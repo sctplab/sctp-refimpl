@@ -11648,7 +11648,8 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_M)
 /*
  * TEST-TITLE authkey/gso_def_1_1
  * TEST-DESCR: Validates on a 1-1 model socket that
- * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an endpoint
+ * TEST-DESCR: you cannot set the default endpoint keynumber (0)
+ * TEST-DESCR: using getsockopt.
  */
 DEFINE_APITEST(authkey, gso_def_1_1)
 {
@@ -11674,7 +11675,8 @@ DEFINE_APITEST(authkey, gso_def_1_1)
 /*
  * TEST-TITLE authkey/gso_def_1_M
  * TEST-DESCR: Validates on a 1-many model socket that
- * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an endpoint
+ * TEST-DESCR: you cannot set the default endpoint keynumber (0)
+ * TEST-DESCR: using getsockopt.
  */
 DEFINE_APITEST(authkey, gso_def_1_M)
 {
@@ -11688,6 +11690,58 @@ DEFINE_APITEST(authkey, gso_def_1_M)
 	}
 	keylen = sizeof(keytext);
 	keyid = 0;
+	result = sctp_get_auth_key(fd, 0, &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fd);
+		return "was able to get auth key";
+	}
+	close(fd);
+	return NULL;
+}
+
+/*
+ * TEST-TITLE authkey/gso_new_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot get/set a new endpoint keynumber using getsockopt.
+ */
+DEFINE_APITEST(authkey, gso_new_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0x1234;
+	result = sctp_get_auth_key(fd, 0, &keyid, &keylen, keytext);
+	if (result >= 0) {
+		close(fd);
+		return "was able to get auth key";
+	}
+	close(fd);
+	return NULL;
+}
+
+/*
+ * TEST-TITLE authkey/gso_new_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot get/set a new endpoint keynumber using getsockopt.
+ */
+DEFINE_APITEST(authkey, gso_new_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	uint8_t keytext[128];
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keylen = sizeof(keytext);
+	keyid = 0x1234;
 	result = sctp_get_auth_key(fd, 0, &keyid, &keylen, keytext);
 	if (result >= 0) {
 		close(fd);
@@ -12770,6 +12824,17 @@ DEFINE_APITEST(actkey, sso_achg_1_M)
  * SCTP_AUTH_DELETE_KEY tests
  *
  ********************************************************/
+/*
+ * NOTE: These tests assume SCTP_AUTH_KEY and SCTP_AUTH_ACTIVE_KEY socket
+ * options are WORKING.  Any failure in AUTH_KEY or AUTH_ACTIVE_KEY will
+ * likely fail additional tests in this suite.
+ */
+
+/*
+ * TEST-TITLE delkey/gso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot delete the default endpoint key using getsockopt.
+ */
 DEFINE_APITEST(delkey, gso_def_1_1)
 {
 	int fd, result;
@@ -12788,6 +12853,11 @@ DEFINE_APITEST(delkey, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/gso_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot delete the default endpoint key using getsockopt.
+ */
 DEFINE_APITEST(delkey, gso_def_1_M)
 {
 	int fd, result;
@@ -12806,6 +12876,58 @@ DEFINE_APITEST(delkey, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/gso_inval_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot delete an unknown keynumber using getsockopt.
+ */
+DEFINE_APITEST(delkey, gso_inval_1_1)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0x1234;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to get delete key?";
+	}
+	return NULL;
+}
+
+/*
+ * TEST-TITLE delkey/gso_inval_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot delete an unknown keynumber using getsockopt.
+ */
+DEFINE_APITEST(delkey, gso_inval_1_M)
+{
+	int fd, result;
+	uint16_t keyid;
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	keyid = 0x1234;
+	result = sctp_get_delete_key(fd, 0, &keyid);
+	close(fd);
+	if (result >= 0) {
+		return "was able to get delete key?";
+	}
+	return NULL;
+}
+
+/*
+ * TEST-TITLE delkey/sso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot delete the default endpoint key because it is
+ * TEST-DESCR: the current active keynumber.
+ */
 DEFINE_APITEST(delkey, sso_def_1_1)
 {
 	int fd, result;
@@ -12826,6 +12948,12 @@ DEFINE_APITEST(delkey, sso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot delete the default endpoint key because it is
+ * TEST-DESCR: the current active keynumber.
+ */
 DEFINE_APITEST(delkey, sso_def_1_M)
 {
 	int fd, result;
@@ -12846,6 +12974,12 @@ DEFINE_APITEST(delkey, sso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_inval_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot delete a keynumber that has not been previously
+ * TEST-DESCR: added using SCTP_AUTH_KEY.
+ */
 DEFINE_APITEST(delkey, sso_inval_1_1)
 {
 	int fd, result;
@@ -12866,6 +13000,12 @@ DEFINE_APITEST(delkey, sso_inval_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_inval_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot delete a keynumber that has not been previously
+ * TEST-DESCR: added using SCTP_AUTH_KEY.
+ */
 DEFINE_APITEST(delkey, sso_inval_1_M)
 {
 	int fd, result;
@@ -12886,6 +13026,13 @@ DEFINE_APITEST(delkey, sso_inval_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_new_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can delete a newly added keynumber that has not been
+ * TEST-DESCR: made active. Note this tries to delete the deleted keynumber
+ * TEST-DESCR: to make sure the delete actually occurred.
+ */
 DEFINE_APITEST(delkey, sso_new_1_1)
 {
 	int fd, result;
@@ -12921,6 +13068,13 @@ DEFINE_APITEST(delkey, sso_new_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_new_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can delete a newly added keynumber that has not been
+ * TEST-DESCR: made active. Note this tries to delete the deleted keynumber
+ * TEST-DESCR: to make sure the delete actually occurred.
+ */
 DEFINE_APITEST(delkey, sso_new_1_M)
 {
 	int fd, result;
@@ -12956,7 +13110,94 @@ DEFINE_APITEST(delkey, sso_new_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_newact_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot delete a newly added keynumber that has been
+ * TEST-DESCR: made active.
+ */
+DEFINE_APITEST(delkey, sso_newact_1_1)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
 
+	fd = sctp_one2one(0, 0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add and activate a new key */
+	keyid = 0xFFFF;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set active key";
+	}
+
+	/* delete the key */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete an active key";
+	}
+	close(fd);
+	return NULL;
+}
+
+/*
+ * TEST-TITLE delkey/sso_newact_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot delete a newly added keynumber that has been
+ * TEST-DESCR: made active.
+ */
+DEFINE_APITEST(delkey, sso_newact_1_M)
+{
+	int fd, result;
+	uint16_t keyid, keylen;
+	char *keytext = "This is my new key";
+
+	fd = sctp_one2many(0, 1);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
+	/* add and activate a new key */
+	keyid = 1;
+	keylen = sizeof(keytext);
+	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
+	if (result < 0) {
+		close(fd);
+		return "was unable to add key";
+	}
+	result = sctp_set_active_key(fd, 0, keyid);
+	if (result < 0) {
+		close(fd);
+		return "was unable to set active key";
+	}
+
+	/* delete the key */
+	result = sctp_set_delete_key(fd, 0, keyid);
+	if (result >= 0) {
+		close(fd);
+		return "was able to delete an active key";
+	}
+	close(fd);
+	return NULL;
+}
+
+/*
+ * TEST-TITLE delkey/sso_zero_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can delete the default endpoint keynumber 0 after a
+ * TEST-DESCR: new keynumber that has been added to the endpoint.
+ * TEST-DESCR: Note this tries to delete the deleted keynumber
+ * TEST-DESCR: to make sure the delete actually occurred.
+ */
 DEFINE_APITEST(delkey, sso_zero_1_1)
 {
 	int fd, result;
@@ -12999,6 +13240,14 @@ DEFINE_APITEST(delkey, sso_zero_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE delkey/sso_zero_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can delete the default endpoint keynumber 0 after a
+ * TEST-DESCR: new keynumber that has been added to the endpoint.
+ * TEST-DESCR: Note this tries to delete the deleted keynumber
+ * TEST-DESCR: to make sure the delete actually occurred.
+ */
 DEFINE_APITEST(delkey, sso_zero_1_M)
 {
 	int fd, result;
