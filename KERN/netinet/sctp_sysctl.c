@@ -116,8 +116,9 @@ uint32_t sctp_debug_on = 0;
 uint32_t sctp_main_timer = SCTP_MAIN_TIMER_DEFAULT;
 #endif
 
-/* It returns an upper limit. No filtering is done here */
+#if defined (__APPLE__) || defined (__FreeBSD__)
 
+/* It returns an upper limit. No filtering is done here */
 static unsigned int
 number_of_addresses(struct sctp_inpcb *inp)
 {
@@ -152,7 +153,6 @@ number_of_addresses(struct sctp_inpcb *inp)
 	return (cnt);
 }
 
-#if defined (__APPLE__) || defined (__FreeBSD__)
 static int
 copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sysctl_req *req)
 {
