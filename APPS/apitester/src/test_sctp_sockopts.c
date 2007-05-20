@@ -2648,7 +2648,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 
 /*
  * TEST-TITLE associnfo/sso_lrwd_asoc_1_1
- * TEST-DESDR: Using a 1-1 socket create an assocation.
+ * TEST-DESCR: Using a 1-1 socket create an assocation.
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
  * TEST-DESCR: that the set option did not effect
@@ -2713,7 +2713,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 
 /*
  * TEST-TITLE associnfo/sso_lrwd_asoc_1_M
- * TEST-DESDR: Using a 1-M socket create an assocation.
+ * TEST-DESCR: Using a 1-M socket create an assocation.
  * TEST-DESCR: Attempt to set the local rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
  * TEST-DESCR: that the set option did not effect
@@ -2784,7 +2784,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 
 /*
  * TEST-TITLE associnfo/sso_lrwd_asoc_1_1
- * TEST-DESDR: Using a 1-1 socket create an assocation.
+ * TEST-DESCR: Using a 1-1 socket create an assocation.
  * TEST-DESCR: Attempt to set the peers rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
  * TEST-DESCR: that the set option did not effect
@@ -2852,7 +2852,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 
 /*
  * TEST-TITLE associnfo/sso_lrwd_asoc_1_M
- * TEST-DESDR: Using a 1-M socket create an assocation.
+ * TEST-DESCR: Using a 1-M socket create an assocation.
  * TEST-DESCR: Attempt to set the peers rwnd using
  * TEST-DESCR: the associnfo structure on the assocation. We validate
  * TEST-DESCR: that the set option did not effect
