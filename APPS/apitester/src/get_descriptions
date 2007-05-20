@@ -1,0 +1,5 @@
+#!/bin/sh
+grep TEST- test*.c  | cut -d: -f2- | cut -c4- > list1
+cat list1 | sed 's/TEST-DESCR:/       /' > test_descriptions.txt
+rm -f list1
+
