@@ -10685,11 +10685,11 @@ DEFINE_APITEST(maxseg, gso_def_1_1)
 }
 
 /*
- * TEST-TITLE maxseg/gso_def_1_1
- * TEST-DESCR: On a 1-1 socket.
- * TEST-DESCR: Validate that the default setting
- * TEST-DESCR: for maxseg is 0, i.e., no user
- * TEST-DESCR: defined fragmentaton point.
+ * TEST-TITLE maxseg/sso_def_1_1
+ * TEST-DESCR: On a 1-1 socket. Get
+ * TEST-DESCR: the max seg, reduce it by
+ * TEST-DESCR: 100 bytes and set it. Validate
+ * TEST-DESCR: that the new setting worked.
  */
 DEFINE_APITEST(maxseg, sso_set_1_1)
 {
@@ -10726,7 +10726,13 @@ DEFINE_APITEST(maxseg, sso_set_1_1)
 	return NULL;
 }
 
-
+/*
+ * TEST-TITLE maxseg/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Validate that the default setting
+ * TEST-DESCR: for maxseg is 0, i.e., no user
+ * TEST-DESCR: defined fragmentaton point.
+ */
 DEFINE_APITEST(maxseg, gso_def_1_M)
 {
 	int fd, val, result;
@@ -10748,6 +10754,13 @@ DEFINE_APITEST(maxseg, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxseg/sso_def_1_M
+ * TEST-DESCR: On a 1-M socket. Get
+ * TEST-DESCR: the max seg, reduce it by
+ * TEST-DESCR: 100 bytes and set it. Validate
+ * TEST-DESCR: that the new setting worked.
+ */
 DEFINE_APITEST(maxseg, sso_set_1_M)
 {
 	int fd, val[3], result;
@@ -10783,7 +10796,12 @@ DEFINE_APITEST(maxseg, sso_set_1_M)
 	return NULL;
 }
 
-
+/*
+ * TEST-TITLE maxseg/sso_asc_1_1
+ * TEST-DESCR: On a 1-1 socket, create an association
+ * TEST-DESCR: set the max seg on the assoc to 1200 bytes.
+ * TEST-DESCR: Validate that the new setting worked.
+ */
 DEFINE_APITEST(maxseg, sso_asc_1_1)
 {
 	int val[2];
@@ -10830,6 +10848,12 @@ DEFINE_APITEST(maxseg, sso_asc_1_1)
  	return NULL;
 }
 
+/*
+ * TEST-TITLE maxseg/sso_asc_1_M
+ * TEST-DESCR: On a 1-M socket, create an association
+ * TEST-DESCR: set the max seg on the assoc to 1200 bytes.
+ * TEST-DESCR: Validate that the new setting worked.
+ */
 DEFINE_APITEST(maxseg, sso_asc_1_M)
 {
 	int val[2];
@@ -10875,6 +10899,12 @@ DEFINE_APITEST(maxseg, sso_asc_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxseg/sso_inherit_1_1
+ * TEST-DESCR: On a 1-1 socket, Set the max seg on the endpoint to 1200 bytes.
+ * TEST-DESCR: Create an assocation and validate that the new
+ * TEST-DESCR: value gets inherited to the new assocaition.
+ */
 DEFINE_APITEST(maxseg, sso_inherit_1_1)
 {
 	int val[2];
@@ -10921,6 +10951,12 @@ DEFINE_APITEST(maxseg, sso_inherit_1_1)
 
 }
 
+/*
+ * TEST-TITLE maxseg/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket, Set the max seg on the endpoint to 1200 bytes.
+ * TEST-DESCR: Create an assocation and validate that the new
+ * TEST-DESCR: value gets inherited to the new assocaition.
+ */
 DEFINE_APITEST(maxseg, sso_inherit_1_M)
 {
 	int val[2];
@@ -10964,6 +11000,15 @@ DEFINE_APITEST(maxseg, sso_inherit_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE maxseg/sso_inherit_ncep_1_1
+ * TEST-DESCR: On a 1-1 socket, 
+ * TEST-DESCR: Set the max seg to 1200 bytes.
+ * TEST-DESCR: Start an association and validate it inherits
+ * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the association. Validate the endpoint value is
+ * TEST-DESCR: unchanged.
+ */
 DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 {
 	int val[3];
@@ -10977,7 +11022,7 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 		return(strerror(errno));
 	}
 	result = sctp_get_maxseg(fd, 0, &val[0]);
-	if (result < 0) {
+a	if (result < 0) {
 		close (fd);
 		return(strerror(errno));
 	}
@@ -11033,7 +11078,15 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 	return retstring;
 
 }
-
+/*
+ * TEST-TITLE maxseg/sso_inherit_ncep_1_M
+ * TEST-DESCR: On a 1-M socket, 
+ * TEST-DESCR: Set the max seg to 1200 bytes.
+ * TEST-DESCR: Start an association and validate it inherits
+ * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the association. Validate the endpoint value is
+ * TEST-DESCR: unchanged.
+ */
 DEFINE_APITEST(maxseg, sso_inherit_ncep_1_M)
 {
 	int  val[3];
@@ -11099,6 +11152,15 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-TITLE maxseg/sso_nc_other_asoc_1_M
+ * TEST-DESCR: On a 1-M socket, 
+ * TEST-DESCR: Set the max seg to 1200 bytes.
+ * TEST-DESCR: Start two associations and validate they inherit
+ * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the association. Validate the endpoint and other
+ * TEST-DESCR: associations  value's are unchanged.
+ */
 DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
 {
 	int val[3];
@@ -11194,7 +11256,13 @@ DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
  * SCTP_AUTH_CHUNK tests
  *
  ********************************************************/
-
+/*
+ * TEST-TITLE authchk/gso_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Attempt to get an auth-chunk id.
+ * TEST-DESCR: This should fail since its a set 
+ * TEST-DESCR: only option.
+ */
 DEFINE_APITEST(authchk, gso_1_1)
 {
 	int result;
@@ -11212,6 +11280,14 @@ DEFINE_APITEST(authchk, gso_1_1)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-TITLE authchk/gso_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Attempt to get an auth-chunk id.
+ * TEST-DESCR: This should fail since its a set 
+ * TEST-DESCR: only option.
+ */
 DEFINE_APITEST(authchk, gso_1_M)
 {
 	int result;
@@ -11229,6 +11305,14 @@ DEFINE_APITEST(authchk, gso_1_M)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-TITLE authchk/sso_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Attempt to add a data chunk (0)
+ * TEST-DESCR: to the list of authenticated chunk.
+ * TEST-DESCR: This should succeed.
+ */
 DEFINE_APITEST(authchk, sso_1_1)
 {
 	int result;
@@ -11251,6 +11335,13 @@ DEFINE_APITEST(authchk, sso_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authchk/sso_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Attempt to add a data chunk (0)
+ * TEST-DESCR: to the list of authenticated chunk.
+ * TEST-DESCR: This should succeed.
+ */
 DEFINE_APITEST(authchk, sso_1_M)
 {
 	int result;
@@ -11279,6 +11370,14 @@ DEFINE_APITEST(authchk, sso_1_M)
  * SCTP_HMAC_IDENT tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE hmacid/sso_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set in to prefer sha256 then sha1. If
+ * TEST-DESCR: that succeeds verify our settings. If it
+ * TEST-DESCR: fails then set just sha1 and verify it
+ * TEST-DESCR: is set correctly.
+ */
 DEFINE_APITEST(hmacid, sso_1_1)
 {
 	int result, fd, i;
@@ -11332,7 +11431,14 @@ DEFINE_APITEST(hmacid, sso_1_1)
 	}
 	return NULL;
 }
-
+/*
+ * TEST-TITLE hmacid/sso_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set in to prefer sha256 then sha1. If
+ * TEST-DESCR: that succeeds verify our settings. If it
+ * TEST-DESCR: fails then set just sha1 and verify it
+ * TEST-DESCR: is set correctly.
+ */
 DEFINE_APITEST(hmacid, sso_1_M)
 {
 	int result, fd, i;
@@ -11386,6 +11492,13 @@ DEFINE_APITEST(hmacid, sso_1_M)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-TITLE hmacid/sso_bad_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set in to prefer id 2960 (bogus) then sha1.
+ * TEST-DESCR: Validate that the request is rejected.
+ */
 DEFINE_APITEST(hmacid, sso_bad_1_1)
 {
 	int result, fd;
@@ -11410,6 +11523,13 @@ DEFINE_APITEST(hmacid, sso_bad_1_1)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-TITLE hmacid/sso_bad_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set in to prefer id 2960 (bogus) then sha1.
+ * TEST-DESCR: Validate that the request is rejected.
+ */
 DEFINE_APITEST(hmacid, sso_bad_1_M)
 {
 	int result, fd;
@@ -11435,6 +11555,13 @@ DEFINE_APITEST(hmacid, sso_bad_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE hmacid/sso_nosha1_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set to prefer only sha256 without 
+ * TEST-DESCR: including sha1. The test should fail
+ * TEST-DESCR: since sha1 is required to be in the list.
+ */
 DEFINE_APITEST(hmacid, sso_nosha1_1_1)
 {
 	int result, fd;
@@ -11470,6 +11597,13 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_1)
 
 }
 
+/*
+ * TEST-TITLE hmacid/sso_nosha1_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set to prefer only sha256 without 
+ * TEST-DESCR: including sha1. The test should fail
+ * TEST-DESCR: since sha1 is required to be in the list.
+ */
 DEFINE_APITEST(hmacid, sso_nosha1_1_M)
 {
 	int result, fd;
@@ -12739,19 +12873,17 @@ DEFINE_APITEST(delkey, sso_zero_1_M)
 
 /********************************************************
  *
- * SCTP_OTHER tests
- *
- ********************************************************/
-
-
-/********************************************************
- *
  * SCTP_DELAYED_SACK tests
  *
  ********************************************************/
 
-
-
+/*
+ * TEST-TITLE dsack/gso_def_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 
 DEFINE_APITEST(dsack, gso_def_1_1)
 {
