@@ -12,6 +12,13 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+/*
+ * TEST-TITLE bind/port_s_a_s_p
+ * TEST-DESCR: (port specifed adress specfied port )
+ * TEST-DESCR: On a 1-1 socket, bind to
+ * TEST-DESCR: a specified port and address and
+ * TEST-DESCR: validate we get the port.
+ */
 DEFINE_APITEST(bind, port_s_a_s_p)
 {
 	int fd;
@@ -34,6 +41,13 @@ DEFINE_APITEST(bind, port_s_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/v4tov6_s_a_s_p
+ * TEST-DESCR: (specifed adress specfied port )
+ * TEST-DESCR: On a 1-1 socket v6, bind to
+ * TEST-DESCR: a specified port and address (v4) and
+ * TEST-DESCR: validate we get the port.
+ */
 DEFINE_APITEST(bind, v4tov6_s_a_s_p)
 {
 	int fd;
@@ -56,6 +70,13 @@ DEFINE_APITEST(bind, v4tov6_s_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/v4tov6_w_a_s_p
+ * TEST-DESCR: (without adress specfied port )
+ * TEST-DESCR: On a 1-1 socket v6, bind to
+ * TEST-DESCR: a specified port and address set to v4 INADDR_ANY
+ * TEST-DESCR: validate we get the port.
+ */
 DEFINE_APITEST(bind, v4tov6_w_a_s_p)
 {
 	int fd;
@@ -78,6 +99,13 @@ DEFINE_APITEST(bind, v4tov6_w_a_s_p)
 		return NULL;
 }
 
+/*
+ * TEST-TITLE bind/v4tov6only_w_a
+ * TEST-DESCR: (without adress)
+ * TEST-DESCR: On a 1-1 socket v6 set for v6 only.
+ * TEST-DESCR: Bind a specified port and address set to v4 INADDR_ANY
+ * TEST-DESCR: validate we fail.
+ */
 DEFINE_APITEST(bind, v4tov6only_w_a)
 {
 	int fd, result;
@@ -99,6 +127,13 @@ DEFINE_APITEST(bind, v4tov6only_w_a)
 		return "bind() was successful";
 }
 
+/*
+ * TEST-TITLE bind/v4tov6only_s_a
+ * TEST-DESCR: (specified adress)
+ * TEST-DESCR: On a 1-1 socket v6 set for v6 only.
+ * TEST-DESCR: Bind a specified port and address set to v4 LOOPBACK
+ * TEST-DESCR: validate we fail.
+ */
 DEFINE_APITEST(bind, v4tov6only_s_a)
 {
 	int fd, result;
@@ -120,6 +155,14 @@ DEFINE_APITEST(bind, v4tov6only_s_a)
 		return "bind() was successful";
 }
 
+/*
+ * TEST-TITLE bind/same_port_s_a_s_p
+ * TEST-DESCR: (specified adress specified port)
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Bind a specified port and address. Then
+ * TEST-DESCR: attempt to bind the same address on another
+ * TEST-DESCR: socket, validate we fail.
+ */
 DEFINE_APITEST(bind, same_port_s_a_s_p)
 {
 	int fd1, fd2, result;
@@ -146,6 +189,14 @@ DEFINE_APITEST(bind, same_port_s_a_s_p)
 		return "bind was successful";
 }
 
+/*
+ * TEST-TITLE bind/duplicate_s_a_s_p
+ * TEST-DESCR: (specified adress specified port)
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Bind a specified port and address. Then
+ * TEST-DESCR: attempt to bind the same address/port
+ * TEST-DESCR: on the same socket, validate we fail.
+ */
 DEFINE_APITEST(bind, duplicate_s_a_s_p)
 {
 	int fd, result;
@@ -168,6 +219,13 @@ DEFINE_APITEST(bind, duplicate_s_a_s_p)
 		return "bind was successful";
 }
 
+/*
+ * TEST-TITLE bind/refinement
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Bind a specified port and with address INADDR_ANY. 
+ * TEST-DESCR: validate that binding the same socket to
+ * TEST-DESCR: a more specific address (the loopback) fails.
+ */
 DEFINE_APITEST(bind, refinement)
 {
 	int fd, result;
