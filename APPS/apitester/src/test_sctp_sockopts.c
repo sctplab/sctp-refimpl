@@ -275,9 +275,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_init
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: opens a 1-1 socket, gets the 
+ * TEST-DESCR: current values on an endpoint adds 10
+ * TEST-DESCR: to initial value but leaves max/min 
+ * TEST-DESCR: unchanged (0 values). Then it validates
+ * TEST-DESCR: that the initial value changed but NOT
+ * TEST-DESCR: max and min.
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_init)
 {
@@ -321,9 +324,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_init)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_M_init
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: opens a 1-1 socket, gets the 
+ * TEST-DESCR: current values on an endpoint adds 10
+ * TEST-DESCR: to initial value but leaves max/min 
+ * TEST-DESCR: unchanged (0 values). Then it validates
+ * TEST-DESCR: that the initial value changed but NOT
+ * TEST-DESCR: max and min.
  */
 DEFINE_APITEST(rtoinfo, sso_1_M_init)
 {
@@ -367,9 +373,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_init)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_max
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can set only the max value and other
+ * TEST-DESCR: values are not effected.
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_max)
 {
@@ -413,9 +419,9 @@ DEFINE_APITEST(rtoinfo, sso_1_1_max)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_M_max
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-M model socket that
+ * TEST-DESCR: you can set only the max value and other
+ * TEST-DESCR: values are not effected.
  */
 DEFINE_APITEST(rtoinfo, sso_1_M_max)
 {
@@ -459,9 +465,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_max)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_min
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can set only the min value and other
+ * TEST-DESCR: values are not effected.
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_min)
 {
@@ -505,9 +511,9 @@ DEFINE_APITEST(rtoinfo, sso_1_1_min)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_M_min
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-M model socket that
+ * TEST-DESCR: you can set only the min value and other
+ * TEST-DESCR: values are not effected.
  */
 DEFINE_APITEST(rtoinfo, sso_1_M_min)
 {
@@ -551,9 +557,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_min)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_same
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can set all values to the same setting
+ * TEST-DESCR: (100).
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_same)
 {
@@ -586,9 +592,9 @@ DEFINE_APITEST(rtoinfo, sso_1_1_same)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_M_same
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validates on a 1-M model socket that
+ * TEST-DESCR: you can set all values to the same setting
+ * TEST-DESCR: (100).
  */
 DEFINE_APITEST(rtoinfo, sso_1_M_same)
 {
@@ -621,9 +627,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_same)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_1
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the initial RTO less than
+ * TEST-DESCR: the minimum. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_1)
 {
@@ -655,9 +661,9 @@ DEFINE_APITEST(rtoinfo, sso_ill_1)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_2
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the initial RTO greater than
+ * TEST-DESCR: the maximum. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_2)
 {
@@ -689,9 +695,9 @@ DEFINE_APITEST(rtoinfo, sso_ill_2)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_3
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the minimum RTO greater than
+ * TEST-DESCR: the initial RTO. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_3)
 {
@@ -722,9 +728,9 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_4
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the minimum RTO greater than
+ * TEST-DESCR: the maximum RTO. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_4)
 {
@@ -755,9 +761,9 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_5
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the maximum RTO smaller than
+ * TEST-DESCR: the initial RTO. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_5)
 {
@@ -788,9 +794,9 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 
 /*
  * TEST-DESCR: rtoinfo/sso_ill_6
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we attempt to
+ * TEST-DESCR: set the maximum RTO smaller than
+ * TEST-DESCR: the minimum RTO. This should fail.
  */
 DEFINE_APITEST(rtoinfo, sso_ill_6)
 {
@@ -821,9 +827,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 
 /*
  * TEST-DESCR: rtoinfo/gso_1_1_c_bad_id
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we create an association
+ * TEST-DESCR: and attempt to get information using one
+ * TEST-DESCR: of the file descriptors using a random (1)
+ * TEST-DESCR: value in the association id field. We expect
+ * TEST-DESCR: this to succeed since the 1-1 model does
+ * TEST-DESCR: not need an association id and should ignore it.
  */
 DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 {
@@ -845,9 +854,12 @@ DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_c_bad_id
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket we create an association
+ * TEST-DESCR: and attempt to set information using one
+ * TEST-DESCR: of the file descriptors using a random (1)
+ * TEST-DESCR: value in the association id field. We expect
+ * TEST-DESCR: this to succeed since the 1-1 model does
+ * TEST-DESCR: not need an association id and should ignore it.
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 {
@@ -878,9 +890,13 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_1_inherit
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: We open a 1-1 socket, change the
+ * TEST-DESCR: default values of the endpoint. We
+ * TEST-DESCR: then create an association by having
+ * TEST-DESCR: our endpoint listen and a seperate
+ * TEST-DESCR: 1-1 socket connect to us. We then validate
+ * TEST-DESCR: that the set values on the endpoint inherited
+ * TEST-DESCR: to the association correctly.
  */
 DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 {
@@ -983,9 +999,13 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 
 /*
  * TEST-DESCR: rtoinfo/sso_1_M_inherit
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: We open a 1-M socket, change the
+ * TEST-DESCR: default values of the endpoint. We
+ * TEST-DESCR: then create an association by having
+ * TEST-DESCR: our endpoint listen and a seperate
+ * TEST-DESCR: 1-M socket connect to us. We then validate
+ * TEST-DESCR: that the set values on the endpoint inherited
+ * TEST-DESCR: to the association correctly.
  */
 DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 {
@@ -1096,11 +1116,16 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	return NULL;
 }
 
+/********************************************************
+ *
+ * SCTP_ASSOCLIST tests
+ *
+ ********************************************************/
+
 /*
- * TEST-DESCR: rtoinfo/gso_numbers_zero
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_numbers_zero
+ * TEST-DESCR: Open a 1-1 socket and validate that
+ * TEST-DESCR: it has no associations.
  */
 DEFINE_APITEST(assoclist, gso_numbers_zero)
 {
@@ -1122,10 +1147,11 @@ DEFINE_APITEST(assoclist, gso_numbers_zero)
 #define NUMBER_OF_ASSOCS 12
 
 /*
- * TEST-DESCR: rtoinfo/gso_numbers_pos
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_numbers_pos
+ * TEST-DESCR: Open a 1-M socket, and create
+ * TEST-DESCR: a number of associations (using seperate fd's) to
+ * TEST-DESCR: it. Validate that the number of associations
+ * TEST-DESCR: returned is the number we created.
  */
 DEFINE_APITEST(assoclist, gso_numbers_pos)
 {
@@ -1148,10 +1174,10 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_ids_no_assoc
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_ids_no_assoc
+ * TEST-DESCR: Open a 1-1 socket, and get the 
+ * TEST-DESCR: assocation list. Verify that no
+ * TEST-DESCR: association id's are returned.
  */
 DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 {
@@ -1175,10 +1201,12 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_ids_buf_fit
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_ids_buf_fit
+ * TEST-DESCR: Open a 1-M socket and create a
+ * TEST-DESCR: number of assocaitions connected to
+ * TEST-DESCR: the 1-M socket. Get the association 
+ * TEST-DESCR: identifiers and validate that they are not
+ * TEST-DESCR: duplicated.
  */
 DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 {
@@ -1213,10 +1241,12 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_ids_buf_large
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_ids_buf_large
+ * TEST-DESCR: Create a number of associations connected
+ * TEST-DESCR: to our 1-M socket. Get the number of 
+ * TEST-DESCR: assocations passing in a larger buffer
+ * TEST-DESCR: then needed i.e. 1 extra id. Then validate
+ * TEST-DESCR: that no duplicate association id is given.
  */
 DEFINE_APITEST(assoclist, gso_ids_buf_large)
 {
@@ -1251,10 +1281,13 @@ DEFINE_APITEST(assoclist, gso_ids_buf_large)
 }
 
 /*
- * TEST-DESCR: rtoinfo/gso_ids_buf_small
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: assoclist/gso_ids_buf_small
+ * TEST-DESCR: Create a number of associations
+ * TEST-DESCR: on a 1-M socket, then request the
+ * TEST-DESCR: association id's but give too small
+ * TEST-DESCR: of a list. Validate that we can retrieve
+ * TEST-DESCR: the list, even though we do not get all
+ * TEST-DESCR: of them.
  */
 DEFINE_APITEST(assoclist, gso_ids_buf_small)
 {
@@ -13803,69 +13836,4 @@ DEFINE_APITEST(read, auth_l_chklist)
 	}
 	return NULL;
 }
-
-
-DEFINE_APITEST(read, numasoc)
-{
-	int fds[2], result;
-	uint32_t cnt=0;
-	sctp_assoc_t ids[2];
-	socklen_t len;
-
-	fds[0] = fds[1] = -1;
-	result = sctp_socketpair_1tom(fds, ids, 1);
-	if(result < 0) {
-		return(strerror(errno));		
-	}
-	len = sizeof(cnt);
-	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_GET_ASSOC_NUMBER,
-			    &cnt, &len);
-	if (result < 0) {
-		close(fds[0]);
-		close(fds[1]);
-		return(strerror(errno));
-	}
-	close(fds[0]);
-	close(fds[1]);
-	if(cnt != 1) {
-		return "Did not get correct number of assocs";
-	}
-	return NULL;
-}
-
-
-DEFINE_APITEST(read, asocidlist)
-{
-	int fds[2], result;
-	sctp_assoc_t ids[2];
-	socklen_t len;
-	struct sctp_assoc_ids *list;
-	uint8_t buffer[1024];
-
-	fds[0] = fds[1] = -1;
-	memset(buffer, 0, sizeof(buffer));
-	result = sctp_socketpair_1tom(fds, ids, 1);
-	if(result < 0) {
-		return(strerror(errno));		
-	}
-	len = sizeof(buffer);
-	result = getsockopt(fds[0], IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST,
-			    &buffer, &len);
-	if (result < 0) {
-		close(fds[0]);
-		close(fds[1]);
-		return(strerror(errno));
-	}
-	close(fds[0]);
-	close(fds[1]);
-	list = (struct sctp_assoc_ids *)buffer;
-	if(list->gaids_assoc_id[0] != ids[0]) {
-		return "Incorrect assoc-id in list";
-	}
-	if((len / sizeof(sctp_assoc_t)) != 1) {
-		return "Incorrect number of assocs";
-	}
-	return NULL;
-}
-
 
