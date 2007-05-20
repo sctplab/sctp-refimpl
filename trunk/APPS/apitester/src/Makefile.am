@@ -10,8 +10,10 @@ api_tests_SOURCES           = api_tests.c api_tests.h \
                               sctp_utilities.c sctp_utilities.h \
                               register_tests.c \
                               $(TEST_SOURCES)
-EXTRA_DIST                  = make_register_tests.sh
-CLEANFILES                  = register_tests.c
+EXTRA_DIST                  = make_register_tests.sh \
+                              get_descriptions
+CLEANFILES                  = register_tests.c \
+                              test_descriptions.txt
 register_tests.c: $(TEST_SOURCES) make_register_tests.sh
 	sh make_register_tests.sh register_tests.c $(TEST_SOURCES)
 dist-hook:
