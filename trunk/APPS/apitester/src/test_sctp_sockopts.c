@@ -1325,6 +1325,11 @@ DEFINE_APITEST(assoclist, gso_ids_buf_small)
  ********************************************************/
 static char error_buffer[128];
 
+/*
+ * TEST-DESCR: associnfo/gso_1_1_defaults
+ * TEST-DESCR: Open a 1-1 socket and validate that
+ * TEST-DESCR: the default settings conform to RFC4960.
+ */
 DEFINE_APITEST(associnfo, gso_1_1_defaults)
 {
 	int fd, result;
@@ -1365,6 +1370,11 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: associnfo/gso_1_M_defaults
+ * TEST-DESCR: Open a 1-1 socket and validate that
+ * TEST-DESCR: the default settings conform to RFC4960.
+ */
 DEFINE_APITEST(associnfo, gso_1_M_defaults)
 {
 	int fd, result;
@@ -1405,7 +1415,12 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 	return NULL;
 }
 
-
+/*
+ * TEST-DESCR: associnfo/sso_rxt_1_1
+ * TEST-DESCR: Open a 1-1 socket and validate that
+ * TEST-DESCR: you can set the maximum rxt and no
+ * TEST-DESCR: other associnfo value is changed.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_1_1)
 {
 	int fd, result;
@@ -1469,6 +1484,12 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_rxt_1_M
+ * TEST-DESCR: Open a 1-M socket and validate that
+ * TEST-DESCR: you can set the maximum rxt and no
+ * TEST-DESCR: other associnfo value is changed.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_1_M)
 {
 	int fd, result;
@@ -1532,6 +1553,13 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_rxt_asoc_1_1
+ * TEST-DESCR: Open a 1-1 socket, create an association,
+ * TEST-DESCR  using that listener, and validate that
+ * TEST-DESCR: you can set the maximum rxt on the association and no
+ * TEST-DESCR: other associnfo value are changed on the association.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 {
 	int fd, result;
@@ -1628,6 +1656,13 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_rxt_asoc_1_M
+ * TEST-DESCR: Open a 1-M socket, create an association,
+ * TEST-DESCR  using the endpoint, and validate that
+ * TEST-DESCR: you can set the maximum rxt on the association and no
+ * TEST-DESCR: other associnfo value is changed on the assocaition.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 {
 	int result;
@@ -1721,6 +1756,13 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_rxt_asoc_1_1_inherit
+ * TEST-DESCR: Create a 1-1 socket, change a value
+ * TEST-DESCR: (maxrxt) and then create an association
+ * TEST-DESCR: using that socket. Validate that the new
+ * TEST-DESCR: value was inherited to the association.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 {
 	int fd, result;
@@ -1820,6 +1862,13 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_rxt_asoc_1_M_inherit
+ * TEST-DESCR: Create a 1-M socket, change a value
+ * TEST-DESCR: (maxrxt) and then create an association
+ * TEST-DESCR: using that socket. Validate that the new
+ * TEST-DESCR: value was inherited to the association.
+ */
 DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 {
 	int result;
@@ -1918,8 +1967,12 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 
 }
 
-
-/* ************************************* */
+/*
+ * TEST-DESCR: associnfo/sso_clife_1_1
+ * TEST-DESCR: Open a 1-1 socket, double the cookie
+ * TEST-DESCR: life and validate it does not change
+ * TEST-DESCR: any other values in the associnfo list.
+ */
 DEFINE_APITEST(associnfo, sso_clife_1_1)
 {
 	int fd, result;
@@ -1983,6 +2036,12 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_clife_1_M
+ * TEST-DESCR: Open a 1-M socket, double the cookie
+ * TEST-DESCR: life and validate it does not change
+ * TEST-DESCR: any other values in the associnfo list.
+ */
 DEFINE_APITEST(associnfo, sso_clife_1_M)
 {
 	int fd, result;
@@ -2046,7 +2105,13 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 
 }
 
-
+/*
+ * TEST-DESCR: associnfo/sso_clife_asoc_1_1
+ * TEST-DESCR: Open a 1-1 socket, create an association,
+ * TEST-DESCR  double the cookie life on the association
+ * TEST-DESCR: and validate it does not change
+ * TEST-DESCR: any other association values in the associnfo list.
+ */
 DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 {
 	int fd, result;
@@ -2143,6 +2208,13 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_clife_asoc_1_M
+ * TEST-DESCR: Open a 1-M socket, create an association,
+ * TEST-DESCR  double the cookie life on the association
+ * TEST-DESCR: and validate it does not change
+ * TEST-DESCR: any other association values in the associnfo list.
+ */
 DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 {
 	int result;
@@ -2236,6 +2308,13 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_clife_asoc_1_1_inherit
+ * TEST-DESCR: Open a 1-1 socket, double its cookie life.
+ * TEST-DESCR  Use the socket to create an association and
+ * TEST-DESCR: validate that the new cookie life inherited to
+ * TEST-DESCR: the association.
+ */
 DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 {
 	int fd, result;
@@ -2335,6 +2414,13 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_clife_asoc_1_M_inherit
+ * TEST-DESCR: Open a 1-1 socket, double its cookie life.
+ * TEST-DESCR  Use the socket to create an association and
+ * TEST-DESCR: validate that the new cookie life inherited to
+ * TEST-DESCR: the association.
+ */
 DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 {
 	int result;
@@ -2433,6 +2519,13 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_ep_1_1
+ * TEST-DESCR: Attempt to set the local rwnd using
+ * TEST-DESCR: the associnfo structure on a 1-1 socket. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the endpoint.
+ */
 DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 {
 	int result;
@@ -2489,6 +2582,13 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 	return(retstring);
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_ep_1_M
+ * TEST-DESCR: Attempt to set the local rwnd using
+ * TEST-DESCR: the associnfo structure on a 1-M socket. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the endpoint.
+ */
 DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 {
 	int result;
@@ -2546,6 +2646,14 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 	return(retstring);
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_asoc_1_1
+ * TEST-DESDR: Using a 1-1 socket create an assocation.
+ * TEST-DESCR: Attempt to set the local rwnd using
+ * TEST-DESCR: the associnfo structure on the assocation. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the association.
+ */
 DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 {
 	int result;
@@ -2603,7 +2711,14 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 	return(retstring);
 }
 
-
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_asoc_1_M
+ * TEST-DESDR: Using a 1-M socket create an assocation.
+ * TEST-DESCR: Attempt to set the local rwnd using
+ * TEST-DESCR: the associnfo structure on the assocation. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the association.
+ */
 DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 {
 	int result;
@@ -2667,7 +2782,14 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 
 
 
-
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_asoc_1_1
+ * TEST-DESDR: Using a 1-1 socket create an assocation.
+ * TEST-DESCR: Attempt to set the peers rwnd using
+ * TEST-DESCR: the associnfo structure on the assocation. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the association.
+ */
 DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 {
 	int result;
@@ -2728,7 +2850,14 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 	return(retstring);
 }
 
-
+/*
+ * TEST-DESCR: associnfo/sso_lrwd_asoc_1_M
+ * TEST-DESDR: Using a 1-M socket create an assocation.
+ * TEST-DESCR: Attempt to set the peers rwnd using
+ * TEST-DESCR: the associnfo structure on the assocation. We validate
+ * TEST-DESCR: that the set option did not effect
+ * TEST-DESCR: the values on the association.
+ */
 DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 {
 	int result;
@@ -2793,6 +2922,13 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 	return(retstring);
 }
 
+/*
+ * TEST-DESCR: associnfo/sso_pdest_asoc_1_1
+ * TEST-DESCR: Create an assocation with the 1-1 model.
+ * TEST-DESCR: Then attempt to set the number of peer
+ * TEST-DESCR: destinations. Validate that the set
+ * TEST-DESCR: had no effect.
+ */
 DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 {
 	int result;
@@ -2853,7 +2989,13 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 	return(retstring);
 }
 
-
+/*
+ * TEST-DESCR: associnfo/sso_pdest_asoc_1_M
+ * TEST-DESCR: Create an assocation with the 1-M model.
+ * TEST-DESCR: Then attempt to set the number of peer
+ * TEST-DESCR: destinations. Validate that the set
+ * TEST-DESCR: had no effect.
+ */
 DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 {
 	int result;
@@ -2925,7 +3067,13 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
  * SCTP_initmsg tests
  *
  ********************************************************/
-
+/*
+ * TEST-DESCR: initmsg/gso_1_1_defaults
+ * TEST-DESCR:
+ * TEST-DESCR:
+ * TEST-DESCR:
+ * TEST-DESCR:
+ */
 DEFINE_APITEST(initmsg, gso_1_1_defaults)
 {
 	int fd, result;
