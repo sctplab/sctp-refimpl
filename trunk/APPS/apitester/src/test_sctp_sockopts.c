@@ -3069,10 +3069,9 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
  ********************************************************/
 /*
  * TEST-DESCR: initmsg/gso_1_1_defaults
- * TEST-DESCR:
- * TEST-DESCR:
- * TEST-DESCR:
- * TEST-DESCR:
+ * TEST-DESCR: Create a 1-1 socket, and gather
+ * TEST-DESCR: the initmsg defaults. Compare these
+ * TEST-DESCR: to those required by RFC4960.
  */
 DEFINE_APITEST(initmsg, gso_1_1_defaults)
 {
@@ -3100,7 +3099,12 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 	return(NULL);
 }
 
-
+/*
+ * TEST-DESCR: initmsg/gso_1_M_defaults
+ * TEST-DESCR: Create a 1-M socket, and gather
+ * TEST-DESCR: the initmsg defaults. Compare these
+ * TEST-DESCR: to those required by RFC4960.
+ */
 DEFINE_APITEST(initmsg, gso_1_M_defaults)
 {
 	int fd,result;
@@ -3127,6 +3131,12 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 	return(NULL);
 }
 
+/*
+ * TEST-DESCR: initmsg/gso_1_1_set_ostrm
+ * TEST-DESCR: Create a 1-1 socket, set the
+ * TEST-DESCR: ostrm's and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 {
 	int fd, result;
@@ -3172,6 +3182,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 
 	return(NULL);
 }
+
+/*
+ * TEST-DESCR: initmsg/gso_1_1_set_istrm
+ * TEST-DESCR: Create a 1-1 socket, set the
+ * TEST-DESCR: istrm's and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 {
 	int fd, result;
@@ -3217,7 +3234,12 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 	return(NULL);
 }
 
-
+/*
+ * TEST-DESCR: initmsg/gso_1_1_set_max
+ * TEST-DESCR: Create a 1-1 socket, set the
+ * TEST-DESCR: max retrans and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_1_set_max)
 {
 	int fd, result;
@@ -3263,6 +3285,12 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 	return(NULL);
 }
 
+/*
+ * TEST-DESCR: initmsg/gso_1_1_set_max
+ * TEST-DESCR: Create a 1-1 socket, set the
+ * TEST-DESCR: timeo and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 {
 	int fd, result;
@@ -3308,6 +3336,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 	return(NULL);
 }
 
+
+/*
+ * TEST-DESCR: initmsg/gso_1_M_set_ostrm
+ * TEST-DESCR: Create a 1-M socket, set the
+ * TEST-DESCR: ostrm's and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 {
 	int fd, result;
@@ -3354,6 +3389,12 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 	return(NULL);
 }
 
+/*
+ * TEST-DESCR: initmsg/gso_1_M_set_istrm
+ * TEST-DESCR: Create a 1-M socket, set the
+ * TEST-DESCR: istrm's and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 {
 	int fd, result;
@@ -3399,6 +3440,12 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 	return(NULL);
 }
 
+/*
+ * TEST-DESCR: initmsg/gso_1_M_set_max
+ * TEST-DESCR: Create a 1-M socket, set the
+ * TEST-DESCR: max retrans and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_M_set_max)
 {
 	int fd, result;
@@ -3444,6 +3491,12 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 	return(NULL);
 }
 
+/*
+ * TEST-DESCR: initmsg/gso_1_M_set_max
+ * TEST-DESCR: Create a 1-M socket, set the
+ * TEST-DESCR: timeo and validate that no other
+ * TEST-DESCR: initmsg parameters change.
+ */
 DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 {
 	int fd, result;
