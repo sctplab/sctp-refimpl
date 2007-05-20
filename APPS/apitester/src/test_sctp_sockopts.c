@@ -9488,10 +9488,9 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
 
 /*
  * TEST-DESCR: defsend/gso_def_1_1
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Get the default send parameters
+ * TEST-DESCR: and validate they are all 0.
  */
 DEFINE_APITEST(defsend, gso_def_1_1)
 {
@@ -9522,6 +9521,12 @@ DEFINE_APITEST(defsend, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: defsend/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Get the default send parameters
+ * TEST-DESCR: and validate they are all 0.
+ */
 DEFINE_APITEST(defsend, gso_def_1_M)
 {
 	struct sctp_sndrcvinfo sinfo;
@@ -9551,6 +9556,13 @@ DEFINE_APITEST(defsend, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: defsend/sso_on_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Change the default stream.
+ * TEST-DESCR: Validate that it changed and
+ * TEST_DESCR: all other settings remain unchanged.
+ */
 DEFINE_APITEST(defsend, sso_on_1_1)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9593,6 +9605,13 @@ DEFINE_APITEST(defsend, sso_on_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: defsend/sso_on_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Change the default stream.
+ * TEST-DESCR: Validate that it changed and
+ * TEST_DESCR: all other settings remain unchanged.
+ */
 DEFINE_APITEST(defsend, sso_on_1_M)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9635,6 +9654,13 @@ DEFINE_APITEST(defsend, sso_on_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: defsend/sso_asc_1_1
+ * TEST-DESCR: On a 1-1 socket create an assocaition.
+ * TEST-DESCR: Change default stream on the assocation.
+ * TEST-DESCR: Validate that it changed and
+ * TEST_DESCR: all other settings remain unchanged.
+ */
 DEFINE_APITEST(defsend, sso_asc_1_1)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9691,6 +9717,13 @@ DEFINE_APITEST(defsend, sso_asc_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: defsend/sso_asc_1_M
+ * TEST-DESCR: On a 1-M socket create an assocaition.
+ * TEST-DESCR: Change default stream on the assocation.
+ * TEST-DESCR: Validate that it changed and
+ * TEST_DESCR: all other settings remain unchanged.
+ */
 DEFINE_APITEST(defsend, sso_asc_1_M)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9744,6 +9777,15 @@ DEFINE_APITEST(defsend, sso_asc_1_M)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-DESCR: defsend/sso_inherit_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Change default stream on the endpoint.
+ * TEST-DESCR: Create an assocation and
+ * TEST-DESCR: validate that the change was
+ * TEST_DESCR: inherited to the association.
+ */
 DEFINE_APITEST(defsend, sso_inherit_1_1)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9801,6 +9843,14 @@ DEFINE_APITEST(defsend, sso_inherit_1_1)
 
 }
 
+/*
+ * TEST-DESCR: defsend/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Change default stream on the endpoint.
+ * TEST-DESCR: Create an assocation and
+ * TEST-DESCR: validate that the change was
+ * TEST_DESCR: inherited to the association.
+ */
 DEFINE_APITEST(defsend, sso_inherit_1_M)
 {
 	struct sctp_sndrcvinfo sinfo[2];
@@ -9857,6 +9907,16 @@ DEFINE_APITEST(defsend, sso_inherit_1_M)
 
 }
 
+/*
+ * TEST-DESCR: defsend/sso_inherit_ncep_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Change default stream on the endpoint.
+ * TEST-DESCR: Create an assocation and
+ * TEST-DESCR: validate that the change was
+ * TEST_DESCR: inherited to the association. Then.
+ * TEST_DESCR: change the association value. Validate
+ * TEST_DESCR: it changed and the endpoint did not change.
+ */
 DEFINE_APITEST(defsend, sso_inherit_ncep_1_1)
 {
 	struct sctp_sndrcvinfo sinfo[3];
@@ -9941,6 +10001,16 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_1)
 
 }
 
+/*
+ * TEST-DESCR: defsend/sso_inherit_ncep_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Change default stream on the endpoint.
+ * TEST-DESCR: Create an assocation and
+ * TEST-DESCR: validate that the change was
+ * TEST_DESCR: inherited to the association. Then.
+ * TEST_DESCR: change the association value. Validate
+ * TEST_DESCR: it changed and the endpoint did not change.
+ */
 DEFINE_APITEST(defsend, sso_inherit_ncep_1_M)
 {
 	struct sctp_sndrcvinfo sinfo[3];
@@ -10020,6 +10090,17 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-DESCR: defsend/sso_nc_other_asc_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Change default stream on the endpoint.
+ * TEST-DESCR: Create two assocation and
+ * TEST-DESCR: validate that the change was
+ * TEST_DESCR: inherited to the association. Then.
+ * TEST_DESCR: change one of the association values. Validate
+ * TEST_DESCR: it changed and the endpoint and other
+ * TEST_DESCR: association did not change.
+ */
 DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
 {
 	struct sctp_sndrcvinfo sinfo[3];
@@ -10124,6 +10205,7 @@ DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
 	close (fds2[1]);
 	return retstring;
 }
+
 /********************************************************
  *
  * SCTP_EVENTS tests
