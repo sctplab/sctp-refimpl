@@ -12880,11 +12880,9 @@ DEFINE_APITEST(delkey, sso_zero_1_M)
 /*
  * TEST-TITLE dsack/gso_def_1_1
  * TEST-DESCR: On a 1-1 socket.
- * TEST-DESCR: 
- * TEST-DESCR: 
- * TEST-DESCR: 
+ * TEST-DESCR: Validate that the default settings
+ * TEST-DESCR: for delayed sack conform to RFC4960.
  */
-
 DEFINE_APITEST(dsack, gso_def_1_1)
 {
 	uint32_t delay, freq;
@@ -12908,6 +12906,12 @@ DEFINE_APITEST(dsack, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/gso_def_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Validate that the default settings
+ * TEST-DESCR: for delayed sack conform to RFC4960.
+ */
 DEFINE_APITEST(dsack, gso_def_1_M)
 {
 	uint32_t delay, freq;
@@ -12931,6 +12935,13 @@ DEFINE_APITEST(dsack, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_delay_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set the delay to a new value.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_delay_1_1)
 {
 	uint32_t delay[2];
@@ -12970,6 +12981,13 @@ DEFINE_APITEST(dsack, sso_delay_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_delay_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set the delay to a new value.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_delay_1_M)
 {
 	uint32_t delay[2];
@@ -13009,6 +13027,13 @@ DEFINE_APITEST(dsack, sso_delay_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_freq_1_1
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Set the freq to a new value.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_freq_1_1)
 {
 	uint32_t delay[2];
@@ -13045,6 +13070,13 @@ DEFINE_APITEST(dsack, sso_freq_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_freq_1_M
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Set the freq to a new value.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_freq_1_M)
 {
 	uint32_t delay[2], freq[2];
@@ -13081,7 +13113,13 @@ DEFINE_APITEST(dsack, sso_freq_1_M)
 	return NULL;
 }
 
-
+/*
+ * TEST-TITLE dsack/sso_asc_1_1
+ * TEST-DESCR: On a 1-1 socket, create an association
+ * TEST-DESCR: Set the delay to a new value for the assoc.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_asc_1_1)
 {
 	uint32_t delay[2], freq[2], newval;
@@ -13134,6 +13172,13 @@ DEFINE_APITEST(dsack, sso_asc_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_asc_1_M
+ * TEST-DESCR: On a 1-M socket, create an association
+ * TEST-DESCR: Set the delay to a new value for the assoc.
+ * TEST-DESCR: Validate that it happens and
+ * TEST-DESCR: no other values change.
+ */
 DEFINE_APITEST(dsack, sso_asc_1_M)
 {
 	uint32_t delay[2], freq[2], newval;
@@ -13183,6 +13228,13 @@ DEFINE_APITEST(dsack, sso_asc_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_inherit_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Set the delay to a new value for the ep.
+ * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: association inherits the new value.
+ */
 DEFINE_APITEST(dsack, sso_inherit_1_1)
 {
 	uint32_t delay[2], freq[2], newval;
@@ -13233,6 +13285,13 @@ DEFINE_APITEST(dsack, sso_inherit_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the delay to a new value for the ep.
+ * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: association inherits the new value.
+ */
 DEFINE_APITEST(dsack, sso_inherit_1_M)
 {
 	uint32_t delay[2], freq[2], newval;
@@ -13281,6 +13340,15 @@ DEFINE_APITEST(dsack, sso_inherit_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE dsack/sso_inherit_1_1
+ * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: Set the delay to a new value for the ep.
+ * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: association inherits the new value. Now
+ * TEST-DESCR: change the assocation value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint.
+ */
 DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
 {
 	uint32_t delay[3], freq[3], newval;
@@ -13356,6 +13424,15 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
 
 }
 
+/*
+ * TEST-TITLE dsack/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the delay to a new value for the ep.
+ * TEST-DESCR: create an association validate that it the
+ * TEST-DESCR: association inherits the new value. Now
+ * TEST-DESCR: change the assocation value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint.
+ */
 DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
 {
 	uint32_t delay[3], freq[3], newval;
@@ -13430,6 +13507,16 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
 	return retstring;
 }
 
+/*
+ * TEST-TITLE dsack/sso_inherit_1_M
+ * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: Set the delay to a new value for the ep.
+ * TEST-DESCR: create two associations validate that both
+ * TEST-DESCR: association inherit the new value. Now
+ * TEST-DESCR: change one assocation value, and validate
+ * TEST-DESCR: the new value is set but not in the endpoint or
+ * TEST-DESCR: other association.
+ */
 DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
 {
 	uint32_t delay[3], freq[3], newval;
