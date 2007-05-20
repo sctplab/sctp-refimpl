@@ -3922,7 +3922,6 @@ DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 	if (result < 0) {
 		return(strerror(errno));
 	}
- try_again:
 	num = sctp_getladdrs(fds[0], ids[0], &sa);
 	if(num < 0) {
 		retstring = "sctp_getladdr failed";
@@ -3930,16 +3929,18 @@ DEFINE_APITEST(setpeerprim, sso_1_M_good_peerprim)
 	}
 	if (num < 2) {
 		sctp_freeladdrs(sa);
+		retstring = "host is not multi-homed can't run test";
+		goto out;
+	}
+	cnt = 0;
+ try_again:
+	result = sctp_set_peer_prim(fds[0], ids[0],  sa);
+	if (result < 0) {
 		if(cnt < 1) {
 			sctp_delay(250);
 			cnt++;
 			goto try_again;
 		}
-		retstring = "host is not multi-homed can't run test";
-		goto out;
-	}
-	result = sctp_set_peer_prim(fds[0], ids[0],  sa);
-	if (result < 0) {
 		retstring = strerror(errno);
 	}
 	sctp_freeladdrs(sa);
@@ -11644,6 +11645,11 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_M)
  *
  ********************************************************/
 /* endpoint tests */
+/*
+ * TEST-TITLE authkey/gso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an endpoint
+ */
 DEFINE_APITEST(authkey, gso_def_1_1)
 {
 	int fd, result;
@@ -11665,6 +11671,11 @@ DEFINE_APITEST(authkey, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/gso_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an endpoint
+ */
 DEFINE_APITEST(authkey, gso_def_1_M)
 {
 	int fd, result;
@@ -11686,6 +11697,12 @@ DEFINE_APITEST(authkey, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can overwrite the endpoint default keynumber 0,
+ * TEST-DESCR: which should have been the NULL key
+ */
 DEFINE_APITEST(authkey, sso_def_1_1)
 {
 	int fd, result;
@@ -11709,6 +11726,12 @@ DEFINE_APITEST(authkey, sso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can overwrite the endpoint default keynumber 0,
+ * TEST-DESCR: which should have been the NULL key
+ */
 DEFINE_APITEST(authkey, sso_def_1_M)
 {
 	int fd, result;
@@ -11732,6 +11755,11 @@ DEFINE_APITEST(authkey, sso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_new_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can add a new endpoint keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_new_1_1)
 {
 	int fd, result;
@@ -11744,7 +11772,7 @@ DEFINE_APITEST(authkey, sso_new_1_1)
 	}
 	/* add a new key id */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -11755,6 +11783,11 @@ DEFINE_APITEST(authkey, sso_new_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_new_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new endpoint keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_new_1_M)
 {
 	int fd, result;
@@ -11767,7 +11800,7 @@ DEFINE_APITEST(authkey, sso_new_1_M)
 	}
 	/* add a new key id */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -11778,6 +11811,11 @@ DEFINE_APITEST(authkey, sso_new_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_newnul_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can add a new endpoint NULL keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_newnul_1_1)
 {
 	int fd, result;
@@ -11790,7 +11828,7 @@ DEFINE_APITEST(authkey, sso_newnul_1_1)
 	}
 	/* add a new NULL key id */
 	keylen = 0;
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, &keytext);
 	if (result < 0) {
 		close(fd);
@@ -11801,6 +11839,11 @@ DEFINE_APITEST(authkey, sso_newnul_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_newnul_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new endpoint NULL keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_newnul_1_M)
 {
 	int fd, result;
@@ -11813,7 +11856,7 @@ DEFINE_APITEST(authkey, sso_newnul_1_M)
 	}
 	/* add a new NULL key id */
 	keylen = 0;
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, &keytext);
 	if (result < 0) {
 		close(fd);
@@ -11825,6 +11868,11 @@ DEFINE_APITEST(authkey, sso_newnul_1_M)
 }
 
 /* assoc tests */
+/*
+ * TEST-TITLE authkey/gso_a_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an assoc
+ */
 DEFINE_APITEST(authkey, gso_a_def_1_1)
 {
 	int fd, fds[2], result;
@@ -11856,6 +11904,11 @@ DEFINE_APITEST(authkey, gso_a_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/gso_a_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot get the SCTP_AUTH_KEY option on an assoc
+ */
 DEFINE_APITEST(authkey, gso_a_def_1_M)
 {
 	int fds[2], result;
@@ -11886,6 +11939,13 @@ DEFINE_APITEST(authkey, gso_a_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can overwrite the assoc default keynumber 0,
+ * TEST-DESCR: which should have been the NULL key
+ * TEST-DESCR: and inherited from the endpoint
+ */
 DEFINE_APITEST(authkey, sso_a_def_1_1)
 {
 	int fd, fds[2], result;
@@ -11920,6 +11980,13 @@ DEFINE_APITEST(authkey, sso_a_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can overwrite the assoc default keynumber 0,
+ * TEST-DESCR: which should have been the NULL key
+ * TEST-DESCR: and inherited from the endpoint
+ */
 DEFINE_APITEST(authkey, sso_a_def_1_M)
 {
 	int fds[2], result;
@@ -11952,6 +12019,11 @@ DEFINE_APITEST(authkey, sso_a_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_new_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can add a new assoc keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_a_new_1_1)
 {
 	int fd, fds[2], result;
@@ -11970,7 +12042,7 @@ DEFINE_APITEST(authkey, sso_a_new_1_1)
 	}
 	/* add a new key id */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[1], 0, keyid, keylen,
 				   (uint8_t *)keytext);
 	if (result < 0) {
@@ -11986,6 +12058,11 @@ DEFINE_APITEST(authkey, sso_a_new_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_new_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new assoc keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_a_new_1_M)
 {
 	int fds[2], result;
@@ -12005,7 +12082,7 @@ DEFINE_APITEST(authkey, sso_a_new_1_M)
 	}
 	/* add a new key id */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen,
 				   (uint8_t *)keytext);
 	if (result < 0) {
@@ -12019,6 +12096,11 @@ DEFINE_APITEST(authkey, sso_a_new_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_newnul_1_1
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new assoc NULL keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_a_newnul_1_1)
 {
 	int fd, fds[2], result;
@@ -12037,7 +12119,7 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_1)
 	}
 	/* add a new NULL key id */
 	keylen = 0;
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[1], 0, keyid, keylen, &keytext);
 	if (result < 0) {
 		close(fd);
@@ -12052,6 +12134,11 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE authkey/sso_a_newnul_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new assoc NULL keynumber 0xFFFF
+ */
 DEFINE_APITEST(authkey, sso_a_newnul_1_M)
 {
 	int fds[2], result;
@@ -12071,7 +12158,7 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_M)
 	}
 	/* add a new NULL key id */
 	keylen = 0;
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen, &keytext);
 	if (result < 0) {
 		close(fds[0]);
@@ -12089,6 +12176,12 @@ DEFINE_APITEST(authkey, sso_a_newnul_1_M)
  * SCTP_AUTH_ACTIVE_KEY tests
  *
  ********************************************************/
+/*
+ * TEST-TITLE actkey/gso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can get the default active endpoint keynumber
+ * TEST-DESCR: which should be keynumber 0
+ */
 DEFINE_APITEST(actkey, gso_def_1_1)
 {
 	int fd, result;
@@ -12110,6 +12203,12 @@ DEFINE_APITEST(actkey, gso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/gso_def_1_M
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can get the default active endpoint keynumber
+ * TEST-DESCR: which should be keynumber 0
+ */
 DEFINE_APITEST(actkey, gso_def_1_M)
 {
 	int fd, result;
@@ -12131,6 +12230,11 @@ DEFINE_APITEST(actkey, gso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_def_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can set the default endpoint keynumber active again
+ */
 DEFINE_APITEST(actkey, sso_def_1_1)
 {
 	int fd, result;
@@ -12157,6 +12261,11 @@ DEFINE_APITEST(actkey, sso_def_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_def_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can set the default endpoint keynumber active again
+ */
 DEFINE_APITEST(actkey, sso_def_1_M)
 {
 	int fd, result;
@@ -12182,6 +12291,11 @@ DEFINE_APITEST(actkey, sso_def_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_inval_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you cannot set an unknown keynumber to be active
+ */
 DEFINE_APITEST(actkey, sso_inval_1_1)
 {
 	int fd, result;
@@ -12200,6 +12314,11 @@ DEFINE_APITEST(actkey, sso_inval_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_inval_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you cannot set an unknown keynumber to be active
+ */
 DEFINE_APITEST(actkey, sso_inval_1_M)
 {
 	int fd, result;
@@ -12218,6 +12337,12 @@ DEFINE_APITEST(actkey, sso_inval_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_new_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: you can add a new keynumber and set it active.
+ * TEST-DESCR: Validates you can also get the new active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_new_1_1)
 {
 	int fd, result;
@@ -12229,7 +12354,7 @@ DEFINE_APITEST(actkey, sso_new_1_1)
 		return (strerror(errno));
 	}
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -12251,6 +12376,12 @@ DEFINE_APITEST(actkey, sso_new_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_new_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: you can add a new keynumber and set it active.
+ * TEST-DESCR: Validates you can also get the new active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_new_1_M)
 {
 	int fd, result;
@@ -12262,7 +12393,7 @@ DEFINE_APITEST(actkey, sso_new_1_M)
 		return (strerror(errno));
 	}
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -12284,6 +12415,11 @@ DEFINE_APITEST(actkey, sso_new_1_M)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_inhdef_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: an assoc inherits the endpoint default active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_inhdef_1_1)
 {
 	int fd, fds[2], result;
@@ -12314,6 +12450,11 @@ DEFINE_APITEST(actkey, sso_inhdef_1_1)
 	return NULL;
 }
 
+/*
+ * TEST-TITLE actkey/sso_inhdef_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: an assoc inherits the endpoint default active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_inhdef_1_M)
 {
 	int fds[2], result;
@@ -12331,6 +12472,7 @@ DEFINE_APITEST(actkey, sso_inhdef_1_M)
 	if (result < 0) {
 		return "was unable to get ep active key";
 	}
+
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if (result < 0) {
 		close(fds[0]);
@@ -12351,6 +12493,11 @@ DEFINE_APITEST(actkey, sso_inhdef_1_M)
 	return (ret);
 }
 
+/*
+ * TEST-TITLE actkey/sso_inhnew_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: an assoc inherits the endpoint active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_inhnew_1_1)
 {
 	int fd, fds[2], result;
@@ -12363,8 +12510,9 @@ DEFINE_APITEST(actkey, sso_inhnew_1_1)
 	if (fd < 0) {
 		return (strerror(errno));
 	}
+	/* add a new key to the ep */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -12375,12 +12523,13 @@ DEFINE_APITEST(actkey, sso_inhnew_1_1)
 		close(fd);
 		return "was unable to set new key active";
 	}
-
+	/* create a new assoc */
 	result = sctp_socketpair_reuse(fd, fds, 1);
 	if (result < 0) {
 		close(fd);
 		return (strerror(errno));
 	}
+	/* verify the assoc inherits the ep active key */
 	result = sctp_get_active_key(fds[1], 0, &a_keyid);
 	if (result < 0) {
 		ret = "was unable to get active key";
@@ -12397,6 +12546,11 @@ DEFINE_APITEST(actkey, sso_inhnew_1_1)
 	return (ret);
 }
 
+/*
+ * TEST-TITLE actkey/sso_inhnew_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: an assoc inherits the endpoint active keynumber.
+ */
 DEFINE_APITEST(actkey, sso_inhnew_1_M)
 {
 	int fds[2], result;
@@ -12411,8 +12565,9 @@ DEFINE_APITEST(actkey, sso_inhnew_1_M)
 	if (fds[0] < 0) {
 		return (strerror(errno));
 	}
+	/* add a new key to the ep */
 	keylen = sizeof(keytext);
-	keyid = 1;
+	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
 				   (uint8_t *)keytext);
 	if (result < 0) {
@@ -12424,12 +12579,13 @@ DEFINE_APITEST(actkey, sso_inhnew_1_M)
 		close(fds[0]);
 		return "was unable to set new key active";
 	}
-
+	/* create a new assoc */
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if (result < 0) {
 		close(fds[0]);
 		return (strerror(errno));
 	}
+	/* verify the assoc inherits the ep active key */
 	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);
 	if (result < 0) {
 		ret = "was unable to get assoc active key";
@@ -12445,6 +12601,12 @@ DEFINE_APITEST(actkey, sso_inhnew_1_M)
 	return (ret);
 }
 
+/*
+ * TEST-TITLE actkey/sso_achg_1_1
+ * TEST-DESCR: Validates on a 1-1 model socket that
+ * TEST-DESCR: changing the assoc active keynumber leaves the ep active
+ * TEST-DESCR: keynumber the same.
+ */
 DEFINE_APITEST(actkey, sso_achg_1_1)
 {
 	int fd, fds[2], result;
@@ -12520,6 +12682,12 @@ DEFINE_APITEST(actkey, sso_achg_1_1)
 	return (ret);
 }
 
+/*
+ * TEST-TITLE actkey/sso_achg_1_M
+ * TEST-DESCR: Validates on a 1-many model socket that
+ * TEST-DESCR: changing the assoc active keynumber leaves the ep active
+ * TEST-DESCR: keynumber the same.
+ */
 DEFINE_APITEST(actkey, sso_achg_1_M)
 {
 	int fds[2], result;
@@ -12596,6 +12764,7 @@ DEFINE_APITEST(actkey, sso_achg_1_M)
 	close(fds[1]);
 	return (ret);
 }
+
 /********************************************************
  *
  * SCTP_AUTH_DELETE_KEY tests
@@ -14876,12 +15045,14 @@ DEFINE_APITEST(read, auth_p_chklist)
 	uint8_t buffer[260];
 	struct sctp_authchunks *auth;
 	socklen_t len;
+	int cnt = 0;
 
 	fds[0] = fds[1] = -1;
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if(result < 0) {
 		return(strerror(errno));		
 	}
+ try_again:
 	memset(buffer, 0, sizeof(buffer));
 	auth = (struct sctp_authchunks *)buffer;
 	auth->gauth_assoc_id = ids[0];
@@ -14893,8 +15064,6 @@ DEFINE_APITEST(read, auth_p_chklist)
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	close(fds[0]);
-	close(fds[1]);
 	j = len - sizeof(sctp_assoc_t);
 	if(j > 260)
 		j = 256;
@@ -14908,8 +15077,17 @@ DEFINE_APITEST(read, auth_p_chklist)
 		}
 	}
 	if ((asconf_ack == 0) || (asconf == 0)) {
+		if (cnt < 1) {
+			cnt++;
+			sctp_delay(SCTP_SLEEP_MS);
+			goto try_again;
+		}
+		close(fds[0]);
+		close(fds[1]);
 		return "Did not see ASCONF/ASCONF-ACK in list";
 	}
+	close(fds[0]);
+	close(fds[1]);
 	return NULL;
 }
 
