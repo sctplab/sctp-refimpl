@@ -8,6 +8,14 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+
+/*
+ * TEST-DESCR: rtoinfo/gso_1_1_defaults
+ * TEST-DESCR: will open a 1-1 socket, get the endpoint
+ * TEST-DESCR: rto info and validate it conforms
+ * TEST-DESCR: to recommended default values
+ * TEST-DESCR: found in rfc4960.
+ */
 DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 {
 	int fd, result;
@@ -29,6 +37,13 @@ DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_M_defaults
+ * TEST-DESCR: will open a 1-M socket, get the endpoint
+ * TEST-DESCR: rto info and validate it conforms
+ * TEST-DESCR: to recommended default values
+ * TEST-DESCR: found in rfc4960.
+ */
 DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 {
 	int fd, result;
@@ -50,6 +65,13 @@ DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_1_badid
+ * TEST-DESCR: will open a 1-1 socket, and attempt to
+ * TEST-DESCR: get association level rto information  using a bad 
+ * TEST-DESCR: association id. It expects the call to
+ * TEST-DESCR: fail.
+ */
 DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 {
 	int fd, result;
@@ -67,6 +89,13 @@ DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_M_badid
+ * TEST-DESCR: will open a 1-M socket, and attempt to
+ * TEST-DESCR: association level get rto information  using a bad 
+ * TEST-DESCR: association id. It expects the call to
+ * TEST-DESCR: fail.
+ */
 DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 {
 	int fd, result;
@@ -87,6 +116,13 @@ DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_1_good
+ * TEST-DESCR: will open a 1-1 socket, get the rto info
+ * TEST-DESCR: double it, and attempt to set the doubled
+ * TEST-DESCR: information back on the ep. It expects
+ * TEST-DESCR: the call to succeed
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_good)
 {
 	int fd, result;
@@ -126,6 +162,13 @@ DEFINE_APITEST(rtoinfo, sso_1_1_good)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_M_good
+ * TEST-DESCR: will open a 1-M socket, get the rto info
+ * TEST-DESCR: double it, and attempt to set the doubled
+ * TEST-DESCR: information back on the ep. It expects
+ * TEST-DESCR: the call to succeed
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_good)
 {
 	int fd, result;
@@ -165,6 +208,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_good)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_1_bad_id
+ * TEST-DESCR: will open a 1-1 socket, set rto information
+ * TEST-DESCR: using a bad association id. It expects the
+ * TEST-DESCR: call to fail.
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_bad_id)
 {
 	int fd, result;
@@ -190,6 +239,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_M_bad_id
+ * TEST-DESCR: will open a 1-M socket, set rto information
+ * TEST-DESCR: using a bad association id. It expects the
+ * TEST-DESCR: call to fail.
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 {
 	int fd, result;
@@ -218,6 +273,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_init
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_init)
 {
 	int fd, result;
@@ -258,6 +319,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_init)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_M_init
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_init)
 {
 	int fd, result;
@@ -298,6 +365,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_init)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_max
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_max)
 {
 	int fd, result;
@@ -338,6 +411,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_max)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_M_max
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_max)
 {
 	int fd, result;
@@ -378,6 +457,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_max)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_min
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_min)
 {
 	int fd, result;
@@ -418,6 +503,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_min)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_M_min
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_min)
 {
 	int fd, result;
@@ -458,6 +549,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_min)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_same
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_same)
 {
 	int fd, result;
@@ -487,6 +584,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_same)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_M_same
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_same)
 {
 	int fd, result;
@@ -516,6 +619,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_same)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_1
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_1)
 {
 	int fd, result;
@@ -544,6 +653,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_1)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_2
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_2)
 {
 	int fd, result;
@@ -572,6 +687,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_2)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_3
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_3)
 {
 	int fd, result;
@@ -599,6 +720,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_4
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_4)
 {
 	int fd, result;
@@ -626,6 +753,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_5
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_5)
 {
 	int fd, result;
@@ -653,6 +786,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_ill_6
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_ill_6)
 {
 	int fd, result;
@@ -680,6 +819,12 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_1_1_c_bad_id
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 {
 	int fd[2], result;
@@ -698,6 +843,12 @@ DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_c_bad_id
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 {
 	int fd[2], result;
@@ -725,6 +876,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_1_inherit
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 {
 	int cfd, afd, lfd, result;
@@ -824,6 +981,12 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/sso_1_M_inherit
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 {
 	int cfd, pfd, afd, lfd, result;
@@ -933,6 +1096,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_numbers_zero
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_numbers_zero)
 {
 	int fd, result;
@@ -952,6 +1121,12 @@ DEFINE_APITEST(assoclist, gso_numbers_zero)
 
 #define NUMBER_OF_ASSOCS 12
 
+/*
+ * TEST-DESCR: rtoinfo/gso_numbers_pos
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_numbers_pos)
 {
 	int fd, fds[NUMBER_OF_ASSOCS], result;
@@ -972,6 +1147,12 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 		return "Wrong number of associations";
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_ids_no_assoc
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 {
 	int fd, result;
@@ -993,6 +1174,12 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 		return "Wrong number of identifiers";
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_ids_buf_fit
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 {
 	int fd, fds[NUMBER_OF_ASSOCS], result;
@@ -1025,6 +1212,12 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 		return "Wrong number of identifiers";
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_ids_buf_large
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_ids_buf_large)
 {
 	int fd, fds[NUMBER_OF_ASSOCS + 1], result;
@@ -1057,6 +1250,12 @@ DEFINE_APITEST(assoclist, gso_ids_buf_large)
 		return "Wrong number of identifiers";
 }
 
+/*
+ * TEST-DESCR: rtoinfo/gso_ids_buf_small
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 DEFINE_APITEST(assoclist, gso_ids_buf_small)
 {
 	int fd, fds[NUMBER_OF_ASSOCS], result;
