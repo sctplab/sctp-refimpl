@@ -3547,7 +3547,13 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
  * SCTP_NODELAY tests
  *
  ********************************************************/
-
+/*
+ * TEST-DESCR: nodelay/gso_1_1_def_ndelay
+ * TEST-DESCR: Create a 1-1 socket, and get
+ * TEST-DESCR: the nodelay option. Validate that
+ * TEST-DESCR: it is off i.e.the Nagle algorithim is enabled by
+ * TEST-DESCR: default.
+ */
 DEFINE_APITEST(nodelay, gso_1_1_def_ndelay)
 {
 	uint32_t val;
@@ -3566,6 +3572,14 @@ DEFINE_APITEST(nodelay, gso_1_1_def_ndelay)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-DESCR: nodelay/gso_1_M_def_ndelay
+ * TEST-DESCR: Create a 1-M socket, and get
+ * TEST-DESCR: the nodelay option. Validate that
+ * TEST-DESCR: it is off i.e.the Nagle algorithim is enabled by
+ * TEST-DESCR: default.
+ */
 DEFINE_APITEST(nodelay, gso_1_M_def_ndelay)
 {
 	uint32_t val;
@@ -3584,6 +3598,13 @@ DEFINE_APITEST(nodelay, gso_1_M_def_ndelay)
 	}
 	return NULL;
 }
+
+/*
+ * TEST-DESCR: nodelay/gso_1_1_set_ndelay
+ * TEST-DESCR: Create a 1-1 socket, and change
+ * TEST-DESCR: the nodelay option. Validate that
+ * TEST-DESCR: it changes correctly.
+ */
 DEFINE_APITEST(nodelay, gso_1_1_set_ndelay)
 {
 	uint32_t val[3];
@@ -3615,6 +3636,12 @@ DEFINE_APITEST(nodelay, gso_1_1_set_ndelay)
 	return NULL;
 }
 
+/*
+ * TEST-DESCR: nodelay/gso_1_M_set_ndelay
+ * TEST-DESCR: Create a 1-M socket, and change
+ * TEST-DESCR: the nodelay option. Validate that
+ * TEST-DESCR: it changes correctly.
+ */
 DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
 {
 	uint32_t val[3];
@@ -3651,6 +3678,12 @@ DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
  * SCTP_autoclose tests
  *
  ********************************************************/
+/*
+ * TEST-DESCR: autoclose/gso_1_1_def_autoclose
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ * TEST-DESCR: 
+ */
 
 DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 {
