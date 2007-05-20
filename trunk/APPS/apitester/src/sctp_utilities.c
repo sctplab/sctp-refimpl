@@ -1214,7 +1214,7 @@ sctp_enable_v6_only(int fd)
 	socklen_t length;
 	
 	length = (socklen_t)sizeof(int);
-	return (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &on, length));
+	return (setsockopt(fd, IPPROTO_IPV6, IPV6_BINDV6ONLY, &on, length));
 }
 
 int
@@ -1224,7 +1224,7 @@ sctp_v6_only_enabled(int fd)
 	socklen_t length;
 	
 	length = (socklen_t)sizeof(int);
-	getsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &onoff, &length);
+	getsockopt(fd, IPPROTO_IPV6, IPV6_BINDV6ONLY, &onoff, &length);
 	return (onoff);
 }
 
