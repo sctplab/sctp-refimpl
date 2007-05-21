@@ -29,4 +29,5 @@
 - Fragment interleave level set to wrong default value.
 - Fragment interleave could not set level 0.
 - Defered stream reset was broken due to a guard check and ntohl issue.
+- Found two lock order reversals and fixed.
 
