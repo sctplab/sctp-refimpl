@@ -1146,22 +1146,22 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-			SCTP_INP_INFO_RUNLOCK();
-			return (NULL);
+			continue;
 		}
-		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		if(want_lock) {
+			SCTP_TCB_LOCK(stcb);
+		}
 		if (stcb->asoc.assoc_id == id) {
 			/* candidate */
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
 			if (inp != stcb->sctp_ep) {
 				/*
 				 * some other guy has the same id active (id
 				 * collision ??).
 				 */
-				SCTP_TCB_UNLOCK(stcb);
+				if(want_lock) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				continue;
 			}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1169,8 +1169,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 #endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
+		} else {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		}
-		SCTP_TCB_UNLOCK(stcb);
+		if(want_lock) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
