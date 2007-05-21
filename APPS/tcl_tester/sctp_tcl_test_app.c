@@ -150,7 +150,7 @@ uint32_t dgram_id_counter = 0;
 void
 print_stats()
 {
-	printf("Rcvd data:%d Snd/Rcv pings:%d Sent:%d Notify's:%d msg_w_weor:%d\n",
+	printf("Rcvd data:%d Sent:%d ping resp,  Sent:%d unsol, Notify's:%d msg_w_weor:%d\n",
 	       msg_in_cnt, sends_ping_resp, sends_out, notify_in_cnt, msg_in_cnt_weor);
 }
 
@@ -474,6 +474,8 @@ setup_a_socket()
 	return (sd);
 }
 
+int do_not_respond = 0;
+
 void
 handle_read_event(int *notDone, int sd)
 {
@@ -506,7 +508,7 @@ handle_read_event(int *notDone, int sd)
 				printf("msg count now %d\n", msg_in_cnt);
 			}
 		}
-		if(rcv->type == SCTP_TEST_LOOPREQ) {
+		if ((rcv->type == SCTP_TEST_LOOPREQ) && (do_not_respond == 0)) {
 			rcv->type = SCTP_TEST_LOOPRESP;
 			if (verbose) {
 				printf("Send loop response of size %d\n", ret);
@@ -515,9 +517,8 @@ handle_read_event(int *notDone, int sd)
 			respmsg = sctp_send(sd, receive_buffer, ret, &sinfo_in, 0);
 			if(respmsg < 0) {
 				print_stats();
-				printf("Got error on sctp_send:%d (loop response) - next socket\n", errno);
-				print_stats();
-				*notDone = 0;
+				printf("sctp_send error:%d - enter silent mode until comm-lost\n", errno);
+				do_not_respond = 1;
 				return;
 			}
 		} 
@@ -771,6 +772,7 @@ main (int argc, char **argv)
 		if(mydelay)
 			sleep(mydelay);
 		notDone = 1;
+		do_not_respond = 0;
 		msg_in_cnt = msg_in_cnt_weor = notify_in_cnt = sends_out = sends_ping_resp = 0;
 	}
 }
