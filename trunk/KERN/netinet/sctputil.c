@@ -6278,10 +6278,13 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			/* we are done */
 			break;
 		}
+		SCTP_INP_INCR_REF(inp);
 		stcb = sctp_findassociation_ep_addr(&inp, sa, NULL, NULL, NULL);
 		if (stcb != NULL) {
 			/* Already have or am bring up an association */
 			return (stcb);
+		} else {
+			SCTP_INP_DECR_REF(inp);
 		}
 		if ((at + incr) > limit) {
 			*totaddr = i;
