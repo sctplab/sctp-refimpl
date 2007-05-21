@@ -906,6 +906,16 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (inp == 0)
 		return EINVAL;
 
+	if(addr) {
+		if((addr->sa_family == AF_INET6) && 
+		   (addr->sa_len != sizeof(struct sockaddr_in6))) {
+			return EINVAL;
+		}
+		if((addr->sa_family == AF_INET) && 
+		   (addr->sa_len != sizeof(struct sockaddr_in))) {
+			return EINVAL;
+		}
+	}
 	inp6 = (struct in6pcb *)inp;
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	inp6->inp_vflag &= ~INP_IPV4;
@@ -1448,6 +1458,24 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
+	}
+	if(addr == NULL) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		splx(s);
+#endif
+		return (EINVAL);
+	}
+	if ((addr->sa_family == AF_INET6) && (addr->sa_len != sizeof(struct sockaddr_in6))) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		splx(s);
+#endif
+		return (EINVAL);
+	}
+	if ((addr->sa_family == AF_INET) && (addr->sa_len != sizeof(struct sockaddr_in))) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		splx(s);
+#endif
+		return (EINVAL);
 	}
 
 	vrf_id = inp->def_vrf_id;
