@@ -330,23 +330,8 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    &abort_flag, (struct sctp_chunkhdr *)cp);
 	if (abort_flag) {
 		/* Send an abort and notify peer */
-		if (op_err != NULL) {
-			sctp_send_operr_to(m, iphlen, op_err,
-					   cp->init.initiate_tag, vrf_id,
-					   table_id);
-		} else {
-			/*
-			 * Just notify (abort_assoc does this if we send an
-			 * abort).
-			 */
-			sctp_abort_notification(stcb, 0);
-			/*
-			 * No sense in further INIT's since we will get the
-			 * same param back
-			 */
-			sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_3);
-			*abort_no_unlock = 1;
-		}
+		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_CAUSE_PROTOCOL_VIOLATION, op_err);
+		*abort_no_unlock = 1;
 		return (-1);
 	}
 	asoc = &stcb->asoc;
@@ -3485,6 +3470,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 	/* validate chunk header length... */
 	if (ntohs(ch->chunk_length) < sizeof(*ch)) {
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Invalid header length %d\n",
+			ntohs(ch->chunk_length));
 		return (NULL);
 	}
 	/*
@@ -3496,6 +3483,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		SCTP_TCB_LOCK_ASSERT(locked_tcb);
 	}
 	if (ch->chunk_type == SCTP_INITIATION) {
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Its an INIT of len:%d vtag:%x\n",
+			ntohs(ch->chunk_length), vtag_in);
 		if (vtag_in != 0) {
 			/* protocol error- silently discard... */
 			SCTP_STAT_INCR(sctps_badvtag);
