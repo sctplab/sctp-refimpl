@@ -2174,7 +2174,14 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
+
+			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK((*stcb));
+
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
+			SCTP_TCB_LOCK((*stcb));
+			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
+
 
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.

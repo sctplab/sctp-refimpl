@@ -1348,7 +1348,11 @@ sctp_auth_setactivekey(struct sctp_tcb *stcb, uint16_t keyid)
 	skey = sctp_find_sharedkey(&stcb->asoc.shared_keys, keyid);
 	if (skey == NULL) {
 		/* if not on the assoc, find the key on the endpoint */
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_RLOCK(stcb->sctp_ep);
+		SCTP_TCB_LOCK(stcb);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		skey = sctp_find_sharedkey(&stcb->sctp_ep->sctp_ep.shared_keys,
 		    keyid);
 		using_ep_key = 1;
