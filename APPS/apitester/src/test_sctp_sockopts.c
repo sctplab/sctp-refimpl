@@ -4448,8 +4448,8 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 		setit = sa;
 	}
 	/* now do the set */
- set_again:
 	cnt = 0;
+ set_again:
 	result = sctp_set_primary(fds[0], ids[0], setit);
 	if (result < 0) {
 		retstring = strerror(errno);
