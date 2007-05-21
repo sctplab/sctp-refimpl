@@ -32,3 +32,5 @@
 - Found two lock order reversals and fixed.
 - Tighten up address checking, if the user gives an address the sa_len
   had better be set properly.
+- Get asoc by assoc-id would return a locked tcb when it was asked
+  not to if the tcb was in the restart hash.
