@@ -326,8 +326,10 @@ __get_assoc_id (int fd, struct sockaddr *addr)
 	struct sctp_paddrinfo sp;
 	socklen_t siz;
 	socklen_t sa_len;
+	int cnt = 0;
 
 	/* First get the assoc id */
+ try_again:
 	siz = sizeof(sp);
 	memset(&sp,0,sizeof(sp));
 	if(addr->sa_family == AF_INET) {
@@ -340,11 +342,15 @@ __get_assoc_id (int fd, struct sockaddr *addr)
 	memcpy((caddr_t)&sp.spinfo_address, addr, sa_len);
 	if(getsockopt(fd, IPPROTO_SCTP, SCTP_GET_PEER_ADDR_INFO,
 		      &sp, &siz) != 0) {
+		if (cnt < 1) {
+			cnt++;
+			sctp_delay(SCTP_SLEEP_MS);
+			goto try_again;
+		}
 		return ((sctp_assoc_t)0);
 	}
 	/* BSD: We depend on the fact that 0 can never be returned */
 	return (sp.spinfo_assoc_id);
-
 }
 
 
@@ -387,9 +393,6 @@ sctp_one2many(unsigned short port, int bindall)
 /* If fds[0] != -1 its a valid 1-2-M socket already open
  * that is to be used with the new association 
  */
-
-
-
 int 
 sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids, int bindall)
 {
@@ -397,6 +400,8 @@ sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids, int bindall)
 	struct sockaddr_in addr;
 	socklen_t addr_len;
 	int set=0;
+	sctp_assoc_t aid;
+
 	fd = sctp_one2many(0, bindall);
 	if (fd == -1) {
 		printf("Can't get socket\n");
@@ -421,7 +426,7 @@ sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids, int bindall)
 	if (bindall) {
 		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	}
-	if (sctp_connectx(fds[0], (struct sockaddr *) &addr, 1, NULL) < 0) {
+	if (sctp_connectx(fds[0], (struct sockaddr *) &addr, 1, &aid) < 0) {
 		close(fd);
 		if(set)
 			close(fds[0]);
@@ -432,7 +437,7 @@ sctp_socketpair_1tom(int *fds, sctp_assoc_t *ids, int bindall)
 	if(ids == NULL)
 		return 0;
 
-	ids[0] = __get_assoc_id (fds[0], (struct sockaddr *)&addr);
+	ids[0] = aid;
 
 	if (getsockname (fds[0], (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
