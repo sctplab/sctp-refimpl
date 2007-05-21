@@ -2631,7 +2631,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				  priv_check_cred(p->td_ucred,
 						  PRIV_NETINET_RESERVEDPORT,
 						  SUSER_ALLOWJAIL
-						  )
+					  )
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else
@@ -2744,7 +2744,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				  priv_check_cred(p->td_ucred,
 						  PRIV_NETINET_RESERVEDPORT,
 						  SUSER_ALLOWJAIL
-						  )
+					  )
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else

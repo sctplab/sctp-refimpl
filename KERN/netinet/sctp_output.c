@@ -10984,6 +10984,20 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 	}
+	/* Pre-screen address, if one is given the sin-len
+	 * must be set correctly!
+	 */
+	if (addr) {
+		if ((addr->sa_family == AF_INET)  &&
+		    (addr->sa_len != sizeof(struct sockaddr_in))) {
+			error = EINVAL;
+			goto out_unlocked;
+		} else if ((addr->sa_family == AF_INET6)  &&
+			   (addr->sa_len != sizeof(struct sockaddr_in6))) {
+			error = EINVAL;
+			goto out_unlocked;
+		}
+	}
 #ifdef __Panda__
 	if (i_control) {
 		control = SCTP_HEADER_TO_CHAIN(i_control);

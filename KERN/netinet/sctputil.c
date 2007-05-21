@@ -6238,7 +6238,7 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 struct sctp_tcb *
 sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			  int *totaddr, int *num_v4, int *num_v6, int *error,
-			  int limit) 
+			  int limit, int *bad_addr) 
 {
 	struct sockaddr *sa;
 	struct sctp_tcb *stcb=NULL;
@@ -6251,6 +6251,11 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 		if (sa->sa_family == AF_INET) {
 			(*num_v4) += 1;
 			incr = sizeof(struct sockaddr_in);
+			if(sa->sa_len != incr) {
+				*error = EINVAL;
+				*bad_addr = 1;
+				return (NULL);
+			}
 		} else if (sa->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 
@@ -6258,10 +6263,16 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 				/* Must be non-mapped for connectx */
 				*error = EINVAL;
+				*bad_addr = 1;
 				return (NULL);
 			}
 			(*num_v6) += 1;
 			incr = sizeof(struct sockaddr_in6);
+			if(sa->sa_len != incr) {
+				*error = EINVAL;
+				*bad_addr = 1;
+				return (NULL);
+			}
 		} else {
 			*totaddr = i;
 			/* we are done */
