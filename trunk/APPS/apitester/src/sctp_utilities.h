@@ -29,6 +29,12 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
+#ifdef __Panda__
+#ifndef INADDR_LOOPBACK
+#define INADDR_LOOPBACK (uint32_t)0x01010101
+#endif
+#endif
+
 #define SCTP_SLEEP_MS	100
 void sctp_delay(int ms);
 
