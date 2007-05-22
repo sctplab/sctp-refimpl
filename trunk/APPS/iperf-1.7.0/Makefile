@@ -4,12 +4,13 @@
 #
 # by Mark Gates <mgates@nlanr.net>
 # October 1999
-# $Id: Makefile,v 1.1.1.1 2004-06-23 13:07:31 randall Exp $
+# $Id: Makefile,v 1.2 2007-05-22 21:24:53 randall Exp $
 
 SHELL = /bin/sh
 
 TOP = .
-
+CFLAGS= -g
+CXXFLAGS= -g
 ##################################################
 # files
 

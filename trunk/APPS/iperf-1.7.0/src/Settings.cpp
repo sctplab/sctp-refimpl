@@ -157,7 +157,7 @@ const struct option env_options[] =
 
 #define SHORT_OPTIONS()
 
-const char short_options[] = "b:c:df:hi:l:mn:o:p:rst:uvw:B:CDF:IL:M:NP:RS:T:VWX";
+const char short_options[] = "b:c:df:hi:l:mn:o:p:rst:uvw:B:CDF:IL:M:NP:RS:T:VWXe";
 
 /* -------------------------------------------------------------------
  * defaults
@@ -216,7 +216,7 @@ Settings::Settings( ext_Settings *main ) {
     mExtSettings->mTTL        = 1;             // -T,  link-local TTL
     mExtSettings->mDomain     = kMode_IPv4;    // -V,
     mExtSettings->mSuggestWin = false;         // -W,  Suggest the window size.
-
+    mExtSettings->mEmulation = false;	       // -e turns on mode
     mExtSettings->mStdout = true;              // default stdout
 
 
@@ -542,7 +542,9 @@ void Settings::Interpret( char option, const char *optarg ) {
          case 'X':
 	   mExtSettings->mProtocol = IPPROTO_SCTP;
 	   break;
-
+         case 'e':
+            mExtSettings->mEmulation = true;
+	    break;
         default: // ignore unknown
             break;
     }

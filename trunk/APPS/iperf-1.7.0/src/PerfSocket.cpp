@@ -529,39 +529,68 @@ void PerfSocket::Sig_Interupt( int inSigno ) {
  * ------------------------------------------------------------------- */
 
 void PerfSocket::SetSocketOptions( void ) {
-    // set the TCP window size (socket buffer sizes)
-    // also the UDP buffer size
-    // must occur before call to accept() for large window sizes
-    set_tcp_windowsize( mSock, mSettings->mTCPWin );
+  // set the TCP window size (socket buffer sizes)
+  // also the UDP buffer size
+  // must occur before call to accept() for large window sizes
+  set_tcp_windowsize( mSock, mSettings->mTCPWin );
 
 #ifdef IP_TOS
 
-    // set IP TOS (type-of-service) field
-    if ( mSettings->mTOS > 0 ) {
-        int  tos = mSettings->mTOS;
-        Socklen_t len = sizeof(tos);
-        int rc = setsockopt( mSock, IPPROTO_IP, IP_TOS,
-                             (char*) &tos, len );
-        FAIL_errno( rc == SOCKET_ERROR, "setsockopt IP_TOS" );
-    }
+  // set IP TOS (type-of-service) field
+  if ( mSettings->mTOS > 0 ) {
+    int  tos = mSettings->mTOS;
+    Socklen_t len = sizeof(tos);
+    int rc = setsockopt( mSock, IPPROTO_IP, IP_TOS,
+			 (char*) &tos, len );
+    FAIL_errno( rc == SOCKET_ERROR, "setsockopt IP_TOS" );
+  }
 #endif
 
-    if ( ! mUDP ) {
-        // set the TCP maximum segment size
-        setsock_tcp_mss( mSock, mSettings->mMSS );
+  if ( ! mUDP ) {
+    // set the TCP maximum segment size
+    if(mSettings->mProtocol != IPPROTO_SCTP) {
+      setsock_tcp_mss( mSock, mSettings->mMSS );
 
 #ifdef TCP_NODELAY
 
-        // set TCP nodelay option
-        if ( mSettings->mNodelay ) {
-            int nodelay = 1;
-            Socklen_t len = sizeof(nodelay);
-            int rc = setsockopt( mSock, IPPROTO_TCP, TCP_NODELAY,
-                                 (char*) &nodelay, len );
-            FAIL_errno( rc == SOCKET_ERROR, "setsockopt TCP_NODELAY" );
-        }
+      // set TCP nodelay option
+      if ( mSettings->mNodelay ) {
+	int nodelay = 1;
+	Socklen_t len = sizeof(nodelay);
+	int rc = setsockopt( mSock, IPPROTO_TCP, TCP_NODELAY,
+			     (char*) &nodelay, len );
+	FAIL_errno( rc == SOCKET_ERROR, "setsockopt TCP_NODELAY" );
+      }
 #endif
+    } else {
+      mSettings->mMSS  = getsock_sctp_mss( mSock );
+
+#ifdef SCTP_NODELAY
+      // set TCP nodelay option
+      if ( mSettings->mNodelay ) {
+	int nodelay = 1;
+	Socklen_t len = sizeof(nodelay);
+	int rc = setsockopt( mSock, IPPROTO_SCTP, SCTP_NODELAY,
+			     (char*) &nodelay, len );
+	FAIL_errno( rc == SOCKET_ERROR, "setsockopt SCTP_NODELAY" );
+      }
+#endif
+#if defined(SCTP_PARTIAL_DELIVERY_POINT) && defined(SCTP_EXPLICIT_EOR)
+      if(mSettings->mEmulation == true) {
+	int rc;
+	int val=1;
+	Socklen_t len = sizeof(int);
+	rc = setsockopt( mSock, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT,
+			     (char*) &val, len );
+	FAIL_errno( rc == SOCKET_ERROR, "setsockopt SCTP_PARTIAL_DELIVERY_POINT" );
+	rc = setsockopt( mSock, IPPROTO_SCTP, SCTP_EXPLICIT_EOR,
+			   (char*) &val, len );
+	FAIL_errno( rc == SOCKET_ERROR, "setsockopt SCTP_EXPLICT_EOR" );
+      }
+#endif
+
     }
+  }
 }
 // end SetSocketOptions
 
