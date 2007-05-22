@@ -54,6 +54,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.22 2007/05/17 12:16:24 r
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_output.h>
+#include <netinet/sctp_bsd_addr.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
@@ -170,7 +171,7 @@ sctp6_input(i_pak, offp, proto)
 	}
 
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
-    pkt_len = SCTP_HEADER_LEN((*i_pak));
+	pkt_len = SCTP_HEADER_LEN((*i_pak));
 #ifdef __Panda__
     /* We dont need the pak hdr, free it */
 	/* For BSD/MAC this does nothing */
@@ -178,6 +179,9 @@ sctp6_input(i_pak, offp, proto)
 	(void)SCTP_RELEASE_HEADER(*i_pak);
 #endif
 
+#ifdef  SCTP_PACKET_LOGGING
+	sctp_packet_log(m, pkt_len);
+#endif
 	ip6 = mtod(m, struct ip6_hdr *);
 	/* Ensure that (sctphdr + sctp_chunkhdr) in a row. */
 	IP6_EXTHDR_GET(sh, struct sctphdr *, m, off,

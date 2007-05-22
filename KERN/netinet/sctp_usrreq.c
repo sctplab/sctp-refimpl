@@ -52,6 +52,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.27 2007/05/17 12:16:24 rrs
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
+#include <netinet/sctp_bsd_addr.h>
+
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
@@ -1885,7 +1887,20 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(val);
 		}
 		break;
+        case SCTP_GET_PACKET_LOG:
+	{
+#ifdef  SCTP_PACKET_LOGGING
+		uint8_t *target;
+		int ret;
 
+		SCTP_CHECK_AND_CAST(target, optval, uint8_t, *optsize);
+		ret = sctp_copy_out_packet_log(target , (int)*optsize);
+		*optsize = ret;
+#else
+		error = EOPNOTSUPP;
+#endif
+		break;
+	}
 	case SCTP_PARTIAL_DELIVERY_POINT:
 		{
 			uint32_t *value;

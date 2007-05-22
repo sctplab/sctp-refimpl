@@ -46,7 +46,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.27 2007/05/17 12:16:24 rrs 
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
-
+#include <netinet/sctp_bsd_addr.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -4839,6 +4839,10 @@ sctp_input(i_pak, va_alist)
 	net = NULL;
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
+
+#ifdef  SCTP_PACKET_LOGGING
+	sctp_packet_log(m, mlen);
+#endif
 
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */

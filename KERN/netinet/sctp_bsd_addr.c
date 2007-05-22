@@ -420,3 +420,141 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 #endif
 	return (m);
 }
+
+
+#ifdef SCTP_PACKET_LOGGING
+
+int packet_log_pos=0;
+int packet_log_start=0;
+int packet_log_end=0;
+int packet_log_old_end=SCTP_PACKET_LOG_SIZE;
+int packet_log_wrapped = 0;
+uint8_t packet_log_buffer[SCTP_PACKET_LOG_SIZE];
+
+
+void
+sctp_packet_log(struct mbuf *m, int length)
+{
+	int *lenat, needed, thisone;
+	void *copyto;
+	uint32_t *tick_tock;
+	int total_len, spare;
+	total_len = SCTP_SIZE32((length + (2 * sizeof(int))));
+	/* Log a packet to the buffer. */
+	if (total_len> SCTP_PACKET_LOG_SIZE) {
+		/* Can't log this packet I have not a buffer big enough */
+		return;
+	}
+	printf("Put in %d bytes -pkt log\n", total_len);
+	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
+		/* it won't fit on the end. 
+		 * We must go back to the beginning.
+		 * To do this we go back and cahnge packet_log_start.
+		 */
+		printf("Won't fit in end:%d to eob\n", packet_log_end);
+		lenat = (int *)packet_log_buffer;
+		if(packet_log_start > packet_log_end) {
+			/* calculate the head room */
+			spare = (int)((caddr_t)&packet_log_buffer[packet_log_start] -
+				      (caddr_t)&packet_log_buffer);
+		} else {
+			spare = 0;
+		}
+		printf("spare is %d\n", spare);
+		needed = total_len - spare;
+		packet_log_wrapped = 1;
+		packet_log_old_end = packet_log_end;
+		/* Now update the start */
+		while (needed > 0) {
+			thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
+			needed -= thisone;
+			/* move to next one */
+			printf("Move start up from %d by %d\n",
+			       packet_log_start, thisone);
+			packet_log_start += thisone;
+			if(packet_log_start >= packet_log_old_end) {
+				/* the front one is the start now */
+				printf("at old end start at beginning now\n");
+				packet_log_start = 0;
+				break;
+			}
+		} 
+	} else {
+		printf("append at the end %d\n", packet_log_end);
+		lenat = (int *)&packet_log_buffer[packet_log_end];
+		if (packet_log_start > packet_log_end) {
+			printf("Start:%d is larger\n", packet_log_start);
+			if ((packet_log_end + total_len) > packet_log_start) {
+				needed = total_len - ((packet_log_start - packet_log_end));
+				printf("Need to move forward start by at least %d bytes\n", needed);
+				while (needed > 0) {
+					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
+					needed -= thisone;
+					/* move to next one */
+					printf("Start moves up from %d by %d 2\n", packet_log_start, thisone);
+					packet_log_start += thisone;
+					if(packet_log_wrapped && (packet_log_start >= packet_log_old_end) ){
+						packet_log_start = 0;
+						printf("wrapped to top\n");
+						break;
+					}
+				}
+			}
+		}
+	}
+	copyto = (void *)lenat;
+
+	packet_log_end = (((caddr_t)copyto + total_len) - (caddr_t)packet_log_buffer);
+	lenat = (int *)copyto;
+	*lenat = total_len;
+	lenat++;
+	tick_tock = (uint32_t *)lenat;
+	*tick_tock = sctp_get_tick_count();
+	tick_tock++;
+	copyto = (void *)tick_tock;
+	m_copydata(m, 0, length,(caddr_t)copyto);
+}
+
+
+int
+sctp_copy_out_packet_log(uint8_t *target , int length)
+{
+	/* We wind through the packet log starting at
+	 * start copying up to length bytes out.
+	 * We return the number of bytes copied.
+	 */
+	int tocopy, this_copy, copied=0;
+	void *at;
+	tocopy = length;
+	if(packet_log_start == packet_log_end) {
+		/* no data */
+		return (0);
+	}
+	if (packet_log_start > packet_log_end) {
+		/* we have a wrapped buffer, we
+		 * must copy from start to the old end.
+		 * Then copy from the top of the buffer
+		 * to the end.
+		 */
+		at = (void *)&packet_log_buffer[packet_log_start];
+		this_copy = min(tocopy, (packet_log_old_end - packet_log_start));
+		memcpy(target, at, this_copy);
+		tocopy -= this_copy;
+		copied += this_copy;
+		if(tocopy == 0)
+			return (copied);
+		this_copy = min(tocopy, packet_log_end);
+		at = (void *)&packet_log_buffer;
+		memcpy(&target[copied], at, this_copy);
+		copied += this_copy;
+		return(copied);
+	} else {
+		/* we have one contiguous buffer */
+		at = (void *)&packet_log_buffer;
+		this_copy = min(length, packet_log_end);
+		memcpy(target, at, this_copy);
+		return (this_copy);
+	}
+}
+
+#endif
