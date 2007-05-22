@@ -75,5 +75,6 @@ main(int argc, char **argv)
 		header = (struct sctp_packet_log *)(&buf[at]);
 	}
 	printf("Done\n");
+	return (0);
 }
 
