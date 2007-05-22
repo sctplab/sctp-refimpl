@@ -445,13 +445,11 @@ sctp_packet_log(struct mbuf *m, int length)
 		/* Can't log this packet I have not a buffer big enough */
 		return;
 	}
-	printf("Put in %d bytes -pkt log\n", total_len);
 	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
 		/* it won't fit on the end. 
 		 * We must go back to the beginning.
 		 * To do this we go back and cahnge packet_log_start.
 		 */
-		printf("Won't fit in end:%d to eob\n", packet_log_end);
 		lenat = (int *)packet_log_buffer;
 		if(packet_log_start > packet_log_end) {
 			/* calculate the head room */
@@ -460,7 +458,6 @@ sctp_packet_log(struct mbuf *m, int length)
 		} else {
 			spare = 0;
 		}
-		printf("spare is %d\n", spare);
 		needed = total_len - spare;
 		packet_log_wrapped = 1;
 		packet_log_old_end = packet_log_end;
@@ -469,33 +466,25 @@ sctp_packet_log(struct mbuf *m, int length)
 			thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 			needed -= thisone;
 			/* move to next one */
-			printf("Move start up from %d by %d\n",
-			       packet_log_start, thisone);
 			packet_log_start += thisone;
 			if(packet_log_start >= packet_log_old_end) {
 				/* the front one is the start now */
-				printf("at old end start at beginning now\n");
 				packet_log_start = 0;
 				break;
 			}
 		} 
 	} else {
-		printf("append at the end %d\n", packet_log_end);
 		lenat = (int *)&packet_log_buffer[packet_log_end];
 		if (packet_log_start > packet_log_end) {
-			printf("Start:%d is larger\n", packet_log_start);
 			if ((packet_log_end + total_len) > packet_log_start) {
 				needed = total_len - ((packet_log_start - packet_log_end));
-				printf("Need to move forward start by at least %d bytes\n", needed);
 				while (needed > 0) {
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
 					/* move to next one */
-					printf("Start moves up from %d by %d 2\n", packet_log_start, thisone);
 					packet_log_start += thisone;
 					if(packet_log_wrapped && (packet_log_start >= packet_log_old_end) ){
 						packet_log_start = 0;
-						printf("wrapped to top\n");
 						break;
 					}
 				}
