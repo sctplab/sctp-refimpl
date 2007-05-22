@@ -424,7 +424,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 
 #ifdef SCTP_PACKET_LOGGING
 
-int packet_log_pos=0;
 int packet_log_start=0;
 int packet_log_end=0;
 int packet_log_old_end=SCTP_PACKET_LOG_SIZE;
@@ -470,21 +469,28 @@ sctp_packet_log(struct mbuf *m, int length)
 			if(packet_log_start >= packet_log_old_end) {
 				/* the front one is the start now */
 				packet_log_start = 0;
+				packet_log_old_end = packet_log_end;
+				packet_log_wrapped = 0;
 				break;
 			}
 		} 
+
 	} else {
 		lenat = (int *)&packet_log_buffer[packet_log_end];
 		if (packet_log_start > packet_log_end) {
 			if ((packet_log_end + total_len) > packet_log_start) {
+				/* Now need to update killing some packets  */
 				needed = total_len - ((packet_log_start - packet_log_end));
 				while (needed > 0) {
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
 					/* move to next one */
 					packet_log_start += thisone;
-					if(packet_log_wrapped && (packet_log_start >= packet_log_old_end) ){
+					if( ((packet_log_start+sizeof(struct ip)) > SCTP_PACKET_LOG_SIZE) ||
+					    (packet_log_wrapped && (packet_log_start >= packet_log_old_end))){
 						packet_log_start = 0;
+						packet_log_old_end = packet_log_end;
+						packet_log_wrapped = 0;
 						break;
 					}
 				}
@@ -519,7 +525,7 @@ sctp_copy_out_packet_log(uint8_t *target , int length)
 		/* no data */
 		return (0);
 	}
-	if (packet_log_start > packet_log_end) {
+	if (packet_log_wrapped) {
 		/* we have a wrapped buffer, we
 		 * must copy from start to the old end.
 		 * Then copy from the top of the buffer
