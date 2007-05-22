@@ -14,7 +14,7 @@ hostname = stewlap
 uname -m = i386
 uname -r = 7.0-CURRENT
 uname -s = FreeBSD
-uname -v = FreeBSD 7.0-CURRENT #108: Mon Mar 19 07:18:19 EDT 2007     rrs@stewlap:/usr/src/sys/i386/compile/ibmlap 
+uname -v = FreeBSD 7.0-CURRENT #20: Sat May  5 08:46:00 EDT 2007     rrs@stewlap:/usr/src/sys/i386/compile/ibmlap 
 
 /usr/bin/uname -p = i386
 /bin/uname -X     = unknown

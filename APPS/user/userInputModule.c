@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.100 2007-05-19 10:42:05 tuexen Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.101 2007-05-22 21:24:54 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -204,6 +204,8 @@ static int cmd_streamreset(char *argv[], int argc);
 static int cmd_deliverydump(char *argv[], int argc);
 static int cmd_sendsent(char *argv[], int argc);
 static int cmd_getroute(char *argv[], int argc);
+
+static int cmd_savepacketlog(char *argv[], int argc);
 
 
 static int cmd_setpdapi(char *argv[], int argc);
@@ -418,6 +420,8 @@ static struct command commands[] = {
      cmd_rwnd},
     {"restorefd", "restorefd - restores the fd to the base for the TCP model",
      cmd_restorefd},
+    {"savepacketlog", "savepacketlog filename - pull a packet log and dump it to a file",
+     cmd_savepacketlog},
     {"send", "send string [n] - send string to a peer if a peer is set [and retrans n times]",
      cmd_send},
     {"sendasoc", "sendasoc asocid string [n] - send string to a peer if a peer is set [and retrans n times]",
@@ -1767,6 +1771,38 @@ cmd_deliverydump(char *argv[], int argc)
     return 0;
 }
 
+
+int 
+cmd_savepacketlog(char *argv[], int argc)
+{
+	FILE *fileio;
+	uint8_t buf[SCTP_PACKET_LOG_SIZE];
+	socklen_t len;
+	int ret;
+
+	if (argc == 0) {
+		printf("Missing argument, need a file name to write\n");
+		return (0);
+	}
+	len = sizeof(buf);
+	fileio = fopen(argv[0], "w+");
+	if (fileio == NULL) {
+		printf("Can't open file %s error:%d\n", argv[0], errno);
+		return (0);
+	}
+	ret = getsockopt(adap->fd, IPPROTO_SCTP, SCTP_GET_PACKET_LOG, &buf, &len);
+	if(ret < 0) {
+		fclose(fileio);
+		printf("Could not get packet log error:%d\n", errno);
+		return (0);
+	}
+	printf("Retrieved %d bytes from the packet log\n", len);
+	if ((ret =  fwrite(buf, 1, len, fileio)) < len) {
+		printf("Only wrote %d bytes errno:%d\n", ret, errno);
+	}
+	fclose(fileio);
+	return (0);
+}
 
 int
 cmd_setloopsleep(char *argv[], int argc)

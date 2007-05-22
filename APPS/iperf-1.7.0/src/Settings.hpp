@@ -135,6 +135,7 @@ struct ext_Settings {
     bool   mStdin;                  // -I
     bool   mStdout;                 // -o
     bool   mSuggestWin;             // -W
+    bool   mEmulation;		    // -e
 };
 
 #define HEADER_VERSION1 0x80000000

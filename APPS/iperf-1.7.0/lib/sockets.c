@@ -119,15 +119,16 @@ int getsock_tcp_mss( int inSock ) {
 } /* end getsock_tcp_mss */
 
 int getsock_sctp_mss( int inSock) {
-    int theMss;
     int rc;
     Socklen_t len;
+    struct sctp_assoc_value av;
     assert( inSock >= 0);
-    len = sizeof(theMss);
+    len = sizeof(av);
 
-    rc = getsockopt( inSock, IPPROTO_SCTP, SCTP_MAXSEG, (char*) &theMss, &len );
-    FAIL_errno( rc == SOCKET_ERROR, "getsockopt TCP_MAXSEG" );
-    return theMss;
+    memset(&av, 0, sizeof(av));
+    rc = getsockopt( inSock, IPPROTO_SCTP, SCTP_MAXSEG, (char*) &av, &len );
+    FAIL_errno( rc == SOCKET_ERROR, "getsockopt SCTP_MAXSEG" );
+    return ((int)av.assoc_value);
 }
 
 /* -------------------------------------------------------------------
