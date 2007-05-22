@@ -471,11 +471,11 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		 * newest first :-0
 		 */
 		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	} else {
 		/* it's ready for use */	
 		sctp_ifap->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
@@ -549,11 +549,12 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		 * newest first :-0
 		 */
 		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	}
 	return;
 }
