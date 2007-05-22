@@ -34,3 +34,6 @@
   had better be set properly.
 - Get asoc by assoc-id would return a locked tcb when it was asked
   not to if the tcb was in the restart hash.
+- sysctl to dig down and get more association details
+-----------------Above here is the May 21 patch--------------------
+
