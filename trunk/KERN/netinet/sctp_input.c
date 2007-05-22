@@ -561,6 +561,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if (stcb->sctp_socket) {
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
+		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
 			/* notify upper layer that peer has initiated a shutdown */
