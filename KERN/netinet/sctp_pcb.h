@@ -320,6 +320,9 @@ struct sctp_pcb {
 	 * change the secret key.  The default is once a hour
 	 */
 	struct sctp_timer signature_change;
+
+	/* Zero copy full buffer timer */
+	struct sctp_timer zero_copy_timer;
 	int def_cookie_life;
 	/* defaults to 0 */
 	int auto_close_time;
@@ -397,6 +400,9 @@ struct sctp_inpcb {
 	 * they are candidates with sctp_sendm for
 	 * de-supporting.
 	 */
+#ifdef __Panda__
+	pakhandle_type pak_to_read;
+#endif	
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

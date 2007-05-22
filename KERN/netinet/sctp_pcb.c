@@ -3354,6 +3354,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
+#if defined(__Panda__)
+	if(inp->pak_to_read) {
+		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.zero_copy_timer.timer);
+		SCTP_RELEASE_PKT(inp->pak_to_read);
+		inp->pak_to_read = NULL;
+	}
+#endif
     /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		/* Its only abandoned if it had data left */
