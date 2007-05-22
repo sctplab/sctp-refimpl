@@ -36,4 +36,6 @@
   not to if the tcb was in the restart hash.
 - sysctl to dig down and get more association details
 -----------------Above here is the May 21 patch--------------------
-
+- Fixes so we won't try to start a timer when we
+  hold a wq lock for the iterator. Panda uses a
+  silly recursive lock they hold through the timer.
