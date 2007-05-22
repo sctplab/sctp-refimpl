@@ -467,6 +467,8 @@ void sctp_unlock_assert(struct socket *so);
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
 
+#define sctp_get_tick_count() (ticks)
+
 /* XXX: Hopefully temporary until APPLE changes to newer defs like other BSDs */
 #define if_addrlist	if_addrhead
 #define if_list		if_link

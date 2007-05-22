@@ -265,6 +265,8 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_OS_TIMER_ACTIVE	callout_active
 #define SCTP_OS_TIMER_DEACTIVATE callout_deactivate
 
+#define sctp_get_tick_count() (ticks)
+
 /*
  * Functions
  */
