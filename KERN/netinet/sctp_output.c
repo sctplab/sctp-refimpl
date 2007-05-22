@@ -11000,6 +11000,11 @@ sctp_lower_sosend(struct socket *so,
 	else {
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
+#ifdef __Panda__        
+        /* We dont need the packet header, free it */
+        SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+        (void)SCTP_RELEASE_HEADER(i_pak);
+#endif
 	}
 	/* Pre-screen address, if one is given the sin-len
 	 * must be set correctly!
