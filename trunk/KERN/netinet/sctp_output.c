@@ -11117,9 +11117,6 @@ sctp_lower_sosend(struct socket *so,
 	} else if (use_rcvinfo && srcv && srcv->sinfo_assoc_id) {
 		stcb = sctp_findassociation_ep_asocid(inp, srcv->sinfo_assoc_id, 0);
 		if (stcb) {
-			if (mtx_owned(&stcb->tcb_mtx)) {
-				panic("Huh-I asked for no lock and got one?");
-			}
 			if (addr) 
 				/* Must locate the net structure if addr given */
 				net = sctp_findnet(stcb, addr);
