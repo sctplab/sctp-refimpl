@@ -3939,7 +3939,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							  stcb, *netp);
 			break;
 		case SCTP_ABORT_ASSOCIATION:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT\n");
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT, stcb %p\n",
+				stcb);
 			if ((stcb) && netp && *netp)
 				sctp_handle_abort((struct sctp_abort_chunk *)ch,
 						  stcb, *netp);
@@ -3947,7 +3948,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 			break;
 		case SCTP_SHUTDOWN:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN\n");
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN, stcb %p\n",
+				stcb);
 			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_shutdown_chunk))) {			
 				*offset = length;
 				if (locked_tcb) {
@@ -3968,7 +3970,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_SHUTDOWN_ACK:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-ACK\n");
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-ACK, stcb %p\n", stcb);
 			if ((stcb) && (netp) && (*netp))
 				sctp_handle_shutdown_ack((struct sctp_shutdown_ack_chunk *)ch, stcb, *netp);
 			*offset = length;
@@ -3985,7 +3987,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_COOKIE_ECHO:
 			SCTPDBG(SCTP_DEBUG_INPUT3,
-				"SCTP_COOKIE-ECHO stcb is %p\n", stcb);
+				"SCTP_COOKIE-ECHO, stcb %p\n", stcb);
 			if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 				;
 			} else {
@@ -4109,7 +4111,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_COOKIE_ACK:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_COOKIE-ACK\n");
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_COOKIE-ACK, stcb %p\n", stcb);
 			if ((stcb == NULL) || chk_length != sizeof(struct sctp_cookie_ack_chunk)) {
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4166,7 +4168,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_SHUTDOWN_COMPLETE:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-COMPLETE\n");
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-COMPLETE, stcb %p\n", stcb);
 			/* must be first and only chunk */
 			if ((num_chunks > 1) ||
 			    (length - *offset > SCTP_SIZE32(chk_length))) {
