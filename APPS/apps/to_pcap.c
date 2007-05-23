@@ -29,6 +29,17 @@
 #include <arpa/inet.h>
 #include <netinet/sctp.h>
 #include <pcap.h>
+struct part_ip {
+	uint8_t ver;
+	uint8_t tos;
+	uint16_t len;
+};
+
+struct part_ip6 {
+	uint32_t ver;
+	uint16_t len;
+	uint16_t rest;
+};
 
 int
 main(int argc, char **argv)
@@ -37,8 +48,11 @@ main(int argc, char **argv)
 	FILE *io, *out;
 	int ret;
 	struct pcap_file_header head;
-	uint32_t loopback = 0x02000000;
+	uint32_t loopback = 0x00000002;
 	struct pcap_pkthdr phead;
+	struct part_ip *ip;
+	struct part_ip6 *ip6;
+	uint16_t len;
 
 	int limit, at, wlen, cnt=0;
 	struct sctp_packet_log { 
@@ -69,7 +83,7 @@ main(int argc, char **argv)
 	}
 	printf("Read in %d bytes\n", limit);
 	/* build pcap header and write */
-	head.magic = 0x1a2b3c4b;
+	head.magic = 0xa1b2c3d4;
 	head.version_major = PCAP_VERSION_MAJOR;
 	head.version_minor = PCAP_VERSION_MINOR;
 	head.thiszone = 0;
@@ -94,19 +108,37 @@ main(int argc, char **argv)
 		if(header->timestamp > 1000000) {
 			phead.ts.tv_usec = header->timestamp % 1000000;
 		}
-		phead.len = phead.caplen = header->datasize + sizeof(uint32_t);
-	
 		if( header->datasize > limit) {
 			printf("strange, size > limit:%d\n", limit);
 			break;
 		}	
+		if(((header->data[0] & 0xf0) >> 4) == 4) {
+			ip = (struct part_ip *) header->data;
+			len = ip->len;
+			ip->len = htons(len);
+		} else if (((header->data[0] & 0xf0) >> 4) == 6) {
+			ip6 = (struct part_ip6 *)header->data;
+			len = ip6->len;
+		} else {
+			printf("Not v6 or v4?\n");
+			break;
+		}
+		wlen = ((((len)+3) >> 2) << 2);
+		phead.len = phead.caplen = wlen + 4;
+
 		if((ret=fwrite(&phead, sizeof(phead), 1, out)) < 1) {
 			printf("Can't write phead ret:%d errno=%d\n",
 			       ret,errno);
 			fclose(out);
 			return(0);
 		}
-		wlen = header->datasize - (sizeof(uint32_t) * 2);
+		if ((ret=fwrite(&loopback, sizeof(loopback), 1, out)) < 1) {
+			printf("Can't write encaps ret:%d errno=%d\n",
+			       ret,errno);
+			fclose(out);
+			return(0);
+		}
+		
 		if ((ret=fwrite(header->data, wlen, 1, out)) < 1) {
 			printf("Can't write body ret:%d errno=%d\n",
 			       ret,errno);
