@@ -471,11 +471,11 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		 * newest first :-0
 		 */
 		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	} else {
 		/* it's ready for use */	
 		sctp_ifap->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
@@ -549,11 +549,12 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		 * newest first :-0
 		 */
 		LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	}
 	return;
 }
@@ -1146,22 +1147,22 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
-			SCTP_INP_INFO_RUNLOCK();
-			return (NULL);
+			continue;
 		}
-		SCTP_TCB_LOCK(stcb);
-		SCTP_INP_RUNLOCK(stcb->sctp_ep);
+		if(want_lock) {
+			SCTP_TCB_LOCK(stcb);
+		}
 		if (stcb->asoc.assoc_id == id) {
 			/* candidate */
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
 			if (inp != stcb->sctp_ep) {
 				/*
 				 * some other guy has the same id active (id
 				 * collision ??).
 				 */
-				SCTP_TCB_UNLOCK(stcb);
+				if(want_lock) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				continue;
 			}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1169,8 +1170,12 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 #endif
 			SCTP_INP_INFO_RUNLOCK();
 			return (stcb);
+		} else {
+			SCTP_INP_RUNLOCK(stcb->sctp_ep);
 		}
-		SCTP_TCB_UNLOCK(stcb);
+		if(want_lock) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
@@ -2163,6 +2168,8 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 		return (EOPNOTSUPP);
 	}
+	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
@@ -2629,7 +2636,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				  priv_check_cred(p->td_ucred,
 						  PRIV_NETINET_RESERVEDPORT,
 						  SUSER_ALLOWJAIL
-						  )
+					  )
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else
@@ -2742,7 +2749,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				  priv_check_cred(p->td_ucred,
 						  PRIV_NETINET_RESERVEDPORT,
 						  SUSER_ALLOWJAIL
-						  )
+					  )
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else
@@ -3047,7 +3054,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-		SCTP_PRINTF("This conflict in free SHOULD not be happening!\n");
+		SCTP_PRINTF("This conflict in free SHOULD not be happening! from %d, imm %d\n", from, immediate);
 #if !defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
 #endif
@@ -3348,6 +3355,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 	inp->sctp_ep.signature_change.type = SCTP_TIMER_TYPE_NONE;
 	/* Clear the read queue */
+#if defined(__Panda__)
+	if(inp->pak_to_read) {
+		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.zero_copy_timer.timer);
+		SCTP_RELEASE_PKT(inp->pak_to_read);
+		inp->pak_to_read = NULL;
+	}
+#endif
     /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		/* Its only abandoned if it had data left */
@@ -5458,7 +5472,9 @@ sctp_pcb_init()
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
 	SCTP_IPI_ITERATOR_WQ_INIT();
-
+#ifdef SCTP_PACKET_LOGGING
+	SCTP_IP_PKTLOG_INIT();
+#endif
 	LIST_INIT(&sctppcbinfo.addr_wq);
 
 	/* not sure if we need all the counts */

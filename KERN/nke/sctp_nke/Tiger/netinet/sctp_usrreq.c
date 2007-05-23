@@ -52,6 +52,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.27 2007/05/17 12:16:24 rrs
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
+#include <netinet/sctp_bsd_addr.h>
+
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
@@ -724,6 +726,9 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* must be a v4 address! */
 		return EINVAL;
 #endif				/* INET6 */
+	if(addr && (addr->sa_len != sizeof(struct sockaddr_in))) {
+		return EINVAL;
+	}
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
@@ -1641,6 +1646,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	int num_v6 = 0, num_v4 = 0, *totaddrp, totaddr;
 	int added=0;
 	uint32_t vrf_id;
+	int bad_addresses=0;
 	sctp_assoc_t *a_id;
 
 	SCTPDBG(SCTP_DEBUG_PCB1, "Connectx called\n");
@@ -1682,13 +1688,14 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	totaddrp = (int *)optval;
 	totaddr = *totaddrp;
 	sa = (struct sockaddr *)(totaddrp + 1);
-	stcb = sctp_connectx_helper_find(inp, sa, &totaddr, &num_v4, &num_v6, &error, (optsize - sizeof(int)));
-	if (stcb != NULL) {
+	stcb = sctp_connectx_helper_find(inp, sa, &totaddr, &num_v4, &num_v6, &error, (optsize - sizeof(int)), &bad_addresses );
+	if ((stcb != NULL) || bad_addresses ) {
 		/* Already have or am bring up an association */
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		creat_lock_on = 0;
 		SCTP_TCB_UNLOCK(stcb);
-		error = EALREADY;
+		if (bad_addresses == 0) 
+			error = EALREADY;
 		goto out_now;
 	}
 #ifdef INET6
@@ -1740,8 +1747,13 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	else
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in6));
 	
+	error = 0;
 	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
 	/* Fill in the return id */
+	if (error) {
+		sctp_free_assoc(inp, stcb, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_12);
+		goto out_now;
+	}
 	a_id = (sctp_assoc_t *)optval;
 	*a_id = sctp_get_associd(stcb);
 
@@ -1875,7 +1887,20 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(val);
 		}
 		break;
+        case SCTP_GET_PACKET_LOG:
+	{
+#ifdef  SCTP_PACKET_LOGGING
+		uint8_t *target;
+		int ret;
 
+		SCTP_CHECK_AND_CAST(target, optval, uint8_t, *optsize);
+		ret = sctp_copy_out_packet_log(target , (int)*optsize);
+		*optsize = ret;
+#else
+		error = EOPNOTSUPP;
+#endif
+		break;
+	}
 	case SCTP_PARTIAL_DELIVERY_POINT:
 		{
 			uint32_t *value;
@@ -2091,7 +2116,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(struct sctp_sockstat);
 		}
 		break;
-	case SCTP_MAXBURST:
+	case SCTP_MAX_BURST:
 		{
 			uint8_t *value;
 			
@@ -2912,7 +2937,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 		} else if (*level == SCTP_FRAG_LEVEL_0) {
-			sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 
 		} else {
@@ -3096,6 +3121,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_FIND_STCB(inp, stcb, sack->sack_assoc_id);
 		if (stcb) {
 			if(sack->sack_delay) {
+				if (MSEC_TO_TICKS(sack->sack_delay) < 1) {
+					sack->sack_delay = TICKS_TO_MSEC(1);
+				}
 				stcb->asoc.delayed_ack = sack->sack_delay;
 			}
 			if(sack->sack_freq) {
@@ -3105,6 +3133,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		} else {
 			SCTP_INP_WLOCK(inp);
 			if(sack->sack_delay) {
+				if (MSEC_TO_TICKS(sack->sack_delay) < 1) {
+					sack->sack_delay = TICKS_TO_MSEC(1);
+				}
 				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sack->sack_delay);
 			}
 			if(sack->sack_freq) {
@@ -3431,7 +3462,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_TCB_UNLOCK(stcb);
 	}
 	break;
-	case SCTP_MAXBURST:
+	case SCTP_MAX_BURST:
 	{
 		uint8_t *burst;
 
@@ -4077,7 +4108,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #if defined(INET6)
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
-
+			if (addrs->addr->sa_len != sizeof(struct sockaddr_in6)) {
+				error = EINVAL;
+				break;
+			}
 			sin6 = (struct sockaddr_in6 *)addr_touse;
 			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 				in6_sin6_2_sin(&sin, sin6);
@@ -4085,6 +4119,13 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 #endif
+		if (addrs->addr->sa_family == AF_INET) {
+			if (addrs->addr->sa_len != sizeof(struct sockaddr_in)) {
+				error = EINVAL;
+				break;
+			}
+
+		}
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 
 #if !defined(__Panda__)            
@@ -4176,7 +4217,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #if defined(INET6)
 		if (addrs->addr->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
-
+			if (addrs->addr->sa_len != sizeof(struct sockaddr_in6)) {
+				error = EINVAL;
+				break;
+			}
 			sin6 = (struct sockaddr_in6 *)addr_touse;
 			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
 				in6_sin6_2_sin(&sin, sin6);
@@ -4184,6 +4228,13 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 #endif
+		if (addrs->addr->sa_family == AF_INET) {
+			if (addrs->addr->sa_len != sizeof(struct sockaddr_in)) {
+				error = EINVAL;
+				break;
+			}
+
+		}
 		/*
 		 * No lock required mgmt_ep_sa does its own locking.
 		 * If the FIX: below is ever changed we may need to
@@ -4421,6 +4472,22 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* I made the same as TCP since we are not setup? */
 		return (ECONNRESET);
 	}
+	if(addr == NULL) 
+		return EINVAL;
+
+	if ((addr->sa_family == AF_INET6) && (addr->sa_len != sizeof(struct sockaddr_in6))) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		splx(s);
+#endif
+		return (EINVAL);
+	}
+	if ((addr->sa_family == AF_INET) && (addr->sa_len != sizeof(struct sockaddr_in))) {
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+		splx(s);
+#endif
+		return (EINVAL);
+	}
+
 	SCTP_ASOC_CREATE_LOCK(inp);
 	create_lock_on = 1;
 
