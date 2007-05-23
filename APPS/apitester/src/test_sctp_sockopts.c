@@ -1193,7 +1193,8 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 	
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
-		
+	
+	sctp_delay(SCTP_SLEEP_MS);
 	result = sctp_get_number_of_associations(fd);
 	
 	close(fd);
@@ -1249,12 +1250,13 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 	
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
-		
+	sctp_delay(SCTP_SLEEP_MS);
+
 	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
 		close(fd);
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 			close(fds[i]);
-		return strerror(errno);
+		return "Wrong number of associations";
 	}
 	
 	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS);
@@ -1289,12 +1291,13 @@ DEFINE_APITEST(assoclist, gso_ids_buf_large)
 	
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
-		
+	sctp_delay(SCTP_SLEEP_MS);
+	
 	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
 		close(fd);
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 			close(fds[i]);	
-		return strerror(errno);
+		return "Wrong number of associations";
 	}
 	
 	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS + 1);
@@ -1330,7 +1333,8 @@ DEFINE_APITEST(assoclist, gso_ids_buf_small)
 	
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
-		
+	sctp_delay(SCTP_SLEEP_MS);
+	
 	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
 		close(fd);
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
