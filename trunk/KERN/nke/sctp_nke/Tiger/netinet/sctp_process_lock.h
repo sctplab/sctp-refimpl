@@ -117,6 +117,20 @@
 
 
 
+#define SCTP_IP_PKTLOG_INIT() \
+        (void)pthread_mutex_init(&sctppcbinfo.ipi_pktlog_mtx, NULL)
+
+
+#define SCTP_IP_PKTLOG_LOCK()	do { 			\
+             (void)pthread_mutex_lock(&sctppcbinfo.ipi_pktlog_mtx);     \
+} while (0)
+
+#define SCTP_IP_PKTLOG_UNLOCK()	(void)pthread_mutex_unlock(&sctppcbinfo.ipi_pktlog_mtx)
+
+#define SCTP_IP_PKTLOG_DESTROY() \
+	(void)pthread_mutex_destroy(&sctppcbinfo.ipi_pktlog_mtx)
+
+
 
 #define SCTP_INP_INFO_RUNLOCK()		(void)pthread_mutex_unlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		(void)pthread_mutex_unlock(&sctppcbinfo.ipi_ep_mtx)
@@ -235,7 +249,7 @@
 } while (0)
 #endif
 
-#define SCTP_TCB_TRYLOCK(_tcb) 	(!(pthread_mutex_trylock(&(_tcb)->tcb_mtx))) 
+#define SCTP_TCB_TRYLOCK(_tcb) 	(!(pthread_mutex_trylock(&(_tcb)->tcb_mtx)))
 
 #define SCTP_TCB_UNLOCK(_tcb)	(void)pthread_mutex_unlock(&(_tcb)->tcb_mtx)
 

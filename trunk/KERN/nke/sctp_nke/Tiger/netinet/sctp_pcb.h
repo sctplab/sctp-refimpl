@@ -192,12 +192,14 @@ struct sctp_epinfo {
 	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
 	struct mtx ipi_addr_mtx;
+	struct mtx ipi_pktlog_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
 	pthread_mutex_t it_mtx;
 	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
+	pthread_mutex_t ipi_pktlog_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -320,6 +322,9 @@ struct sctp_pcb {
 	 * change the secret key.  The default is once a hour
 	 */
 	struct sctp_timer signature_change;
+
+	/* Zero copy full buffer timer */
+	struct sctp_timer zero_copy_timer;
 	int def_cookie_life;
 	/* defaults to 0 */
 	int auto_close_time;
@@ -397,6 +402,9 @@ struct sctp_inpcb {
 	 * they are candidates with sctp_sendm for
 	 * de-supporting.
 	 */
+#ifdef __Panda__
+	pakhandle_type pak_to_read;
+#endif	
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

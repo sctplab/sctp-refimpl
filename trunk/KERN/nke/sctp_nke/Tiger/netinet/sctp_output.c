@@ -3543,6 +3543,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(m, packet_length);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 
 		/* send it out.  table id is taken from stcb */
@@ -3782,6 +3785,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_m_freem(m);
 			return (ENOMEM);
 		}
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(m, packet_length);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 
 		/* send it out. table id is taken from stcb */
@@ -4156,13 +4162,14 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	limit = ntohs(cp->chunk_length) - sizeof(struct sctp_init_chunk);
 	at = param_offset;
 	op_err = NULL;
-
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Check for unrecognized param's\n");
 	phdr = sctp_get_next_param(mat, at, &params, sizeof(params));
 	while ((phdr != NULL) && ((size_t)limit >= sizeof(struct sctp_paramhdr))) {
 		ptype = ntohs(phdr->param_type);
 		plen = ntohs(phdr->param_length);
 		if ((plen > limit) || (plen < sizeof(struct sctp_paramhdr)))  {
 			/* wacked parameter */
+			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error %d\n", plen);
 			goto invalid_size;
 		}
 		limit -= SCTP_SIZE32(plen);
@@ -4187,18 +4194,21 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		case SCTP_CHUNK_LIST:
 		case SCTP_SUPPORTED_CHUNK_EXT:
 			if (padded_size > (sizeof(struct sctp_supported_chunk_types_param) + (sizeof(uint8_t) * SCTP_MAX_SUPPORTED_EXT)))  {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error chklist %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_SUPPORTED_ADDRTYPE:
 			if (padded_size > SCTP_MAX_ADDR_PARAMS_SIZE) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error supaddrtype %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_RANDOM:
 			if (padded_size > (sizeof(struct sctp_auth_random) + SCTP_RANDOM_MAX_SIZE)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error random %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
@@ -4208,6 +4218,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		case SCTP_ADD_IP_ADDRESS:
 			if ((padded_size != sizeof(struct sctp_asconf_addrv4_param)) &&
 			    (padded_size != sizeof(struct sctp_asconf_addr_param))){
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error setprim %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
@@ -4215,18 +4226,21 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			/* Param's with a fixed size */
 		case SCTP_IPV4_ADDRESS:
 			if (padded_size != sizeof(struct sctp_ipv4addr_param)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ipv4 addr %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_IPV6_ADDRESS:
 			if (padded_size != sizeof(struct sctp_ipv6addr_param)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ipv6 addr %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_COOKIE_PRESERVE:
 			if (padded_size != sizeof(struct sctp_cookie_perserve_param)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error cookie-preserve %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
@@ -4234,24 +4248,28 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		case SCTP_ECN_NONCE_SUPPORTED:
 		case SCTP_PRSCTP_SUPPORTED:
 			if (padded_size != sizeof(struct sctp_paramhdr)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ecnnonce/prsctp %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_ECN_CAPABLE:
 			if (padded_size != sizeof(struct sctp_ecn_supported_param)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ecn %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_ULP_ADAPTATION:
 			if (padded_size != sizeof(struct sctp_adaptation_layer_indication)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error adapatation %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
 			break;
 		case SCTP_SUCCESS_REPORT:
 			if (padded_size != sizeof(struct sctp_asconf_paramhdr)) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error success %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
@@ -4260,7 +4278,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 		{
 			/* We can NOT handle HOST NAME addresses!! */
 			int l_len;
-			SCTPDBG(SCTP_DEBUG_OUTPUT4, "Can't handle hostname addresses.. abort processing\n");
+			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Can't handle hostname addresses.. abort processing\n");
 			*abort_processing = 1;
 			if (op_err == NULL) {
 				/* Ok need to try to get a mbuf */
@@ -4316,8 +4334,10 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			 * we do not recognize the parameter figure out what
 			 * we do.
 			 */
+			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Hit default param %x\n", ptype);
 			if ((ptype & 0x4000) == 0x4000) {
 				/* Report bit is set?? */
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "report op err\n");
 				if (op_err == NULL) {
 					int l_len;
 					/* Ok need to try to get an mbuf */
@@ -4369,9 +4389,11 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			}
 		more_processing:
 			if ((ptype & 0x8000) == 0x0000) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "stop proc\n");
 				return (op_err);
 			} else {
 				/* skip this chunk and continue processing */
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "move on\n");
 				at += SCTP_SIZE32(plen);
 			}
 			break;
@@ -4381,6 +4403,7 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 	}
 	return (op_err);
  invalid_size:
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "abort flag set\n");
 	*abort_processing = 1;
 	if ((op_err == NULL) && phdr) {
 		int l_len;
@@ -9475,6 +9498,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #else
 		iph_out->ip_len = htons(mlen);
 #endif
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, mlen);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 
 		/* out it goes */
@@ -9500,6 +9526,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		ro._l_addr.sa.sa_family = AF_INET6;
 #endif
 		mlen = SCTP_BUF_LEN(mout);
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, mlen);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
@@ -10366,6 +10395,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iph_out->ip_len = htons(len);
 #endif
 		/* out it goes */
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, len);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id, table_id);
 
@@ -10391,6 +10423,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip6_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, len);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
@@ -10501,6 +10536,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #else
 		out->ip_len = htons(len);
 #endif
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, len);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 
 		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb, vrf_id, table_id);
@@ -10554,6 +10592,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "dst ");
 		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)&fsa6);
 
+#ifdef  SCTP_PACKET_LOGGING
+		sctp_packet_log(mout, len);
+#endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
 
@@ -10983,6 +11024,25 @@ sctp_lower_sosend(struct socket *so,
 	else {
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
+#ifdef __Panda__        
+        /* We dont need the packet header, free it */
+        SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+        (void)SCTP_RELEASE_HEADER(i_pak);
+#endif
+	}
+	/* Pre-screen address, if one is given the sin-len
+	 * must be set correctly!
+	 */
+	if (addr) {
+		if ((addr->sa_family == AF_INET)  &&
+		    (addr->sa_len != sizeof(struct sockaddr_in))) {
+			error = EINVAL;
+			goto out_unlocked;
+		} else if ((addr->sa_family == AF_INET6)  &&
+			   (addr->sa_len != sizeof(struct sockaddr_in6))) {
+			error = EINVAL;
+			goto out_unlocked;
+		}
 	}
 #ifdef __Panda__
 	if (i_control) {

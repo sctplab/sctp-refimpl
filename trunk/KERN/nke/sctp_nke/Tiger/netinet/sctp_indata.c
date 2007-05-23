@@ -1608,7 +1608,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * only validate the FIRST fragment so the bit must be set.
 	 */
 	strmseq = ntohs(ch->dp.stream_sequence);
-
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
@@ -1622,6 +1621,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
+	    (TAILQ_EMPTY(&asoc->resetHead)) &&
 	    (chunk_flags & SCTP_DATA_UNORDERED) == 0 &&
 	    (compare_with_wrap(asoc->strmin[strmno].last_sequence_delivered,
 	    strmseq, MAX_SEQ) ||
@@ -1998,9 +1998,8 @@ failed_express_del:
 			 * singletons I must worry about.
 			 */
 			if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
-			    ((compare_with_wrap(tsn, ntohl(liste->tsn), MAX_TSN)) ||
-			    (tsn == ntohl(liste->tsn)))
-			    ) {
+			    ((compare_with_wrap(tsn, liste->tsn, MAX_TSN)))
+				) {
 				/*
 				 * yep its past where we need to reset... go
 				 * ahead and queue it.
@@ -2084,8 +2083,8 @@ finish_express_del:
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 	/* check the special flag for stream resets */
 	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
-	    ((compare_with_wrap(asoc->cumulative_tsn, ntohl(liste->tsn), MAX_TSN)) ||
-	    (asoc->cumulative_tsn == ntohl(liste->tsn)))
+	    ((compare_with_wrap(asoc->cumulative_tsn, liste->tsn, MAX_TSN)) ||
+	    (asoc->cumulative_tsn == liste->tsn))
 	    ) {
 		/*
 		 * we have finished working through the backlogged TSN's now
@@ -2113,7 +2112,7 @@ finish_express_del:
 			}
 		} else if (ctl) {
 			/* more than one in queue */
-			while (!compare_with_wrap(ctl->sinfo_tsn, ntohl(liste->tsn), MAX_TSN)) {
+			while (!compare_with_wrap(ctl->sinfo_tsn, liste->tsn, MAX_TSN)) {
 				/*
 				 * if ctl->sinfo_tsn is <= liste->tsn we can
 				 * process it which is the NOT of

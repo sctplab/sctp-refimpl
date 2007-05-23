@@ -102,10 +102,12 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	 * stcb in the right place.
 	 */
 	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
 
 	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 
-	SCTP_TCB_UNLOCK(stcb);
 	return (0);
 }
 
@@ -145,10 +147,10 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = ENOMEM;
 		SCTP_TCB_UNLOCK(stcb);
 		return (NULL);
-#ifndef SCTP_PER_SOCKET_LOCKING
+
 	}
-#else
-        } else {
+#ifdef SCTP_PER_SOCKET_LOCKING
+         else {
 		SCTP_SOCKET_LOCK(newso, 1);
 	}
 #endif
@@ -212,14 +214,16 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 */
 	SCTP_INP_WUNLOCK(n_inp);
 	SCTP_INP_WUNLOCK(inp);
-	sctp_move_pcb_and_assoc(inp, n_inp, stcb);
+        sctp_move_pcb_and_assoc(inp, n_inp, stcb);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
 	/*
 	 * And now the final hack. We move data in the pending side i.e.
 	 * head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
 	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 
-	SCTP_TCB_UNLOCK(stcb);
 	return (newso);
 #endif
 }
