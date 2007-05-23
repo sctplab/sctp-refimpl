@@ -444,6 +444,7 @@ sctp_packet_log(struct mbuf *m, int length)
 		/* Can't log this packet I have not a buffer big enough */
 		return;
 	}
+	SCTP_IP_PKTLOG_LOCK();
 	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
 		/* it won't fit on the end. 
 		 * We must go back to the beginning.
@@ -497,6 +498,7 @@ sctp_packet_log(struct mbuf *m, int length)
 			}
 		}
 	}
+	SCTP_IP_PKTLOG_UNLOCK();
 	copyto = (void *)lenat;
 
 	packet_log_end = (((caddr_t)copyto + total_len) - (caddr_t)packet_log_buffer);
@@ -531,23 +533,29 @@ sctp_copy_out_packet_log(uint8_t *target , int length)
 		 * Then copy from the top of the buffer
 		 * to the end.
 		 */
+		SCTP_IP_PKTLOG_LOCK();
 		at = (void *)&packet_log_buffer[packet_log_start];
 		this_copy = min(tocopy, (packet_log_old_end - packet_log_start));
 		memcpy(target, at, this_copy);
 		tocopy -= this_copy;
 		copied += this_copy;
-		if(tocopy == 0)
+		if(tocopy == 0) {
+			SCTP_IP_PKTLOG_UNLOCK();
 			return (copied);
+		}
 		this_copy = min(tocopy, packet_log_end);
 		at = (void *)&packet_log_buffer;
 		memcpy(&target[copied], at, this_copy);
 		copied += this_copy;
+		SCTP_IP_PKTLOG_UNLOCK();
 		return(copied);
 	} else {
 		/* we have one contiguous buffer */
+		SCTP_IP_PKTLOG_LOCK();
 		at = (void *)&packet_log_buffer;
 		this_copy = min(length, packet_log_end);
 		memcpy(target, at, this_copy);
+		SCTP_IP_PKTLOG_UNLOCK();
 		return (this_copy);
 	}
 }

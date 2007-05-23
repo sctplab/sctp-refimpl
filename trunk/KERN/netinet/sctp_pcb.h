@@ -192,12 +192,14 @@ struct sctp_epinfo {
 	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
 	struct mtx ipi_addr_mtx;
+	struct mtx ipi_pktlog_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
 	pthread_mutex_t it_mtx;
 	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
+	pthread_mutex_t ipi_pktlog_mtx;
 #elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;

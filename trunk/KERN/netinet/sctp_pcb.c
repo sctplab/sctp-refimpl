@@ -5472,6 +5472,7 @@ sctp_pcb_init()
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
 	SCTP_IPI_ITERATOR_WQ_INIT();
+	SCTP_IP_PKTLOG_INIT();
 
 	LIST_INIT(&sctppcbinfo.addr_wq);
 
