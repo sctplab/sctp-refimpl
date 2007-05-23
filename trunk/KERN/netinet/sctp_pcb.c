@@ -3054,7 +3054,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-		SCTP_PRINTF("This conflict in free SHOULD not be happening!\n");
+		SCTP_PRINTF("This conflict in free SHOULD not be happening! from %d, imm %d\n", from, immediate);
 #if !defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
 #endif
