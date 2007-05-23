@@ -3473,6 +3473,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	if (ntohs(ch->chunk_length) < sizeof(*ch)) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Invalid header length %d\n",
 			ntohs(ch->chunk_length));
+		if (locked_tcb) {
+			SCTP_TCB_UNLOCK(locked_tcb);
+		}
 		return (NULL);
 	}
 	/*
@@ -3512,6 +3515,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (*offset >= length) {
 				/* no more data left in the mbuf chain */
 				*offset = length;
+				if (locked_tcb) {
+					SCTP_TCB_UNLOCK(locked_tcb);
+				}
 				return (NULL);
 			}
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
@@ -3520,6 +3526,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		if(ch == NULL) {
 			/* Help */
 			*offset = length;
+			if (locked_tcb) {
+				SCTP_TCB_UNLOCK(locked_tcb);
+			}
 			return (NULL);
 		}
 		if (ch->chunk_type == SCTP_COOKIE_ECHO) {
@@ -3555,6 +3564,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								       auth_offset)) {
 					/* auth HMAC failed so dump it */
 					*offset = length;
+					if (locked_tcb) {
+						SCTP_TCB_UNLOCK(locked_tcb);
+					}
 					return (NULL);
 				} else {
 					/* remaining chunks are HMAC checked */
@@ -4840,9 +4852,6 @@ sctp_input(i_pak, va_alist)
 	SCTP_STAT_INCR(sctps_recvpackets);
 	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
 
-#ifdef  SCTP_PACKET_LOGGING
-	sctp_packet_log(m, mlen);
-#endif
 
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
@@ -4867,6 +4876,14 @@ sctp_input(i_pak, va_alist)
 		}
 		ip = mtod(m, struct ip *);
 	}
+#if defined(__NetBSD__) || defined(__OpenBSD__)
+	/* Open BSD gives us the len in network order, fix it */
+	NTOHS(ip->ip_len);
+#endif
+
+#ifdef  SCTP_PACKET_LOGGING
+	sctp_packet_log(m, ip->ip_len);
+#endif
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 
@@ -4939,10 +4956,6 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate mbuf chain length with IP payload length */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	/* Open BSD gives us the len in network order, fix it */
-	NTOHS(ip->ip_len);
-#endif
 	if (mlen < (ip->ip_len - iphlen)) {
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
