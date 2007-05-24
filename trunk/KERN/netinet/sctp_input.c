@@ -4866,6 +4866,11 @@ sctp_input(i_pak, va_alist)
 		mat = SCTP_BUF_NEXT(mat);
 	}
 #endif
+#ifdef  SCTP_PACKET_LOGGING
+	sctp_packet_log(m, mlen);
+#endif
+	/* Must take out the iphlen, since mlen expects this (only effect lb case) */
+	mlen -= iphlen;
 
 	/*
 	 * Get IP, SCTP, and first chunk header together in first mbuf.
@@ -4884,9 +4889,6 @@ sctp_input(i_pak, va_alist)
 	NTOHS(ip->ip_len);
 #endif
 
-#ifdef  SCTP_PACKET_LOGGING
-	sctp_packet_log(m, ip->ip_len);
-#endif
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 
