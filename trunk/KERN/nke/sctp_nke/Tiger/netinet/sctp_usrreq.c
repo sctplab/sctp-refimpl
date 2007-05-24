@@ -3094,14 +3094,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			uint32_t *tarray;
 			SCTP_MALLOC(tarray, uint32_t *,
 				    (sizeof(uint32_t) * (inp->vrf_size + SCTP_DEFAULT_VRF_SIZE)), 
-				    "VRFid's");
+				    SCTP_M_MVRF);
 			if (tarray == NULL) {
 				error = ENOMEM;
 				SCTP_INP_WUNLOCK(inp);
 				break;
 			}
 			memcpy(tarray, inp->m_vrf_ids, (sizeof(uint32_t) * inp->vrf_size));
-			SCTP_FREE(inp->m_vrf_ids);
+			SCTP_FREE(inp->m_vrf_ids, SCTP_M_MVRF);
 			inp->m_vrf_ids = tarray;
 			inp->vrf_size += SCTP_DEFAULT_VRF_SIZE;
 		}
@@ -4300,13 +4300,13 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	optsize = sopt->sopt_valsize;
 	if (optsize) {
-		SCTP_MALLOC(optval, void *, optsize, "SCTPSockOpt");
+		SCTP_MALLOC(optval, void *, optsize, SCTP_M_SOCKOPT);
 		if (optval == NULL) {
 			return (ENOBUFS);
 		}
 		error = sooptcopyin(sopt, optval, optsize, optsize);
 		if (error) {
-			SCTP_FREE(optval);
+			SCTP_FREE(optval, SCTP_M_SOCKOPT);
 			goto out;
 		}
 	}
@@ -4324,9 +4324,9 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	if ((error == 0) && (optval != NULL)) {
 		error = sooptcopyout(sopt, optval, optsize);
-		SCTP_FREE(optval);
+		SCTP_FREE(optval, SCTP_M_SOCKOPT);
 	} else if (optval != NULL) {
-		SCTP_FREE(optval);
+		SCTP_FREE(optval, SCTP_M_SOCKOPT);
 	}
 out:
 	return (error);

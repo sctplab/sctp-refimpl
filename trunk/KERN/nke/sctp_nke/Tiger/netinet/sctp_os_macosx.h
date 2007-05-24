@@ -194,6 +194,31 @@ extern struct fileops socketops;
 #define SCTP_UNLOCK_SHARED(lck)	lck_rw_unlock_shared(lck)
 #define SCTP_TRYLOCK_SHARED(lck) lck_rw_try_lock_shared(lck)
 
+
+
+
+#define SCTP_M_SOCKOPT "sctp socketopt"
+#define SCTP_M_ITER "sctp_iterator"
+#define SCTP_M_VRF "sctp_vrf"
+#define SCTP_M_IFA "sctp_ifa"
+#define SCTP_M_IFN "sctp_ifn"
+#define SCTP_M_MVRF "sctp_mvrf"
+#define SCTP_M_TIMW "sctp_timewait"
+#define SCTP_M_CMSG "SCTP_CMSG"
+#define SCTP_M_STRESET "stream reset"
+#define SCTp_M_MAP "maparray"
+#define SCTP_M_STRMI "streamin"
+#define SCTP_M_STRMO "streamout"
+#define SCTP_M_ASC_ADDR "sctp_aadr"
+#define SCTP_M_ASC_IT "sctp_asconf_iter"
+#define SCTP_M_AUTH_CL "sctp auth chunklist"
+#define SCTP_M_AUTH_KY  "sctp auth key"
+#define SCTP_M_AUTH_HL "sctp auth hmac list"
+#define SCTP_M_AUTH_IF "sctp_athi"
+#define SCTP_M_COPYAL "sctp copy all"
+#define SCTP_M_MAP "sctp asoc map descriptor"
+
+
 /*
  * general memory allocation
  */
@@ -205,17 +230,18 @@ extern struct fileops socketops;
 #else
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
-	MALLOC(var, type, size, M_PCB, M_NOWAIT); \
+	MALLOC(var, type, size, name, M_NOWAIT); \
     } while (0)
 #endif
 
-#define SCTP_FREE(var)	FREE(var, M_PCB)
+#define SCTP_FREE(var, type)	FREE(var, M_PCB)
 
 #define SCTP_MALLOC_SONAME(var, type, size) \
     do { \
 	MALLOC(var, type, size, M_SONAME, M_WAITOK | M_ZERO); \
     } while (0)
 #define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
+
 
 /*
  * zone allocation functions
@@ -236,7 +262,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 	zfree(zone, element);
 
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
-#define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table)
+#define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 
