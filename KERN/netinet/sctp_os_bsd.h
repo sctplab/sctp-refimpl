@@ -110,8 +110,26 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.17 2007/05/09 13:30:06 rrs
 #define in6pcb		inpcb
 #endif
 #endif
-
-
+/* Declare all the malloc names for all the various mallocs */
+MALLOC_DECLARE(SCTP_M_MAP);
+MALLOC_DECLARE(SCTP_M_STRMI);
+MALLOC_DECLARE(SCTP_M_STRMO);
+MALLOC_DECLARE(SCTP_M_ASC_ADDR);
+MALLOC_DECLARE(SCTP_M_ASC_IT);
+MALLOC_DECLARE(SCTP_M_AUTH_CL);
+MALLOC_DECLARE(SCTP_M_AUTH_KY);
+MALLOC_DECLARE(SCTP_M_AUTH_HL);
+MALLOC_DECLARE(SCTP_M_AUTH_IF);
+MALLOC_DECLARE(SCTP_M_STRESET);
+MALLOC_DECLARE(SCTP_M_CMSG);
+MALLOC_DECLARE(SCTP_M_COPYAL);
+MALLOC_DECLARE(SCTP_M_VRF);
+MALLOC_DECLARE(SCTP_M_IFA);
+MALLOC_DECLARE(SCTP_M_IFN);
+MALLOC_DECLARE(SCTP_M_TIMW);
+MALLOC_DECLARE(SCTP_M_MVRF);
+MALLOC_DECLARE(SCTP_M_ITER);
+MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
 /*
  *
@@ -178,10 +196,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.17 2007/05/09 13:30:06 rrs
  */
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
-	MALLOC(var, type, size, M_PCB, M_NOWAIT); \
+	MALLOC(var, type, size, name, M_NOWAIT); \
     } while (0)
 
-#define SCTP_FREE(var)	FREE(var, M_PCB)
+#define SCTP_FREE(var, type)	FREE(var, type)
 
 #define SCTP_MALLOC_SONAME(var, type, size) \
     do { \

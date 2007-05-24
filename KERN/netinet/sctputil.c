@@ -1070,7 +1070,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	    m->sctp_ep.pre_open_stream_count;
 	SCTP_MALLOC(asoc->strmout, struct sctp_stream_out *,
 		    asoc->streamoutcnt * sizeof(struct sctp_stream_out),
-		    "StreamsOut");
+		    SCTP_M_STRMO);
 	if (asoc->strmout == NULL) {
 		/* big trouble no memory */
 		return (ENOMEM);
@@ -1094,9 +1094,9 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	/* Now the mapping array */
 	asoc->mapping_array_size = SCTP_INITIAL_MAPPING_ARRAY;
 	SCTP_MALLOC(asoc->mapping_array, uint8_t *, asoc->mapping_array_size,
-		    "MappingArray");
+		    SCTP_M_MAP);
 	if (asoc->mapping_array == NULL) {
-		SCTP_FREE(asoc->strmout);
+		SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
 		return (ENOMEM);
 	}
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);
@@ -1138,7 +1138,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	uint16_t new_size;
 
 	new_size = asoc->mapping_array_size + SCTP_MAPPING_ARRAY_INCR;
-	SCTP_MALLOC(new_array, uint8_t *, new_size, "MappingArray");
+	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
 		/* can't get more, forget it */
 		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
@@ -1147,7 +1147,7 @@ sctp_expand_mapping_array(struct sctp_association *asoc)
 	}
 	memset(new_array, 0, new_size);
 	memcpy(new_array, asoc->mapping_array, asoc->mapping_array_size);
-	SCTP_FREE(asoc->mapping_array);
+	SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 	asoc->mapping_array = new_array;
 	asoc->mapping_array_size = new_size;
 	return (0);
@@ -1172,7 +1172,7 @@ done_with_iterator:
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
-		SCTP_FREE(it);
+		SCTP_FREE(it,SCTP_M_ITER);
 		return;
 	}
 select_a_new_ep:
@@ -1351,7 +1351,7 @@ sctp_handle_addr_wq(void)
 	struct sctp_asconf_iterator *asc;
 
 	SCTP_MALLOC(asc, struct sctp_asconf_iterator *, 
-		    sizeof(struct sctp_asconf_iterator), "SCTP_ASCONF_ITERATOR");
+		    sizeof(struct sctp_asconf_iterator), SCTP_M_ASC_IT);
 	if(asc == NULL) {
 		/* Try later, no memory */
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
@@ -1372,7 +1372,7 @@ sctp_handle_addr_wq(void)
 	}
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	if(asc->cnt == 0) {
-		SCTP_FREE(asc);
+		SCTP_FREE(asc, SCTP_M_ASC_IT);
 	} else {
 		(void)sctp_initiate_iterator(sctp_iterator_ep, 
 				       sctp_iterator_stcb, 
