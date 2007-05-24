@@ -256,6 +256,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->last_echo_tsn = asoc->asconf_seq_in;
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 	/* open the requested streams */
+	
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
 		struct sctp_queued_to_read *ctl;
@@ -270,14 +271,14 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 				ctl = TAILQ_FIRST(&asoc->strmin[i].inqueue);
 			}
 		}
-		SCTP_FREE(asoc->strmin);
+		SCTP_FREE(asoc->strmin, SCTP_M_STRMI);
 	}
 	asoc->streamincnt = ntohs(init->num_outbound_streams);
 	if (asoc->streamincnt > MAX_SCTP_STREAMS) {
 		asoc->streamincnt = MAX_SCTP_STREAMS;
 	}
 	SCTP_MALLOC(asoc->strmin, struct sctp_stream_in *, asoc->streamincnt *
-		    sizeof(struct sctp_stream_in), "StreamsIn");
+		    sizeof(struct sctp_stream_in), SCTP_M_STRMI);
 	if (asoc->strmin == NULL) {
 		/* we didn't get memory for the streams! */
 		SCTPDBG(SCTP_DEBUG_INPUT2, "process_init: couldn't get memory for the streams!\n");
@@ -3025,7 +3026,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 
 			siz = sizeof(struct sctp_stream_reset_list) + (number_entries * sizeof(uint16_t));
 			SCTP_MALLOC(liste, struct sctp_stream_reset_list *,
-				    siz, "StrRstList");
+				    siz, SCTP_M_STRESET);
 			if (liste == NULL) {
 				/* gak out of memory */
 				sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);

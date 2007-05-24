@@ -159,7 +159,7 @@ sctp_allocate_vrf(int vrf_id)
 		return (vrf);
 	}
 	SCTP_MALLOC(vrf, struct sctp_vrf *, sizeof(struct sctp_vrf),
-		    "SCTP_VRF");
+		    SCTP_M_VRF);
  	if (vrf == NULL) {
  		/* No memory */
 #ifdef INVARIANTS
@@ -180,7 +180,7 @@ sctp_allocate_vrf(int vrf_id)
 #ifdef INVARIANTS
 		panic("No memory for VRF:%d", vrf_id);
 #endif
-		SCTP_FREE(vrf);
+		SCTP_FREE(vrf, SCTP_M_VRF);
 		return (NULL);
 	}
 	vrf->vrf_ifn_hash = SCTP_HASH_INIT(SCTP_VRF_IFN_HASH_SIZE,
@@ -191,7 +191,7 @@ sctp_allocate_vrf(int vrf_id)
 		panic("No memory for VRF:%d", vrf_id);
 #endif
 		SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
-		SCTP_FREE(vrf);
+		SCTP_FREE(vrf, SCTP_M_VRF);
 		return (NULL);
 	}
 
@@ -248,7 +248,7 @@ sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 	ret = atomic_fetchadd_int(&sctp_ifnp->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
-		SCTP_FREE(sctp_ifnp);
+		SCTP_FREE(sctp_ifnp, SCTP_M_IFN);
 		atomic_subtract_int(&sctppcbinfo.ipi_count_ifns, 1);
 	}
 }
@@ -276,7 +276,7 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
-		SCTP_FREE(sctp_ifap);
+		SCTP_FREE(sctp_ifap, SCTP_M_IFA);
 		atomic_subtract_int(&sctppcbinfo.ipi_count_ifas, 1);
 	}
 }
@@ -330,7 +330,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		 * until after malloc done though.
 		 */
 		SCTP_IPI_ADDR_UNLOCK();
-		SCTP_MALLOC(sctp_ifnp, struct sctp_ifn *, sizeof(struct sctp_ifn), "SCTP_IFN");
+		SCTP_MALLOC(sctp_ifnp, struct sctp_ifn *, sizeof(struct sctp_ifn), SCTP_M_IFN);
 		if (sctp_ifnp == NULL) {
 #ifdef INVARIANTS
 			panic("No memory for IFN:%u", sctp_ifnp->ifn_index);
@@ -388,7 +388,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		}
 	}
 	SCTP_IPI_ADDR_UNLOCK();
-	SCTP_MALLOC(sctp_ifap, struct sctp_ifa *, sizeof(struct sctp_ifa), "SCTP_IFA");
+	SCTP_MALLOC(sctp_ifap, struct sctp_ifa *, sizeof(struct sctp_ifa), SCTP_M_IFA);
 	if (sctp_ifap == NULL) {
 #ifdef INVARIANTS
 		panic("No memory for IFA");
@@ -2183,7 +2183,7 @@ sctp_inpcb_alloc(struct socket *so)
 #ifdef SCTP_MVRF
 	inp->vrf_size = SCTP_DEFAULT_VRF_SIZE;
 	SCTP_MALLOC(inp->m_vrf_ids, uint32_t *,
-		    (sizeof(uint32_t) * inp->vrf_size), "VRF_id's");
+		    (sizeof(uint32_t) * inp->vrf_size), SCTP_M_MVRF);
 	if (inp->m_vrf_ids == NULL) {
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
@@ -2204,7 +2204,7 @@ sctp_inpcb_alloc(struct socket *so)
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%x\n", so);
 #ifdef SCTP_MVRF
-		SCTP_FREE(inp->m_vrf_ids);
+		SCTP_FREE(inp->m_vrf_ids, SCTP_M_MVRF);
 #endif
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
@@ -3526,7 +3526,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
         /* *** END TEMP CODE ****/
 #endif
 #ifdef SCTP_MVRF
-	SCTP_FREE(inp->m_vrf_ids);
+	SCTP_FREE(inp->m_vrf_ids, SCTP_M_MVRF);
 #endif
 	/* Now lets see about freeing the EP hash table. */
 	if (inp->sctp_tcbhash != NULL) {
@@ -4142,11 +4142,14 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, SCTP_DO_SETSCOPE, SCTP_ALLOC_ASOC))) {
 		/* failure.. memory error? */
-		if (asoc->strmout)
-			SCTP_FREE(asoc->strmout);
-		if (asoc->mapping_array)
-			SCTP_FREE(asoc->mapping_array);
-
+		if (asoc->strmout) {
+			SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
+			asoc->strmout = NULL;
+		}
+		if (asoc->mapping_array) {
+			SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
+			asoc->mapping_array = NULL;
+		}
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_TCB_LOCK_DESTROY(stcb);
@@ -4293,7 +4296,7 @@ sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag, uint32_t time)
 	/* Need to add a new block to chain */
 	if (!set) {
 		SCTP_MALLOC(twait_block, struct sctp_tagblock *,
-		    sizeof(struct sctp_tagblock), "TimeWait");
+		    sizeof(struct sctp_tagblock), SCTP_M_TIMW);
 		if (twait_block == NULL) {
 			return;
 		}
@@ -4682,7 +4685,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
     /*sa_ignore FREED_MEMORY*/
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
-		SCTP_FREE(liste);
+		SCTP_FREE(liste, SCTP_M_STRESET);
 	}
 
 	sq = TAILQ_FIRST(&asoc->pending_reply_queue);
@@ -4809,12 +4812,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   }
 */
 	if (asoc->mapping_array) {
-		SCTP_FREE(asoc->mapping_array);
+		SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 		asoc->mapping_array = NULL;
 	}
 	/* the stream outs */
 	if (asoc->strmout) {
-		SCTP_FREE(asoc->strmout);
+		SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
 		asoc->strmout = NULL;
 	}
 	asoc->streamoutcnt = 0;
@@ -4844,7 +4847,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				}
 			}
 		}
-		SCTP_FREE(asoc->strmin);
+		SCTP_FREE(asoc->strmin, SCTP_M_STRMI);
 		asoc->strmin = NULL;
 	}
 	asoc->streamincnt = 0;
@@ -4874,7 +4877,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
         /*sa_ignore FREED_MEMORY*/
 		aparam = TAILQ_FIRST(&asoc->asconf_queue);
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
-		SCTP_FREE(aparam);
+		SCTP_FREE(aparam,SCTP_M_ASC_ADDR);
 	}
 	if (asoc->last_asconf_ack_sent != NULL) {
 		sctp_m_freem(asoc->last_asconf_ack_sent);
@@ -6546,7 +6549,7 @@ sctp_initiate_iterator(inp_func inpf,
 		return (-1);
 	}
 	SCTP_MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator),
-	    "Iterator");
+		    SCTP_M_ITER);
 	if (it == NULL) {
 		return (ENOMEM);
 	}

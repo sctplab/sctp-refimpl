@@ -5898,7 +5898,7 @@ sctp_sendall_completes(void *ptr, uint32_t val)
 
 	/* now free everything */
 	sctp_m_freem(ca->m);
-	SCTP_FREE(ca);
+	SCTP_FREE(ca, SCTP_M_COPYAL);
 }
 
 
@@ -5958,7 +5958,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	struct sctp_copy_all *ca;
 
 	SCTP_MALLOC(ca, struct sctp_copy_all *, sizeof(struct sctp_copy_all),
-		    "CopyAll");
+		    SCTP_M_COPYAL);
 	if (ca == NULL) {
 		sctp_m_freem(m);
 		return (ENOMEM);
@@ -5983,7 +5983,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 #endif
 		if (ca->m == NULL) {
-			SCTP_FREE(ca);
+			SCTP_FREE(ca, SCTP_M_COPYAL);
 			return (ENOMEM);
 		}
 	} else {
@@ -6005,7 +6005,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 				     sctp_sendall_completes, inp, 1);
 	if (ret) {
 		SCTP_PRINTF("Failed to initiate iterator for sendall\n");
-		SCTP_FREE(ca);
+		SCTP_FREE(ca, SCTP_M_COPYAL);
 		return (EFAULT);
 	}
 	return (0);
@@ -11314,12 +11314,12 @@ sctp_lower_sosend(struct socket *so,
 								    struct sctp_stream_out *,
 								    (asoc->pre_open_streams *
 								     sizeof(struct sctp_stream_out)),
-								    "StreamsOut");
+								    SCTP_M_STRMO);
 							if(had_lock) {
 								SCTP_TCB_LOCK(stcb);
 							}
 							if(tmp_str != NULL) {
-								SCTP_FREE(asoc->strmout);
+								SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
 								asoc->strmout = tmp_str;
 								asoc->streamoutcnt = asoc->pre_open_streams;
 							} else {
