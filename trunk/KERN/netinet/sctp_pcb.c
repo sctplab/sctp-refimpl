@@ -2693,7 +2693,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 					SCTP_INP_INFO_WUNLOCK();
-					return (EADDRNOTAVAIL);
+					return (EADDRINUSE);
 				}
 #ifdef SCTP_MVRF
 			}
@@ -2715,7 +2715,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
-				return (EADDRNOTAVAIL);
+				return (EADDRINUSE);
 			}
 			
 		}
@@ -2730,7 +2730,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
-				return (EADDRNOTAVAIL);
+				return (EADDRINUSE);
 			}
 		}
 	} else {
@@ -2812,7 +2812,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 					SCTP_INP_INFO_WUNLOCK();
-					return (EADDRNOTAVAIL);
+					return (EADDRINUSE);
 				}
 				if (candiate == last)
 					candiate = first;
