@@ -63,7 +63,7 @@ sctp_alloc_chunklist(void)
 	sctp_auth_chklist_t *chklist;
 
 	SCTP_MALLOC(chklist, sctp_auth_chklist_t *, sizeof(*chklist),
-		    "AUTH chklist");
+		    SCTP_M_AUTH_CL);
 	if (chklist == NULL) {
 		SCTPDBG(SCTP_DEBUG_AUTH1, "sctp_alloc_chunklist: failed to get memory!\n");
 	} else {
@@ -76,7 +76,7 @@ void
 sctp_free_chunklist(sctp_auth_chklist_t *list)
 {
 	if (list != NULL)
-		SCTP_FREE(list);
+		SCTP_FREE(list, SCTP_M_AUTH_CL);
 }
 
 sctp_auth_chklist_t *
@@ -262,7 +262,7 @@ sctp_alloc_key(uint32_t keylen)
 	sctp_key_t *new_key;
 
 	SCTP_MALLOC(new_key, sctp_key_t *, sizeof(*new_key) + keylen,
-		    "AUTH key");
+		    SCTP_M_AUTH_KY);
 	if (new_key == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -275,7 +275,7 @@ void
 sctp_free_key(sctp_key_t *key)
 {
 	if (key != NULL)
-		SCTP_FREE(key);
+		SCTP_FREE(key,SCTP_M_AUTH_KY);
 }
 
 void
@@ -494,7 +494,7 @@ sctp_alloc_sharedkey(void)
 	sctp_sharedkey_t *new_key;
 
 	SCTP_MALLOC(new_key, sctp_sharedkey_t *, sizeof(*new_key),
-		    "AUTH skey");
+		    SCTP_M_AUTH_KY);
 	if (new_key == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -510,7 +510,7 @@ sctp_free_sharedkey(sctp_sharedkey_t * skey)
 	if (skey != NULL) {
 		if (skey->key != NULL)
 			sctp_free_key(skey->key);
-		SCTP_FREE(skey);
+		SCTP_FREE(skey, SCTP_M_AUTH_KY);
 	}
 }
 
@@ -609,7 +609,7 @@ sctp_alloc_hmaclist(uint8_t num_hmacs)
 
 	alloc_size = sizeof(*new_list) + num_hmacs * sizeof(new_list->hmac[0]);
 	SCTP_MALLOC(new_list, sctp_hmaclist_t *, alloc_size,
-		    "AUTH HMAC list");
+		    SCTP_M_AUTH_HL);
 	if (new_list == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -623,7 +623,7 @@ void
 sctp_free_hmaclist(sctp_hmaclist_t *list)
 {
 	if (list != NULL) {
-		SCTP_FREE(list);
+		SCTP_FREE(list,SCTP_M_AUTH_HL);
 		list = NULL;
 	}
 }
@@ -775,7 +775,8 @@ sctp_alloc_authinfo(void)
 	sctp_authinfo_t *new_authinfo;
 
 	SCTP_MALLOC(new_authinfo, sctp_authinfo_t *, sizeof(*new_authinfo),
-		    "AUTH info");
+		    SCTP_M_AUTH_IF);
+
 	if (new_authinfo == NULL) {
 		/* out of memory */
 		return (NULL);
@@ -800,7 +801,7 @@ sctp_free_authinfo(sctp_authinfo_t *authinfo)
 		sctp_free_key(authinfo->recv_key);
 
 	/* We are NOT dynamically allocating authinfo's right now... */
-	/* SCTP_FREE(authinfo); */
+	/* SCTP_FREE(authinfo, SCTP_M_AUTH_??); */
 }
 
 

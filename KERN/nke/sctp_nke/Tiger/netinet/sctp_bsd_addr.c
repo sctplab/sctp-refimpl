@@ -51,6 +51,40 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.7 2007/05/08 17:01:10 rr
 #include <sys/unistd.h>
 
 
+/* Declare all of our malloc named types */
+
+/* Not to Michael/Peter for mac-os, 
+ * I think mac has this to since I
+ * do see the M_PCB type, so I
+ * will also put in the mac file the
+ * MALLOC_DELCARE. If this does not
+ * work for mac uncomment the defines for
+ * the strings that we use in Panda, I put
+ * them in comments in the mac-os file.
+ */
+#ifndef __Panda__
+MALLOC_DEFINE(SCTP_M_MAP, "sctp_map", "sctp asoc map descriptor");
+MALLOC_DEFINE(SCTP_M_STRMI, "sctp_stri", "sctp stream in array");
+MALLOC_DEFINE(SCTP_M_STRMO, "sctp_stro", "sctp stream out array");
+MALLOC_DEFINE(SCTP_M_ASC_ADDR, "sctp_aadr", "sctp asconf address");
+MALLOC_DEFINE(SCTP_M_ASC_IT, "sctp_a_it", "sctp asconf iterator");
+MALLOC_DEFINE(SCTP_M_AUTH_CL, "sctp_atcl", "sctp auth chunklist");
+MALLOC_DEFINE(SCTP_M_AUTH_KY, "sctp_atky", "sctp auth key");
+MALLOC_DEFINE(SCTP_M_AUTH_HL, "sctp_athm", "sctp auth hmac list");
+MALLOC_DEFINE(SCTP_M_AUTH_IF, "sctp_athi", "sctp auth info");
+MALLOC_DEFINE(SCTP_M_STRESET, "sctp_stre", "sctp stream reset");
+MALLOC_DEFINE(SCTP_M_CMSG, "sctp_cmsg", "sctp CMSG buffer");
+MALLOC_DEFINE(SCTP_M_COPYAL, "sctp_cpal", "sctp copy all");
+MALLOC_DEFINE(SCTP_M_VRF, "sctp_vrf", "sctp vrf struct");
+MALLOC_DEFINE(SCTP_M_IFA, "sctp_ifa", "sctp ifa struct");
+MALLOC_DEFINE(SCTP_M_IFN, "sctp_ifn", "sctp ifn struct");
+MALLOC_DEFINE(SCTP_M_TIMW, "sctp_timw", "sctp time block");
+MALLOC_DEFINE(SCTP_M_MVRF, "sctp_mvrf", "sctp mvrf pcb list");
+MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
+MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
+#endif
+
+
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_wakeup_iterator(void)
@@ -444,38 +478,43 @@ sctp_packet_log(struct mbuf *m, int length)
 		/* Can't log this packet I have not a buffer big enough */
 		return;
 	}
+	if (length < (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk))) {
+		printf("Huh, length is %d to small for sctp min:%d\n", 
+		       length,
+		       (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk)));
+		return;
+	}
 	SCTP_IP_PKTLOG_LOCK();
 	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
 		/* it won't fit on the end. 
 		 * We must go back to the beginning.
 		 * To do this we go back and cahnge packet_log_start.
-		 */
+		 */ 
+		int orig_end;
 		lenat = (int *)packet_log_buffer;
-		if(packet_log_start > packet_log_end) {
+		orig_end = packet_log_end;
+		packet_log_old_end = packet_log_end;
+		packet_log_end = 0;
+		if(packet_log_start > packet_log_old_end) {
 			/* calculate the head room */
-			spare = (int)((caddr_t)&packet_log_buffer[packet_log_start] -
-				      (caddr_t)&packet_log_buffer);
+			spare = packet_log_start - packet_log_old_end;
 		} else {
 			spare = 0;
 		}
 		needed = total_len - spare;
 		packet_log_wrapped = 1;
-		packet_log_old_end = packet_log_end;
 		/* Now update the start */
 		while (needed > 0) {
 			thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 			needed -= thisone;
+			if(thisone == 0) {
+				int *foo;
+				foo = (int *)(&packet_log_buffer[packet_log_start]);
+				goto insane;
+			}
 			/* move to next one */
 			packet_log_start += thisone;
-			if(packet_log_start >= packet_log_old_end) {
-				/* the front one is the start now */
-				packet_log_start = 0;
-				packet_log_old_end = packet_log_end;
-				packet_log_wrapped = 0;
-				break;
-			}
-		} 
-
+		}
 	} else {
 		lenat = (int *)&packet_log_buffer[packet_log_end];
 		if (packet_log_start > packet_log_end) {
@@ -485,12 +524,15 @@ sctp_packet_log(struct mbuf *m, int length)
 				while (needed > 0) {
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
+					if(thisone == 0) {
+						goto insane;
+					}
 					/* move to next one */
 					packet_log_start += thisone;
 					if( ((packet_log_start+sizeof(struct ip)) > SCTP_PACKET_LOG_SIZE) ||
 					    (packet_log_wrapped && (packet_log_start >= packet_log_old_end))){
 						packet_log_start = 0;
-						packet_log_old_end = packet_log_end;
+						packet_log_old_end = 0;
 						packet_log_wrapped = 0;
 						break;
 					}
@@ -498,18 +540,26 @@ sctp_packet_log(struct mbuf *m, int length)
 			}
 		}
 	}
-	SCTP_IP_PKTLOG_UNLOCK();
-	copyto = (void *)lenat;
-
-	packet_log_end = (((caddr_t)copyto + total_len) - (caddr_t)packet_log_buffer);
-	lenat = (int *)copyto;
+	if (((packet_log_end + total_len) >= SCTP_PACKET_LOG_SIZE) || 
+	    ((void *)((caddr_t)lenat) < (void *)packet_log_buffer) ||
+	    ((void *)((caddr_t)lenat + total_len) > (void *)&packet_log_buffer[SCTP_PACKET_LOG_SIZE])) {
+		/* Madness protection */
+	insane:
+		printf("Went mad, end:%d start:%d len:%d wrapped:%d oe:%d - zapping\n",
+		       packet_log_end, packet_log_start, total_len, packet_log_wrapped, packet_log_old_end);
+		packet_log_start = packet_log_end = packet_log_old_end = packet_log_wrapped = 0;
+		lenat = (int *)&packet_log_buffer[0];
+	}
 	*lenat = total_len;
 	lenat++;
 	tick_tock = (uint32_t *)lenat;
+	lenat++;
 	*tick_tock = sctp_get_tick_count();
-	tick_tock++;
-	copyto = (void *)tick_tock;
-	m_copydata(m, 0, length,(caddr_t)copyto);
+	copyto = (void *)lenat;
+	packet_log_end = (((caddr_t)copyto + length) - (caddr_t)packet_log_buffer);
+	SCTP_IP_PKTLOG_UNLOCK();
+	m_copydata(m, 0, length, (caddr_t)copyto);
+
 }
 
 

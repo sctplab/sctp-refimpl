@@ -959,13 +959,13 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
 			sctp_free_ifa(aa->ifa);
-			SCTP_FREE(aa);
+			SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 			return (-1);
 		}
 	}			/* for each aa */
 
 	/* adding new request to the queue */
-	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), "AsconfAddr");
+	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), SCTP_M_ASC_ADDR);
 	if (aa == NULL) {
 		/* didn't get memory */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
@@ -1005,7 +1005,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 		    sizeof(struct in_addr));
 	} else {
 		/* invalid family! */
-		SCTP_FREE(aa);
+		SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
@@ -1084,7 +1084,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
 			/* free the entry */
 			sctp_free_ifa(aa->ifa);
-			SCTP_FREE(aa);
+			SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 			return (-1);
 		} else if (type == SCTP_DEL_IP_ADDRESS &&
 		    aa->ap.aph.ph.param_type == SCTP_ADD_IP_ADDRESS) {
@@ -1096,7 +1096,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			sctp_asconf_addr_mgmt_ack(stcb, aa->ifa, type, 1);
 			/* free the entry */
 			sctp_free_ifa(aa->ifa);
-			SCTP_FREE(aa);
+			SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 			return (-1);
 		}
 	}			/* for each aa */
@@ -1112,7 +1112,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 		return (-1);
 	}
 	/* adding new request to the queue */
-	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), "AsconfAddr");
+	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa), SCTP_M_ASC_ADDR);
 	if (aa == NULL) {
 		/* didn't get memory */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
@@ -1146,7 +1146,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 		    sizeof(struct in_addr));
 	} else {
 		/* invalid family! */
-		SCTP_FREE(aa);
+		SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
@@ -1275,7 +1275,7 @@ sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
 	/* remove the param and free it */
 	TAILQ_REMOVE(&stcb->asoc.asconf_queue, aparam, next);
 	sctp_free_ifa(aparam->ifa);
-	SCTP_FREE(aparam);
+	SCTP_FREE(aparam, SCTP_M_ASC_ADDR);
 }
 
 /*
@@ -1883,7 +1883,7 @@ void sctp_iterator_end(void *ptr, uint32_t val)
 		SCTP_DECR_LADDR_COUNT();
 		l = l_next;
 	}
-	SCTP_FREE(asc);
+	SCTP_FREE(asc, SCTP_M_ASC_IT);
 }
 
 /*
@@ -2600,14 +2600,14 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 		struct sctp_laddr *wi;
 		SCTP_MALLOC(asc, struct sctp_asconf_iterator *, 
 			    sizeof(struct sctp_asconf_iterator),
-			    "SCTP_ASCONF_ITERATOR");
+			    SCTP_M_ASC_IT);
 		if (asc == NULL) {
 			return (ENOMEM);
 		}
 		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr,
 				   struct sctp_laddr);
 		if (wi == NULL) {
-			SCTP_FREE(asc);
+			SCTP_FREE(asc, SCTP_M_ASC_IT);
 			return (ENOMEM);
 		} 
 		if (type == SCTP_ADD_IP_ADDRESS) {
