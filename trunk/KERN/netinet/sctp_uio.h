@@ -950,6 +950,7 @@ struct xsctp_tcb {
 	uint32_t cumulative_tsn;
 	uint32_t cumulative_tsn_ack;
 	uint32_t mtu;
+	uint32_t refcnt;
 	/* add more association specific data here*/
 };
 
