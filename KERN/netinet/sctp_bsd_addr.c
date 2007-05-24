@@ -478,6 +478,12 @@ sctp_packet_log(struct mbuf *m, int length)
 		/* Can't log this packet I have not a buffer big enough */
 		return;
 	}
+	if (length < (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk))) {
+		printf("Huh, length is %d to small for sctp min:%d\n", 
+		       length,
+		       (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk)));
+		return;
+	}
 	SCTP_IP_PKTLOG_LOCK();
 	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
 		/* it won't fit on the end. 
@@ -489,49 +495,38 @@ sctp_packet_log(struct mbuf *m, int length)
 		orig_end = packet_log_end;
 		packet_log_old_end = packet_log_end;
 		packet_log_end = 0;
-		if(packet_log_start > packet_log_end) {
+		if(packet_log_start > packet_log_old_end) {
 			/* calculate the head room */
-			spare = packet_log_start - packet_log_end;
+			spare = packet_log_start - packet_log_old_end;
 		} else {
 			spare = 0;
 		}
 		needed = total_len - spare;
-		printf("none at end for %d/%d start:%d end:%d wrap:%d oe:%d spare:%d\n",
-		       total_len,
-		       needed,
-		       packet_log_start, 
-		       orig_end, 
-		       packet_log_wrapped, 
-		       packet_log_old_end, spare);
 		packet_log_wrapped = 1;
 		/* Now update the start */
 		while (needed > 0) {
 			thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
-			printf("deduct this one  %d\n", thisone);
 			needed -= thisone;
+			if(thisone == 0) {
+				int *foo;
+				foo = (int *)(&packet_log_buffer[packet_log_start]);
+				goto insane;
+			}
 			/* move to next one */
 			packet_log_start += thisone;
 		}
-		printf("final start:%d end at:%d wrap:%d oe:%d\n",
-		       packet_log_start, 
-		       packet_log_end, 
-		       packet_log_wrapped, 
-		       packet_log_old_end);
 	} else {
 		lenat = (int *)&packet_log_buffer[packet_log_end];
 		if (packet_log_start > packet_log_end) {
 			if ((packet_log_end + total_len) > packet_log_start) {
 				/* Now need to update killing some packets  */
 				needed = total_len - ((packet_log_start - packet_log_end));
-				printf("make room for %d start:%d end:%d wrap:%d oe:%d\n",
-				       needed,
-				       packet_log_start, 
-				       packet_log_end, 
-				       packet_log_wrapped, 
-				       packet_log_old_end);
 				while (needed > 0) {
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
+					if(thisone == 0) {
+						goto insane;
+					}
 					/* move to next one */
 					packet_log_start += thisone;
 					if( ((packet_log_start+sizeof(struct ip)) > SCTP_PACKET_LOG_SIZE) ||
@@ -542,11 +537,6 @@ sctp_packet_log(struct mbuf *m, int length)
 						break;
 					}
 				}
-				printf("final start:%d end at:%d wrap:%d oe:%d\n",
-				       packet_log_start, 
-				       packet_log_end, 
-				       packet_log_wrapped, 
-				       packet_log_old_end);
 			}
 		}
 	}
@@ -554,22 +544,22 @@ sctp_packet_log(struct mbuf *m, int length)
 	    ((void *)((caddr_t)lenat) < (void *)packet_log_buffer) ||
 	    ((void *)((caddr_t)lenat + total_len) > (void *)&packet_log_buffer[SCTP_PACKET_LOG_SIZE])) {
 		/* Madness protection */
+	insane:
 		printf("Went mad, end:%d start:%d len:%d wrapped:%d oe:%d - zapping\n",
 		       packet_log_end, packet_log_start, total_len, packet_log_wrapped, packet_log_old_end);
 		packet_log_start = packet_log_end = packet_log_old_end = packet_log_wrapped = 0;
 		lenat = (int *)&packet_log_buffer[0];
 	}
-	SCTP_IP_PKTLOG_UNLOCK();
-	copyto = (void *)lenat;
-	packet_log_end = (((caddr_t)copyto + total_len) - (caddr_t)packet_log_buffer);
-	lenat = (int *)copyto;
 	*lenat = total_len;
 	lenat++;
 	tick_tock = (uint32_t *)lenat;
+	lenat++;
 	*tick_tock = sctp_get_tick_count();
-	tick_tock++;
-	copyto = (void *)tick_tock;
-	m_copydata(m, 0, length,(caddr_t)copyto);
+	copyto = (void *)lenat;
+	packet_log_end = (((caddr_t)copyto + length) - (caddr_t)packet_log_buffer);
+	SCTP_IP_PKTLOG_UNLOCK();
+	m_copydata(m, 0, length, (caddr_t)copyto);
+
 }
 
 
