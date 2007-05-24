@@ -11399,6 +11399,8 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* Keep the stcb from being freed under our feet */
+	if (free_cnt_applied)
+		panic("refcnt already incremented");
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	free_cnt_applied = 1;
 
