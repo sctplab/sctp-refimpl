@@ -1537,6 +1537,9 @@ sctp_timeout_handler(void *t)
 #endif
 			SCTP_INP_DECR_REF(inp);
 		}
+		if (stcb) {
+			atomic_add_int(&stcb->asoc.refcnt, -1);
+		}
 		return;
 	}
 #endif
@@ -5215,6 +5218,8 @@ sctp_sorecvmsg(struct socket *so,
 			 * the sender uses the tcb_lock to increment, we need to use
 			 * the atomic add to the refcnt
 			 */
+			if (freecnt_applied)
+				panic("refcnt already incremented"); 
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			freecnt_applied = 1;
 			/* Setup to remember how much we have not yet told
