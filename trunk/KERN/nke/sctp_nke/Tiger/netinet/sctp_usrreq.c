@@ -4172,7 +4172,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
 							     SCTP_ADD_IP_ADDRESS, vrf_id);
 			} else {
-				error = EADDRNOTAVAIL;
+				error = EADDRINUSE;
 			}
 			if (error)
 				break;
