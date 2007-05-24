@@ -33,6 +33,8 @@ struct part_ip {
 	uint8_t ver;
 	uint8_t tos;
 	uint16_t len;
+	uint16_t ip_id;
+	uint16_t ip_off;
 };
 
 struct part_ip6 {
@@ -113,17 +115,29 @@ main(int argc, char **argv)
 			break;
 		}	
 		if(((header->data[0] & 0xf0) >> 4) == 4) {
+			uint16_t tmp;
 			ip = (struct part_ip *) header->data;
 			len = ip->len;
+			tmp = htons(ip->ip_off);
+			ip->ip_off = tmp;
+			wlen = (((len+3) << 2) >> 2);
+			if(wlen < (header->datasize-8)) {
+				/* Ip header on input on
+				 * bsd will drop the header size
+				 */
+				wlen += 20;
+				len += 20;
+			}
 			ip->len = htons(len);
+			wlen = ((((len)+3) >> 2) << 2);
 		} else if (((header->data[0] & 0xf0) >> 4) == 6) {
 			ip6 = (struct part_ip6 *)header->data;
 			len = ip6->len;
+			wlen = header->datasize - 8;
 		} else {
 			printf("Not v6 or v4?\n");
 			break;
 		}
-		wlen = ((((len)+3) >> 2) << 2);
 		phead.len = phead.caplen = wlen + 4;
 
 		if((ret=fwrite(&phead, sizeof(phead), 1, out)) < 1) {
