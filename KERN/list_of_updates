@@ -1,42 +1,6 @@
-- fixed autclose to not allow setting on 1-2-1 model.
-- bounded cookie-life to 1 second minimum in socket option set.
-- Delayed_ack_time becomes delayed_ack per new socket api document.
-- Improve port number selection, we now use low/high bounds and
-  no chance of a endless loop. Only one call to random per bind
-  as well.
-- fixes so set_peer_primary pre-screens addresses to be 
-  valid to this host.
-- maxseg did not allow setting on an assoc basis. We needed
-  to thus track and use an association value instead of a inp value.
-- Fixed ep get of HB status to report back properly.
-- use settings flag to tell if assoc level hb is on off not
-  the timer.. since the timer may still run if unconf address
-  are present.
-- check for crazy ENABLE/DISABLE conditions.
-- set and get of pmtud (fixed path mtu) not always taking into account ovh.
-- Getting PMTU info on stcb only needs to return PMTUD_ENABLED if
-  any net is doing PMTU discovery.
-- Panic or warning fixed to not do so when a valid ip frag is
-  taking place.
-- sndrcvinfo appearing in both inp and stcb was full size, instead
-  of the non-pad version. This saves about 92 bytes from each struct
-  by carefully converting to use the smaller version.
-- one-2-one model get(maxseg) would always get ep value, never the
-  tcb's value.
-- The delayed ack time could be under a tick, this fixes so
-  it bounds it to at least 1 tick for platforms whos tick
-  is more than a ms.
-- Fragment interleave level set to wrong default value.
-- Fragment interleave could not set level 0.
-- Defered stream reset was broken due to a guard check and ntohl issue.
-- Found two lock order reversals and fixed.
-- Tighten up address checking, if the user gives an address the sa_len
-  had better be set properly.
-- Get asoc by assoc-id would return a locked tcb when it was asked
-  not to if the tcb was in the restart hash.
-- sysctl to dig down and get more association details
------------------Above here is the May 21 patch--------------------
 - Fixes so we won't try to start a timer when we
   hold a wq lock for the iterator. Panda uses a
   silly recursive lock they hold through the timer.
 - Add poor mans e-real (packet_logging) option.
+- Allocate and start using SCTP_M_XXX for all SCTP_MALLOC() calls.
+- sysctl now will get back the refcnt for viewing by onlookers.
