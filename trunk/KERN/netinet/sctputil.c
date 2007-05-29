@@ -1136,13 +1136,14 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 }
 
 int
-sctp_expand_mapping_array(struct sctp_association *asoc)
+sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 {
 	/* mapping array needs to grow */
 	uint8_t *new_array;
-	uint16_t new_size;
+	uint32_t new_size;
 
-	new_size = asoc->mapping_array_size + SCTP_MAPPING_ARRAY_INCR;
+	
+	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
 	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
 		/* can't get more, forget it */

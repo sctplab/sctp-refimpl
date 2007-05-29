@@ -200,7 +200,7 @@ void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
 
 void sctp_report_all_outbound(struct sctp_tcb *, int);
 
-int sctp_expand_mapping_array(struct sctp_association *);
+int sctp_expand_mapping_array(struct sctp_association *, uint32_t);
 
 void sctp_abort_notification(struct sctp_tcb *, int);
 
