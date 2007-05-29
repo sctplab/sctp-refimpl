@@ -5507,7 +5507,7 @@ sctp_pcb_init()
 	SCTP_OS_TIMER_INIT(&sctppcbinfo.addr_wq_timer.timer);
 
 	/* Init the TIMEWAIT list */
-	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
+	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE_A; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
