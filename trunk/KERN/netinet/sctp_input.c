@@ -1381,7 +1381,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (asoc->mapping_array) {
 			memset(asoc->mapping_array, 0,
 			       asoc->mapping_array_size);
-			printf("reset mapping array at %p restarting asoc:%p\n", asoc->mapping_array, stcb);
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_INFO_WLOCK();
