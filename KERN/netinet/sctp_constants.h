@@ -962,7 +962,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.17 2007/05/28 11:17:23 
  * entries must be searched to see if the tag is in timed wait. If so we
  * reject it.
  */
-#define SCTP_STACK_VTAG_HASH_SIZE 31
+#define SCTP_STACK_VTAG_HASH_SIZE   31
+#define SCTP_STACK_VTAG_HASH_SIZE_A 32
+
 
 /*
  * If we use the per-endpoint model than we do not have a hash table of
