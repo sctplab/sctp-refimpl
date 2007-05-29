@@ -472,6 +472,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	void *copyto;
 	uint32_t *tick_tock;
 	int total_len, spare;
+	int mad_from=0;
 	total_len = SCTP_SIZE32((length + (2 * sizeof(int))));
 	/* Log a packet to the buffer. */
 	if (total_len> SCTP_PACKET_LOG_SIZE) {
@@ -482,6 +483,11 @@ sctp_packet_log(struct mbuf *m, int length)
 		return;
 	}
 	SCTP_IP_PKTLOG_LOCK();
+	if (packet_log_start < 0) {
+		mad_from = 5;
+		thisone = 0;
+		goto insane;
+	}
 	if((SCTP_PACKET_LOG_SIZE - packet_log_end) <= total_len) {
 		/* it won't fit on the end. 
 		 * We must go back to the beginning.
@@ -507,9 +513,11 @@ sctp_packet_log(struct mbuf *m, int length)
 			if(thisone == 0) {
 				int *foo;
 				foo = (int *)(&packet_log_buffer[packet_log_start]);
+				mad_from = 1;
 				goto insane;
 			}
 			if ((packet_log_start+thisone) > SCTP_PACKET_LOG_SIZE) {
+				mad_from = 2;
 				goto insane;
 			}
 			/* move to next one */
@@ -526,9 +534,11 @@ sctp_packet_log(struct mbuf *m, int length)
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
 					if(thisone == 0) {
+						mad_from = 3;
 						goto insane;
 					}
 					if ((packet_log_start+thisone) > SCTP_PACKET_LOG_SIZE) {
+						mad_from = 4;
 						goto insane;
 					}
 					/* move to next one */
@@ -549,8 +559,9 @@ sctp_packet_log(struct mbuf *m, int length)
 	    ((void *)((caddr_t)lenat + total_len) > (void *)&packet_log_buffer[SCTP_PACKET_LOG_SIZE])) {
 		/* Madness protection */
 	insane:
-		printf("Went mad, end:%d start:%d len:%d wrapped:%d oe:%d - zapping\n",
-		       packet_log_end, packet_log_start, total_len, packet_log_wrapped, packet_log_old_end);
+		printf("Went mad, end:%d start:%d len:%d wrapped:%d oe:%d - zapping thisone:%d from:%d\n",
+		       packet_log_end, packet_log_start, total_len, packet_log_wrapped, packet_log_old_end,
+		       thisone, mad_from);
 		packet_log_start = packet_log_end = packet_log_old_end = packet_log_wrapped = 0;
 		lenat = (int *)&packet_log_buffer[0];
 	}
