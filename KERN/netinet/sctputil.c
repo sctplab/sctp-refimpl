@@ -5200,36 +5200,36 @@ sctp_sorecvmsg(struct socket *so,
 	 * Note that stcb COULD be NULL.
 	 */
 	control->some_taken = 1;
-	if(hold_sblock) {
+	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
 	stcb = control->stcb;
 	if (stcb) {
-		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
-		   (control->do_not_ref_stcb == 0)) {
-			if(freecnt_applied == 0)
+		if ((control->do_not_ref_stcb == 0) &&
+		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
+			if (freecnt_applied == 0)
 				stcb = NULL;
 		} else if (control->do_not_ref_stcb == 0) {
 			/* you can't free it on me please */
 			/*
-			 * The lock on the socket buffer protects us so the free
-			 * code will stop. But since we used the socketbuf lock and
-			 * the sender uses the tcb_lock to increment, we need to use
-			 * the atomic add to the refcnt
+			 * The lock on the socket buffer protects us so the
+			 * free code will stop. But since we used the socketbuf
+			 * lock and the sender uses the tcb_lock to increment,
+			 * we need to use the atomic add to the refcnt
 			 */
 			if (freecnt_applied)
 				panic("refcnt already incremented"); 
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			freecnt_applied = 1;
-			/* Setup to remember how much we have not yet told
+			/*
+			 * Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
 			 * the value from the tcb from last time.
-			 * Note too that sack sending clears this when a sack is
-			 * sent.. which is fine. Once we hit the rwnd_req, we
-			 * then will go to the sctp_user_rcvd() that will
+			 * Note too that sack sending clears this when a sack
+			 * is sent, which is fine. Once we hit the rwnd_req,
+			 * we then will go to the sctp_user_rcvd() that will
 			 * not lock until it KNOWs it MUST send a WUP-SACK.
-			 *
 			 */
 			freed_so_far = stcb->freed_by_sorcv_sincelast;
 			stcb->freed_by_sorcv_sincelast = 0;
