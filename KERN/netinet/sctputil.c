@@ -1097,9 +1097,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->mapping_array_size = SCTP_INITIAL_MAPPING_ARRAY;
 	SCTP_MALLOC(asoc->mapping_array, uint8_t *, asoc->mapping_array_size,
 		    SCTP_M_MAP);
-	printf("Mapping array is at address %p (stcb:%p)\n", 
-	       asoc->mapping_array,
-	       stcb);
 	if (asoc->mapping_array == NULL) {
 		SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
 		return (ENOMEM);
@@ -1153,8 +1150,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	}
 	memset(new_array, 0, new_size);
 	memcpy(new_array, asoc->mapping_array, asoc->mapping_array_size);
-	printf("free old map %p new map is now %p\n",
-	       asoc->mapping_array, new_array);
 	SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 	asoc->mapping_array = new_array;
 	asoc->mapping_array_size = new_size;
