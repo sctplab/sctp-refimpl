@@ -1,2 +1,8 @@
+- gcc 4.2 inlines things it should not, add directive
+  to prevent process_control from inlining.
+- Fix a memory overwrite when the mapping array
+  is expanded.
+- Fix so vtag hash is 1 bigger so that it modulo's out
+  correctly.
 - do not dereference stcb when control->do_not_ref_stcb is set
 - 
