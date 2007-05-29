@@ -909,7 +909,6 @@ union sctp_sockstore {
 	struct sockaddr sa;
 };
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
 struct xsctp_inpcb {
 	uint32_t last;
 	uint16_t local_port;
@@ -923,7 +922,6 @@ struct xsctp_inpcb {
 	uint16_t maxqlen;
 	/* add more endpoint specific data here*/
 };
-#endif
 
 struct xsctp_tcb {
 	uint32_t last;
