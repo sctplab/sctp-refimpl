@@ -512,8 +512,12 @@ sctp_packet_log(struct mbuf *m, int length)
 				foo = (int *)(&packet_log_buffer[packet_log_start]);
 				goto insane;
 			}
+			if ((packet_log_start+thisone) > SCTP_PACKET_LOG_SIZE) {
+				goto insane;
+			}
 			/* move to next one */
 			packet_log_start += thisone;
+			
 		}
 	} else {
 		lenat = (int *)&packet_log_buffer[packet_log_end];
@@ -525,6 +529,9 @@ sctp_packet_log(struct mbuf *m, int length)
 					thisone = (*(int *)(&packet_log_buffer[packet_log_start]));
 					needed -= thisone;
 					if(thisone == 0) {
+						goto insane;
+					}
+					if ((packet_log_start+thisone) > SCTP_PACKET_LOG_SIZE) {
 						goto insane;
 					}
 					/* move to next one */
