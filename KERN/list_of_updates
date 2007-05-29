@@ -1,6 +1,2 @@
-- Fixes so we won't try to start a timer when we
-  hold a wq lock for the iterator. Panda uses a
-  silly recursive lock they hold through the timer.
-- Add poor mans e-real (packet_logging) option.
-- Allocate and start using SCTP_M_XXX for all SCTP_MALLOC() calls.
-- sysctl now will get back the refcnt for viewing by onlookers.
+-
+
