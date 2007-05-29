@@ -1,2 +1,2 @@
--
-
+- do not dereference stcb when control->do_not_ref_stcb is set
+- 
