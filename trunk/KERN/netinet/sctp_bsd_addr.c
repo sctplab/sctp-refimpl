@@ -479,9 +479,6 @@ sctp_packet_log(struct mbuf *m, int length)
 		return;
 	}
 	if (length < (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk))) {
-		printf("Huh, length is %d to small for sctp min:%d\n", 
-		       length,
-		       (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk)));
 		return;
 	}
 	SCTP_IP_PKTLOG_LOCK();
