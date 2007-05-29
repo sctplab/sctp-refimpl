@@ -468,7 +468,7 @@ uint8_t packet_log_buffer[SCTP_PACKET_LOG_SIZE];
 void
 sctp_packet_log(struct mbuf *m, int length)
 {
-	int *lenat, needed, thisone;
+	int *lenat, needed, thisone=0;
 	void *copyto;
 	uint32_t *tick_tock;
 	int total_len, spare;
