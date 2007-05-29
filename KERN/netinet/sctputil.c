@@ -5245,7 +5245,7 @@ sctp_sorecvmsg(struct socket *so,
 	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
-		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 			struct sctp_extrcvinfo *s_extra;
 			s_extra = (struct sctp_extrcvinfo *)sinfo;
 			if ((nxt) &&
@@ -5282,7 +5282,7 @@ sctp_sorecvmsg(struct socket *so,
 		/*
 		 * update off the real current cum-ack, if we have an stcb.
 		 */
-		if (stcb)
+		if ((control->do_not_ref_stcb == 0) && stcb)
 			sinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		/*
 		 * mask off the high bits, we keep the actual chunk bits in
@@ -5373,11 +5373,11 @@ sctp_sorecvmsg(struct socket *so,
 				       0);
 #endif
 			/* re-read */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				goto release;
 			}
 
-			if (stcb &&
+			if ((control->do_not_ref_stcb == 0) && stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				no_rcv_needed = 1;
 			}
@@ -5385,10 +5385,11 @@ sctp_sorecvmsg(struct socket *so,
 				/* error we are out of here */
 				goto release;
 			}
-			if((SCTP_BUF_NEXT(m) == NULL) && 
-			   (cp_len >= SCTP_BUF_LEN(m)) &&
-			   ((control->end_added == 0) ||
-			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
+			if ((SCTP_BUF_NEXT(m) == NULL) && 
+			    (cp_len >= SCTP_BUF_LEN(m)) &&
+			    ((control->end_added == 0) ||
+			     (control->end_added &&
+			      (TAILQ_NEXT(control, next) == NULL)))
 				) {
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_DOESLCK,
@@ -5438,7 +5439,7 @@ sctp_sorecvmsg(struct socket *so,
 					freed_so_far += cp_len;
 #ifdef __FreeBSD__
 					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if(alen < cp_len) {
+					if (alen < cp_len) {
 						panic("Control length goes negative?");
 					}
 #else
@@ -5496,7 +5497,8 @@ sctp_sorecvmsg(struct socket *so,
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
-					if (stcb) {
+					if ((control->do_not_ref_stcb ==0) &&
+					    stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
 					copied_so_far += cp_len;
@@ -5508,7 +5510,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 #ifdef __FreeBSD__
 					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if(alen < cp_len) {
+					if (alen < cp_len) {
 						panic("Control length goes negative2?");
 					}
 #else
@@ -5560,13 +5562,14 @@ sctp_sorecvmsg(struct socket *so,
 					       0,
 					       0);
 #endif
-				if(TAILQ_NEXT(control, next) == NULL) {
-					/* If we don't have a next we need a lock,
-					 * if there is a next interupt is filling ahead
-					 * of us and we don't need a lock to remove this
-					 * guy (which is the head of the queue).
+				if (TAILQ_NEXT(control, next) == NULL) {
+					/* If we don't have a next we need a
+					 * lock, if there is a next interupt
+					 * is filling ahead of us and we don't
+					 * need a lock to remove this guy
+					 * (which is the head of the queue).
 					 */
-					if(hold_rlock == 0) {
+					if (hold_rlock == 0) {
 						SCTP_INP_READ_LOCK(inp);
 						hold_rlock = 1;
 					}
@@ -5587,7 +5590,8 @@ sctp_sorecvmsg(struct socket *so,
 				control->data = NULL;
 				sctp_free_a_readq(stcb, control);
 				control = NULL;
-				if ((freed_so_far >= rwnd_req) && (no_rcv_needed == 0))
+				if ((freed_so_far >= rwnd_req) &&
+				    (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 
 			} else {
@@ -5598,8 +5602,9 @@ sctp_sorecvmsg(struct socket *so,
 				 * control to read.
 				 */
 #ifdef INVARIANTS
-				if(control->end_added && (control->data == NULL) &&
-				   (control->tail_mbuf == NULL)) {
+				if (control->end_added &&
+				    (control->data == NULL) &&
+				    (control->tail_mbuf == NULL)) {
 					panic("Gak, control->length is corrupt?");
 				}
 #endif
