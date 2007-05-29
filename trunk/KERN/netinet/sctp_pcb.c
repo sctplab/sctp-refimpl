@@ -4094,7 +4094,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
-	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag, vrf_id))) {
+	if ((err = sctp_init_asoc(inp, stcb, for_a_init, override_tag, vrf_id))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
@@ -4147,6 +4147,8 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			asoc->strmout = NULL;
 		}
 		if (asoc->mapping_array) {
+			printf("ARA failed free map %p\n",
+			       asoc->mapping_array);
 			SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 			asoc->mapping_array = NULL;
 		}
@@ -4812,6 +4814,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   }
 */
 	if (asoc->mapping_array) {
+		printf("Free asoc frees array:%p (stcb:%p)\n" 
+		       asoc->mapping_array, stcb);
 		SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 		asoc->mapping_array = NULL;
 	}
