@@ -4814,7 +4814,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   }
 */
 	if (asoc->mapping_array) {
-		printf("Free asoc frees array:%p (stcb:%p)\n" 
+		printf("Free asoc frees array:%p (stcb:%p)\n",
 		       asoc->mapping_array, stcb);
 		SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 		asoc->mapping_array = NULL;
