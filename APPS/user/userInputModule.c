@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.101 2007-05-22 21:24:54 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.102 2007-05-30 10:51:22 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1776,7 +1776,7 @@ int
 cmd_savepacketlog(char *argv[], int argc)
 {
 	FILE *fileio;
-	uint8_t buf[SCTP_PACKET_LOG_SIZE];
+	uint8_t buf[(SCTP_PACKET_LOG_SIZE + 4)];
 	socklen_t len;
 	int ret;
 
