@@ -29,6 +29,24 @@
 #include <arpa/inet.h>
 #include <netinet/sctp.h>
 
+struct part_ip {
+	uint8_t   ver;
+	uint8_t   tos;
+	uint16_t  len;
+	uint16_t  id;
+        uint16_t  off;
+        uint8_t   ttl;
+        uint8_t   p;
+        uint16_t  sum;
+	uint32_t  src;
+        uint32_t  dst;
+};
+
+struct part_ip6 {
+	uint32_t ver;
+	uint16_t len;
+	uint16_t rest;
+};
 
 int
 main(int argc, char **argv)
@@ -61,12 +79,27 @@ main(int argc, char **argv)
 	header = (struct sctp_packet_log *)buf;
 	at = 0;
 	while (at < limit) {
-		printf("%d - %d bytes (including pad), ts:%x ipversion:%x\n",
+		printf("header:%p | %d - %d bytes (including pad), ts:%x ipversion:%x\n",
+		       header,
 		       cnt, 
 		       header->datasize, 
 		       header->timestamp, 
 		       ((header->data[0] >> 4) & 0x0f));
 		cnt++;
+		if((((header->data[0] >> 4) & 0x0f)) == 4) {
+			struct part_ip *ip;
+			ip = (struct part_ip *)header->data;
+			printf("ver:%2.2x tos:%2.2x len:%d\n",
+			       ip->ver,
+			       ip->tos,
+			       ip->len);
+			printf("id:%4.4d off:%4.4x ttl:%x proto:%d\n",
+			       ip->id, ip->off, ip->ttl, ip->p);
+			printf("sum:%d src:%x dest:%x\n",
+			       ip->sum,
+			       ip->src,
+			       ip->dst);
+		}
 		if( header->datasize > limit) {
 			printf("strange, size > limit:%d\n", limit);
 			break;
