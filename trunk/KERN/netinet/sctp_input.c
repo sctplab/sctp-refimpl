@@ -1548,9 +1548,12 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		/* memory problem? */
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"process_cookie_new: no room for another TCB!\n");
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
+		
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id, table_id);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
@@ -1575,9 +1578,11 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 * cookie was in flight. Only recourse is to abort the
 		 * association.
 		 */
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id, table_id);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
@@ -1599,14 +1604,18 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	else
 		retval = 0;
 	if (retval < 0) {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 	/*
@@ -1673,7 +1682,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		memcpy(&sin6->sin6_addr, cookie->laddress,
 		    sizeof(sin6->sin6_addr));
 	} else {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 
