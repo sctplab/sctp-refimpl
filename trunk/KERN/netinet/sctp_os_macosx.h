@@ -157,6 +157,8 @@ extern struct fileops socketops;
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
 
+/* MAC always needs a lock */
+#define SCTP_PKTLOG_WRITERS_NEED_LOCK 0
 /*
  * Access to IFN's to help with src-addr-selection
  */
