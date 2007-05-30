@@ -103,11 +103,13 @@ useage(char *who)
 	printf("-L              - send LOOP requests\n");
 	printf("-v              - Verbose please\n");
 	printf("-S              - send SIMPLE data (default)\n");
+	printf("-Z              - No heatbeat delay\n");
 	printf("-I strms        - Number of allowed in-streams (default 13)\n");
 	printf("-O strms        - Number of requesed out-streams (default 13)\n");
 	printf("-H or -?        - help\n");
 }
 
+int no_hb_delay = 0;
 union sctp_sockstore addr;
 union sctp_sockstore from;
 union sctp_sockstore bindto;
@@ -419,6 +421,21 @@ setup_a_socket()
 	rto.srto_min = 1000;
         rto.srto_max = 5000;
         rto.srto_initial = 1000;
+	if (no_hb_delay) {
+		struct sctp_paddrparams param;
+		socklen_t len;
+		int result;
+		memset(&param, 0, sizeof(param));
+		param.spp_flags = SPP_HB_ENABLE | SPP_HB_TIME_IS_ZERO;
+		len = sizeof(param);
+		result = setsockopt(sd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
+				    &param, len);
+		if(result != 0) {
+			printf("Can't turn HB delay to zero error:%d -exiting\n", errno);
+			exit (-1);
+		}
+	}
+
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_RTOINFO, &rto, siz) != 0) {
 		printf("Can't set RTO information error:%d - exiting\n", errno);
 		exit (-1);
@@ -543,13 +560,16 @@ main (int argc, char **argv)
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
 	addr.sa.sa_family = AF_INET6;
 	addr.sa.sa_len = sizeof(struct sockaddr_in6);
-	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?H")) != EOF) {
+	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?HZ")) != EOF) {
 		switch(i) {
 		case 'D':
 			mydelay = strtoul(optarg, NULL, 0);
 			if (mydelay == 0) {
 				printf("Warning, test app may not function/fail without some delay\n");
 			}
+			break;
+		case 'Z':
+			no_hb_delay = 1;
 			break;
 		case 'l':
 			listen_only = 1;
