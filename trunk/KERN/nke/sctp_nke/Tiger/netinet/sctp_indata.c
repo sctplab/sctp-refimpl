@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.24 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.27 2007/05/30 17:39:44 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1481,7 +1481,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if (gap >= (uint32_t) (asoc->mapping_array_size << 3)) {
 		SCTP_TCB_LOCK_ASSERT(stcb);
-		if (sctp_expand_mapping_array(asoc)) {
+		if (sctp_expand_mapping_array(asoc, gap)) {
 			/* Can't expand, drop it */
 			return (0);
 		}

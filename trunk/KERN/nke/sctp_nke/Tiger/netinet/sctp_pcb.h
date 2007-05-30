@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.16 2007/05/09 13:30:06 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.19 2007/05/30 17:39:45 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -255,7 +255,7 @@ struct sctp_epinfo {
 	uint32_t ipi_free_strmoq;
 
 
-	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
+	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE_A];
 
 	/* address work queue handling */
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)

@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.8 2007/05/17 12:16:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.11 2007/05/29 11:53:27 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -209,7 +209,7 @@ struct sctp_paramhdr {
  * form. Note this is a compile option to
  * the kernel,  SCTP_PACKET_LOGGING, and
  * without it in your kernel you
- * will get a ENOSUPPORT.
+ * will get a EOPNOTSUPP
  */
 #define SCTP_GET_PACKET_LOG             0x00004001
 

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.29 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.32 2007/05/30 17:39:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4094,7 +4094,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
-	if ((err = sctp_init_asoc(inp, asoc, for_a_init, override_tag, vrf_id))) {
+	if ((err = sctp_init_asoc(inp, stcb, for_a_init, override_tag, vrf_id))) {
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
@@ -5503,7 +5503,7 @@ sctp_pcb_init()
 	SCTP_OS_TIMER_INIT(&sctppcbinfo.addr_wq_timer.timer);
 
 	/* Init the TIMEWAIT list */
-	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
+	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE_A; i++) {
 		LIST_INIT(&sctppcbinfo.vtag_timewait[i]);
 	}
 
