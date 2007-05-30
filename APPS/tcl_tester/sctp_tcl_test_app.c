@@ -174,7 +174,7 @@ handle_notification(char *receive_buffer, int *notDone)
 	char buf[256];
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
-	sctp_assoc_t id;
+	sctp_assoc_t id = 0;
 
 	asocDown = 0;
 
