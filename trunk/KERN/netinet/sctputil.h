@@ -47,7 +47,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.20 2007/05/28 11:17:23 rrs Ex
  * its not already defined.
  */
 
-#if defined(SCTP_LOG_MAXBURST) || defined(SCTP_LOG_RWND) || defined(SCTP_LOG_RWND)
+#if defined(SCTP_LOG_MAXBURST) || defined(SCTP_LOG_RWND)
 #ifndef SCTP_STAT_LOGGING
 #define SCTP_STAT_LOGGING 1
 #endif
@@ -65,7 +65,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.20 2007/05/28 11:17:23 rrs Ex
 #endif
 #endif
 
-#if defined(SCTP_SACK_LOGGING) || defined(SCTP_LOCK_LOGGING) || defined(SCTP_STAT_LOGGING)
+#if defined(SCTP_SACK_LOGGING) || defined(SCTP_LOCK_LOGGING)
 #ifndef SCTP_STAT_LOGGING
 #define SCTP_STAT_LOGGING 1
 #endif

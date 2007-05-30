@@ -171,4 +171,19 @@ document sctp_showfreesnd
 Show free strm send entries
 end
 
+define sctp_showpacketlog
+set $_at=packet_log_start
+set $_end=packet_log_end
+set $_ipoint=(int *)(&packet_log_buffer[$_at])
+ while ( $_at < $_end )
+    set $_val=*$_ipoint
+    printf "at:%d size:%d\n", $_at, $_val
+    set $_newval=$_val + $_at
+    set $_at=$_newval
+    set $_ipoint=(int *)(&packet_log_buffer[$_at])
+ end
+end
+document sctp_showpacketlog
+walk the packet log
+end
 
