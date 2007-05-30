@@ -499,7 +499,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	again_locked:
 		value = packet_log_end;
 		newval = packet_log_end + total_len;
-		if(newval > SCTP_PACKET_LOG_SIZE) {
+		if(newval >= SCTP_PACKET_LOG_SIZE) {
 			/* we wrapped */
 			thisbegin = 0;
 			thisend = total_len;
@@ -513,7 +513,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	} else {
 		value = packet_log_end;
 		newval = packet_log_end + total_len;
-		if (newval > SCTP_PACKET_LOG_SIZE) {
+		if (newval >= SCTP_PACKET_LOG_SIZE) {
 			/* we wrapped */
 			thisbegin = 0;
 			thisend = total_len;
@@ -533,6 +533,7 @@ sctp_packet_log(struct mbuf *m, int length)
 		       packet_log_writers,
 		       grabbed_lock,
 		       packet_log_end);
+		packet_log_end = 0;
 		goto no_log;
 		       
 	}
@@ -548,11 +549,15 @@ sctp_packet_log(struct mbuf *m, int length)
 	thisone = thisend - sizeof(int);
 	lenat = (int *)&packet_log_buffer[thisone];
 	*lenat = thisbegin;
+	if (grabbed_lock) {
+		SCTP_IP_PKTLOG_UNLOCK();
+		grabbed_lock = 0;
+	}
+	m_copydata(m, 0, length, (caddr_t)copyto);
  no_log:
 	if (grabbed_lock) {
 		SCTP_IP_PKTLOG_UNLOCK();
 	}
-	m_copydata(m, 0, length, (caddr_t)copyto);
 	atomic_subtract_int(&packet_log_writers, 1);
 }
 
