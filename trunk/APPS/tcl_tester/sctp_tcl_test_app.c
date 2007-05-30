@@ -568,7 +568,7 @@ main (int argc, char **argv)
 	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
 	addr.sa.sa_family = AF_INET6;
 	addr.sa.sa_len = sizeof(struct sockaddr_in6);
-	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D?HZq")) != EOF) {
+	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D:?HZq")) != EOF) {
 		switch(i) {
 		case 'D':
 			mydelay = strtoul(optarg, NULL, 0);
