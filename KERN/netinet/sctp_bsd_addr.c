@@ -536,7 +536,7 @@ sctp_packet_log(struct mbuf *m, int length)
 		goto no_log;
 		       
 	}
-	lenat = (int *)&packet_buffer[thisbegin];
+	lenat = (int *)&packet_log_buffer[thisbegin];
 	*lenat = total_len;
 	lenat++;
 	*lenat = value;
@@ -546,7 +546,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	*tick_tock = sctp_get_tick_count();
 	copyto = (void *)lenat;
 	thisone = thisend - sizeof(int);
-	lenat = (int *)&packet_buffer[thisone];
+	lenat = (int *)&packet_log_buffer[thisone];
 	*lenat = thisbegin;
  no_log:
 	if (grabbed_lock) {
