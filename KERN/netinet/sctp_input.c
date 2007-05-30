@@ -1548,12 +1548,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		/* memory problem? */
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"process_cookie_new: no room for another TCB!\n");
-		atomic_add_int(&stcb->asoc.refcnt, 1);
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id, table_id);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
