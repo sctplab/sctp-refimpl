@@ -102,6 +102,7 @@ useage(char *who)
 	printf("-p port         - of host to connect to (defaults to 2222)\n");
 	printf("-L              - send LOOP requests\n");
 	printf("-v              - Verbose please\n");
+	printf("-q              - Quiet mode, no prints or stats\n");
 	printf("-S              - send SIMPLE data (default)\n");
 	printf("-Z              - No heatbeat delay\n");
 	printf("-I strms        - Number of allowed in-streams (default 13)\n");
@@ -110,6 +111,7 @@ useage(char *who)
 }
 
 int no_hb_delay = 0;
+int quiet_mode = 0;
 union sctp_sockstore addr;
 union sctp_sockstore from;
 union sctp_sockstore bindto;
@@ -388,9 +390,11 @@ handle_notification(char *receive_buffer, int *notDone)
 		}
 	} /* end switch(snp->sn_header.sn_type) */
 	if (asocDown) {
-		print_stats();
-		printf("Associd:0x%x Terminates (reason=%s)\n", 
-		       id, ((str == NULL) ? "None" : str));
+		if(quiet_mode == 0) {
+			print_stats();
+			printf("Associd:0x%x Terminates (reason=%s)\n", 
+			       id, ((str == NULL) ? "None" : str));
+		}
 		*notDone = 0;
 	}
 }
@@ -508,7 +512,9 @@ handle_read_event(int *notDone, int sd)
 			   &from.sa, &flen, &sinfo_in, &msg_flags);
 	if (ret < 0) {
 		print_stats();
-		printf("Got error on sctp_recvmsg:%d - next socket\n", errno);
+		if(quiet_mode == 0) {
+			printf("Got error on sctp_recvmsg:%d - next socket\n", errno);
+		}
 		*notDone=0;
 		return;
 	}
@@ -533,8 +539,10 @@ handle_read_event(int *notDone, int sd)
 			sends_ping_resp++;
 			respmsg = sctp_send(sd, receive_buffer, ret, &sinfo_in, 0);
 			if(respmsg < 0) {
-				print_stats();
-				printf("sctp_send error:%d - enter silent mode until comm-lost\n", errno);
+				if(quiet_mode == 0) {
+					print_stats();
+					printf("sctp_send error:%d - enter silent mode until comm-lost\n", errno);
+				}
 				do_not_respond = 1;
 				return;
 			}
@@ -610,7 +618,10 @@ main (int argc, char **argv)
 			addr.sa.sa_len = sizeof(struct sockaddr_in6);
 			use_v6 = 1;
 			break;
-
+		case 'q':
+			verbose = 0;
+			quiet_mode = 1;
+			break;
 		case 'I':
 			strm_in = (uint16_t)strtol(optarg, NULL, 0);
 			break;
@@ -629,6 +640,7 @@ main (int argc, char **argv)
 
 		case 'v':
 			verbose = 1;
+			quiet_mode = 0;
 			break;
 		case 'B':
 		{
