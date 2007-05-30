@@ -1,4 +1,1 @@
-- Fixed (Apple) compiler warnings in sctp_input.c, sctputil.c, sctp_output.c
-- Fixed a LOR in handling a cookie. Turns out create lock is applied.
-  And if we abort processing, this causes LOR. Changed to force the
-  timer to clean up, that way create lock is released.
+- 
