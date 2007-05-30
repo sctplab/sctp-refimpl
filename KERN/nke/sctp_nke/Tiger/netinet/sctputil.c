@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.31 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.34 2007/05/30 17:39:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -905,9 +905,10 @@ sctp_select_a_tag(struct sctp_inpcb *m)
 
 
 int
-sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
+sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
     int for_a_init, uint32_t override_tag, uint32_t vrf_id)
 {
+	struct sctp_association *asoc;
 	/*
 	 * Anything set to zero is taken care of by the allocation routine's
 	 * bzero
@@ -921,6 +922,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 	 */
 	int i;
 
+	asoc = &stcb->asoc;
 	/* init all variables to a known value. */
 	asoc->state = SCTP_STATE_INUSE;
 	asoc->max_burst = m->sctp_ep.max_burst;
@@ -1131,13 +1133,14 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_association *asoc,
 }
 
 int
-sctp_expand_mapping_array(struct sctp_association *asoc)
+sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 {
 	/* mapping array needs to grow */
 	uint8_t *new_array;
-	uint16_t new_size;
+	uint32_t new_size;
 
-	new_size = asoc->mapping_array_size + SCTP_MAPPING_ARRAY_INCR;
+	
+	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
 	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
 		/* can't get more, forget it */
@@ -1662,7 +1665,7 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		{
-			struct sctp_nets *net;
+			struct sctp_nets *lnet;
 			int cnt_of_unconf = 0;
 
 			if ((stcb == NULL) || (inp == NULL)) {
@@ -1670,23 +1673,24 @@ sctp_timeout_handler(void *t)
 			}
 			SCTP_STAT_INCR(sctps_timoheartbeat);
 			stcb->asoc.timoheartbeat++;
-			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-				    (net->dest_state & SCTP_ADDR_REACHABLE)) {
+			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
+				if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+				    (lnet->dest_state & SCTP_ADDR_REACHABLE)) {
 					cnt_of_unconf++;
 				}
 			}
 			if (cnt_of_unconf == 0) {
-				if (sctp_heartbeat_timer(inp, stcb, net, cnt_of_unconf)) {
+				if (sctp_heartbeat_timer(inp, stcb, lnet,
+							 cnt_of_unconf)) {
 					/* no need to unlock on tcb its gone */
 					goto out_decr;
 				}
 			}
 #ifdef SCTP_AUDITING_ENABLED
-			sctp_auditing(4, inp, stcb, net);
+			sctp_auditing(4, inp, stcb, lnet);
 #endif
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
-			    stcb, net);
+			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
+					 stcb->sctp_ep, stcb, lnet);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR);
 		}
 		break;
@@ -2035,7 +2039,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				return;
 			}
 			if (net) {
-				struct sctp_nets *lnet;
 				int delay;
 
 				delay = stcb->asoc.heart_beat_delay;
@@ -2494,16 +2497,15 @@ sctp_calculate_len(struct mbuf *m)
 #if defined(SCTP_WITH_NO_CSUM)
 
 uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
+sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
 	 * pointing at a sctphdr (with csum set to 0) go through the chain
-	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This is currently
-	 * Adler32 but will change to CRC32x soon. Also has a side bonus
-	 * calculate the total length of the mbuf chain. Note: if offset is
-	 * greater than the total mbuf length, checksum=1, pktlen=0 is
-	 * returned (ie. no real error code)
+	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This also
+	 * has a side bonus as it will calculate the total length of the
+	 * mbuf chain. Note: if offset is greater than the total mbuf length,
+	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
 	if (pktlen == NULL)
 		return (0);
@@ -2516,16 +2518,15 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 #include <machine/in_cksum.h>
 
 uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
+sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
 	 * pointing at a sctphdr (with csum set to 0) go through the chain
-	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This is currently
-	 * Adler32 but will change to CRC32x soon. Also has a side bonus
-	 * calculate the total length of the mbuf chain. Note: if offset is
-	 * greater than the total mbuf length, checksum=1, pktlen=0 is
-	 * returned (ie. no real error code)
+	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This also
+	 * has a side bonus as it will calculate the total length of the
+	 * mbuf chain. Note: if offset is greater than the total mbuf length,
+	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
 	int32_t tlen = 0;
 	struct mbuf *at;
@@ -2546,25 +2547,23 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 #else
 
 uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
+sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
 	 * pointing at a sctphdr (with csum set to 0) go through the chain
-	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This is currently
-	 * Adler32 but will change to CRC32x soon. Also has a side bonus
-	 * calculate the total length of the mbuf chain. Note: if offset is
-	 * greater than the total mbuf length, checksum=1, pktlen=0 is
-	 * returned (ie. no real error code)
+	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This also
+	 * has a side bonus as it will calculate the total length of the
+	 * mbuf chain. Note: if offset is greater than the total mbuf length,
+	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
 	int32_t tlen = 0;
 	
 #ifdef SCTP_USE_ADLER32
 	uint32_t base = 1L;
-
 #else
 	uint32_t base = 0xffffffff;
-#endif				/* SCTP_USE_ADLER32 */
+#endif
 	struct mbuf *at;
 
 	at = m;
@@ -2590,12 +2589,12 @@ sctp_calculate_sum(struct mbuf *m, int32_t * pktlen, uint32_t offset)
 						    (unsigned char *)(SCTP_BUF_AT(at, offset)),
 						    (unsigned int)(SCTP_BUF_LEN(at) - offset));
 			}
-#endif				/* SCTP_USE_ADLER32 */
+#endif
 			tlen += SCTP_BUF_LEN(at) - offset;
 			/* we only offset once into the first mbuf */
 		}
 		if (offset) {
-			if(offset < SCTP_BUF_LEN(at))
+			if (offset < (uint32_t)SCTP_BUF_LEN(at))
 				offset = 0;
 			else
 				offset -= SCTP_BUF_LEN(at);
@@ -4719,7 +4718,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 }
 
 static void
-sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock, 
+sctp_user_rcvd(struct sctp_tcb *stcb, uint32_t *freed_so_far, int hold_rlock, 
 	       uint32_t rwnd_req)
 {
 	/* User pulled some data, do we need a rwnd update? */
@@ -4727,15 +4726,14 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
 	
-	if(stcb == NULL) 
+	if (stcb == NULL) 
 		return;
 
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 
 	if (stcb->asoc.state & (SCTP_STATE_ABOUT_TO_BE_FREED |
 				SCTP_STATE_SHUTDOWN_RECEIVED |
-				SCTP_STATE_SHUTDOWN_ACK_SENT)
-		) {
+				SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 		/* Pre-check If we are freeing no update */
 		goto no_lock;
 	}
@@ -4762,13 +4760,13 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 
 	/* Figure out what the rwnd would be */
 	rwnd = sctp_calc_rwnd(stcb, &stcb->asoc);
-	if(rwnd >= stcb->asoc.my_last_reported_rwnd) {
+	if (rwnd >= stcb->asoc.my_last_reported_rwnd) {
 		dif = rwnd - stcb->asoc.my_last_reported_rwnd;
 	} else {
 		dif = 0;
 	}
-	if(dif >= rwnd_req) {
-		if(hold_rlock) {
+	if (dif >= rwnd_req) {
+		if (hold_rlock) {
 			SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 			r_unlocked = 1;
 		}
@@ -4812,7 +4810,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, int *freed_so_far, int hold_rlock,
 #endif
 	}
  out:
-	if(so && r_unlocked && hold_rlock) {
+	if (so && r_unlocked && hold_rlock) {
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
 
@@ -4850,7 +4848,7 @@ sctp_sorecvmsg(struct socket *so,
 	int freecnt_applied = 0;
 	int out_flags = 0, in_flags=0;
 	int block_allowed = 1;
-	int freed_so_far = 0;
+	uint32_t freed_so_far = 0;
 	int copied_so_far = 0;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
@@ -4864,7 +4862,7 @@ sctp_sorecvmsg(struct socket *so,
 	int alen = 0;
 #endif
 	int slen = 0;
-	int held_length = 0;
+	uint32_t held_length = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock=0;
 #endif
@@ -4906,7 +4904,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 	rwnd_req = (SCTP_SB_LIMIT_RCV(so) >> SCTP_RWND_HIWAT_SHIFT);
 	/* Must be at least a MTU's worth */
-	if(rwnd_req < SCTP_MIN_RWND)
+	if (rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 #ifdef SCTP_RECV_RWND_LOGGING
@@ -5105,23 +5103,23 @@ sctp_sorecvmsg(struct socket *so,
 		 * maybe a peer in EEOR that just closed after sending and
 		 * never indicated a EOR.
 		 */
-		if(hold_rlock == 0) {
+		if (hold_rlock == 0) {
 			hold_rlock = 1;
 			SCTP_INP_READ_LOCK(inp);
 		}
 		control->held_length = 0;
-		if(control->data) {
+		if (control->data) {
 			/* Hmm there is data here .. fix */
-			struct mbuf *m;
+			struct mbuf *m_tmp;
 			int cnt=0;
-			m = control->data;
-			while(m) {
-				cnt += SCTP_BUF_LEN(m);
-				if(SCTP_BUF_NEXT(m) == NULL) {
-					control->tail_mbuf = m;
+			m_tmp = control->data;
+			while (m_tmp) {
+				cnt += SCTP_BUF_LEN(m_tmp);
+				if (SCTP_BUF_NEXT(m_tmp) == NULL) {
+					control->tail_mbuf = m_tmp;
 					control->end_added = 1;
 				}
-				m = SCTP_BUF_NEXT(m);
+				m_tmp = SCTP_BUF_NEXT(m_tmp);
 			}
 			control->length = cnt;
 		} else {
@@ -5200,36 +5198,36 @@ sctp_sorecvmsg(struct socket *so,
 	 * Note that stcb COULD be NULL.
 	 */
 	control->some_taken = 1;
-	if(hold_sblock) {
+	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
 	stcb = control->stcb;
 	if (stcb) {
-		if((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) &&
-		   (control->do_not_ref_stcb == 0)) {
-			if(freecnt_applied == 0)
+		if ((control->do_not_ref_stcb == 0) &&
+		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
+			if (freecnt_applied == 0)
 				stcb = NULL;
 		} else if (control->do_not_ref_stcb == 0) {
 			/* you can't free it on me please */
 			/*
-			 * The lock on the socket buffer protects us so the free
-			 * code will stop. But since we used the socketbuf lock and
-			 * the sender uses the tcb_lock to increment, we need to use
-			 * the atomic add to the refcnt
+			 * The lock on the socket buffer protects us so the
+			 * free code will stop. But since we used the socketbuf
+			 * lock and the sender uses the tcb_lock to increment,
+			 * we need to use the atomic add to the refcnt
 			 */
 			if (freecnt_applied)
 				panic("refcnt already incremented"); 
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			freecnt_applied = 1;
-			/* Setup to remember how much we have not yet told
+			/*
+			 * Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
 			 * the value from the tcb from last time.
-			 * Note too that sack sending clears this when a sack is
-			 * sent.. which is fine. Once we hit the rwnd_req, we
-			 * then will go to the sctp_user_rcvd() that will
+			 * Note too that sack sending clears this when a sack
+			 * is sent, which is fine. Once we hit the rwnd_req,
+			 * we then will go to the sctp_user_rcvd() that will
 			 * not lock until it KNOWs it MUST send a WUP-SACK.
-			 *
 			 */
 			freed_so_far = stcb->freed_by_sorcv_sincelast;
 			stcb->freed_by_sorcv_sincelast = 0;
@@ -5245,7 +5243,7 @@ sctp_sorecvmsg(struct socket *so,
 	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
-		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 			struct sctp_extrcvinfo *s_extra;
 			s_extra = (struct sctp_extrcvinfo *)sinfo;
 			if ((nxt) &&
@@ -5282,7 +5280,7 @@ sctp_sorecvmsg(struct socket *so,
 		/*
 		 * update off the real current cum-ack, if we have an stcb.
 		 */
-		if (stcb)
+		if ((control->do_not_ref_stcb == 0) && stcb)
 			sinfo->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
 		/*
 		 * mask off the high bits, we keep the actual chunk bits in
@@ -5373,11 +5371,11 @@ sctp_sorecvmsg(struct socket *so,
 				       0);
 #endif
 			/* re-read */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				goto release;
 			}
 
-			if (stcb &&
+			if ((control->do_not_ref_stcb == 0) && stcb &&
 			    stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				no_rcv_needed = 1;
 			}
@@ -5385,10 +5383,11 @@ sctp_sorecvmsg(struct socket *so,
 				/* error we are out of here */
 				goto release;
 			}
-			if((SCTP_BUF_NEXT(m) == NULL) && 
-			   (cp_len >= SCTP_BUF_LEN(m)) &&
-			   ((control->end_added == 0) ||
-			    (control->end_added && (TAILQ_NEXT(control, next) == NULL)))
+			if ((SCTP_BUF_NEXT(m) == NULL) && 
+			    (cp_len >= SCTP_BUF_LEN(m)) &&
+			    ((control->end_added == 0) ||
+			     (control->end_added &&
+			      (TAILQ_NEXT(control, next) == NULL)))
 				) {
 #ifdef SCTP_RECV_DETAIL_RWND_LOGGING
 				sctp_misc_ints(SCTP_SORCV_DOESLCK,
@@ -5438,7 +5437,7 @@ sctp_sorecvmsg(struct socket *so,
 					freed_so_far += cp_len;
 #ifdef __FreeBSD__
 					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if(alen < cp_len) {
+					if (alen < cp_len) {
 						panic("Control length goes negative?");
 					}
 #else
@@ -5496,7 +5495,8 @@ sctp_sorecvmsg(struct socket *so,
 					sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBFREE, cp_len);
 #endif
 					atomic_subtract_int(&so->so_rcv.sb_cc, cp_len);
-					if (stcb) {
+					if ((control->do_not_ref_stcb ==0) &&
+					    stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
 					copied_so_far += cp_len;
@@ -5508,7 +5508,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 #ifdef __FreeBSD__
 					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if(alen < cp_len) {
+					if (alen < cp_len) {
 						panic("Control length goes negative2?");
 					}
 #else
@@ -5560,13 +5560,14 @@ sctp_sorecvmsg(struct socket *so,
 					       0,
 					       0);
 #endif
-				if(TAILQ_NEXT(control, next) == NULL) {
-					/* If we don't have a next we need a lock,
-					 * if there is a next interupt is filling ahead
-					 * of us and we don't need a lock to remove this
-					 * guy (which is the head of the queue).
+				if (TAILQ_NEXT(control, next) == NULL) {
+					/* If we don't have a next we need a
+					 * lock, if there is a next interupt
+					 * is filling ahead of us and we don't
+					 * need a lock to remove this guy
+					 * (which is the head of the queue).
 					 */
-					if(hold_rlock == 0) {
+					if (hold_rlock == 0) {
 						SCTP_INP_READ_LOCK(inp);
 						hold_rlock = 1;
 					}
@@ -5587,7 +5588,8 @@ sctp_sorecvmsg(struct socket *so,
 				control->data = NULL;
 				sctp_free_a_readq(stcb, control);
 				control = NULL;
-				if ((freed_so_far >= rwnd_req) && (no_rcv_needed == 0))
+				if ((freed_so_far >= rwnd_req) &&
+				    (no_rcv_needed == 0))
 					sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 
 			} else {
@@ -5598,8 +5600,9 @@ sctp_sorecvmsg(struct socket *so,
 				 * control to read.
 				 */
 #ifdef INVARIANTS
-				if(control->end_added && (control->data == NULL) &&
-				   (control->tail_mbuf == NULL)) {
+				if (control->end_added &&
+				    (control->data == NULL) &&
+				    (control->tail_mbuf == NULL)) {
 					panic("Gak, control->length is corrupt?");
 				}
 #endif
@@ -6265,7 +6268,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 	sa = addr;
 	*error = *num_v6 = *num_v4 = 0;
 	/* account and validate addresses */
-	for (i = 0; i < *totaddr; i++) {
+	for (i = 0; i < (size_t)*totaddr; i++) {
 		if (sa->sa_family == AF_INET) {
 			(*num_v4) += 1;
 			incr = sizeof(struct sockaddr_in);
@@ -6304,7 +6307,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 		} else {
 			SCTP_INP_DECR_REF(inp);
 		}
-		if ((at + incr) > limit) {
+		if ((at + incr) > (size_t)limit) {
 			*totaddr = i;
 			break;
 		}

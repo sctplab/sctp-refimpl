@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.18 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.20 2007/05/29 09:29:02 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -909,7 +909,6 @@ union sctp_sockstore {
 	struct sockaddr sa;
 };
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
 struct xsctp_inpcb {
 	uint32_t last;
 	uint16_t local_port;
@@ -923,7 +922,6 @@ struct xsctp_inpcb {
 	uint16_t maxqlen;
 	/* add more endpoint specific data here*/
 };
-#endif
 
 struct xsctp_tcb {
 	uint32_t last;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.16 2007/05/17 12:16:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.18 2007/05/30 17:39:44 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -962,7 +962,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.16 2007/05/17 12:16:23 
  * entries must be searched to see if the tag is in timed wait. If so we
  * reject it.
  */
-#define SCTP_STACK_VTAG_HASH_SIZE 31
+#define SCTP_STACK_VTAG_HASH_SIZE   31
+#define SCTP_STACK_VTAG_HASH_SIZE_A 32
+
 
 /*
  * If we use the per-endpoint model than we do not have a hash table of

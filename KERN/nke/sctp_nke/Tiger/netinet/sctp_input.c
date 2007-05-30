@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.27 2007/05/17 12:16:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.31 2007/05/30 17:39:44 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1010,15 +1010,15 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	int init_offset, initack_offset, i;
 	int retval;
 	int spec_flag=0;
-	int how_indx;
+	uint32_t how_indx;
 
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
-	for(how_indx=0; how_indx <sizeof(asoc->cookie_how);how_indx++) {
-		if(asoc->cookie_how[how_indx] == 0)
+	for (how_indx = 0; how_indx  < sizeof(asoc->cookie_how); how_indx++) {
+		if (asoc->cookie_how[how_indx] == 0)
 			break;
 	}
-	if(how_indx < sizeof(asoc->cookie_how)) {
+	if (how_indx < sizeof(asoc->cookie_how)) {
 		asoc->cookie_how[how_indx] = 1;
 	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
@@ -1110,7 +1110,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				/* First we must process the INIT !! */
 				retval = sctp_process_init(init_cp, stcb, net);
 				if (retval < 0) {
-					if(how_indx < sizeof(asoc->cookie_how))
+					if (how_indx < sizeof(asoc->cookie_how))
 						asoc->cookie_how[how_indx] = 3;
 					return (NULL);
 				}
@@ -1178,14 +1178,14 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 4;
 			return (NULL);
 		}
 		/* respond with a COOKIE-ACK */
 		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 5;
 		return (stcb);
 	}
@@ -1196,7 +1196,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/*
 		 * case C in Section 5.2.4 Table 2: XMOO silently discard
 		 */
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 6;
 		return (NULL);
 	}
@@ -1224,12 +1224,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 * no way to tell.. until we send on a stream that does
 			 * not exist :-)
 			 */
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 7;
 
 			return(NULL);
 		}
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 8;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
 		sctp_stop_all_cookie_timers(stcb);
@@ -1269,14 +1269,14 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* process the INIT info (peer's info) */
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 9;
 			return (NULL);
 		}
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 10;
 			return (NULL);
 		}
@@ -1322,7 +1322,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 */
 			sctp_chunk_output(inp,stcb, SCTP_OUTPUT_FROM_COOKIE_ACK);
 		}
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 11;
 
 		return (stcb);
@@ -1338,7 +1338,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
 		/* temp code */
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 12;
 		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_14);
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_15);
@@ -1378,9 +1378,10 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		asoc->str_reset_seq_in = asoc->init_seq_number;
 
 		asoc->advanced_peer_ack_point = asoc->last_acked_seq;
-		if (asoc->mapping_array)
+		if (asoc->mapping_array) {
 			memset(asoc->mapping_array, 0,
 			       asoc->mapping_array_size);
+		}
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(stcb->sctp_ep);
@@ -1425,7 +1426,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 
 		retval = sctp_process_init(init_cp, stcb, net);
 		if (retval < 0) {
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 13;
 
 			return (NULL);
@@ -1439,7 +1440,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (sctp_load_addresses_from_init(stcb, m, iphlen,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
-			if(how_indx < sizeof(asoc->cookie_how))
+			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 14;
 
 			return (NULL);
@@ -1448,7 +1449,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		sctp_stop_all_cookie_timers(stcb);
 		sctp_toss_old_cookies(stcb, asoc);
 		sctp_send_cookie_ack(stcb);
-		if(how_indx < sizeof(asoc->cookie_how))
+		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 15;
 
 		return (stcb);
@@ -1769,27 +1770,27 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	iph = mtod(m, struct ip *);
 	if (iph->ip_v == IPVERSION) {
 		/* its IPv4 */
-		struct sockaddr_in *sin;
+		struct sockaddr_in *lsin;
 
-		sin = (struct sockaddr_in *)(localep_sa);
-		memset(sin, 0, sizeof(*sin));
-		sin->sin_family = AF_INET;
-		sin->sin_len = sizeof(*sin);
-		sin->sin_port = sh->dest_port;
-		sin->sin_addr.s_addr = iph->ip_dst.s_addr;
+		lsin = (struct sockaddr_in *)(localep_sa);
+		memset(lsin, 0, sizeof(*lsin));
+		lsin->sin_family = AF_INET;
+		lsin->sin_len = sizeof(*lsin);
+		lsin->sin_port = sh->dest_port;
+		lsin->sin_addr.s_addr = iph->ip_dst.s_addr;
 		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
 	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
-		struct sockaddr_in6 *sin6;
+		struct sockaddr_in6 *lsin6;
 
-		sin6 = (struct sockaddr_in6 *)(localep_sa);
-		memset(sin6, 0, sizeof(*sin6));
-		sin6->sin6_family = AF_INET6;
-		sin6->sin6_len = sizeof(struct sockaddr_in6);
+		lsin6 = (struct sockaddr_in6 *)(localep_sa);
+		memset(lsin6, 0, sizeof(*lsin6));
+		lsin6->sin6_family = AF_INET6;
+		lsin6->sin6_len = sizeof(struct sockaddr_in6);
 		ip6 = mtod(m, struct ip6_hdr *);
-		sin6->sin6_port = sh->dest_port;
-		sin6->sin6_addr = ip6->ip6_dst;
+		lsin6->sin6_port = sh->dest_port;
+		lsin6->sin6_addr = ip6->ip6_dst;
 		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6) + iphlen;
 	} else {
 		return (NULL);
@@ -3414,7 +3415,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			 * whichever is less.
 			 */
 			incr = min((bw_avail - on_queue) >> 2,
-			    (int)stcb->asoc.max_burst * (int)net->mtu);
+			    stcb->asoc.max_burst * net->mtu);
 			net->cwnd += incr;
 		}
 		if (net->cwnd > bw_avail) {
@@ -3444,6 +3445,11 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
  * cookie-echo processing - return NULL to discard the packet (ie. no asoc,
  * bad packet,...) otherwise return the tcb for this packet
  */
+#if !defined(__Panda__)
+#ifdef __GNUC__
+__attribute__ ((noinline))
+#endif
+#endif
 static struct sctp_tcb *
 sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
     struct sctphdr *sh, struct sctp_chunkhdr *ch, struct sctp_inpcb *inp,
@@ -3453,7 +3459,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	struct sctp_association *asoc;
 	uint32_t vtag_in;
 	int num_chunks = 0;	/* number of control chunks processed */
-	int chk_length;
+	uint32_t chk_length;
 	int ret;
 	int abort_no_unlock = 0;
 	/*
@@ -3652,8 +3658,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		chk_length = ntohs(ch->chunk_length);
 		SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_process_control: processing a chunk type=%u, len=%u\n", 
 			ch->chunk_type, chk_length);
-		if ((size_t)chk_length < sizeof(*ch) ||
-		    (*offset + chk_length) > length) {
+		if (chk_length < sizeof(*ch) ||
+		    (*offset + (int)chk_length) > length) {
 			*offset = length;
 			if (locked_tcb) {
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -3679,7 +3685,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 		} else if (ch->chunk_type == SCTP_COOKIE_ECHO) {
-			if(chk_length > sizeof(chunk_buf)) {
+			if (chk_length > sizeof(chunk_buf)) {
 				/* use just the size of the chunk buffer
 				 * so the front part of our cookie is intact.
 				 * The rest of cookie processing should use
@@ -3702,7 +3708,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 		} else {
 			/* get a complete chunk... */
-			if ((size_t)chk_length > sizeof(chunk_buf)) {
+			if (chk_length > sizeof(chunk_buf)) {
 				struct mbuf *oper;
 				struct sctp_paramhdr *phdr;
 
@@ -3782,7 +3788,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			}
 			if ((num_chunks > 1) ||
-			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
+			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -3834,7 +3840,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			}
 			if ((num_chunks > 1) ||
-			    (sctp_strict_init && (length - *offset > SCTP_SIZE32(chk_length)))) {
+			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4172,7 +4178,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-COMPLETE, stcb %p\n", stcb);
 			/* must be first and only chunk */
 			if ((num_chunks > 1) ||
-			    (length - *offset > SCTP_SIZE32(chk_length))) {
+			    (length - *offset > (int)SCTP_SIZE32(chk_length))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
