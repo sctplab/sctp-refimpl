@@ -59,6 +59,7 @@ main(int argc, char **argv)
 	int limit, at, wlen, cnt=0;
 	struct sctp_packet_log { 
 		uint32_t datasize;
+		uint32_t prev;
 		uint32_t timestamp;
 		/* we should always have at least 20 bytes */
 		char data[20];

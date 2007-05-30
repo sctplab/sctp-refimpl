@@ -51,41 +51,110 @@ struct part_ip6 {
 int
 main(int argc, char **argv)
 {
-	uint8_t buf[SCTP_PACKET_LOG_SIZE];
+	/* 
+	 * Buffer layout.
+	 * -sizeof this entry (total_len)
+	 * -previous end      (value)
+	 * -ticks of log      (ticks)
+	 * o -ip packet
+	 * o -as logged
+	 * - where this started (thisbegin)
+	 * x <--end points here 
+	 * First 4 bytes of buf will have the pkt_end_value.
+	 */
+
+	uint8_t buf[SCTP_PACKET_LOG_SIZE+4];
 	FILE *io;
-	int limit, at, cnt=0;
+	int sd;
+	int *point;
+	int limit, at, cnt=0, end_at, notdone, last_at, ret;
+	socklen_t len;
 	struct sctp_packet_log { 
 		uint32_t datasize;
+		uint32_t prev_end;
 		uint32_t timestamp;
 		/* we should always have at least 20 bytes */
 		char data[20];
 	} *header;
+
 	if (argc < 2) {
-		printf("Use %s file\n", argv[0]);
+		printf("Use %s file-to-write\n", argv[0]);
 		return (0);
 	}
-	io = fopen(argv[1], "r");
-	if(io == NULL) {
-		printf("Can't open %s error:%d\n", argv[1], errno);
+	sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if(sd == -1) {
+		/* Can't open */
+		printf("Can't open SCTP socket err:%d\n", errno);
+		exit(-1);
+	}
+	len = sizeof(buf);
+	ret = getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PACKET_LOG, &buf, &len);
+	if(ret < 0) {
+		printf("Could not get packet log error:%d\n", errno);
 		return (0);
 	}
-	limit = fread(buf, 1, SCTP_PACKET_LOG_SIZE, io);
-	if(limit < 0) {
-		printf("Could not read error %d\n", errno);
-		fclose(io);
+	at = 4;
+	limit = SCTP_PACKET_LOG_SIZE+4;
+	/* First we back through the buffer, to
+	 * find the first entry. Then we write each
+	 * one out in order.
+	 */
+
+	/* get end out */
+	point = (int *)buf;
+	end_at = *point;
+
+	printf("end is at %d\n", end_at);
+	if((end_at > sizeof(buf) || (end_at < 4))) {
+		printf("nothing to print, end_at is %d\n", end_at);
+		return(0);
+	}
+	point = (int *)&buf[end_at];
+	point--;
+	notdone = 1;
+	last_at = 0;
+	while(notdone) {
+		at = *point;
+		if ((at > sizeof(buf)) || (at < 4) || (at == end_at)) {
+			notdone = 0;
+			printf("Found %d records and we start at %d\n", cnt,  last_at);
+			continue;
+		}
+		cnt++;
+		header = (struct sctp_packet_log *)&buf[at];
+		last_at = at;
+		at = header->prev_end;
+		if ((at > sizeof(buf)) || (at < 4) || (at == end_at)) {
+			notdone = 0;
+			printf("Found %d records and we start at %d - 2\n", cnt, last_at);
+			continue;
+		}
+		/* Go to where the header says and decrement to
+		 * get to end of packet (and our start mark).
+		 */
+		point = (int *)&buf[at];
+		point--;
+	}
+	at = last_at;
+	printf("We have %d records at:%d to write out\n", cnt, at);
+	if (cnt <= 0) {
+		return(0);
+	}
+	io = fopen(argv[1], "w+");
+	if (io == NULL) {
+		printf("Can't open file %s for output error:%d\n", argv[1], 
+		       errno);
 		return (0);
 	}
-	printf("Read in %d bytes\n", limit);
-	header = (struct sctp_packet_log *)buf;
-	at = 0;
-	while (at < limit) {
+
+	while (cnt > 0) {
+		header = (struct sctp_packet_log *)&buf[at];
 		printf("header:%p | %d - %d bytes (including pad), ts:%x ipversion:%x\n",
 		       header,
 		       cnt, 
 		       header->datasize, 
 		       header->timestamp, 
 		       ((header->data[0] >> 4) & 0x0f));
-		cnt++;
 		if((((header->data[0] >> 4) & 0x0f)) == 4) {
 			struct part_ip *ip;
 			ip = (struct part_ip *)header->data;
@@ -103,9 +172,10 @@ main(int argc, char **argv)
 		if( header->datasize > limit) {
 			printf("strange, size > limit:%d\n", limit);
 			break;
-		}	
+		}
+		fwrite(&buf[at], header->datasize, 1, io);
 		at += header->datasize;
-		header = (struct sctp_packet_log *)(&buf[at]);
+		cnt--;
 	}
 	printf("Done\n");
 	return (0);
