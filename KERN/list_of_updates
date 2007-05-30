@@ -1,2 +1,2 @@
-- Fixed (Apple) compiler warnings in sctp_input.c, sctputil.c
+- Fixed (Apple) compiler warnings in sctp_input.c, sctputil.c, sctp_output.c
 
