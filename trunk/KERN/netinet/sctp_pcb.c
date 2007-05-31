@@ -294,6 +294,7 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 		SCTP_IPI_ADDR_LOCK();
 	LIST_REMOVE(sctp_ifnp, next_bucket);
 	LIST_REMOVE(sctp_ifnp, next_ifn);
+	SCTP_DEREGISTER_INTERFACE(sctp_ifnp->ifn_index, sctp_ifnp->ifn_name);
 	if (hold_addr_lock == 0) 
 		SCTP_IPI_ADDR_UNLOCK();
 	/* Take away the reference, and possibly free it */
@@ -344,7 +345,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		sctp_ifnp->refcount = 1;
 		sctp_ifnp->vrf = vrf;
 		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index);
-		if(if_name != NULL) {
+		if (if_name != NULL) {
 			memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
 		} else {
 			memcpy(sctp_ifnp->ifn_name, "unknown", min(7,SCTP_IFNAMSIZ));
@@ -355,6 +356,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		LIST_INSERT_HEAD(hash_ifn_head, sctp_ifnp, next_bucket);
 		LIST_INSERT_HEAD(&vrf->ifnlist, sctp_ifnp, next_ifn);
 		atomic_add_int(&sctppcbinfo.ipi_count_ifns, 1);
+		SCTP_REGISTER_INTERFACE(ifn_index, if_name);
 	}
 	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
 	if (sctp_ifap) {
