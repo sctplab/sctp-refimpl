@@ -104,9 +104,6 @@ struct sctp_ifa {
 				 * appropriate locks. This is for V6.
 				 */
 	union sctp_sockstore address;
-#if defined(__Panda__)
-	struct ip_addr ip_addr;	/* internal address format */
-#endif
 	uint32_t refcount;	/* number of folks refering to this */
  	uint32_t flags;
 	uint32_t localifa_flags;
@@ -114,7 +111,6 @@ struct sctp_ifa {
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
 	uint8_t resv;
-
 };
 
 struct sctp_laddr {
