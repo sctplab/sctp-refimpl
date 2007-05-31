@@ -80,6 +80,9 @@ struct sctp_ifn {
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
 	uint32_t ifa_count;	/* IFA's we hold (in our list - ifalist)*/
+	uint32_t num_v6;	/* number of v6 addresses */
+	uint32_t num_v4;	/* number of v4 addresses */
+	uint32_t registered_af;	/* registered address family for i/f events */
 	char     ifn_name[SCTP_IFNAMSIZ];
 };
 
@@ -105,7 +108,7 @@ struct sctp_ifa {
 				 */
 	union sctp_sockstore address;
 	uint32_t refcount;	/* number of folks refering to this */
- 	uint32_t flags;
+     	uint32_t flags;
 	uint32_t localifa_flags;
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
