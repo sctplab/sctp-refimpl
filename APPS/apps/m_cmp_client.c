@@ -675,7 +675,7 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
 	    time_of_tran = (sec * 1000000.0);
 	    time_of_tran += (usec * 1.0);
 	    time_of_tran /= 1000000.0;
-	    bw = ((double)(ntohl(ctl->req.sizetosend)) / time_of_tran);
+	    bw = ((double)(ntohl(ctl->req.sizetosend) * ntohl(ctl->req.blksize)) / time_of_tran);
 	    bw *= 8.0;
 	    if(bw > 1000000000.0) {
 		    rate = "Gigabits";
@@ -689,7 +689,7 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
 	    } else {
 		    rate = "bits";
 	    }
-	    printf("Transfered via %s %d bytes at %f %s per second\n",
+	    printf("Transfered via %s %d records at %f %s per second\n",
 		   ((proto == IPPROTO_SCTP) ? "sctp" : "tcp"),
 		   (int)ntohl(ctl->req.sizetosend),bw,rate);
 	    fprintf(out_log, " (%f %s per sec)\n",bw,rate);
