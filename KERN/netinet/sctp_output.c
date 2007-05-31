@@ -2996,16 +2996,10 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 *   we must use rotation amongst the bound addresses..
 	 */
 	if (ro->ro_rt == NULL) {
-		uint32_t table_id = 0;
 		/*
 		 * Need a route to cache.
 		 */
-		if (stcb) {
-		    table_id = stcb->asoc.table_id;
-		} else {
-		    table_id = SCTP_VRF_DEFAULT_TABLEID(vrf_id);
-		}
-		SCTP_RTALLOC(ro, vrf_id, table_id);
+		SCTP_RTALLOC(ro, vrf_id);
 	}
 	if (ro->ro_rt == NULL) {
 		return (NULL);
@@ -3013,7 +3007,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	fam = to->sin_family;
 	dest_is_priv = dest_is_loop = 0;
 	/* Setup our scopes for the destination */
-	if(fam == AF_INET) {
+	if (fam == AF_INET) {
 		/* Scope based on outbound address */
 		if ((IN4_ISPRIVATE_ADDRESS(&to->sin_addr))) {
 			dest_is_priv = 1;
@@ -3549,7 +3543,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 
 		/* send it out.  table id is taken from stcb */
-		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb, vrf_id, 0);
+		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb, vrf_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -3792,7 +3786,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 		/* send it out. table id is taken from stcb */
 		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp,
-				stcb, vrf_id, 0);
+				stcb, vrf_id);
 
 		if (net) {
 			/* for link local this must be done */
@@ -4587,7 +4581,7 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 void
 sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *init_pkt, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_init_chunk *init_chk, uint32_t vrf_id, uint32_t table_id)
+    struct sctp_init_chunk *init_chk, uint32_t vrf_id)
 {
 	struct sctp_association *asoc;
 	struct mbuf *m, *m_at, *m_tmp, *m_cookie, *op_err, *mp_last;
@@ -4625,8 +4619,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * though we even set the T bit and copy in the 0 tag.. this
 		 * looks no different than if no listener was present.
 		 */
-		sctp_send_abort(init_pkt, iphlen, sh, 0, NULL, vrf_id,
-				table_id);
+		sctp_send_abort(init_pkt, iphlen, sh, 0, NULL, vrf_id);
 		return;
 	}
 	abort_flag = 0;
@@ -4635,8 +4628,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 						       &abort_flag, (struct sctp_chunkhdr *)init_chk);
 	if (abort_flag) {
 		sctp_send_abort(init_pkt, iphlen, sh,
-				init_chk->init.initiate_tag, op_err, vrf_id,
-				table_id);
+				init_chk->init.initiate_tag, op_err, vrf_id);
 		return;
 	}
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
@@ -9390,7 +9382,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 
 void
 sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
-			     uint32_t vrf_id, uint32_t table_id)
+			     uint32_t vrf_id)
 {
 	/* formulate and SEND a SHUTDOWN-COMPLETE */
 #ifdef __Panda__
@@ -9503,7 +9495,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 
 		/* out it goes */
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id, table_id);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -9529,7 +9521,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10253,7 +10245,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 void
 sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
-    struct mbuf *err_cause, uint32_t vrf_id, uint32_t table_id)
+    struct mbuf *err_cause, uint32_t vrf_id)
 {
 	/*-
 	 * Formulate the abort message, and send it back down.
@@ -10398,7 +10390,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id, table_id);
+		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10426,7 +10418,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -10438,7 +10430,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 void
 sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
-		   uint32_t vrf_id, uint32_t table_id)
+		   uint32_t vrf_id)
 {
 #ifdef __Panda__
 	pakhandle_type o_pak;
@@ -10540,7 +10532,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 
-		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb, vrf_id, table_id);
+		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb, vrf_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
@@ -10595,7 +10587,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id, table_id);
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);

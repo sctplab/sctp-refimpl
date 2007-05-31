@@ -343,11 +343,6 @@ static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
 	vrf_id = SCTP_DEFAULT_VRFID;
 	return (0);
 }
-static inline int SCTP_GET_PKT_TABLEID(void *m, uint32_t table_id) {
-	table_id = SCTP_DEFAULT_TABLEID;
-	return (0);
-}
-
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
@@ -404,7 +399,7 @@ static inline int SCTP_GET_PKT_TABLEID(void *m, uint32_t table_id) {
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
-#define SCTP_RTALLOC(ro, vrf_id, table_id) rtalloc_ign((struct route *)ro, 0UL)
+#define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
@@ -414,7 +409,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id, table_id) \
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
 	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
@@ -425,7 +420,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
 }
 
-#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id, table_id) \
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
  	if (stcb && stcb->sctp_ep) \
 		result = ip6_output(o_pak, \

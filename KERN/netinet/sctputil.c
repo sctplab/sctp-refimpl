@@ -963,8 +963,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->my_vtag_nonce = sctp_select_a_tag(m);
 	asoc->peer_vtag_nonce = sctp_select_a_tag(m);
 	asoc->vrf_id = vrf_id;
-    /* Save the table id as well from the inp */
-    asoc->table_id = m->def_table_id;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
 		asoc->hb_is_disabled = 1;
@@ -3721,7 +3719,7 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error)
 void
 sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *m, int iphlen, struct sctphdr *sh, struct mbuf *op_err,
-    uint32_t vrf_id, uint32_t table_id)
+    uint32_t vrf_id)
 {
 	uint32_t vtag;
 
@@ -3732,9 +3730,8 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sctp_abort_notification(stcb, 0);
 		/* get the assoc vrf id and table id */
 		vrf_id = stcb->asoc.vrf_id;
-		table_id = stcb->asoc.table_id;
 	}
-	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id, table_id);
+	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
@@ -3843,8 +3840,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id,
-    uint32_t table_id)
+    struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
@@ -3879,8 +3875,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			 */
 			return;
 		case SCTP_SHUTDOWN_ACK:
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
-						     table_id);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
 			return;
 		default:
 			break;
@@ -3889,7 +3884,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id, table_id);
+	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 
 /*
