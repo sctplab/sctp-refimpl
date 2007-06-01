@@ -245,16 +245,12 @@ sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 }
 
 void
-sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu)
+sctp_update_ifn_mtu(uint32_t ifn_index, uint32_t mtu)
 {
 	struct sctp_ifn *sctp_ifnp;
-	struct sctp_vrf *vrf;
 
-	vrf = sctp_find_vrf(vrf_id);
-	if(vrf == NULL)
-		return;
 	sctp_ifnp = sctp_find_ifn((void *)NULL, ifn_index);
-	if(sctp_ifnp != NULL) {
+	if (sctp_ifnp != NULL) {
 		sctp_ifnp->ifn_mtu = mtu;
 	}
 }

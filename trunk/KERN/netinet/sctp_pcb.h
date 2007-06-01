@@ -542,9 +542,10 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add);
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags,
+		     int dynamic_add);
 
-void sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu);
+void sctp_update_ifn_mtu(uint32_t ifn_index, uint32_t mtu);
 
 void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
