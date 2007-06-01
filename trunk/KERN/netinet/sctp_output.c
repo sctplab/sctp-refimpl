@@ -11440,8 +11440,10 @@ sctp_lower_sosend(struct socket *so,
 	/* Ok, we will attempt a msgsnd :> */
 #ifndef __Panda__
 	if (p) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 603000
 		p->td_ru.ru_msgsnd++;
+#elif defined(__FreeBSD__) && __FreeBSD_version >= 500000
+ 		p->td_proc->p_stats->p_ru.ru_msgsnd++;
 #else
 		p->p_stats->p_ru.ru_msgsnd++;
 #endif
