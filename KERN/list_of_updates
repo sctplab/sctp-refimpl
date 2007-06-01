@@ -1,1 +1,3 @@
 - remove table_id stuff since it doesn't work for dual-stack
+- fix initial pcb vrf setting when the initial vrf is not the
+  default_vrf_id
