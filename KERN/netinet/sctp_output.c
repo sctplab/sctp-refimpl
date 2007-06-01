@@ -2403,7 +2403,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
-	sctp_ifn = sctp_find_ifn(vrf, ifn, ifn_index);
+	sctp_ifn = sctp_find_ifn(ifn, ifn_index);
 	/*
 	 * first question, is the ifn we will emit on in our list, if so, we
 	 * want such an address. Note that we first looked for a
@@ -2513,7 +2513,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
-	sctp_ifn = sctp_find_ifn(vrf, ifn, ifn_index);
+	sctp_ifn = sctp_find_ifn( ifn, ifn_index);
 
 	/*
  	 * first question, is the ifn we will emit on in our list?  If so,
@@ -2740,7 +2740,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
 
-	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn(vrf, ifn, ifn_index);
+	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn( ifn, ifn_index);
 	if (sctp_ifn == NULL) {
 		/* ?? We don't have this guy ?? */
 		goto bound_all_plan_b;

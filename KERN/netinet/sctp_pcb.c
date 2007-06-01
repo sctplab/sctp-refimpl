@@ -183,17 +183,6 @@ sctp_allocate_vrf(int vrf_id)
 		SCTP_FREE(vrf, SCTP_M_VRF);
 		return (NULL);
 	}
-	vrf->vrf_ifn_hash = SCTP_HASH_INIT(SCTP_VRF_IFN_HASH_SIZE,
-					    &vrf->vrf_ifn_hashmark);
-	if(vrf->vrf_ifn_hash == NULL) {
- 		/* No memory */
-#ifdef INVARIANTS
-		panic("No memory for VRF:%d", vrf_id);
-#endif
-		SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
-		SCTP_FREE(vrf, SCTP_M_VRF);
-		return (NULL);
-	}
 
 	/* Add it to the hash table */
 	bucket = &sctppcbinfo.sctp_vrfhash[(vrf_id & sctppcbinfo.hashvrfmark)];
@@ -204,7 +193,7 @@ sctp_allocate_vrf(int vrf_id)
 
 
 struct sctp_ifn *
-sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index)
+sctp_find_ifn(void *ifn, uint32_t ifn_index)
 {
 	struct sctp_ifn *sctp_ifnp;
 	struct sctp_ifnlist *hash_ifn_head;
@@ -212,7 +201,7 @@ sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index)
 	/* We assume the lock is held for the addresses 
 	 * if thats wrong problems could occur :-)
 	 */
-	hash_ifn_head = &vrf->vrf_ifn_hash[(ifn_index & vrf->vrf_ifn_hashmark)];	
+	hash_ifn_head = &sctppcbinfo.vrf_ifn_hash[(ifn_index & sctppcbinfo.vrf_ifn_hashmark)];	
 	LIST_FOREACH(sctp_ifnp, hash_ifn_head, next_bucket) {
 		if (sctp_ifnp->ifn_index == ifn_index) {
 			return(sctp_ifnp);
@@ -262,7 +251,7 @@ sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu)
 	vrf = sctp_find_vrf(vrf_id);
 	if(vrf == NULL)
 		return;
-	sctp_ifnp = sctp_find_ifn(vrf, (void *)NULL, ifn_index);
+	sctp_ifnp = sctp_find_ifn((void *)NULL, ifn_index);
 	if(sctp_ifnp != NULL) {
 		sctp_ifnp->ifn_mtu = mtu;
 	}
@@ -285,7 +274,7 @@ static void
 sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 {
 	struct sctp_ifn *found;
-	found = sctp_find_ifn(sctp_ifnp->vrf, sctp_ifnp->ifn_p, sctp_ifnp->ifn_index);
+	found = sctp_find_ifn(sctp_ifnp->ifn_p, sctp_ifnp->ifn_index);
 	if (found == NULL) {
 		/* Not in the list.. sorry */
 		return;
@@ -327,7 +316,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 			return (NULL);
 		}
 	}
-	sctp_ifnp = sctp_find_ifn(vrf, ifn, ifn_index);
+	sctp_ifnp = sctp_find_ifn(ifn, ifn_index);
 	if (sctp_ifnp == NULL) {
 		/* build one and add it, can't hold lock
 		 * until after malloc done though.
@@ -352,7 +341,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		} else {
 			memcpy(sctp_ifnp->ifn_name, "unknown", min(7,SCTP_IFNAMSIZ));
 		}
-		hash_ifn_head = &vrf->vrf_ifn_hash[(ifn_index & vrf->vrf_ifn_hashmark)];
+		hash_ifn_head = &sctppcbinfo.vrf_ifn_hash[(ifn_index & sctppcbinfo.vrf_ifn_hashmark)];
 		LIST_INIT(&sctp_ifnp->ifalist);
 		SCTP_IPI_ADDR_LOCK();
 		LIST_INSERT_HEAD(hash_ifn_head, sctp_ifnp, next_bucket);
@@ -5462,6 +5451,9 @@ sctp_pcb_init()
 
 	sctppcbinfo.sctp_vrfhash = SCTP_HASH_INIT(SCTP_SIZE_OF_VRF_HASH,
 						  &sctppcbinfo.hashvrfmark);
+
+	sctppcbinfo.vrf_ifn_hash = SCTP_HASH_INIT(SCTP_VRF_IFN_HASH_SIZE,
+						  &sctppcbinfo.vrf_ifn_hashmark);
 
 	/* init the zones */
 	/*
