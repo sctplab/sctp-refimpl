@@ -77,8 +77,8 @@ sctp_init(void)
 	sctp_pcb_init();
 
 #if defined(__Panda__)
-	sctp_sendspace = SCTPCTL_MAXDGRAM_DEFAULT;
-	sctp_recvspace = SCTPCTL_RECVSPACE_DEFAULT;
+	sctp_sendspace = SB_MAX;
+	sctp_recvspace = SB_MAX;
 #else
 #ifndef __OpenBSD__
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
