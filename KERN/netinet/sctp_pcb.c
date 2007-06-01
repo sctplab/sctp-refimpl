@@ -172,6 +172,8 @@ sctp_allocate_vrf(int vrf_id)
 	vrf->vrf_id = vrf_id;
 	LIST_INIT(&vrf->ifnlist);
 	vrf->total_ifa_count = 0;
+	/* now also setup table ids */
+	SCTP_INIT_VRF_TABLEID(vrf);
 	/* Init the HASH of addresses */
 	vrf->vrf_addr_hash = SCTP_HASH_INIT(SCTP_VRF_ADDR_HASH_SIZE,
 					    &vrf->vrf_addr_hashmark);
