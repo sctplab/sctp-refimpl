@@ -64,6 +64,8 @@ struct sctp_vrf {
 	struct sctp_ifnlist *vrf_ifn_hash;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
+	uint32_t tbl_id_v4;		/* default v4 table id */
+	uint32_t tbl_id_v6;		/* default v6 table id */
 	uint32_t total_ifa_count;
 	u_long   vrf_addr_hashmark;
 	u_long   vrf_ifn_hashmark;
