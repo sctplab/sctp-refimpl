@@ -472,7 +472,6 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	int error;
 	uint32_t vrf_id;
 
-
 	/* FIX, for non-bsd is this right? */
 	vrf_id = SCTP_DEFAULT_VRFID;
 
@@ -612,7 +611,7 @@ static int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_attach(struct socket *so, int proto, struct thread *p)
 #elif defined(__Panda__)
-sctp_attach(struct socket *so, int proto, uint32_t vrfid)
+sctp_attach(struct socket *so, int proto, uint32_t vrf_id)
 #else
 sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
@@ -623,6 +622,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	int s;
 #endif
 	int error;
+#if !defined(__Panda__)
+	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
+#endif
 #ifdef IPSEC	
 	uint32_t flags;
 #endif
@@ -643,7 +645,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
 		return error;
 	}
-	error = sctp_inpcb_alloc(so);
+	error = sctp_inpcb_alloc(so, vrf_id);
 	if (error) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
