@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.30 2007/05/30 22:34:21 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.31 2007/06/01 01:12:44 jeff Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -11441,7 +11441,7 @@ sctp_lower_sosend(struct socket *so,
 #ifndef __Panda__
 	if (p) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		p->td_proc->p_stats->p_ru.ru_msgsnd++;
+		p->td_ru.ru_msgsnd++;
 #else
 		p->p_stats->p_ru.ru_msgsnd++;
 #endif
