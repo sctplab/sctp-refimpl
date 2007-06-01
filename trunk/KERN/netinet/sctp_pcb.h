@@ -596,7 +596,7 @@ struct sctp_tcb *
 sctp_findassociation_ep_asconf(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **);
 
-int sctp_inpcb_alloc(struct socket *);
+int sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id);
 
 int sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id);
 

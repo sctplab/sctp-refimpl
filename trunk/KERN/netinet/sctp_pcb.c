@@ -2090,7 +2090,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
  * port with all addresses bound.
  */
 int
-sctp_inpcb_alloc(struct socket *so)
+sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 {
 	/*
 	 * we get called when a new endpoint starts up. We need to allocate
@@ -2227,10 +2227,10 @@ sctp_inpcb_alloc(struct socket *so)
 #endif
 		return (ENOBUFS);
 	}
+	inp->m_vrf_ids[0] = vrf_id;
 	inp->num_vrfs = 1;
-	inp->m_vrf_ids[0] = SCTP_DEFAULT_VRFID;
 #endif
-	inp->def_vrf_id = SCTP_DEFAULT_VRFID;
+	inp->def_vrf_id = vrf_id;
 
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* LOCK init's */

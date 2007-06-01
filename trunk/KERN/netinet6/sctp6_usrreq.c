@@ -801,7 +801,7 @@ static int
 sctp6_attach(struct socket *so, int proto, struct thread *p)
 #elif defined(__Panda__)
 int
-sctp6_attach(struct socket *so, int proto, uint32_t vrfid)
+sctp6_attach(struct socket *so, int proto, uint32_t vrf_id)
 #else
 static int
 sctp6_attach(struct socket *so, int proto, struct proc *p)
@@ -813,6 +813,9 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 	int error;
 	struct sctp_inpcb *inp;
+#if !defined(__Panda__)
+	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
+#endif
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp != NULL)
@@ -826,13 +829,14 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_alloc(so);
+	error = sctp_inpcb_alloc(so, vrf_id);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
 	if (error)
 		return error;
 	inp = (struct sctp_inpcb *)so->so_pcb;
+	SCTP_INP_WLOCK(inp);
 	inp->sctp_flags |= SCTP_PCB_FLAGS_BOUND_V6;	/* I'm v6! */
 	inp6 = (struct in6pcb *)inp;
 
@@ -871,6 +875,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	 * Hmm what about the IPSEC stuff that is missing here but in
 	 * sctp_attach()?
 	 */
+	SCTP_INP_WUNLOCK(inp);
 	return 0;
 }
 
