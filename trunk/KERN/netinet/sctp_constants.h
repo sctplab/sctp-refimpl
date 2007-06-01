@@ -63,6 +63,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.18 2007/05/30 17:39:44 
 #define SCTP_COUNT_LIMIT 40
 
 #define SCTP_ZERO_COPY_TICK_DELAY (((100 * hz) + 999) / 1000)
+#define SCTP_ZERO_COPY_SENDQ_TICK_DELAY (((100 * hz) + 999) / 1000)
 
 /* Number of ticks to delay before running 
  * iterator on an address change.
@@ -549,8 +550,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.18 2007/05/30 17:39:44 
 #define SCTP_TIMER_TYPE_ASOCKILL        18
 #define SCTP_TIMER_TYPE_ADDR_WQ         19
 #define SCTP_TIMER_TYPE_ZERO_COPY       20
+#define SCTP_TIMER_TYPE_ZCOPY_SENDQ     21
 /* add new timers here - and increment LAST */
-#define SCTP_TIMER_TYPE_LAST            21
+#define SCTP_TIMER_TYPE_LAST            22
 
 #define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
 					 ((t) < SCTP_TIMER_TYPE_LAST))

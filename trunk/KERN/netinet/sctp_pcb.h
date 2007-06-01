@@ -324,6 +324,8 @@ struct sctp_pcb {
 
 	/* Zero copy full buffer timer */
 	struct sctp_timer zero_copy_timer;
+        /* Zero copy app to transport (sendq) read repulse timer */
+	struct sctp_timer zero_copy_sendq_timer;
 	int def_cookie_life;
 	/* defaults to 0 */
 	int auto_close_time;
@@ -403,6 +405,7 @@ struct sctp_inpcb {
 	 */
 #ifdef __Panda__
 	pakhandle_type pak_to_read;
+	pakhandle_type pak_to_read_sendq;
 #endif	
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;

@@ -3395,6 +3395,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		SCTP_RELEASE_PKT(inp->pak_to_read);
 		inp->pak_to_read = NULL;
 	}
+	if(inp->pak_to_read_sendq) {
+		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.zero_copy_sendq_timer.timer);
+		SCTP_RELEASE_PKT(inp->pak_to_read_sendq);
+		inp->pak_to_read_sendq = NULL;
+	}
 #endif
     /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {

@@ -1579,6 +1579,11 @@ sctp_timeout_handler(void *t)
 			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
 		}
 		break;
+	case SCTP_TIMER_TYPE_ZCOPY_SENDQ:
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
+		    SCTP_ZERO_COPY_SENDQ_EVENT(inp, inp->sctp_socket);
+		}
+                break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		sctp_handle_addr_wq();
 		break;
@@ -1926,6 +1931,10 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case SCTP_TIMER_TYPE_ZERO_COPY:
 		tmr = &inp->sctp_ep.zero_copy_timer;
 		to_ticks = SCTP_ZERO_COPY_TICK_DELAY;
+		break;
+	case SCTP_TIMER_TYPE_ZCOPY_SENDQ:
+		tmr = &inp->sctp_ep.zero_copy_sendq_timer;
+		to_ticks = SCTP_ZERO_COPY_SENDQ_TICK_DELAY;
 		break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		/* Only 1 tick away :-) */
@@ -2290,7 +2299,9 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case SCTP_TIMER_TYPE_ZERO_COPY:
 		tmr = &inp->sctp_ep.zero_copy_timer;
 		break;
-
+	case SCTP_TIMER_TYPE_ZCOPY_SENDQ:
+		tmr = &inp->sctp_ep.zero_copy_sendq_timer;
+		break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		tmr = &sctppcbinfo.addr_wq_timer;
 		break;
