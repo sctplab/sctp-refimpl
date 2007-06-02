@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.18 2007/05/29 09:29:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.19 2007/06/01 11:19:54 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -300,7 +300,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				 */
 				continue;
 			}
-			if (val > mnet->ssthresh) {
+			if (val < mnet->ssthresh) {
 				hthresh = mnet;
 				val = mnet->ssthresh;
 			} else if (val == mnet->ssthresh) {
@@ -660,6 +660,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					chk->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
 				}
 			}
+			/* CMT: Do not allow FRs on retransmitted TSNs.
+			 */
 			if (sctp_cmt_on_off == 1) {
 				chk->no_fr_allowed = 1;
 			}
