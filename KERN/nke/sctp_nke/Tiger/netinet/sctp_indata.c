@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.27 2007/05/30 17:39:44 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.28 2007/06/01 11:19:54 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -491,7 +491,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * Now lets see if we can deliver the next one on
 			 * the stream
 			 */
-			uint16_t nxt_todel;
 			struct sctp_stream_in *strm;
 
 			strm = &asoc->strmin[stream_no];
@@ -2591,7 +2590,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_19;
 				sctp_abort_association(inp, stcb, m, iphlen, sh,
-						       op_err, 0, 0);
+						       op_err, 0);
 				return (2);
 			}
 #ifdef SCTP_AUDITING_ENABLED
@@ -2654,7 +2653,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 					struct mbuf *op_err;
 
 					op_err = sctp_generate_invmanparam(SCTP_CAUSE_PROTOCOL_VIOLATION);
-					sctp_abort_association(inp, stcb, m, iphlen, sh, op_err, 0, 0);
+					sctp_abort_association(inp, stcb, m, iphlen, sh, op_err, 0);
 					return (2);
 				}
 				break;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.19 2007/05/30 17:39:45 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.20 2007/06/01 11:19:54 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -61,12 +61,12 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
 	struct sctp_ifalist *vrf_addr_hash;
-	struct sctp_ifnlist *vrf_ifn_hash;
 	struct sctp_ifnlist ifnlist;
 	uint32_t vrf_id;
+	uint32_t tbl_id_v4;		/* default v4 table id */
+	uint32_t tbl_id_v6;		/* default v6 table id */
 	uint32_t total_ifa_count;
 	u_long   vrf_addr_hashmark;
-	u_long   vrf_ifn_hashmark;
 };
 
 struct sctp_ifn {
@@ -80,6 +80,9 @@ struct sctp_ifn {
 	uint32_t ifn_index;	/* shorthand way to look at ifn for reference */
 	uint32_t refcount;	/* number of reference held should be >= ifa_count */
 	uint32_t ifa_count;	/* IFA's we hold (in our list - ifalist)*/
+	uint32_t num_v6;	/* number of v6 addresses */
+	uint32_t num_v4;	/* number of v4 addresses */
+	uint32_t registered_af;	/* registered address family for i/f events */
 	char     ifn_name[SCTP_IFNAMSIZ];
 };
 
@@ -104,17 +107,13 @@ struct sctp_ifa {
 				 * appropriate locks. This is for V6.
 				 */
 	union sctp_sockstore address;
-#if defined(__Panda__)
-	struct ip_addr ip_addr;	/* internal address format */
-#endif
 	uint32_t refcount;	/* number of folks refering to this */
- 	uint32_t flags;
+     	uint32_t flags;
 	uint32_t localifa_flags;
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
 	uint8_t resv;
-
 };
 
 struct sctp_laddr {
@@ -169,6 +168,9 @@ struct sctp_epinfo {
 
 	struct sctp_vrflist *sctp_vrfhash;
 	u_long hashvrfmark;
+
+	struct sctp_ifnlist *vrf_ifn_hash;
+	u_long   vrf_ifn_hashmark;
 
 	struct sctppcbhead listhead;
 	struct sctpladdr addr_wq;
@@ -325,6 +327,8 @@ struct sctp_pcb {
 
 	/* Zero copy full buffer timer */
 	struct sctp_timer zero_copy_timer;
+        /* Zero copy app to transport (sendq) read repulse timer */
+	struct sctp_timer zero_copy_sendq_timer;
 	int def_cookie_life;
 	/* defaults to 0 */
 	int auto_close_time;
@@ -404,6 +408,7 @@ struct sctp_inpcb {
 	 */
 #ifdef __Panda__
 	pakhandle_type pak_to_read;
+	pakhandle_type pak_to_read_sendq;
 #endif	
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
@@ -451,7 +456,6 @@ struct sctp_inpcb {
 	uint32_t i_am_here_line;
 #endif
 	uint32_t def_vrf_id;
-	uint32_t def_table_id;
 #ifdef SCTP_MVRF
 	uint32_t *m_vrf_ids;
 	uint32_t num_vrfs;
@@ -528,7 +532,7 @@ int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
 void sctp_fill_pcbinfo(struct sctp_pcbinfo *);
 
 struct sctp_ifn *
-sctp_find_ifn(struct sctp_vrf *vrf, void *ifn, uint32_t ifn_index);
+sctp_find_ifn(void *ifn, uint32_t ifn_index);
 
 struct sctp_vrf *sctp_allocate_vrf(int vrfid);
 
@@ -538,9 +542,10 @@ struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
 		     void *ifn, uint32_t ifn_index, uint32_t ifn_type,
 		     const char *if_name,
-		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags, int dynamic_add);
+		     void *ifa, struct sockaddr *addr, uint32_t ifa_flags,
+		     int dynamic_add);
 
-void sctp_update_ifn_mtu(uint32_t vrf_id, uint32_t ifn_index, uint32_t mtu);
+void sctp_update_ifn_mtu(uint32_t ifn_index, uint32_t mtu);
 
 void sctp_free_ifn(struct sctp_ifn *sctp_ifnp);
 void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
@@ -595,7 +600,7 @@ struct sctp_tcb *
 sctp_findassociation_ep_asconf(struct mbuf *, int, int,
     struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **);
 
-int sctp_inpcb_alloc(struct socket *);
+int sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id);
 
 int sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id);
 

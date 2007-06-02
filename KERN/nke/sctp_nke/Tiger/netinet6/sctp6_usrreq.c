@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.24 2007/05/29 09:29:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.25 2007/06/01 11:19:54 rrs Exp $");
 #endif
 
 
@@ -138,7 +138,7 @@ sctp6_input(i_pak, offp, proto)
 	struct sctp_nets *net;
 	int refcount_up = 0;
 	uint32_t check, calc_check;
-	uint32_t vrf_id = 0, table_id = 0;
+	uint32_t vrf_id = 0;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
 	int length, mlen, offset, iphlen;
@@ -162,10 +162,6 @@ sctp6_input(i_pak, offp, proto)
 #endif
 	/* get the VRF and table id's */
  	if (SCTP_GET_PKT_VRFID(*i_pak, vrf_id)) {
-		SCTP_RELEASE_PKT(*i_pak);
-		return (-1);
-	}
- 	if (SCTP_GET_PKT_TABLEID(*i_pak, table_id)) {
 		SCTP_RELEASE_PKT(*i_pak);
 		return (-1);
 	}
@@ -297,8 +293,7 @@ sctp_skip_csum:
 				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id,
-						     table_id);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
  			goto bad;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
@@ -306,8 +301,7 @@ sctp_skip_csum:
 		}
 
 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id,
-					table_id);
+			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
@@ -410,7 +404,7 @@ sctp_skip_csum:
 #endif
     /*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-	    in6p, stcb, net, ecn_bits, vrf_id, table_id);
+	    in6p, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -807,7 +801,7 @@ static int
 sctp6_attach(struct socket *so, int proto, struct thread *p)
 #elif defined(__Panda__)
 int
-sctp6_attach(struct socket *so, int proto, uint32_t vrfid)
+sctp6_attach(struct socket *so, int proto, uint32_t vrf_id)
 #else
 static int
 sctp6_attach(struct socket *so, int proto, struct proc *p)
@@ -819,6 +813,9 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 	int error;
 	struct sctp_inpcb *inp;
+#if !defined(__Panda__)
+	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
+#endif
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp != NULL)
@@ -832,13 +829,14 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_alloc(so);
+	error = sctp_inpcb_alloc(so, vrf_id);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
 	if (error)
 		return error;
 	inp = (struct sctp_inpcb *)so->so_pcb;
+	SCTP_INP_WLOCK(inp);
 	inp->sctp_flags |= SCTP_PCB_FLAGS_BOUND_V6;	/* I'm v6! */
 	inp6 = (struct in6pcb *)inp;
 
@@ -877,6 +875,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	 * Hmm what about the IPSEC stuff that is missing here but in
 	 * sctp_attach()?
 	 */
+	SCTP_INP_WUNLOCK(inp);
 	return 0;
 }
 

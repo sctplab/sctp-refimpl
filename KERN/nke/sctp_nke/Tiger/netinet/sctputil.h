@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.21 2007/05/30 17:39:45 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.22 2007/06/01 11:19:54 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -207,7 +207,7 @@ void sctp_abort_notification(struct sctp_tcb *, int);
 /* We abort responding to an IP packet for some reason */
 void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
-    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t, uint32_t);
+    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t);
 
 
 /* We choose to abort via user input */
@@ -216,7 +216,7 @@ sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
     struct mbuf *);
 
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *, struct mbuf *, uint32_t, uint32_t);
+    struct sctp_inpcb *, struct mbuf *, uint32_t);
 
 int sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
     int totaddr, int *error);
