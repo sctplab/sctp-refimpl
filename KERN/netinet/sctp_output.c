@@ -10961,7 +10961,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 )
 {
-	unsigned int sndlen, max_len;
+	unsigned int sndlen = 0, max_len;
 	int error, len;
 	struct mbuf *top=NULL;
 #if defined(__NetBSD__) || defined(__OpenBSD_)
@@ -11015,9 +11015,11 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
-        /* We dont need the packet header, free it */
+        /* We delink the chain from header, but keep
+         * the header around as we will need it in
+         * EAGAIN case
+         */
         SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
-        (void)SCTP_RELEASE_HEADER(i_pak);
 #endif
 	}
 	/* Pre-screen address, if one is given the sin-len
@@ -12238,6 +12240,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
  out_unlocked:
 
+
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
@@ -12259,6 +12262,27 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 #endif
+#endif
+#ifdef __Panda__
+    /* 
+     * Handle the EAGAIN cases to reattach the pak header
+     * to particle when pak is passed in, so that caller 
+     * can try again with this pak
+     *
+     * NOTE: For other cases, including success case,
+     * we simply want to return the header back to free
+     * pool
+     */
+    if (top) {
+        if (error == EAGAIN)  {
+            SCTP_ATTACH_CHAIN(i_pak, top, sndlen);    
+            top = NULL;
+        } else {
+            (void)SCTP_RELEASE_HEADER(i_pak);
+        }
+    } else {
+        (void)SCTP_RELEASE_HEADER(i_pak);
+    }
 #endif
 	if (top){ 
 		sctp_m_freem(top);
