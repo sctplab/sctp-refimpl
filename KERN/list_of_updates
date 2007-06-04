@@ -1,6 +1,2 @@
-- remove table_id stuff since it doesn't work for dual-stack
-- fix initial pcb vrf setting when the initial vrf is not the
-  default_vrf_id
-- Missing lock/unlock of inp added as well.
-- IFN hash table moves to sctppcbinfo since indexes are
-  unique across systems (including different VRFs).
+- SCTP_UNORDERED was not getting set in the read.
+
