@@ -5293,6 +5293,9 @@ sctp_sorecvmsg(struct socket *so,
 		 * there.
 		 */
 		sinfo->sinfo_flags &= 0x00ff;
+		if((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED) {
+			sinfo->sinfo_flags |= SCTP_UNORDERED;
+		}
 	}
 	if (fromlen && from) {
 		struct sockaddr *to;
