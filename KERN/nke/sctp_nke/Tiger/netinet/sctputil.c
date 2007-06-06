@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.36 2007/06/01 11:19:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.37 2007/06/06 00:40:41 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5293,6 +5293,9 @@ sctp_sorecvmsg(struct socket *so,
 		 * there.
 		 */
 		sinfo->sinfo_flags &= 0x00ff;
+		if((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED) {
+			sinfo->sinfo_flags |= SCTP_UNORDERED;
+		}
 	}
 	if (fromlen && from) {
 		struct sockaddr *to;
