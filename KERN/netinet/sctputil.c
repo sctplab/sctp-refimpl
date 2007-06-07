@@ -2745,7 +2745,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	} else {
 		/* First RTO measurment */
 		net->lastsa = calc_time;
-		net->lastsv = calc_time >> 1;
+		net->lastsv = calc_time;
 		if (net->lastsv == 0) {
 			net->lastsv = SCTP_CLOCK_GRANULARITY;
 		}
