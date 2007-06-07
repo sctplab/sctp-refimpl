@@ -2746,6 +2746,9 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 		/* First RTO measurment */
 		net->lastsa = calc_time;
 		net->lastsv = calc_time >> 1;
+		if (net->lastsv == 0) {
+			net->lastsv = SCTP_CLOCK_GRANULARITY;
+		}
 		first_measure = 1;
 		net->prev_rtt = o_calctime;
 #ifdef SCTP_RTTVAR_LOGGING
@@ -2753,7 +2756,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 #endif
 	}
 calc_rto:
-	new_rto = ((net->lastsa >> 2) + net->lastsv) >> 1;
+	new_rto = ((net->lastsa >> 3) + net->lastsv;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&
 	    (stcb->asoc.sat_network_lockout == 0)) {
 		stcb->asoc.sat_network = 1;
