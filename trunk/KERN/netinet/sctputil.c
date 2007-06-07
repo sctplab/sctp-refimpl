@@ -2756,7 +2756,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 #endif
 	}
 calc_rto:
-	new_rto = ((net->lastsa >> 3) + net->lastsv;
+	new_rto = (net->lastsa >> 3) + net->lastsv;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&
 	    (stcb->asoc.sat_network_lockout == 0)) {
 		stcb->asoc.sat_network = 1;
