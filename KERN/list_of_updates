@@ -1,2 +1,4 @@
 - SCTP_UNORDERED was not getting set in the read.
-
+- RTT initialization was incorrect, noticable when
+  RTT was > 1second only.
+- Get rid of "magic" numbers in RTT calculation.
