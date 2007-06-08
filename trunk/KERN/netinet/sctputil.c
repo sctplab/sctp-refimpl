@@ -3083,6 +3083,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_length = length;
 	ssf->ssf_error = error;
 	/* not exactly what the user sent in, but should be close :) */
+	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = chk->rec.data.stream_number;
 	ssf->ssf_info.sinfo_ssn = chk->rec.data.stream_seq;
 	ssf->ssf_info.sinfo_flags = chk->rec.data.rcv_flags;
@@ -3148,6 +3149,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_length = length;
 	ssf->ssf_error = error;
 	/* not exactly what the user sent in, but should be close :) */
+	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = sp->stream;
 	ssf->ssf_info.sinfo_ssn = sp->strseq;
 	ssf->ssf_info.sinfo_flags = sp->sinfo_flags;
@@ -3654,6 +3656,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 					sctp_mbuf_crush(chk->data);
+					chk->send_size -= sizeof(struct sctp_data_chunk);
 				}
 
 			}
@@ -3685,6 +3688,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 					sctp_mbuf_crush(chk->data);
+					chk->send_size -= sizeof(struct sctp_data_chunk);
 				}
 
 			}
