@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.34 2007/06/02 11:05:08 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.35 2007/06/08 10:57:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3785,7 +3785,10 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			net->dest_state = SCTP_ADDR_REACHABLE |
 			    SCTP_ADDR_UNCONFIRMED;
 	}
-	net->RTO = stcb->asoc.initial_rto;
+	/* We set this to 0, the timer code knows that
+	 * this means its an initial value
+	 */
+ 	net->RTO = 0;
 	stcb->asoc.numnets++;
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;

@@ -31,13 +31,16 @@
 /* $KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.h,v 1.3 2007/05/08 17:01:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.h,v 1.4 2007/06/08 10:57:11 rrs Exp $");
 #endif
 
 #ifndef __sctp_timer_h__
 #define __sctp_timer_h__
 
 #if defined(_KERNEL)
+
+#define SCTP_RTT_SHIFT 3
+#define SCTP_RTT_VAR_SHIFT 2
 
 void
 sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,

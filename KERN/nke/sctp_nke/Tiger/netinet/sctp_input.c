@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.33 2007/06/01 11:19:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.34 2007/06/08 10:57:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2333,7 +2333,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		if (net->ssthresh < net->mtu) {
 			net->ssthresh = net->mtu;
 			/* here back off the timer as well, to slow us down */
-			net->RTO <<= 2;
+			net->RTO <<= 1;
 		}
 		net->cwnd = net->ssthresh;
 #ifdef SCTP_CWND_MONITOR

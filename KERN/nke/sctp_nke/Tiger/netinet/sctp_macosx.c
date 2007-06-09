@@ -677,6 +677,7 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
     msg.msg_iov = &iov;
     msg.msg_iovlen = 1;
     flags = 0;
+    length = 0;
     /* read the routing socket */
     error = sock_receive(rt_sock, &msg, flags, &length);
     if (error != 0) {
@@ -691,7 +692,7 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 
     /* process the routing event */
     rt_msg = (struct rt_msghdr *)rt_buffer;
-/*    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, length);*/
+    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, length);
     switch (rt_msg->rtm_type) {
     case RTM_DELADDR:
     case RTM_NEWADDR:
