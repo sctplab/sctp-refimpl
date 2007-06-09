@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.38 2007/06/08 10:57:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.39 2007/06/09 13:46:57 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3616,64 +3616,6 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 	if(holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
-	for(i=0; i<stcb->asoc.streamoutcnt; i++) {
-		/* For each stream */
-		outs = &stcb->asoc.strmout[i];
-		/* clean up any sends there */
-		stcb->asoc.locked_on_sending = NULL;
-		sp = TAILQ_FIRST(&outs->outqueue);
-		while (sp) {
-			stcb->asoc.stream_queue_cnt--;
-			TAILQ_REMOVE(&outs->outqueue, sp, next);
-			sctp_free_spbufspace(stcb, asoc, sp);
-			sctp_ulp_notify(SCTP_NOTIFY_SPECIAL_SP_FAIL, stcb,
-			    SCTP_NOTIFY_DATAGRAM_UNSENT, (void *)sp);
-			if (sp->data) {
-				sctp_m_freem(sp->data);
-				sp->data = NULL;
-			}
-			if (sp->net)
-				sctp_free_remote_addr(sp->net);
-			sp->net = NULL;
-			/* Free the chunk */
-			sctp_free_a_strmoq(stcb, sp);
-            /*sa_ignore FREED_MEMORY*/
-			sp = TAILQ_FIRST(&outs->outqueue);
-		}
-	}
-
-	/* pending send queue SHOULD be empty */
-	if (!TAILQ_EMPTY(&asoc->send_queue)) {
-		chk = TAILQ_FIRST(&asoc->send_queue);
-		while (chk) {
-			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
-			asoc->send_queue_cnt--;
-			if (chk->data) {
-				/*
-				 * trim off the sctp chunk header(it should
-				 * be there)
-				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
-					m_adj(chk->data, sizeof(struct sctp_data_chunk));
-					sctp_mbuf_crush(chk->data);
-					chk->send_size -= sizeof(struct sctp_data_chunk);
-				}
-
-			}
-			sctp_free_bufspace(stcb, asoc, chk, 1);
-			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
-			if (chk->data) {
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
-			}
-			if (chk->whoTo)
-				sctp_free_remote_addr(chk->whoTo);
-			chk->whoTo = NULL;
-			sctp_free_a_chunk(stcb, chk);
-            /*sa_ignore FREED_MEMORY*/
-			chk = TAILQ_FIRST(&asoc->send_queue);
-		}
-	}
 	/* sent queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		chk = TAILQ_FIRST(&asoc->sent_queue);
@@ -3707,6 +3649,64 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
+	/* pending send queue SHOULD be empty */
+	if (!TAILQ_EMPTY(&asoc->send_queue)) {
+		chk = TAILQ_FIRST(&asoc->send_queue);
+		while (chk) {
+			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
+			asoc->send_queue_cnt--;
+			if (chk->data) {
+				/*
+				 * trim off the sctp chunk header(it should
+				 * be there)
+				 */
+				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
+					m_adj(chk->data, sizeof(struct sctp_data_chunk));
+					sctp_mbuf_crush(chk->data);
+					chk->send_size -= sizeof(struct sctp_data_chunk);
+				}
+
+			}
+			sctp_free_bufspace(stcb, asoc, chk, 1);
+			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk);
+			if (chk->data) {
+				sctp_m_freem(chk->data);
+				chk->data = NULL;
+			}
+			if (chk->whoTo)
+				sctp_free_remote_addr(chk->whoTo);
+			chk->whoTo = NULL;
+			sctp_free_a_chunk(stcb, chk);
+            /*sa_ignore FREED_MEMORY*/
+			chk = TAILQ_FIRST(&asoc->send_queue);
+		}
+	}
+	for(i=0; i<stcb->asoc.streamoutcnt; i++) {
+		/* For each stream */
+		outs = &stcb->asoc.strmout[i];
+		/* clean up any sends there */
+		stcb->asoc.locked_on_sending = NULL;
+		sp = TAILQ_FIRST(&outs->outqueue);
+		while (sp) {
+			stcb->asoc.stream_queue_cnt--;
+			TAILQ_REMOVE(&outs->outqueue, sp, next);
+			sctp_free_spbufspace(stcb, asoc, sp);
+			sctp_ulp_notify(SCTP_NOTIFY_SPECIAL_SP_FAIL, stcb,
+			    SCTP_NOTIFY_DATAGRAM_UNSENT, (void *)sp);
+			if (sp->data) {
+				sctp_m_freem(sp->data);
+				sp->data = NULL;
+			}
+			if (sp->net)
+				sctp_free_remote_addr(sp->net);
+			sp->net = NULL;
+			/* Free the chunk */
+			sctp_free_a_strmoq(stcb, sp);
+            /*sa_ignore FREED_MEMORY*/
+			sp = TAILQ_FIRST(&outs->outqueue);
+		}
+	}
+
 	if(holds_lock == 0) {
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}

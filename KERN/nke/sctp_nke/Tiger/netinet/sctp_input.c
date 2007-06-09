@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.34 2007/06/08 10:57:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.36 2007/06/09 13:53:27 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1854,12 +1854,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* it's the old cookie */
 		(void)sctp_hmac_m(SCTP_HMAC,
 		    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
-		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
+		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig, 0);
 	} else {
 		/* it's the current cookie */
 		(void)sctp_hmac_m(SCTP_HMAC,
 		    (uint8_t *)ep->secret_key[(int)ep->current_secret_number],
-		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
+		    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig, 0);
 	}
 	/* get the signature */
 	SCTP_INP_RUNLOCK(l_inp);
@@ -1877,7 +1877,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* compute digest with old */
 			(void)sctp_hmac_m(SCTP_HMAC,
 			    (uint8_t *)ep->secret_key[(int)ep->last_secret_number],
-			    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig);
+			    SCTP_SECRET_SIZE, m, cookie_offset, calc_sig, 0);
 			/* compare */
 			if (memcmp(calc_sig, sig, SCTP_SIGNATURE_SIZE) == 0)
 				cookie_ok = 1;
