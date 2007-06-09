@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.4 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.h,v 1.5 2007/06/09 13:46:57 rrs Exp $");
 #endif
 
 #ifndef __SCTP_AUTH_H__
@@ -182,7 +182,7 @@ extern int sctp_auth_is_supported_hmac(sctp_hmaclist_t *list, uint16_t id);
 /* mbuf versions */
 extern uint32_t
 sctp_hmac_m(uint16_t hmac_algo, uint8_t *key, uint32_t keylen,
-    struct mbuf *m, uint32_t m_offset, uint8_t *digest);
+    struct mbuf *m, uint32_t m_offset, uint8_t *digest, uint32_t trailer);
 extern uint32_t
 sctp_compute_hmac_m(uint16_t hmac_algo, sctp_key_t *key, struct mbuf *m,
     uint32_t m_offset, uint8_t *digest);
