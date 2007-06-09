@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.37 2007/06/06 00:40:41 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.38 2007/06/08 10:57:11 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2728,24 +2728,27 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	o_calctime = calc_time;
 	/* this is Van Jacobson's integer version */
 	if (net->RTO) {
-		calc_time -= (net->lastsa >> 3);
+		calc_time -= (net->lastsa >> SCTP_RTT_SHIFT); /* take away 1/8th when shift=3 */
 #ifdef SCTP_RTTVAR_LOGGING
 		rto_logging(net, SCTP_LOG_RTTVAR);
 #endif
 		net->prev_rtt = o_calctime;
-		net->lastsa += calc_time;
+		net->lastsa += calc_time; /* add 7/8th into sa when shift=3 */
 		if (calc_time < 0) {
 			calc_time = -calc_time;
 		}
-		calc_time -= (net->lastsv >> 2);
+		calc_time -= (net->lastsv >> SCTP_RTT_VAR_SHIFT); /* take away 1/4 when VAR shift=2 */
 		net->lastsv += calc_time;
 		if (net->lastsv == 0) {
 			net->lastsv = SCTP_CLOCK_GRANULARITY;
 		}
 	} else {
 		/* First RTO measurment */
-		net->lastsa = calc_time;
-		net->lastsv = calc_time >> 1;
+		net->lastsa = calc_time << SCTP_RTT_SHIFT; /* Multiply by 8 when shift=3 */
+		net->lastsv = calc_time;
+		if (net->lastsv == 0) {
+			net->lastsv = SCTP_CLOCK_GRANULARITY;
+		}
 		first_measure = 1;
 		net->prev_rtt = o_calctime;
 #ifdef SCTP_RTTVAR_LOGGING
@@ -2753,7 +2756,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 #endif
 	}
 calc_rto:
-	new_rto = ((net->lastsa >> 2) + net->lastsv) >> 1;
+	new_rto = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
 	if ((new_rto > SCTP_SAT_NETWORK_MIN) &&
 	    (stcb->asoc.sat_network_lockout == 0)) {
 		stcb->asoc.sat_network = 1;
@@ -3080,6 +3083,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_length = length;
 	ssf->ssf_error = error;
 	/* not exactly what the user sent in, but should be close :) */
+	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = chk->rec.data.stream_number;
 	ssf->ssf_info.sinfo_ssn = chk->rec.data.stream_seq;
 	ssf->ssf_info.sinfo_flags = chk->rec.data.rcv_flags;
@@ -3131,7 +3135,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 		return;
 
 	length = sizeof(struct sctp_send_failed) + sp->length;
-	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_adaption_event), 0, M_DONTWAIT, 1, MT_DATA);
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
@@ -3145,6 +3149,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_length = length;
 	ssf->ssf_error = error;
 	/* not exactly what the user sent in, but should be close :) */
+	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = sp->stream;
 	ssf->ssf_info.sinfo_ssn = sp->strseq;
 	ssf->ssf_info.sinfo_flags = sp->sinfo_flags;
@@ -3651,6 +3656,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 					sctp_mbuf_crush(chk->data);
+					chk->send_size -= sizeof(struct sctp_data_chunk);
 				}
 
 			}
@@ -3682,6 +3688,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock)
 				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
 					m_adj(chk->data, sizeof(struct sctp_data_chunk));
 					sctp_mbuf_crush(chk->data);
+					chk->send_size -= sizeof(struct sctp_data_chunk);
 				}
 
 			}
