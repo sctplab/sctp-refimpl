@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.102 2007-05-30 10:51:22 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.103 2007-06-11 21:02:45 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -99,6 +99,7 @@ int loop_sleep = 0;
  * Each command must have its own function, with the prefix "cmd_".
  */
 static int cmd_setloopsleep(char *argv[], int argc);
+static int cmd_settos(char *argv[], int argc);
 static int cmd_getloopsleep(char *argv[], int argc);
 static int cmd_abort(char *argv[], int argc);
 static int cmd_abortassoc(char *argv[], int argc);
@@ -493,6 +494,10 @@ static struct command commands[] = {
 
     {"setnodelay", "setnodelay 0/1 - set no delay 1=on 0=off (nagle on = 0 nagle off = 1)",
      cmd_setnodelay},
+
+    {"settos", "settos val - set the v4 tos value with IPPROTO_IP/IP_TOS",
+     cmd_settos},
+
 
     {"setv4mapped", "setv4mapped 0/1 - set the v4-mapped addresses 0=off/1=on",
      cmd_setv4mapped},
@@ -2328,6 +2333,28 @@ static int cmd_getv4mapped(char *argv[], int argc)
 	printf("IPv4-mapped addresses is %s\n",((optval) ? "ON" : "OFF"));
     }
     return (0);
+}
+
+
+static int cmd_settos(char *argv[], int argc)
+{
+    uint32_t optval;
+    socklen_t optlen;
+    int ret;
+
+    if (argc < 1) {
+	  printf("Use settos tos-value\n");
+	  return -1;
+    }
+    optval = strtoul(argv[0], NULL, 0);
+    optlen = sizeof(optval);
+    ret = setsockopt(adap->fd, IPPROTO_IP, IP_TOS, &optval, optlen);
+    if (ret < 0) {
+	    printf("setsockopt fails errno:%d\n", errno);
+    } else {
+	    printf("Success\n");
+    }
+    return 0;
 }
 
 static int cmd_setv4mapped(char *argv[], int argc)
