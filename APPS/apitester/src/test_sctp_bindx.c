@@ -229,9 +229,12 @@ DEFINE_APITEST(bindx, add_zero_addresses)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
@@ -260,9 +263,12 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
@@ -281,9 +287,12 @@ DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
@@ -302,9 +311,12 @@ DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
@@ -323,9 +335,12 @@ DEFINE_APITEST(bindx, add_null_addresses)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
@@ -344,9 +359,12 @@ DEFINE_APITEST(bindx, rem_null_addresses)
 	close(fd);
 		
 	if (result)
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	else
-		return NULL;
+		return "sctp_bindx() succeeded";
 }
 
 /*
