@@ -242,7 +242,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 		return (-1);
 	}
 	/* validate the address count and list */
-	if ((addrcnt < 0) || ((addrcnt > 0) && (addrs == NULL))) {
+	if ((addrcnt <= 0) || (addrs == NULL)) {
 		errno = EINVAL;
 		return (-1);
 	}
