@@ -56,7 +56,7 @@ DEFINE_APITEST(bindx, port_w_a_w_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -88,7 +88,7 @@ DEFINE_APITEST(bindx, port_s_a_w_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -120,7 +120,7 @@ DEFINE_APITEST(bindx, port_w_a_s_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -152,7 +152,7 @@ DEFINE_APITEST(bindx, port_s_a_s_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -183,7 +183,7 @@ DEFINE_APITEST(bindx, zero_flag)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -214,7 +214,7 @@ DEFINE_APITEST(bindx, add_zero_addresses)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -245,7 +245,7 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -274,7 +274,7 @@ DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 {
 	int fd, result;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	result = sctp_bindx(fd, NULL, 0, SCTP_BINDX_ADD_ADDR);
@@ -295,10 +295,52 @@ DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 {
 	int fd, result;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	result = sctp_bindx(fd, NULL, 0, SCTP_BINDX_REM_ADDR);
+	close(fd);
+		
+	if (result)
+		return strerror(errno);
+	else
+		return NULL;
+}
+
+/*
+ * TEST-TITLE bind/add_null_addresses
+ * TEST-DESCR: On a 1-1 socket, bindx add addresses
+ * TEST-DESCR: with a NULL pointer, we expect a error.
+ */
+DEFINE_APITEST(bindx, add_null_addresses)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+		
+	result = sctp_bindx(fd, NULL, 1, SCTP_BINDX_ADD_ADDR);
+	close(fd);
+		
+	if (result)
+		return strerror(errno);
+	else
+		return NULL;
+}
+
+/*
+ * TEST-TITLE bind/rem_null_addresses
+ * TEST-DESCR: On a 1-1 socket, bindx remove addresses
+ * TEST-DESCR: with NULL pointer, we expect a error.
+ */
+DEFINE_APITEST(bindx, rem_null_addresses)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+		
+	result = sctp_bindx(fd, NULL, 1, SCTP_BINDX_REM_ADDR);
 	close(fd);
 		
 	if (result)
@@ -319,7 +361,7 @@ DEFINE_APITEST(bindx, dup_add_s_a_s_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -356,7 +398,7 @@ DEFINE_APITEST(bindx, rem_last_s_a_s_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
@@ -394,7 +436,7 @@ DEFINE_APITEST(bindx, rem_s_a_s_p)
 	int fd, result;
 	struct sockaddr_in address;
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 		
 	bzero((void *)&address, sizeof(struct sockaddr_in));
