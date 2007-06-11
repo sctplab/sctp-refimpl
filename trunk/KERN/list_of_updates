@@ -2,3 +2,4 @@
 - Reorder send failed to be in correct order.
 - Fixed calulation of init-ack to be right off
   mbuf lengths.. instead of the precalculated value.
+- add null pointer check for bindx()/connectx()
