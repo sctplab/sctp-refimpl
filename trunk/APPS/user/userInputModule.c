@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.103 2007-06-11 21:02:45 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.104 2007-06-11 22:39:29 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -940,7 +940,7 @@ checkBulkTranfer(void *v,void *xxx)
 
 	cnt = 0;
 	ret = 0;
-	fd = (int)v;
+	fd = *((int *)v);
 	while(bulkCount > 0){
 		if(bulkPingMode == 0){
 			fillPingBuffer(fd,(bulkBufSize-4));
@@ -1075,7 +1075,7 @@ SCTPdataTimerTicks(void *o,void *b)
   int fd;
   struct sctpdataToProduce dp;
 
-  fd = (int)b;
+  fd = *((int *)b);
   memset(&dp,0,sizeof(dp));
   strcpy(dp.string,"hulk");
   dp.sent = dist->lastKnownTime;
@@ -1155,7 +1155,7 @@ sendRftpTransfer(void *v, void *xxx)
   int fd;
   struct sockaddr *sa;
 
-  fd = (int)v;
+  fd = *((int *)v);
   limit = 0;
 
   if(rftp_bsz > 10000-sizeof(testDgram_t))
@@ -1394,7 +1394,7 @@ sctpInput(void *arg, messageEnvolope *msg)
 
 	SCTP_setcurrent((sctpAdaptorMod *)arg);
 	if(msg->type == PROTOCOL_Sctp){
-		fd  = (int)msg->sender;
+		fd  = *((int *)msg->sender);
 	}else{
 		/* we don't deal with non-sctp data */
 		return;
@@ -2917,7 +2917,7 @@ cmd_bulk(char *argv[], int argc)
       strncpy(pingBuffer,"bulk",4);
     }
     bulkInProgress = 1;
-    checkBulkTranfer((void *)fd,NULL);
+    checkBulkTranfer((void *)&adap->fd,NULL);
     if(bulkCount == 0){
 	printf("bulk: bulk message are now queued\n");
     }else{
@@ -3202,9 +3202,9 @@ static int cmd_cwndlog(char *argv[], int argc)
 			idx = SCTP_STR_LOG_FROM_EXPRS_DEL+1;
 		}
 		if(req->log[i].event_type == SCTP_LOG_EVENT_CWND) {
-			printf("%d: net:0x%x chg:%d cwnd:%d flight:%d  by:%s\n",
+			printf("%d: net:%p chg:%d cwnd:%d flight:%d  by:%s\n",
 			       i,
-			       (uint32_t)req->log[i].x.cwnd.net,
+			       req->log[i].x.cwnd.net,
 			       (req->log[i].x.cwnd.cwnd_augment*1024),
 			       (req->log[i].x.cwnd.inflight*1024),
 			       (int)req->log[i].x.cwnd.cwnd_new_value,
@@ -4162,7 +4162,6 @@ cmd_bulkstop(char *argv[], int argc)
 static int
 cmd_hulkstart(char *argv[], int argc)
 {
-    int fd = adap->fd;
     char *filename;
 
     if (argc < 1) {
@@ -4176,7 +4175,7 @@ cmd_hulkstart(char *argv[], int argc)
       printf("hulk scheduler begun\n");
       dist_TimerStart(dist,
 		      SCTPdataTimerTicks, 
-		      0,period,(void *)NULL,(void *)fd);
+		      0,period,(void *)NULL,(void *)&adap->fd);
     }else{
       printf("Can't open file err:%d for file '%s'\n",
 	     errno,filename);
@@ -4190,14 +4189,13 @@ cmd_hulkstart(char *argv[], int argc)
 static int
 cmd_hulkstop(char *argv[], int argc)
 {
-    int fd = adap->fd;
     curSeq = 0;
     if(hulkfile != NULL)
       fclose(hulkfile);
     hulkfile = NULL;
     dist_TimerStop(dist,
 		   SCTPdataTimerTicks, 
-		      (void *)NULL,(void *)fd);
+		      (void *)NULL,(void *)&adap->fd);
     return 0;
 }
 
@@ -4466,7 +4464,6 @@ cmd_printrftpstat(char *argv[], int argc)
 static int
 cmd_rftp(char *argv[], int argc)
 {
-    int fd = adap->fd;
 
     char cbuf[255];
     char *file_in;
@@ -4517,7 +4514,7 @@ cmd_rftp(char *argv[], int argc)
     rftp_ending1 = rftp_ending2 = 0;
     str1Flow = str2Flow=0;
 
-    sendRftpTransfer((void *)fd, NULL);
+    sendRftpTransfer((void *)&adap->fd, NULL);
 
     return 0;
 }

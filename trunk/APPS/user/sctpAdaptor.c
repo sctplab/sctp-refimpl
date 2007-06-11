@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.29 2007-06-11 21:02:45 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.30 2007-06-11 22:39:29 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -301,7 +301,7 @@ handle_notification(int fd,char *notify_buf) {
 	      msgout.to = NULL;
 	      msgout.origFrom = NULL;
 	      msgout.origType =  PROTOCOL_Unknown;
-	      msgout.sender = (void *)fd;
+	      msgout.sender = (void *)&mainFd;
 	      if(big_o)
 		dist_sendmessage(big_o,&msgout);
 	      else{
@@ -459,7 +459,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
     msgout.to = NULL;
     msgout.origFrom = NULL;
     msgout.origType =  PROTOCOL_Unknown;
-    msgout.sender = (void *)fd;
+    msgout.sender = (void *)&mainFd;
     dist_sendmessage(o,&msgout);
   }else{
     char *newout;
@@ -505,7 +505,7 @@ sctpReadInput(int fd, distributor *o,sctpAdaptorMod *r)
       msgout.to = NULL;
       msgout.origFrom = NULL;
       msgout.origType =  PROTOCOL_Unknown;
-      msgout.sender = (void *)fd;
+      msgout.sender = (void *)&mainFd;
       dist_sendmessage(o,&msgout);
       dataout = NULL;
       dtsize = 0;
