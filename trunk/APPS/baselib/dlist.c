@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/dlist.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/dlist.c,v 1.2 2007-06-11 22:09:19 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -686,12 +686,12 @@ dlist_printList(dlist_t *o)
 {
   dlist_dlink *t;
   int cnt;
-  printf("O->Head:%x o->tail:%x o->curr:%x cnt:%d\n",
-	 (u_int)o->head,(u_int)o->tail,(u_int)o->curr,o->cntIn);
+  printf("O->Head:%p o->tail:%p o->curr:%p cnt:%d\n",
+	 o->head,o->tail,o->curr,o->cntIn);
   cnt = 0;
   for(t = o->head;t != NULL;t=t->next){
-    printf("entry[%d]:%x prev:%x next:%x\n",
-	   cnt,(u_int)t,(u_int)t->prev,(u_int)t->next);
+    printf("entry[%d]:%p prev:%p next:%p\n",
+	   cnt,t,t->prev,t->next);
     cnt++;
   }
 }

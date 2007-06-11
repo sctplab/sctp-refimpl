@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/llist.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/llist.c,v 1.2 2007-06-11 22:09:19 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -476,14 +476,14 @@ llist_printList(llist_t *o)
   ll = o->last->next;
   i = 0;
   do{
-    printf("%d:Me 0x%x Entry 0x%x Next->0x%x\n",
-	   i,(unsigned int)ll,(unsigned int)ll->ent,(unsigned int)ll->next);
+    printf("%d:Me %p Entry %p Next->%p\n",
+	   i,ll,ll->ent,ll->next);
     pp = ll->next;
     ll = pp;
     i++;
   }while(ll != o->last);
-  printf("%d:Me 0x%x Entry 0x%x Next->0x%x\n",
-	 i,(unsigned int)o->last,(unsigned int)o->last->ent,(unsigned int)o->last->next);
+  printf("%d:Me %p Entry %p Next->%p\n",
+	 i,o->last,o->last->ent,o->last->next);
   printf("List ends\n");
 }
 
