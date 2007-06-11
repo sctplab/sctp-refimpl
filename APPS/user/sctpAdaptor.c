@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.28 2007-03-03 03:18:01 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.29 2007-06-11 21:02:45 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -665,181 +665,182 @@ SCTPnotify(int event, char *data, int size)
 sctpAdaptorMod *
 create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd )
 {
-  sctpAdaptorMod *r;
-  socklen_t length;
-  struct sockaddr_in6 inAddr6,myAddr6;
-  struct sctp_event_subscribe event;
-  int optval;
-  socklen_t optlen;
-  int bindsa_len;
+	sctpAdaptorMod *r;
+	socklen_t length;
+	struct sockaddr_in6 inAddr6,myAddr6;
+	struct sctp_event_subscribe event;
+	int optval;
+	socklen_t optlen;
+	int bindsa_len;
 
-  memset(&inAddr6,0,sizeof(inAddr6));
-  memset(&myAddr6,0,sizeof(myAddr6));
-  inAddr6.sin6_port = htons(port);
-  myAddr6.sin6_port = 0;
-  inAddr6.sin6_family = AF_INET6;
-  myAddr6.sin6_family = AF_INET6;
+	memset(&inAddr6,0,sizeof(inAddr6));
+	memset(&myAddr6,0,sizeof(myAddr6));
+	inAddr6.sin6_port = htons(port);
+	myAddr6.sin6_port = 0;
+	inAddr6.sin6_family = AF_INET6;
+	myAddr6.sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
-  inAddr6.sin6_len = sizeof(struct sockaddr_in6);
-  myAddr6.sin6_len = sizeof(struct sockaddr_in6);
+	inAddr6.sin6_len = sizeof(struct sockaddr_in6);
+	myAddr6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 
-  memset(to_ip,0,sizeof(to_ip));
-  r = calloc(1,sizeof(sctpAdaptorMod));
-  if(r == NULL)
-    return(r);
-  r->o = o;
-  if(model & SCTP_UDP_TYPE){
-    if (v4only) {
-      mainFd = r->fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-    } else {
-      mainFd = r->fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
-    }
-  }else{
-    if (v4only) {
-      mainFd = r->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-    } else {
-      mainFd = r->fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
-    }
-  }
-  if(r->fd < 0){
-    printf("errno:%d\n", errno);
-    free(r);
-    return(NULL);
-  }
-  optval = 1;
-  errno = 0;
-  /*  ret = ioctl(r->fd,FIONBIO,&optval);
-      printf("ret from FIONBIO ioctl is %d err:%d\n",
-      ret,errno);
-  */
-  r->model = model & (SCTP_UDP_TYPE|SCTP_TCP_TYPE);
-  if (v6only) {
-    /* set this to v6 only... */
-    optval = 1;
-    if (setsockopt(r->fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
-	sizeof(optval)) == -1) {
-      close(r->fd);
-      free(r);
-      return(NULL);
-    }
-  }
-  /* fill in specific local server address if doing bind specific */
-  if (bindSpecific) {
-    struct sockaddr *sa = (struct sockaddr *)&bind_ss;
-    /* copy bind address in */
-    memcpy(&inAddr6, &bind_ss, sizeof(struct sockaddr_in6));
+	memset(to_ip,0,sizeof(to_ip));
+	r = calloc(1,sizeof(sctpAdaptorMod));
+	if(r == NULL)
+		return(r);
+	r->o = o;
+	if(model & SCTP_UDP_TYPE){
+		if (v4only) {
+			mainFd = r->fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+		} else {
+			mainFd = r->fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+		}
+	}else{
+		if (v4only) {
+			mainFd = r->fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+		} else {
+			mainFd = r->fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
+		}
+	}
+	if(r->fd < 0){
+		printf("errno:%d\n", errno);
+		free(r);
+		return(NULL);
+	}
+	optval = 1;
+	errno = 0;
+	/*  ret = ioctl(r->fd,FIONBIO,&optval);
+	    printf("ret from FIONBIO ioctl is %d err:%d\n",
+	    ret,errno);
+	*/
+	r->model = model & (SCTP_UDP_TYPE|SCTP_TCP_TYPE);
+	if (v6only) {
+		/* set this to v6 only... */
+		optval = 1;
+		if (setsockopt(r->fd, IPPROTO_IPV6, IPV6_V6ONLY, (char *)&optval,
+			       sizeof(optval)) == -1) {
+			close(r->fd);
+			free(r);
+			return(NULL);
+		}
+	}
+	/* fill in specific local server address if doing bind specific */
+	if (bindSpecific) {
+		struct sockaddr *sa = (struct sockaddr *)&bind_ss;
+		/* copy bind address in */
+		memcpy(&inAddr6, &bind_ss, sizeof(struct sockaddr_in6));
 
-    /* set desired port */
-    if (sa->sa_family == AF_INET) {
-      struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
-      sin->sin_port = htons(port); 
-      bindsa_len = sizeof(struct sockaddr_in);
-    } else {
-      inAddr6.sin6_port = htons(port);
-      bindsa_len = sizeof(struct sockaddr_in6);
-      inAddr6.sin6_scope_id = scope_id;
-    }
-  } else {
-    if (v4only) {
-      struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
-      memset(sin, 0, sizeof(*sin));
-      sin->sin_family = AF_INET;
+		/* set desired port */
+		if (sa->sa_family == AF_INET) {
+			struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
+			sin->sin_port = htons(port); 
+			bindsa_len = sizeof(struct sockaddr_in);
+		} else {
+			inAddr6.sin6_port = htons(port);
+			bindsa_len = sizeof(struct sockaddr_in6);
+			inAddr6.sin6_scope_id = scope_id;
+		}
+	} else {
+		if (v4only) {
+			struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
+			memset(sin, 0, sizeof(*sin));
+			sin->sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
-      sin->sin_len = sizeof(struct sockaddr_in);
+			sin->sin_len = sizeof(struct sockaddr_in);
 #endif
-      sin->sin_port = htons(port);
-      bindsa_len = sizeof(struct sockaddr_in);
-    } else {
-      inAddr6.sin6_port = htons(port);
-      bindsa_len = sizeof(struct sockaddr_in6);
-      inAddr6.sin6_scope_id = scope_id;
-    }
-  }
-  /* enable all event notifications */
-  event.sctp_data_io_event = 1;
-  event.sctp_association_event = 1;
-  event.sctp_address_event = 1;
-  event.sctp_send_failure_event = 1;
-  event.sctp_peer_error_event = 1;
-  event.sctp_shutdown_event = 1;
-  event.sctp_partial_delivery_event = 1;
+			sin->sin_port = htons(port);
+			bindsa_len = sizeof(struct sockaddr_in);
+		} else {
+			inAddr6.sin6_port = htons(port);
+			bindsa_len = sizeof(struct sockaddr_in6);
+			inAddr6.sin6_scope_id = scope_id;
+		}
+	}
+	/* enable all event notifications */
+	event.sctp_data_io_event = 1;
+	event.sctp_association_event = 1;
+	event.sctp_address_event = 1;
+	event.sctp_send_failure_event = 1;
+	event.sctp_peer_error_event = 1;
+	event.sctp_shutdown_event = 1;
+	event.sctp_partial_delivery_event = 1;
 #if defined(__BSD_SCTP_STACK__)
-  event.sctp_adaptation_layer_event = 1;
+	event.sctp_adaptation_layer_event = 1;
 #else
-  event.sctp_adaption_layer_event = 1;
+	event.sctp_adaption_layer_event = 1;
 #endif
 #if defined(__BSD_SCTP_STACK__)
-  event.sctp_authentication_event = 1;
-  event.sctp_stream_reset_events = 1;
+	event.sctp_authentication_event = 1;
+	event.sctp_stream_reset_events = 1;
 #endif
 
-  if (setsockopt(r->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
-    printf("Can't do SET_EVENTS socket option! err:%d\n", errno);
-  }
-  optlen = 4;
-  if(swnd) {
-	  optval = swnd;
-	  if(setsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0){
-		  printf("err:%d could not set sndbuf\n",errno);
-	  }
-  }
-  if (rwnd){
-	  optval = rwnd;
-	  if(setsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, optlen) != 0){
-		  printf("err:%d could not set rcvbuf\n",errno);
-	  }
-  }
-  optval = 0;
-  if(getsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, &optlen) != 0)
-    printf("err:%d could not read sndbuf\n",errno);
-  else
-    printf("snd buffer is %d\n",optval);
+	if (setsockopt(r->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+		printf("Can't do SET_EVENTS socket option! err:%d\n", errno);
+	}
+	optlen = 4;
+	if(swnd) {
+		optval = swnd;
+		if(setsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, optlen) != 0){
+			printf("err:%d could not set sndbuf\n",errno);
+		}
+	}
+	if (rwnd){
+		optval = rwnd;
+		if(setsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, optlen) != 0){
+			printf("err:%d could not set rcvbuf\n",errno);
+		}
+	}
+	optval = 0;
+	if(getsockopt(r->fd, SOL_SOCKET, SO_SNDBUF, &optval, &optlen) != 0)
+		printf("err:%d could not read sndbuf\n",errno);
+	else
+		printf("snd buffer is %d\n",optval);
 
-  optval = 0;
-  if(getsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, &optlen) != 0)
-    printf("err:%d could not read rcvbuf\n",errno);
-  else
-    printf("rcv buffer is %d\n",optval);
+	optval = 0;
+	if(getsockopt(r->fd, SOL_SOCKET, SO_RCVBUF, &optval, &optlen) != 0)
+		printf("err:%d could not read rcvbuf\n",errno);
+	else
+		printf("rcv buffer is %d\n",optval);
 
-  if (port) {
-    if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
-	    printf("bind failed err:%d\n",errno);
-	    close(r->fd);
-	    free(r);
-	    return(NULL);
-    }
-  }
+	if (port) {
+		if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
+			printf("bind failed err:%d\n",errno);
+			close(r->fd);
+			free(r);
+			return(NULL);
+		}
+	}
 
-  if(model & SCTP_UDP_TYPE){
-    printf("Calling listen for one-to-many model\n");
-    listen(r->fd,1);
+	if(model & SCTP_UDP_TYPE){
+		printf("Calling listen for one-to-many model\n");
+		listen(r->fd,1);
 #ifdef __APPLE__
-    {
-   	int opt = 0;
-	/* fix Apple listen() issue */
-	setsockopt(r->fd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &opt, sizeof(opt));
-    }
+		{
+			int opt = 0;
+			/* fix Apple listen() issue */
+			setsockopt(r->fd, IPPROTO_SCTP, SCTP_LISTEN_FIX, &opt, sizeof(opt));
+		}
 #endif
-  }
-  length = sizeof(myAddr6);
-  if(getsockname(r->fd, (struct sockaddr *)&myAddr6, &length) < 0){
-    printf("get sockname failed err:%d\n",errno);
-    close(r->fd);
-    free(r);
-    return(NULL);
-  }	
-  if(port){
-    if(port != ntohs(myAddr6.sin6_port)){
-      printf("Can't get my port:%d got %d\n",port,ntohs(myAddr6.sin6_port));
-      close(r->fd);
-      free(r);
-      return(NULL);
-    }
-  }
-  dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);
-  object_in = r;
-  return(r);
+	}
+	if(port){
+		length = sizeof(myAddr6);
+		if(getsockname(r->fd, (struct sockaddr *)&myAddr6, &length) < 0){
+			printf("get sockname failed err:%d\n",errno);
+			close(r->fd);
+			free(r);
+			return(NULL);
+		}	
+
+		if(port != ntohs(myAddr6.sin6_port)){
+			printf("Can't get my port:%d got %d\n",port,ntohs(myAddr6.sin6_port));
+			close(r->fd);
+			free(r);
+			return(NULL);
+		}
+	}
+	dist_addFd(o,r->fd,sctpFdInput,POLLIN,(void *)r);
+	object_in = r;
+	return(r);
 }
 
 void
