@@ -95,8 +95,8 @@ useage(char *who)
 	printf("-B ip-address   - Bind the specified address (else bindall)\n");
 	printf("-s size         - send data at start of an assoc size is data write size (def none)\n");
 	printf("-c cnt          - count of data to send at start (default 10)\n");
-	printf("-4              - bind v4 socket\n");
-	printf("-6              - bind v6 socket (default)\n");
+	printf("-4              - bind v4 socket (default)\n");
+	printf("-6              - bind v6 socket\n");
 	printf("-l              - don't connect, listen only (default)\n");
 	printf("-h host-address - address of host to connect to (required if no -l)\n");
 	printf("-p port         - of host to connect to (defaults to 2222)\n");
@@ -563,11 +563,11 @@ main (int argc, char **argv)
 	memset(&addr, 0, sizeof(addr));
 	memset(&bindto, 0, sizeof(bindto));
 	mydelay = 1;
-
-	bindto.sa.sa_family = AF_INET6;
-	bindto.sa.sa_len = sizeof(struct sockaddr_in6);
-	addr.sa.sa_family = AF_INET6;
-	addr.sa.sa_len = sizeof(struct sockaddr_in6);
+	bindto.sa.sa_family = AF_INET;
+	bindto.sa.sa_len = sizeof(struct sockaddr_in);
+	addr.sa.sa_family = AF_INET;
+	addr.sa.sa_len = sizeof(struct sockaddr_in);
+	use_v6 = 0;
 	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D:?HZq")) != EOF) {
 		switch(i) {
 		case 'D':
