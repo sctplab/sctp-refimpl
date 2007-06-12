@@ -412,7 +412,6 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 		int old_cwnd = net->cwnd;
 
 #endif
-		printf("Doing cwnd penatly too\n"); 
 		net->ssthresh = net->cwnd >> 1;
 		if (net->ssthresh < (net->mtu << 1)) {
 			net->ssthresh = (net->mtu << 1);
@@ -889,7 +888,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	stcb->asoc.sat_t3_recovery_tsn = stcb->asoc.sending_seq;
 
 	/* Backoff the timer and cwnd */
-	printf("Retransmit - call backoff\n");
 	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk);
 	if (win_probe == 0) {
 		/* We don't do normal threshold management on window probes */
