@@ -1149,6 +1149,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				 * don't double things
 				 */
 				net->hb_responded = 1;
+				net->RTO = sctp_calculate_rto(stcb, asoc, net,
+							      &cookie->time_entered);
 
 				if (stcb->asoc.sctp_autoclose_ticks &&
 				    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
@@ -1719,9 +1721,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
-	if ((netp) && (*netp))
+	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered);
+	}
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
 }

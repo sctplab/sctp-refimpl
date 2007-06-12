@@ -3783,6 +3783,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	 * this means its an initial value
 	 */
  	net->RTO = 0;
+	net->RTO_measured = 0;
 	stcb->asoc.numnets++;
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
