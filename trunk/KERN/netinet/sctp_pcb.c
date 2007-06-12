@@ -875,7 +875,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			}
 #else
 			/*- 
-			 *MVRF is tricky, we must look in every VRF 
+			 * MVRF is tricky, we must look in every VRF 
 			 * the endpoint has.
 			 */
 			{
@@ -1523,7 +1523,8 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 #endif
 struct sctp_tcb *
 sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
-    struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool, uint32_t vrf_id)
+    struct sctp_inpcb **inp_p, struct sctp_nets **netp, int find_tcp_pool,
+    uint32_t vrf_id)
 {
 	struct sctp_inpcb *inp = NULL;
 	struct sctp_tcb *retval;
@@ -1534,9 +1535,11 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	SCTP_INP_INFO_RLOCK();
 	if (find_tcp_pool) {
 		if (inp_p != NULL) {
-			retval = sctp_tcb_special_locate(inp_p, from, to, netp, vrf_id);
+			retval = sctp_tcb_special_locate(inp_p, from, to, netp,
+							 vrf_id);
 		} else {
-			retval = sctp_tcb_special_locate(&inp, from, to, netp, vrf_id);
+			retval = sctp_tcb_special_locate(&inp, from, to, netp,
+							 vrf_id);
 		}
 		if (retval != NULL) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1571,9 +1574,11 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	 * inbound packet side.
 	 */
 	if (inp_p != NULL) {
-		retval = sctp_findassociation_ep_addr(inp_p, from, netp, to, NULL);
+		retval = sctp_findassociation_ep_addr(inp_p, from, netp, to,
+						      NULL);
 	} else {
-		retval = sctp_findassociation_ep_addr(&inp, from, netp, to, NULL);
+		retval = sctp_findassociation_ep_addr(&inp, from, netp, to,
+						      NULL);
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	/*
@@ -2674,6 +2679,17 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_INP_INFO_WUNLOCK();
 				return (error);
 			}
+#if defined(__Panda)
+			if (!SCTP_IS_PRIVILEDGED(so)) {
+				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_WUNLOCK(inp);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+#endif
+				SCTP_INP_INFO_WUNLOCK();
+				return (EACCES);
+			}
+#endif
 		}
 #if !defined(__Panda__)
 		if (p == NULL) {
@@ -2752,7 +2768,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			}
 		}
 	} else {
-		uint16_t first, last, candiate;
+		uint16_t first, last, candidate;
                 uint16_t count;
 		int done;
 
@@ -2801,13 +2817,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			last = temp;
 		}
 		count = last - first + 1; /* number of candidates */
-		candiate = first + sctp_select_initial_TSN(&inp->sctp_ep) % (count);
+		candidate = first + sctp_select_initial_TSN(&inp->sctp_ep) % (count);
 		
 		done = 0;
 		while (!done) {
 #ifdef SCTP_MVRF
 			for (i=0; i < inp->num_vrfs; i++) {
-				if (sctp_isport_inuse(inp, htons(candiate), inp->m_vrf_ids[i]) == 1) {
+				if (sctp_isport_inuse(inp, htons(candidate), inp->m_vrf_ids[i]) == 1) {
 					break;
 				}
 			}
@@ -2815,7 +2831,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				done = 1;
 			}
 #else
-			if (sctp_isport_inuse(inp, htons(candiate), inp->def_vrf_id) == 0) {
+			if (sctp_isport_inuse(inp, htons(candidate), inp->def_vrf_id) == 0) {
 				done = 1;
 			}
 #endif
@@ -2829,13 +2845,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 					SCTP_INP_INFO_WUNLOCK();
 					return (EADDRINUSE);
 				}
-				if (candiate == last)
-					candiate = first;
+				if (candidate == last)
+					candidate = first;
 				else
-					candiate = candiate + 1;
+					candidate = candidate + 1;
 			}
 		}
-		lport = htons(candiate);
+		lport = htons(candidate);
 	}
 	SCTP_INP_DECR_REF(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE |
