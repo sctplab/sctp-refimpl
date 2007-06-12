@@ -4,4 +4,4 @@
   if a RTO calc as been done, this allows the RTO var to be
   doubled during initial timeouts.
 - Reduces the amount of stack used by process control.
-
+- Use a constant for the peer chunk overhead.
