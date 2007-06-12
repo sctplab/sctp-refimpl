@@ -939,7 +939,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 	uint32_t init, min, max, new_init, new_max, new_min;
 
 	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-    	return strerror(errno);
+		return strerror(errno);
 
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
@@ -1048,8 +1048,8 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	uint32_t init, min, max, new_init, new_max, new_min;
 	sctp_assoc_t assoc_id;
 	
-	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-    	return strerror(errno);
+	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
+	   	return strerror(errno);
 
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
@@ -1165,7 +1165,7 @@ DEFINE_APITEST(assoclist, gso_numbers_zero)
 	int fd, result;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-    	return strerror(errno);
+	    	return strerror(errno);
 		
 	result = sctp_get_number_of_associations(fd);
 	
@@ -1219,7 +1219,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 	sctp_assoc_t id;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-    	return strerror(errno);
+	    	return strerror(errno);
 		
 	if (sctp_get_number_of_associations(fd) != 0) {
 		close(fd);
@@ -1374,6 +1374,9 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 	uint32_t peer_rwnd, local_rwnd, cookie_life;
 	
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 	
 	result = sctp_get_assoc_info(fd, 0, 
 				     &asoc_maxrxt,
@@ -1419,6 +1422,9 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 	uint32_t peer_rwnd, local_rwnd, cookie_life;
 	
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 
 	result = sctp_get_assoc_info(fd, 0, 
 				     &asoc_maxrxt,
@@ -1466,7 +1472,10 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1536,6 +1545,9 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 	char *retstring=NULL;
 
 	fd = sctp_one2many(0, 0);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -1606,8 +1618,8 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -1711,7 +1723,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return (strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -1809,8 +1821,8 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -1917,7 +1929,7 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0, 0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2018,7 +2030,10 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 	int newval;
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -2088,6 +2103,9 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 	char *retstring=NULL;
 
 	fd = sctp_one2many(0, 0);
+	if (fd < 0) {
+		return (strerror(errno));
+	}
 
 	/* Get all the values for assoc info on ep */
 	result = sctp_get_assoc_info(fd, 0, 
@@ -2158,8 +2176,8 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2263,7 +2281,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0, 0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return (strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2361,8 +2379,8 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 	int fds[2];
 	char *retstring=NULL;
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2469,7 +2487,7 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2570,8 +2588,9 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fd;
 	char *retstring=NULL;
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -2634,7 +2653,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 	int fd;
 	char *retstring=NULL;
 	fd = sctp_one2many(0, 0);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -3117,7 +3136,7 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3149,7 +3168,7 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3182,7 +3201,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3234,7 +3253,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3285,7 +3304,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3336,7 +3355,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3388,7 +3407,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3440,7 +3459,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 	uint32_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3491,7 +3510,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3542,7 +3561,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 	uint16_t newval;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	
@@ -3596,7 +3615,7 @@ DEFINE_APITEST(nodelay, gso_1_1_def_ndelay)
 	uint32_t val;
 	int fd, result;
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_ndelay(fd, &val);
@@ -3622,7 +3641,7 @@ DEFINE_APITEST(nodelay, gso_1_M_def_ndelay)
 	uint32_t val;
 	int fd, result;
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_ndelay(fd, &val);
@@ -3647,7 +3666,7 @@ DEFINE_APITEST(nodelay, gso_1_1_set_ndelay)
 	uint32_t val[3];
 	int fd, result;
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_ndelay(fd, &val[0]);
@@ -3684,7 +3703,7 @@ DEFINE_APITEST(nodelay, gso_1_M_set_ndelay)
 	uint32_t val[3];
 	int fd, result;
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_ndelay(fd, &val[0]);
@@ -3727,7 +3746,7 @@ DEFINE_APITEST(autoclose, gso_1_1_def_autoclose)
 	int result, fd;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_autoclose(fd, &aclose);
@@ -3753,7 +3772,7 @@ DEFINE_APITEST(autoclose, gso_1_M_def_autoclose)
 	int result, fd;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_autoclose(fd, &aclose);
@@ -3780,7 +3799,7 @@ DEFINE_APITEST(autoclose, gso_1_1_set_autoclose)
 	int result, fd;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_autoclose(fd, &aclose[0]);
@@ -3818,7 +3837,7 @@ DEFINE_APITEST(autoclose, gso_1_M_set_autoclose)
 	int result, fd;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-	if(fd < 0) {
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	result = sctp_get_autoclose(fd, &aclose[0]);
@@ -7479,8 +7498,8 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_1)
 	uint8_t ipv4_tos[3];
 	uint32_t muflags[2];
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -7583,7 +7602,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_int_1_M)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -7685,8 +7704,8 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_1)
 	uint8_t ipv4_tos[3];
 	uint32_t muflags[2];
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -7790,7 +7809,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_zero_1_M)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -7890,8 +7909,8 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_1)
 	uint8_t ipv4_tos[3];
 	uint32_t muflags[2];
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -8001,7 +8020,7 @@ DEFINE_APITEST(paddrpara, sso_ainhhb_off_1_M)
 	char *retstring=NULL;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -8108,8 +8127,8 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_1)
 	uint32_t muflags[2];
 	uint16_t new_maxrxt;
 
-	fd = sctp_one2one(0,1, 0);
-	if(fd < 0) {
+	fd = sctp_one2one(0, 1, 0);
+	if (fd < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
@@ -8213,7 +8232,7 @@ DEFINE_APITEST(paddrpara, sso_ainhpmrxt_int_1_M)
 	uint16_t new_maxrxt;
 
 	fds[0] = sctp_one2many(0,0);
-	if(fds[0] < 0) {
+	if (fds[0] < 0) {
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
