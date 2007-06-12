@@ -2679,7 +2679,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 				SCTP_INP_INFO_WUNLOCK();
 				return (error);
 			}
-#if defined(__Panda)
+#if defined(__Panda__)
 			if (!SCTP_IS_PRIVILEDGED(so)) {
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
