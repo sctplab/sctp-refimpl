@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.30 2007/06/02 11:05:08 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.31 2007/06/12 00:11:59 rwatson Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -476,13 +476,8 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	vrf_id = SCTP_DEFAULT_VRFID;
 
 #if __FreeBSD_version > 602000
-	/*
-	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
-	 * visibility is scoped using cr_canseesocket(), which it is not
-	 * here.
-	 */
-	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_GETCRED, 
-				SUSER_ALLOWJAIL);
+	error = priv_check(req->td, PRIV_NETINET_GETCRED);
+
 #elif __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
@@ -3994,9 +3989,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-		error = priv_check_cred(curthread->td_ucred, 
-					PRIV_NETINET_RESERVEDPORT,
-					SUSER_ALLOWJAIL);
+		error = priv_check(curthread,
+				   PRIV_NETINET_RESERVEDPORT);
 #elif __FreeBSD_version >= 500000
 		error = suser((struct thread *)p);
 #else
