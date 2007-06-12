@@ -167,6 +167,8 @@ DEFINE_APITEST(connect, self_listen)
 	socklen_t addr_len;
 	
 	fd = sctp_one2one(0, 1, 0);
+	if (fd  < 0)
+		return strerror(errno);
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname(fd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(fd);
