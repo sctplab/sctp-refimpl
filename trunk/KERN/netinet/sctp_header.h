@@ -43,9 +43,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.4 2007/05/08 17:01:10 rrs 
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
-#ifndef __Panda__
-#define PACKED __attribute__((packed))
-#endif
 
 /*
  * Parameter structures
@@ -53,7 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.4 2007/05/08 17:01:10 rrs 
 struct sctp_ipv4addr_param {
 	struct sctp_paramhdr ph;/* type=SCTP_IPV4_PARAM_TYPE, len=8 */
 	uint32_t addr;		/* IPV4 address */
-} PACKED ;
+} SCTP_PACKED ;
 
 #define SCTP_V6_ADDR_BYTES 16
 
@@ -61,7 +58,7 @@ struct sctp_ipv4addr_param {
 struct sctp_ipv6addr_param {
 	struct sctp_paramhdr ph;/* type=SCTP_IPV6_PARAM_TYPE, len=20 */
 	uint8_t addr[SCTP_V6_ADDR_BYTES];	/* IPV6 address */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Cookie Preservative */
 struct sctp_cookie_perserve_param {
@@ -73,7 +70,7 @@ struct sctp_cookie_perserve_param {
 struct sctp_host_name_param {
 	struct sctp_paramhdr ph;/* type=SCTP_HOSTNAME_ADDRESS */
 	char name[SCTP_ARRAY_MIN_LEN];		/* host name */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* 
  * This is the maximum padded size of a s-a-p 
@@ -84,12 +81,12 @@ struct sctp_host_name_param {
 struct sctp_supported_addr_param {
 	struct sctp_paramhdr ph;/* type=SCTP_SUPPORTED_ADDRTYPE */
 	uint16_t addr_type[SCTP_ARRAY_MIN_LEN];	/* array of supported address types */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* ECN parameter */
 struct sctp_ecn_supported_param {
 	struct sctp_paramhdr ph;/* type=SCTP_ECN_CAPABLE */
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* heartbeat info parameter */
@@ -103,44 +100,44 @@ struct sctp_heartbeat_info_param {
 	uint8_t addr_family;
 	uint8_t addr_len;
 	char address[SCTP_ADDRMAX];
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* draft-ietf-tsvwg-prsctp */
 /* PR-SCTP supported parameter */
 struct sctp_prsctp_supported_param {
 	struct sctp_paramhdr ph;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* draft-ietf-tsvwg-addip-sctp */
 struct sctp_asconf_paramhdr {	/* an ASCONF "parameter" */
 	struct sctp_paramhdr ph;/* a SCTP parameter header */
 	uint32_t correlation_id;/* correlation id for this param */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_asconf_addr_param {	/* an ASCONF address parameter */
 	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
 	struct sctp_ipv6addr_param addrp;	/* max storage size */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
 	struct sctp_ipv4addr_param addrp;	/* max storage size */
-} PACKED ;
+} SCTP_PACKED ;
 
 #define SCTP_MAX_SUPPORTED_EXT 256
 
 struct sctp_supported_chunk_types_param {
 	struct sctp_paramhdr ph;/* type = 0x8008  len = x */
 	uint8_t chunk_types[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* ECN Nonce: draft-ladha-sctp-ecn-nonce */
 struct sctp_ecn_nonce_supported_param {
 	struct sctp_paramhdr ph;/* type = 0x8001  len = 4 */
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /*
@@ -152,12 +149,12 @@ struct sctp_data {
 	uint16_t stream_sequence;
 	uint32_t protocol_id;
 	/* user data follows */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_data_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_data dp;
-} PACKED ;
+} SCTP_PACKED ;
 
 /*
  * Structures for the control chunks
@@ -171,7 +168,7 @@ struct sctp_init {
 	uint16_t num_inbound_streams;	/* MIS */
 	uint32_t initial_tsn;	/* I-TSN */
 	/* optional param's follow */
-} PACKED ;
+} SCTP_PACKED ;
 #define SCTP_IDENTIFICATION_SIZE 16
 #define SCTP_ADDRESS_SIZE 4
 #define SCTP_RESERVE_SPACE 6
@@ -206,7 +203,7 @@ struct sctp_state_cookie {	/* this is our definition... */
 	 * at the end is tacked on the INIT chunk and the INIT-ACK chunk
 	 * (minus the cookie).
 	 */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_inv_mandatory_param {
 	uint16_t cause;
@@ -218,30 +215,30 @@ struct sctp_inv_mandatory_param {
 	 * this error.
 	 */
 	uint16_t resv;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_unresolv_addr {
 	uint16_t cause;
 	uint16_t length;
 	uint16_t addr_type;
 	uint16_t reserved;	/* Only one invalid addr type */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* state cookie parameter */
 struct sctp_state_cookie_param {
 	struct sctp_paramhdr ph;
 	struct sctp_state_cookie cookie;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_init_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_init init;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_init_msg {
 	struct sctphdr sh;
 	struct sctp_init_chunk msg;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* ... used for both INIT and INIT ACK */
 #define sctp_init_ack		sctp_init
@@ -253,7 +250,7 @@ struct sctp_init_msg {
 struct sctp_gap_ack_block {
 	uint16_t start;		/* Gap Ack block start */
 	uint16_t end;		/* Gap Ack block end */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_sack {
 	uint32_t cum_tsn_ack;	/* cumulative TSN Ack */
@@ -262,23 +259,23 @@ struct sctp_sack {
 	uint16_t num_dup_tsns;	/* number of duplicate TSNs */
 	/* struct sctp_gap_ack_block's follow */
 	/* uint32_t duplicate_tsn's follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_sack_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_sack sack;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* Heartbeat Request (HEARTBEAT) */
 struct sctp_heartbeat {
 	struct sctp_heartbeat_info_param hb_info;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_heartbeat_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_heartbeat heartbeat;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* ... used for Heartbeat Ack (HEARTBEAT ACK) */
 #define sctp_heartbeat_ack		sctp_heartbeat
@@ -289,83 +286,83 @@ struct sctp_heartbeat_chunk {
 struct sctp_abort_chunk {
 	struct sctp_chunkhdr ch;
 	/* optional error cause may follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_abort_msg {
 	struct sctphdr sh;
 	struct sctp_abort_chunk msg;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* Shutdown Association (SHUTDOWN) */
 struct sctp_shutdown_chunk {
 	struct sctp_chunkhdr ch;
 	uint32_t cumulative_tsn_ack;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* Shutdown Acknowledgment (SHUTDOWN ACK) */
 struct sctp_shutdown_ack_chunk {
 	struct sctp_chunkhdr ch;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* Operation Error (ERROR) */
 struct sctp_error_chunk {
 	struct sctp_chunkhdr ch;
 	/* optional error causes follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 
 /* Cookie Echo (COOKIE ECHO) */
 struct sctp_cookie_echo_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_state_cookie cookie;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Cookie Acknowledgment (COOKIE ACK) */
 struct sctp_cookie_ack_chunk {
 	struct sctp_chunkhdr ch;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Explicit Congestion Notification Echo (ECNE) */
 struct sctp_ecne_chunk {
 	struct sctp_chunkhdr ch;
 	uint32_t tsn;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Congestion Window Reduced (CWR) */
 struct sctp_cwr_chunk {
 	struct sctp_chunkhdr ch;
 	uint32_t tsn;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Shutdown Complete (SHUTDOWN COMPLETE) */
 struct sctp_shutdown_complete_chunk {
 	struct sctp_chunkhdr ch;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Oper error holding a stale cookie */
 struct sctp_stale_cookie_msg {
 	struct sctp_paramhdr ph;/* really an error cause */
 	uint32_t time_usec;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_adaptation_layer_indication {
 	struct sctp_paramhdr ph;
 	uint32_t indication;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_cookie_while_shutting_down {
 	struct sctphdr sh;
 	struct sctp_chunkhdr ch;
 	struct sctp_paramhdr ph;/* really an error cause */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_shutdown_complete_msg {
 	struct sctphdr sh;
 	struct sctp_shutdown_complete_chunk shut_cmp;
-} PACKED ;
+} SCTP_PACKED ;
 
 /*
  * draft-ietf-tsvwg-addip-sctp
@@ -376,14 +373,14 @@ struct sctp_asconf_chunk {
 	uint32_t serial_number;
 	/* lookup address parameter (mandatory) */
 	/* asconf parameters follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* Address/Stream Configuration Acknowledge (ASCONF ACK) */
 struct sctp_asconf_ack_chunk {
 	struct sctp_chunkhdr ch;
 	uint32_t serial_number;
 	/* asconf parameters follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 /* draft-ietf-tsvwg-prsctp */
 /* Forward Cumulative TSN (FORWARD TSN) */
@@ -391,17 +388,17 @@ struct sctp_forward_tsn_chunk {
 	struct sctp_chunkhdr ch;
 	uint32_t new_cumulative_tsn;
 	/* stream/sequence pairs (sctp_strseq) follow */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_strseq {
 	uint16_t stream;
 	uint16_t sequence;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_forward_tsn_msg {
 	struct sctphdr sh;
 	struct sctp_forward_tsn_chunk msg;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* should be a multiple of 4 - 1 aka 3/7/11 etc. */
 
@@ -411,7 +408,7 @@ struct sctp_chunk_desc {
 	uint8_t chunk_type;
 	uint8_t data_bytes[SCTP_NUM_DB_TO_VERIFY];
 	uint32_t tsn_ifany;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 struct sctp_pktdrop_chunk {
@@ -421,7 +418,7 @@ struct sctp_pktdrop_chunk {
 	uint16_t trunc_len;
 	uint16_t reserved;
 	uint8_t data[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 /**********STREAM RESET STUFF ******************/
 
@@ -431,25 +428,25 @@ struct sctp_stream_reset_out_request {
 	uint32_t response_seq;	/* if a response, the resp seq no */
 	uint32_t send_reset_at_tsn;	/* last TSN I assigned outbound */
 	uint16_t list_of_streams[0];	/* if not all list of streams */
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_in_request {
 	struct sctp_paramhdr ph;
 	uint32_t request_seq;
 	uint16_t list_of_streams[0];	/* if not all list of streams */
-} PACKED ;
+} SCTP_PACKED ;
 
 
 struct sctp_stream_reset_tsn_request {
 	struct sctp_paramhdr ph;
 	uint32_t request_seq;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_response {
 	struct sctp_paramhdr ph;
 	uint32_t response_seq;	/* if a response, the resp seq no */
 	uint32_t result;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_response_tsn {
 	struct sctp_paramhdr ph;
@@ -457,7 +454,7 @@ struct sctp_stream_reset_response_tsn {
 	uint32_t result;
 	uint32_t senders_next_tsn;
 	uint32_t receivers_next_tsn;
-} PACKED ;
+} SCTP_PACKED ;
 
 
 
@@ -476,28 +473,28 @@ struct sctp_stream_reset_response_tsn {
 struct sctp_stream_reset_out_req {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_out_request sr_req;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_in_req {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_in_request sr_req;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_tsn_req {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_tsn_request sr_req;
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_stream_reset_resp {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_response sr_resp;
-} PACKED ;
+} SCTP_PACKED ;
 
 /* respone only valid with a TSN request */
 struct sctp_stream_reset_resp_tsn {
 	struct sctp_chunkhdr ch;
 	struct sctp_stream_reset_response_tsn sr_resp;
-} PACKED ;
+} SCTP_PACKED ;
 
 /****************************************************/
 
@@ -510,30 +507,30 @@ struct sctp_stream_reset_resp_tsn {
 struct sctp_auth_random {
 	struct sctp_paramhdr ph;/* type = 0x8002 */
 	uint8_t random_data[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_auth_chunk_list {
 	struct sctp_paramhdr ph;/* type = 0x8003 */
 	uint8_t chunk_types[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_auth_hmac_algo {
 	struct sctp_paramhdr ph;/* type = 0x8004 */
 	uint16_t hmac_ids[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_auth_chunk {
 	struct sctp_chunkhdr ch;
 	uint16_t shared_key_id;
 	uint16_t hmac_id;
 	uint8_t hmac[0];
-} PACKED ;
+} SCTP_PACKED ;
 
 struct sctp_auth_invalid_hmac {
 	struct sctp_paramhdr ph;
 	uint16_t hmac_id;
 	uint16_t padding;
-} PACKED ;
+} SCTP_PACKED ;
 
 /*
  * we pre-reserve enough room for a ECNE or CWR AND a SACK with no missing
