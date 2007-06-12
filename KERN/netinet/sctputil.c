@@ -2772,8 +2772,6 @@ calc_rto:
 	if (new_rto > stcb->asoc.maxrto) {
 		new_rto = stcb->asoc.maxrto;
 	}
-	printf("Calcualte new RTO for net:%p var:%d srtt:%d rto:%d\n",
-	       net, net->lastsv, net->lastsa, new_rto);
 	/* we are now returning the RTO */
  	return (new_rto);
 }
