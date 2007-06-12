@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.26 2007/06/02 11:05:08 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.27 2007/06/12 00:12:00 rwatson Exp $");
 #endif
 
 
@@ -665,13 +665,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 602000
-	/*
-	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
-	 * visibility is scoped using cr_canseesocket(), which it is not
-	 * here.
-	 */
-	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_RESERVEDPORT,
-	    0);
+	error = priv_check(req->td, PRIV_NETINET_GETCRED);
 #elif defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
