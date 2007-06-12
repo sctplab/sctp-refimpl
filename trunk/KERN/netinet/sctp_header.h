@@ -170,29 +170,34 @@ struct sctp_init {
 };
 #define SCTP_IDENTIFICATION_SIZE 16
 #define SCTP_ADDRESS_SIZE 4
+#define SCTP_RESERVE_SPACE 6
 /* state cookie header */
 struct sctp_state_cookie {	/* this is our definition... */
 	uint8_t identification[SCTP_IDENTIFICATION_SIZE];/* id of who we are */
+	struct timeval time_entered;	/* the time I built cookie */
 	uint32_t cookie_life;	/* life I will award this cookie */
 	uint32_t tie_tag_my_vtag;	/* my tag in old association */
+
 	uint32_t tie_tag_peer_vtag;	/* peers tag in old association */
 	uint32_t peers_vtag;	/* peers tag in INIT (for quick ref) */
+
 	uint32_t my_vtag;	/* my tag in INIT-ACK (for quick ref) */
-	struct timeval time_entered;	/* the time I built cookie */
 	uint32_t address[SCTP_ADDRESS_SIZE];	/* 4 ints/128 bits */
 	uint32_t addr_type;	/* address type */
 	uint32_t laddress[SCTP_ADDRESS_SIZE];	/* my local from address */
 	uint32_t laddr_type;	/* my local from address type */
 	uint32_t scope_id;	/* v6 scope id for link-locals */
+
 	uint16_t peerport;	/* port address of the peer in the INIT */
 	uint16_t myport;	/* my port address used in the INIT */
 	uint8_t ipv4_addr_legal;/* Are V4 addr legal? */
 	uint8_t ipv6_addr_legal;/* Are V6 addr legal? */
 	uint8_t local_scope;	/* IPv6 local scope flag */
 	uint8_t site_scope;	/* IPv6 site scope flag */
+
 	uint8_t ipv4_scope;	/* IPv4 private addr scope */
 	uint8_t loopback_scope;	/* loopback scope information */
-	uint16_t reserved;
+	uint8_t reserved[SCTP_RESERVE_SPACE];    /* Align to 64 bits */
 	/*
 	 * at the end is tacked on the INIT chunk and the INIT-ACK chunk
 	 * (minus the cookie).
