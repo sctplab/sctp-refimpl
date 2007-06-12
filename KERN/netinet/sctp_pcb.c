@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.35 2007/06/08 10:57:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.36 2007/06/12 00:11:59 rwatson Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2654,10 +2654,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (p && (error =
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-				  priv_check_cred(p->td_ucred,
-						  PRIV_NETINET_RESERVEDPORT,
-						  SUSER_ALLOWJAIL
-					  )
+				  priv_check(p, PRIV_NETINET_RESERVEDPORT)
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else
@@ -2767,10 +2764,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 			if (p && (error =
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-				  priv_check_cred(p->td_ucred,
-						  PRIV_NETINET_RESERVEDPORT,
-						  SUSER_ALLOWJAIL
-					  )
+				  priv_check(p, PRIV_NETINET_RESERVEDPORT)
 #elif __FreeBSD_version >= 500000
 				  suser_cred(p->td_ucred, 0)
 #else
