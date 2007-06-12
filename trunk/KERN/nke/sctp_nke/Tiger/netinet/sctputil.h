@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.22 2007/06/01 11:19:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.23 2007/06/12 11:20:59 rrs Exp $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -282,6 +282,12 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 
 struct mbuf *sctp_generate_invmanparam(int);
 
+void sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
+			    struct sockaddr *sa, sctp_assoc_t assoc_id,
+			    uint32_t vrf_id, int *error, void *p);
+void sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
+			       struct sockaddr *sa, sctp_assoc_t assoc_id,
+			       uint32_t vrf_id, int *error);
 
 #ifdef SCTP_MBCNT_LOGGING
 void

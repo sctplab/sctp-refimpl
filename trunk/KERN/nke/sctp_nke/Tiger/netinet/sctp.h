@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.11 2007/05/29 11:53:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.12 2007/06/12 11:20:59 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -52,7 +52,7 @@ struct sctphdr {
 	uint32_t v_tag;		/* verification tag of packet */
 	uint32_t checksum;	/* Adler32 C-Sum */
 	/* chunks follow... */
-};
+} __attribute__((packed)) ;
 
 /*
  * SCTP Chunks
@@ -62,7 +62,7 @@ struct sctp_chunkhdr {
 	uint8_t chunk_flags;	/* chunk flags */
 	uint16_t chunk_length;	/* chunk length */
 	/* optional params follow */
-};
+} __attribute__((packed));
 
 /*
  * SCTP chunk parameters
@@ -70,7 +70,7 @@ struct sctp_chunkhdr {
 struct sctp_paramhdr {
 	uint16_t param_type;	/* parameter type */
 	uint16_t param_length;	/* parameter length */
-};
+} __attribute__((packed));
 
 /*
  * user socket options: socket API defined
@@ -299,38 +299,38 @@ struct sctp_error_cause {
 	uint16_t code;
 	uint16_t length;
 	/* optional cause-specific info may follow */
-};
+} __attribute__((packed));
 
 struct sctp_error_invalid_stream {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
 	uint16_t stream_id;	/* stream id of the DATA in error */
 	uint16_t reserved;
-};
+} __attribute__((packed));
 
 struct sctp_error_missing_param {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_MISSING_PARAM */
 	uint32_t num_missing_params;	/* number of missing parameters */
 	/* uint16_t param_type's follow */
-};
+} __attribute__((packed));
 
 struct sctp_error_stale_cookie {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_STALE_COOKIE */
 	uint32_t stale_time;	/* time in usec of staleness */
-};
+} __attribute__((packed));
 
 struct sctp_error_out_of_resource {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_OUT_OF_RESOURCES */
-};
+} __attribute__((packed));
 
 struct sctp_error_unresolv_addr {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRESOLVABLE_ADDR */
 
-};
+} __attribute__((packed));
 
 struct sctp_error_unrecognized_chunk {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRECOG_CHUNK */
 	struct sctp_chunkhdr ch;/* header from chunk in error */
-};
+} __attribute__((packed));
 
 #define HAVE_SCTP			1
 #define HAVE_KERNEL_SCTP		1

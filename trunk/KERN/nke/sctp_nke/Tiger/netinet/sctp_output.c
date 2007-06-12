@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.35 2007/06/09 13:53:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.36 2007/06/12 11:20:59 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3169,7 +3169,7 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 	ph->param_type = htons(SCTP_STATE_COOKIE);
 	ph->param_length = 0;	/* fill in at the end */
 	/* Fill in the stc cookie data */
-	*stc = *stc_in;
+	memcpy(stc, stc_in, sizeof(struct sctp_state_cookie));
 
 	/* tack the INIT and then the INIT-ACK onto the chain */
 	cookie_sz = 0;
