@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.30 2007/06/02 11:05:08 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.32 2007/06/12 11:20:59 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -476,13 +476,8 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	vrf_id = SCTP_DEFAULT_VRFID;
 
 #if __FreeBSD_version > 602000
-	/*
-	 * XXXRW: Other instances of getcred use SUSER_ALLOWJAIL, as socket
-	 * visibility is scoped using cr_canseesocket(), which it is not
-	 * here.
-	 */
-	error = priv_check_cred(req->td->td_ucred, PRIV_NETINET_GETCRED, 
-				SUSER_ALLOWJAIL);
+	error = priv_check(req->td, PRIV_NETINET_GETCRED);
+
 #elif __FreeBSD_version >= 500000
 	error = suser(req->td);
 #else
@@ -3994,9 +3989,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 #ifdef __FreeBSD__
 #if __FreeBSD_version > 602000
-		error = priv_check_cred(curthread->td_ucred, 
-					PRIV_NETINET_RESERVEDPORT,
-					SUSER_ALLOWJAIL);
+		error = priv_check(curthread,
+				   PRIV_NETINET_RESERVEDPORT);
 #elif __FreeBSD_version >= 500000
 		error = suser((struct thread *)p);
 #else
@@ -4081,178 +4075,22 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_BINDX_ADD_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-		struct sockaddr *addr_touse;
-		struct sockaddr_in sin;
-#ifdef SCTP_MVRF
-		int i, fnd=0;
-#endif
-		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
 
-		/* see if we're bound all already! */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-			error = EINVAL;
-			break;
-		}
-		/* Is the VRF one we have */
-#ifdef SCTP_MVRF
-		for (i=0;i<inp->num_vrfs; i++) {
-			if(vrf_id == inp->m_vrf_ids[i]) {
-				fnd = 1;
-				break;
-			}
-		}
-		if (!fnd) {
-			error = EINVAL;
-			break;
-		}
-#endif
-		addr_touse = addrs->addr;
-#if defined(INET6)
-		if (addrs->addr->sa_family == AF_INET6) {
-			struct sockaddr_in6 *sin6;
-			if (addrs->addr->sa_len != sizeof(struct sockaddr_in6)) {
-				error = EINVAL;
-				break;
-			}
-			sin6 = (struct sockaddr_in6 *)addr_touse;
-			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-				in6_sin6_2_sin(&sin, sin6);
-				addr_touse = (struct sockaddr *)&sin;
-			}
-		}
-#endif
-		if (addrs->addr->sa_family == AF_INET) {
-			if (addrs->addr->sa_len != sizeof(struct sockaddr_in)) {
-				error = EINVAL;
-				break;
-			}
-
-		}
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
-
-#if !defined(__Panda__)            
-			if (p == NULL) {
-				/* Can't get proc for Net/Open BSD */
-				error = EINVAL;
-				break;
-			}
-#endif
-			error = sctp_inpcb_bind(so, addr_touse, p);
-			break;
-		}
-		/*
-		 * No locks required here since bind and mgmt_ep_sa
-		 * all do their own locking. If we do something for
-		 * the FIX: below we may need to lock in that case.
-		 */
-		if (addrs->sget_assoc_id == 0) {
-			/* add the address */
-			struct sctp_inpcb *lep;
-
-			((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
-#endif
-			lep = sctp_pcb_findep(addr_touse, 1, 0, vrf_id);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
-#endif
-			if (lep != NULL) {
-				/*
-				 * We must decrement the refcount
-				 * since we have the ep already and
-				 * are binding. No remove going on
-				 * here.
-				 */
-				SCTP_INP_DECR_REF(inp);
-			}
-			if (lep == inp) {
-				/* already bound to it.. ok */
-				break;
-			} else if (lep == NULL) {
-				((struct sockaddr_in *)addr_touse)->sin_port = 0;
-				error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
-							     SCTP_ADD_IP_ADDRESS, vrf_id);
-			} else {
-				error = EADDRINUSE;
-			}
-			if (error)
-				break;
-
-		} else {
-			/*
-			 * FIX: decide whether we allow assoc based
-			 * bindx
-			 */
-		}
+		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses,
+optsize);
+		sctp_bindx_add_address(so, inp, addrs->addr,
+				       addrs->sget_assoc_id, vrf_id,
+				       &error, p);
 	}
 	break;
 	case SCTP_BINDX_REM_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-		struct sockaddr *addr_touse;
-		struct sockaddr_in sin;
-#ifdef SCTP_MVRF
-		int i, fnd=0;
-#endif
 		
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
-		/* see if we're bound all already! */
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-			error = EINVAL;
-			break;
-		}
-#ifdef SCTP_MVRF
-		/* Is the VRF one we have */
-		for (i = 0; i < inp->num_vrfs; i++) {
-			if (vrf_id == inp->m_vrf_ids[i]) {
-				fnd = 1;
-				break;
-			}
-		}
-		if (!fnd) {
-			error = EINVAL;
-			break;
-		}
-#endif
-		addr_touse = addrs->addr;
-#if defined(INET6)
-		if (addrs->addr->sa_family == AF_INET6) {
-			struct sockaddr_in6 *sin6;
-			if (addrs->addr->sa_len != sizeof(struct sockaddr_in6)) {
-				error = EINVAL;
-				break;
-			}
-			sin6 = (struct sockaddr_in6 *)addr_touse;
-			if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-				in6_sin6_2_sin(&sin, sin6);
-				addr_touse = (struct sockaddr *)&sin;
-			}
-		}
-#endif
-		if (addrs->addr->sa_family == AF_INET) {
-			if (addrs->addr->sa_len != sizeof(struct sockaddr_in)) {
-				error = EINVAL;
-				break;
-			}
-
-		}
-		/*
-		 * No lock required mgmt_ep_sa does its own locking.
-		 * If the FIX: below is ever changed we may need to
-		 * lock before calling association level binding.
-		 */
-		if (addrs->sget_assoc_id == 0) {
-			/* delete the address */
-			error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
-						     SCTP_DEL_IP_ADDRESS,
-						     vrf_id);
-		} else {
-			/*
-			 * FIX: decide whether we allow assoc based
-			 * bindx
-			 */
-		}
+		sctp_bindx_delete_address(so, inp, addrs->addr,
+					  addrs->sget_assoc_id, vrf_id,
+					  &error);
 	}
 	break;
 #ifdef __APPLE__

@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.25 2007/06/01 11:19:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.26 2007/06/02 11:05:08 rrs Exp $");
 #endif
 
 
@@ -1661,7 +1661,6 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			struct sockaddr_in6 *sin_a6;
 			struct sctp_nets *net;
 			int fnd;
-
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 				goto notConn6;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.19 2007/06/01 11:19:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.20 2007/06/12 11:20:59 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -691,7 +691,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.19 2007/06/01 11:19:54 
 #define SCTP_SCALE_OF_RWND_TO_UPD       4
 #define SCTP_MINIMAL_RWND		(4096)	/* minimal rwnd */
 
-#define SCTP_ADDRMAX		20
+#define SCTP_ADDRMAX		24
 
 /* SCTP DEBUG Switch parameters */
 #define SCTP_DEBUG_TIMER1	0x00000001
