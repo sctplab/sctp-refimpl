@@ -32,7 +32,7 @@
 #define _NETINET6_SCTP6_VAR_H_
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.5 2007/05/08 17:01:12 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.6 2007/06/12 11:21:00 rrs Exp $");
 #endif
 
 #if defined(_KERNEL)
@@ -40,10 +40,8 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.5 2007/05/08 17:01:12 rrs E
 #if defined(__FreeBSD__) || (__APPLE__)
 SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
-int sctp6_ctloutput __P((struct socket *, struct sockopt *));
 
 #else
-int sctp6_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 int sctp6_usrreq 
