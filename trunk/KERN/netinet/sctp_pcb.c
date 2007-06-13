@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.36 2007/06/12 00:11:59 rwatson Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.37 2007/06/12 16:24:53 bms Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3478,7 +3478,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 #endif
 	if (ip_pcb->inp_moptions) {
+#if defined(__FreeBSD__) &&  __FreeBSD_version > 602000
+		inp_freemoptions(ip_pcb->inp_moptions);
+#else
 		ip_freemoptions(ip_pcb->inp_moptions);
+#endif
 		ip_pcb->inp_moptions = 0;
 	}
 #endif
