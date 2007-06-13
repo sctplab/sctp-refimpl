@@ -73,10 +73,10 @@ sctp_sblog(struct sockbuf *sb,
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_SB,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 void
@@ -96,10 +96,10 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_CLOSE,
 	     0,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 
@@ -112,10 +112,10 @@ rto_logging(struct sctp_nets *net, int from)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_RTT,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -132,10 +132,10 @@ sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t tsn, uint16_t sseq, uint16
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_STRM,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -151,10 +151,10 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_NAGLE,
 	     action,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 
@@ -170,10 +170,10 @@ sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps,
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_SACK,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 void
@@ -186,10 +186,10 @@ sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_MAP,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 void
@@ -203,10 +203,10 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_FR,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -233,10 +233,10 @@ sctp_log_mb(struct mbuf *m, int from)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_MBUF,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 
@@ -263,10 +263,10 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_STRM,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -298,10 +298,10 @@ sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_CWND,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -344,10 +344,10 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_LOCK_EVENT,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 #endif
@@ -371,10 +371,10 @@ sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int b
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_MAXBURST,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -389,10 +389,10 @@ sctp_log_rwnd(uint8_t from, uint32_t peers_rwnd, uint32_t snd_size, uint32_t ove
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_RWND,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 void
@@ -406,10 +406,10 @@ sctp_log_rwnd_set(uint8_t from, uint32_t peers_rwnd, uint32_t flight_size, uint3
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_RWND,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 }
 
 void
@@ -423,10 +423,10 @@ sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mb
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_MBCNT,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -478,10 +478,10 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_WAKE,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
@@ -499,10 +499,10 @@ sctp_log_block(uint8_t from, struct socket *so, struct sctp_association *asoc, i
 	CTR6(KTR_SCTP_SUBSYS, "%d:%x-%x-%x-%x", 
 	     SCTP_LOG_EVENT_BLOCK,
 	     from,
-	     sctp_clog.misc.log1,
-	     sctp_clog.misc.log2,
-	     sctp_clog.misc.log3,
-	     sctp_clog.misc.log4)
+	     sctp_clog.x.misc.log1,
+	     sctp_clog.x.misc.log2,
+	     sctp_clog.x.misc.log3,
+	     sctp_clog.x.misc.log4);
 
 }
 
