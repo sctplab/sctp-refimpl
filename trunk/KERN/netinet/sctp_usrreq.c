@@ -176,11 +176,13 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			chk->rec.data.doing_fast_retransmit = 0;
 #ifdef SCTP_FLIGHT_LOGGING
-			sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
-				       chk->whoTo->flight_size,
-				       chk->book_size, 
-				       (uintptr_t)chk->whoTo, 
-				       chk->rec.data.TSN_seq);
+			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
+				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
+					       chk->whoTo->flight_size,
+					       chk->book_size, 
+					       (uintptr_t)chk->whoTo, 
+					       chk->rec.data.TSN_seq);
+			}
 #endif
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
@@ -336,7 +338,9 @@ sctp_notify(struct sctp_inpcb *inp,
 
 		if (inp->sctp_socket) {
 #ifdef SCTP_LOCK_LOGGING
-			sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCK);
+			if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
+				sctp_log_lock(inp, stcb, SCTP_LOG_LOCK_SOCK);
+			}
 #endif
 			SOCK_LOCK(inp->sctp_socket);
 			inp->sctp_socket->so_error = error;
@@ -2152,11 +2156,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		break;
 	case SCTP_GET_STAT_LOG:
-#ifdef SCTP_STAT_LOGGING
 		error = sctp_fill_stat_log(optval, optsize);
-#else
-		error = EOPNOTSUPP;
-#endif
 		break;
 	case SCTP_EVENTS:
 		{
@@ -2961,11 +2961,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	}
 	break;
 	case SCTP_CLR_STAT_LOG:
-#ifdef SCTP_STAT_LOGGING
-		sctp_clr_stat_log();
-#else
 		error = EOPNOTSUPP;
-#endif
 		break;
 	case SCTP_CONTEXT:
 	{
@@ -4471,7 +4467,9 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 	SCTP_INP_RLOCK(inp);
 #ifdef SCTP_LOCK_LOGGING
-	sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
+	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
+		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
+	}
 #endif
 	SOCK_LOCK(so);
 #if defined(__FreeBSD__) && __FreeBSD_version > 500000

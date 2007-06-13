@@ -3950,7 +3950,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
-	sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
+	if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
+	}
 #endif
 
 	/*

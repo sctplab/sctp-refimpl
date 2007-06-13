@@ -6062,16 +6062,16 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		data_list[i]->sent_rcv_time = net->last_sent_time;
 		data_list[i]->rec.data.fast_retran_tsn = data_list[i]->rec.data.TSN_seq;
 		TAILQ_REMOVE(&asoc->send_queue,
-		    data_list[i],
-		    sctp_next);
+			     data_list[i],
+			     sctp_next);
 		/* on to the sent queue */
 		tp1 = TAILQ_LAST(&asoc->sent_queue, sctpchunk_listhead);
 		if ((tp1) && (compare_with_wrap(tp1->rec.data.TSN_seq,
-		    data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
+						data_list[i]->rec.data.TSN_seq, MAX_TSN))) {
 			struct sctp_tmit_chunk *tpp;
 
 			/* need to move back */
-	back_up_more:
+		back_up_more:
 			tpp = TAILQ_PREV(tp1, sctpchunk_listhead, sctp_next);
 			if (tpp == NULL) {
 				TAILQ_INSERT_BEFORE(tp1, data_list[i], sctp_next);
@@ -6079,16 +6079,16 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			}
 			tp1 = tpp;
 			if (compare_with_wrap(tp1->rec.data.TSN_seq,
-			    data_list[i]->rec.data.TSN_seq, MAX_TSN)) {
+					      data_list[i]->rec.data.TSN_seq, MAX_TSN)) {
 				goto back_up_more;
 			}
 			TAILQ_INSERT_AFTER(&asoc->sent_queue, tp1, data_list[i], sctp_next);
 		} else {
 			TAILQ_INSERT_TAIL(&asoc->sent_queue,
-			    data_list[i],
-			    sctp_next);
+					  data_list[i],
+					  sctp_next);
 		}
-all_done:
+	all_done:
 		/* This does not lower until the cum-ack passes it */
 		asoc->sent_queue_cnt++;
 		asoc->send_queue_cnt--;
@@ -6105,20 +6105,22 @@ all_done:
 		data_list[i]->snd_count = 1;
 		data_list[i]->rec.data.chunk_was_revoked = 0;
 #ifdef SCTP_FLIGHT_LOGGING
-		sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
-			       data_list[i]->whoTo->flight_size,
-			       data_list[i]->book_size, 
-			       (uintptr_t)data_list[i]->whoTo, 
-			       data_list[i]->rec.data.TSN_seq);
+		if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
+			sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
+				       data_list[i]->whoTo->flight_size,
+				       data_list[i]->book_size, 
+				       (uintptr_t)data_list[i]->whoTo, 
+				       data_list[i]->rec.data.TSN_seq);
+		}
 #endif
 		sctp_flight_size_increase(data_list[i]);
 		sctp_total_flight_increase(stcb, data_list[i]);
 #ifdef SCTP_LOG_RWND
 		sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
-		    asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
+			      asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
 #endif
 		asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
-		    (uint32_t) (data_list[i]->send_size + sctp_peer_chunk_oh));
+						    (uint32_t) (data_list[i]->send_size + sctp_peer_chunk_oh));
 		if (asoc->peers_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_sender) {
 			/* SWS sender side engages */
 			asoc->peers_rwnd = 0;
@@ -6946,7 +6948,9 @@ one_more_time:
 			 * mostly copy by reference (we hope).
 			 */
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+			}
 #endif
 			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode);
 		}
@@ -7544,7 +7548,9 @@ again_one_more_time:
 			}
 		}
 #ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
+		if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+			sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
+		}
 #endif
 	}
 	if (old_startat == NULL) {
@@ -7557,7 +7563,9 @@ again_one_more_time:
 	 * queue.
 	 */
 #ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(stcb, net, *num_out, SCTP_CWND_LOG_FROM_SEND);
+	if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+		sctp_log_cwnd(stcb, net, *num_out, SCTP_CWND_LOG_FROM_SEND);
+	}
 #endif
 	if ((*num_out == 0) && (*reason_code == 0)) {
 		*reason_code = 4;
@@ -8121,8 +8129,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		chk->snd_count++;	/* update our count */
 
 		if ((error = sctp_lowlevel_chunk_output(inp, stcb, chk->whoTo,
-		    (struct sockaddr *)&chk->whoTo->ro._l_addr, m, auth_offset,
-		    auth, no_fragmentflg, 0, NULL, asconf))) {
+							(struct sockaddr *)&chk->whoTo->ro._l_addr, m, auth_offset,
+							auth, no_fragmentflg, 0, NULL, asconf))) {
 			SCTP_STAT_INCR(sctps_lowlevelerr);
 			return (error);
 		}
@@ -8198,7 +8206,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			}
 			return (1);
 		}
-one_chunk_around:
+	one_chunk_around:
 		if (asoc->peers_rwnd < mtu) {
 			one_chunk = 1;
 			if ((asoc->peers_rwnd == 0) &&
@@ -8238,7 +8246,7 @@ one_chunk_around:
 		 */
 		if ((auth == NULL) &&
 		    sctp_auth_is_required_chunk(SCTP_DATA,
-		    stcb->asoc.peer_auth_chunks)) {
+						stcb->asoc.peer_auth_chunks)) {
 			dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 		} else
 			dmtu = 0;
@@ -8290,14 +8298,14 @@ one_chunk_around:
 				}
 				if ((auth == NULL) &&
 				    sctp_auth_is_required_chunk(SCTP_DATA,
-				    stcb->asoc.peer_auth_chunks)) {
+								stcb->asoc.peer_auth_chunks)) {
 					dmtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 				} else
 					dmtu = 0;
 				if (fwd->send_size <= (mtu - dmtu)) {
 					if ((auth == NULL) &&
 					    (sctp_auth_is_required_chunk(SCTP_DATA, 
-									       stcb->asoc.peer_auth_chunks))) {
+									 stcb->asoc.peer_auth_chunks))) {
 						m = sctp_add_auth_chunk(m,
 									&endofchain,
 									&auth, &auth_offset,
@@ -8354,8 +8362,8 @@ one_chunk_around:
 			auth_offset += sizeof(struct sctphdr);
 			/* Now lets send it, if there is anything to send :> */
 			if ((error = sctp_lowlevel_chunk_output(inp, stcb, net,
-			    (struct sockaddr *)&net->ro._l_addr, m, auth_offset,
-			    auth, no_fragmentflg, 0, NULL, asconf))) {
+								(struct sockaddr *)&net->ro._l_addr, m, auth_offset,
+								auth, no_fragmentflg, 0, NULL, asconf))) {
 				/* error, we could not output */
 				SCTP_STAT_INCR(sctps_lowlevelerr);
 				return (error);
@@ -8422,18 +8430,20 @@ one_chunk_around:
 				} else {
 #ifdef SCTP_LOG_RWND
 					sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
-					    asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
+						      asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
 #endif
 					asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
-					    (uint32_t) (data_list[i]->send_size +
-					    sctp_peer_chunk_oh));
+									    (uint32_t) (data_list[i]->send_size +
+											sctp_peer_chunk_oh));
 				}
 #ifdef SCTP_FLIGHT_LOGGING
-				sctp_misc_ints(SCTP_FLIGHT_LOG_UP_RSND, 
-					       data_list[i]->whoTo->flight_size,
-					       data_list[i]->book_size, 
-					       (uintptr_t)data_list[i]->whoTo, 
-					       data_list[i]->rec.data.TSN_seq);
+				if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
+					sctp_misc_ints(SCTP_FLIGHT_LOG_UP_RSND, 
+						       data_list[i]->whoTo->flight_size,
+						       data_list[i]->book_size, 
+						       (uintptr_t)data_list[i]->whoTo, 
+						       data_list[i]->rec.data.TSN_seq);
+				}
 #endif
 				sctp_flight_size_increase(data_list[i]);
 				sctp_total_flight_increase(stcb, data_list[i]);
@@ -8462,7 +8472,9 @@ one_chunk_around:
 				}
 			}
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_RESEND);
+			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+				sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_RESEND);
+			}
 #endif
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(21, inp, stcb, NULL);
@@ -8578,8 +8590,8 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * and then the next call with get the retran's.
 			 */
  			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-			    &cwnd_full, from_where,
-			    &now, &now_filled, frag_point);
+						    &cwnd_full, from_where,
+						    &now, &now_filled, frag_point);
 			return;
 		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
 			/* if its not from a HB then do it */
@@ -8603,8 +8615,8 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * if queued too.
 			 */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-			    &cwnd_full, from_where,
-			    &now, &now_filled, frag_point);
+						    &cwnd_full, from_where,
+						    &now, &now_filled, frag_point);
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(8, inp, stcb, NULL);
 #endif
@@ -8631,7 +8643,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 #endif
 			/* Push out any control */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where,
-			    &now, &now_filled, frag_point);
+						    &now, &now_filled, frag_point);
 			return;
 		}
 		if (tot_frs > asoc->max_burst) {
@@ -8678,7 +8690,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 					net->cwnd = (net->flight_size + (burst_limit * net->mtu));
 
 #ifdef SCTP_CWND_MONITOR
-					sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
+					if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+						sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
+					}
 #endif
 
 #ifdef SCTP_LOG_MAXBURST
@@ -8700,16 +8714,18 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	cwnd_full = 0;
 	do {
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
-		    &reason_code, 0, &cwnd_full, from_where,
-		    &now, &now_filled, frag_point);
+					      &reason_code, 0, &cwnd_full, from_where,
+					      &now, &now_filled, frag_point);
 		if (error) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Error %d was returned from med-c-op\n", error);
 #ifdef SCTP_LOG_MAXBURST
 			sctp_log_maxburst(stcb, asoc->primary_destination, error, burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
 #endif
 #ifdef SCTP_CWND_LOGGING
-			sctp_log_cwnd(stcb, NULL, error, SCTP_SEND_NOW_COMPLETES);
-			sctp_log_cwnd(stcb, NULL, 0xdeadbeef, SCTP_SEND_NOW_COMPLETES);
+			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+				sctp_log_cwnd(stcb, NULL, error, SCTP_SEND_NOW_COMPLETES);
+				sctp_log_cwnd(stcb, NULL, 0xdeadbeef, SCTP_SEND_NOW_COMPLETES);
+			}
 #endif
 
 			break;
@@ -8719,9 +8735,11 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		tot_out += num_out;
 		burst_cnt++;
 #ifdef SCTP_CWND_LOGGING
-		sctp_log_cwnd(stcb, NULL, num_out, SCTP_SEND_NOW_COMPLETES);
-		if (num_out == 0) {
-			sctp_log_cwnd(stcb, NULL, reason_code, SCTP_SEND_NOW_COMPLETES);
+		if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+			sctp_log_cwnd(stcb, NULL, num_out, SCTP_SEND_NOW_COMPLETES);
+			if (num_out == 0) {
+				sctp_log_cwnd(stcb, NULL, reason_code, SCTP_SEND_NOW_COMPLETES);
+			}
 		}
 #endif
 		if (nagle_on) {
@@ -8749,7 +8767,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			break;
 		}
 	} while (num_out && (sctp_use_cwnd_based_maxburst ||
-	    (burst_cnt < burst_limit)));
+			     (burst_cnt < burst_limit)));
 
 	if (sctp_use_cwnd_based_maxburst == 0) {
 		if (burst_cnt >= burst_limit) {
@@ -8763,7 +8781,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		}
 	}
 #ifdef SCTP_CWND_LOGGING
-	sctp_log_cwnd(stcb, NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
+	if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
+		sctp_log_cwnd(stcb, NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
+	}
 #endif
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Ok, we have put out %d chunks\n",
 		tot_out);
@@ -11583,8 +11603,10 @@ sctp_lower_sosend(struct socket *so,
 		SOCKBUF_LOCK(&so->so_snd);
 		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
-			sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
-				       so, asoc, uio->uio_resid);
+			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
+				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
+					       so, asoc, uio->uio_resid);
+			}
 #endif
 			be.error = 0;
 #ifndef __Panda__
@@ -11604,8 +11626,10 @@ sctp_lower_sosend(struct socket *so,
 				goto out_unlocked;
 			}
 #ifdef SCTP_BLK_LOGGING
-			sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-				       so, asoc, stcb->asoc.total_output_queue_size);
+			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
+				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+					       so, asoc, stcb->asoc.total_output_queue_size);
+			}
 #endif
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
@@ -11868,9 +11892,14 @@ sctp_lower_sosend(struct socket *so,
 			}
 			/* What about the INIT, send it maybe */
 #ifdef SCTP_BLK_LOGGING
-			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, queue_only_for_init, queue_only, nagle_applies, un_sent);
-			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, stcb->asoc.total_output_queue_size, stcb->asoc.total_flight,
-				       stcb->asoc.chunks_on_out_queue, stcb->asoc.total_flight_count);
+			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
+
+				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, queue_only_for_init, queue_only, 
+					       nagle_applies, un_sent);
+				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, stcb->asoc.total_output_queue_size, 
+					       stcb->asoc.total_flight,
+					       stcb->asoc.chunks_on_out_queue, stcb->asoc.total_flight_count);
+			}
 #endif
 			if (queue_only_for_init) {
 				if (hold_tcblock == 0) {
@@ -11932,8 +11961,10 @@ sctp_lower_sosend(struct socket *so,
 			 */
 			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
 #ifdef SCTP_BLK_LOGGING
-				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
-					       so, asoc, uio->uio_resid);
+				if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
+					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+						       so, asoc, uio->uio_resid);
+				}
 #endif
 				be.error = 0;
 #ifndef __Panda__
@@ -11967,8 +11998,10 @@ sctp_lower_sosend(struct socket *so,
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #ifdef SCTP_BLK_LOGGING
-				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-					       so, asoc, stcb->asoc.total_output_queue_size);
+				if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
+					sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+						       so, asoc, stcb->asoc.total_output_queue_size);
+				}
 #endif
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
