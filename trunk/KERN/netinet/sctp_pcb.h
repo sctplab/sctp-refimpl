@@ -67,6 +67,7 @@ struct sctp_vrf {
 	uint32_t tbl_id_v6;		/* default v6 table id */
 	uint32_t total_ifa_count;
 	u_long   vrf_addr_hashmark;
+	uint32_t refcount;
 };
 
 struct sctp_ifn {

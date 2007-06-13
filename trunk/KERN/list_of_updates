@@ -1,1 +1,2 @@
-- 
+- Fix so ifn's are properly deleted when the ref count goes to 0.
+- Fix so VRF's will clean themselves up when no references are around.
