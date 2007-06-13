@@ -6116,8 +6116,10 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		sctp_flight_size_increase(data_list[i]);
 		sctp_total_flight_increase(stcb, data_list[i]);
 #ifdef SCTP_LOG_RWND
-		sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
+		if(sctp_logging_level & SCTP_LOG_RWND_ENABLE) {
+			sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
 			      asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
+		}
 #endif
 		asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
 						    (uint32_t) (data_list[i]->send_size + sctp_peer_chunk_oh));
@@ -7014,7 +7016,9 @@ again_one_more_time:
 			if ((ifp->if_snd.ifq_len + 2) >= ifp->if_snd.ifq_maxlen) {
 				SCTP_STAT_INCR(sctps_ifnomemqueued);
 #ifdef SCTP_LOG_MAXBURST
-				sctp_log_maxburst(stcb, net, ifp->if_snd.ifq_len, ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED);
+				if(sctp_logging_level & SCTP_LOG_MAXBURST_ENABLE) {
+					sctp_log_maxburst(stcb, net, ifp->if_snd.ifq_len, ifp->if_snd.ifq_maxlen, SCTP_MAX_IFP_APPLIED);
+				}
 #endif
 				continue;
 			}
@@ -8429,8 +8433,10 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 
 				} else {
 #ifdef SCTP_LOG_RWND
-					sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
+					if(sctp_logging_level & SCTP_LOG_RWND_ENABLE) {
+						sctp_log_rwnd(SCTP_DECREASE_PEER_RWND,
 						      asoc->peers_rwnd, data_list[i]->send_size, sctp_peer_chunk_oh);
+					}
 #endif
 					asoc->peers_rwnd = sctp_sbspace_sub(asoc->peers_rwnd,
 									    (uint32_t) (data_list[i]->send_size +
@@ -8696,7 +8702,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 #endif
 
 #ifdef SCTP_LOG_MAXBURST
-					sctp_log_maxburst(stcb, net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
+					if(sctp_logging_level & SCTP_LOG_MAXBURST_ENABLE) {
+						sctp_log_maxburst(stcb, net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
+					}
 #endif
 					SCTP_STAT_INCR(sctps_maxburstqueued);
 				}
@@ -8719,7 +8727,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		if (error) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Error %d was returned from med-c-op\n", error);
 #ifdef SCTP_LOG_MAXBURST
-			sctp_log_maxburst(stcb, asoc->primary_destination, error, burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
+			if(sctp_logging_level & SCTP_LOG_MAXBURST_ENABLE) {
+				sctp_log_maxburst(stcb, asoc->primary_destination, error, burst_cnt, SCTP_MAX_BURST_ERROR_STOP);
+			}
 #endif
 #ifdef SCTP_CWND_LOGGING
 			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
@@ -8774,7 +8784,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			SCTP_STAT_INCR(sctps_maxburstqueued);
 			asoc->burst_limit_applied = 1;
 #ifdef SCTP_LOG_MAXBURST
-			sctp_log_maxburst(stcb, asoc->primary_destination, 0, burst_cnt, SCTP_MAX_BURST_APPLIED);
+			if(sctp_logging_level & SCTP_LOG_MAXBURST_ENABLE) {
+				sctp_log_maxburst(stcb, asoc->primary_destination, 0, burst_cnt, SCTP_MAX_BURST_APPLIED);
+			}
 #endif
 		} else {
 			asoc->burst_limit_applied = 0;
@@ -11020,11 +11032,11 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
-        /* We delink the chain from header, but keep
-         * the header around as we will need it in
-         * EAGAIN case
-         */
-        SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+		/* We delink the chain from header, but keep
+		 * the header around as we will need it in
+		 * EAGAIN case
+		 */
+		SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
 #endif
 	}
 	/* Pre-screen address, if one is given the sin-len
@@ -11878,14 +11890,18 @@ sctp_lower_sosend(struct socket *so,
 				 * data unless wen have a "full" segment to send.
 				 */
 #ifdef SCTP_NAGLE_LOGGING
-				sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+				if(sctp_logging_level & SCTP_NAGLE_LOGGING_ENABLE) {
+					sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+				}
 #endif
 				SCTP_STAT_INCR(sctps_naglequeued);
 				nagle_applies = 1;
 			} else {
 #ifdef SCTP_NAGLE_LOGGING
-				if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
-					sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+				if(sctp_logging_level & SCTP_NAGLE_LOGGING_ENABLE) {
+					if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
+						sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+				}
 #endif
 				SCTP_STAT_INCR(sctps_naglesent);
 				nagle_applies = 0;
@@ -12162,14 +12178,18 @@ sctp_lower_sosend(struct socket *so,
 		 * data unless wen have a "full" segment to send.
 		 */
 #ifdef SCTP_NAGLE_LOGGING
-		sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+		if(sctp_logging_level & SCTP_NAGLE_LOGGING_ENABLE) {
+			sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+		}
 #endif
 		SCTP_STAT_INCR(sctps_naglequeued);
 		nagle_applies = 1;
 	} else {
 #ifdef SCTP_NAGLE_LOGGING
-		if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
-			sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+		if(sctp_logging_level & SCTP_NAGLE_LOGGING_ENABLE) {
+			if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
+				sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+		}
 #endif
 		SCTP_STAT_INCR(sctps_naglesent);
 		nagle_applies = 0;
@@ -12239,7 +12259,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point);
+					    &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
@@ -12282,25 +12302,25 @@ sctp_lower_sosend(struct socket *so,
 #endif
 #endif
 #ifdef __Panda__
-    /* 
-     * Handle the EAGAIN cases to reattach the pak header
-     * to particle when pak is passed in, so that caller 
-     * can try again with this pak
-     *
-     * NOTE: For other cases, including success case,
-     * we simply want to return the header back to free
-     * pool
-     */
-    if (top) {
-        if (error == EAGAIN)  {
-            SCTP_ATTACH_CHAIN(i_pak, top, sndlen);    
-            top = NULL;
-        } else {
-            (void)SCTP_RELEASE_HEADER(i_pak);
-        }
-    } else {
-        (void)SCTP_RELEASE_HEADER(i_pak);
-    }
+	/* 
+	 * Handle the EAGAIN cases to reattach the pak header
+	 * to particle when pak is passed in, so that caller 
+	 * can try again with this pak
+	 *
+	 * NOTE: For other cases, including success case,
+	 * we simply want to return the header back to free
+	 * pool
+	 */
+	if (top) {
+		if (error == EAGAIN)  {
+			SCTP_ATTACH_CHAIN(i_pak, top, sndlen);    
+			top = NULL;
+		} else {
+			(void)SCTP_RELEASE_HEADER(i_pak);
+		}
+	} else {
+		(void)SCTP_RELEASE_HEADER(i_pak);
+	}
 #endif
 	if (top){ 
 		sctp_m_freem(top);
