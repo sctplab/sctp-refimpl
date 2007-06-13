@@ -193,7 +193,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 			lnet->ssthresh = asoc->peers_rwnd;
 
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
-			sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
+			if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
+			}
 #endif
 
 		}
@@ -243,7 +245,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
 #ifdef SCTP_MAP_LOGGING
-	sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+		sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+	}
 #endif
 	/* This is the next one we expect */
 	asoc->str_reset_seq_in = asoc->asconf_seq_in + 1;
@@ -2340,7 +2344,9 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		}
 		net->cwnd = net->ssthresh;
 #ifdef SCTP_CWND_MONITOR
-		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		}
 #endif
 		/*
 		 * we reduce once every RTT. So we will only lower cwnd at
@@ -2436,162 +2442,164 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
     struct sctp_nets *net, uint8_t flg)
 {
 	switch (desc->chunk_type) {
-		case SCTP_DATA:
+	case SCTP_DATA:
 		/* find the tsn to resend (possibly */
-		{
-			uint32_t tsn;
-			struct sctp_tmit_chunk *tp1;
+	{
+		uint32_t tsn;
+		struct sctp_tmit_chunk *tp1;
 
-			tsn = ntohl(desc->tsn_ifany);
+		tsn = ntohl(desc->tsn_ifany);
+		tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+		while (tp1) {
+			if (tp1->rec.data.TSN_seq == tsn) {
+				/* found it */
+				break;
+			}
+			if (compare_with_wrap(tp1->rec.data.TSN_seq, tsn,
+					      MAX_TSN)) {
+				/* not found */
+				tp1 = NULL;
+				break;
+			}
+			tp1 = TAILQ_NEXT(tp1, sctp_next);
+		}
+		if (tp1 == NULL) {
+			/*
+			 * Do it the other way , aka without paying
+			 * attention to queue seq order.
+			 */
+			SCTP_STAT_INCR(sctps_pdrpdnfnd);
 			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			while (tp1) {
 				if (tp1->rec.data.TSN_seq == tsn) {
 					/* found it */
 					break;
 				}
-				if (compare_with_wrap(tp1->rec.data.TSN_seq, tsn,
-				    MAX_TSN)) {
-					/* not found */
-					tp1 = NULL;
-					break;
-				}
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 			}
-			if (tp1 == NULL) {
-				/*
-				 * Do it the other way , aka without paying
-				 * attention to queue seq order.
-				 */
-				SCTP_STAT_INCR(sctps_pdrpdnfnd);
-				tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
-				while (tp1) {
-					if (tp1->rec.data.TSN_seq == tsn) {
-						/* found it */
-						break;
-					}
-					tp1 = TAILQ_NEXT(tp1, sctp_next);
-				}
-			}
-			if (tp1 == NULL) {
-				SCTP_STAT_INCR(sctps_pdrptsnnf);
-			}
-			if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
-				uint8_t *ddp;
+		}
+		if (tp1 == NULL) {
+			SCTP_STAT_INCR(sctps_pdrptsnnf);
+		}
+		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
+			uint8_t *ddp;
 
-				if ((stcb->asoc.peers_rwnd == 0) &&
-				    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
-					SCTP_STAT_INCR(sctps_pdrpdiwnp);
-					return (0);
-				}
-				if (stcb->asoc.peers_rwnd == 0 &&
-				    (flg & SCTP_FROM_MIDDLE_BOX)) {
-					SCTP_STAT_INCR(sctps_pdrpdizrw);
-					return (0);
-				}
-				ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
-				    sizeof(struct sctp_data_chunk));
-				{
-					unsigned int iii;
+			if ((stcb->asoc.peers_rwnd == 0) &&
+			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
+				SCTP_STAT_INCR(sctps_pdrpdiwnp);
+				return (0);
+			}
+			if (stcb->asoc.peers_rwnd == 0 &&
+			    (flg & SCTP_FROM_MIDDLE_BOX)) {
+				SCTP_STAT_INCR(sctps_pdrpdizrw);
+				return (0);
+			}
+			ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
+					   sizeof(struct sctp_data_chunk));
+			{
+				unsigned int iii;
 
-					for (iii = 0; iii < sizeof(desc->data_bytes);
-					    iii++) {
-						if (ddp[iii] != desc->data_bytes[iii]) {
-							SCTP_STAT_INCR(sctps_pdrpbadd);
-							return (-1);
-						}
+				for (iii = 0; iii < sizeof(desc->data_bytes);
+				     iii++) {
+					if (ddp[iii] != desc->data_bytes[iii]) {
+						SCTP_STAT_INCR(sctps_pdrpbadd);
+						return (-1);
 					}
 				}
-				/*
-				 * We zero out the nonce so resync not
-				 * needed
-				 */
-				tp1->rec.data.ect_nonce = 0;
+			}
+			/*
+			 * We zero out the nonce so resync not
+			 * needed
+			 */
+			tp1->rec.data.ect_nonce = 0;
 
-				if (tp1->do_rtt) {
-					/*
-					 * this guy had a RTO calculation
-					 * pending on it, cancel it
-					 */
-					tp1->do_rtt = 0;
-				}
-				SCTP_STAT_INCR(sctps_pdrpmark);
-				if (tp1->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				tp1->sent = SCTP_DATAGRAM_RESEND;
+			if (tp1->do_rtt) {
 				/*
-				 * mark it as if we were doing a FR, since
-				 * we will be getting gap ack reports behind
-				 * the info from the router.
+				 * this guy had a RTO calculation
+				 * pending on it, cancel it
 				 */
-				tp1->rec.data.doing_fast_retransmit = 1;
-				/*
-				 * mark the tsn with what sequences can
-				 * cause a new FR.
-				 */
-				if (TAILQ_EMPTY(&stcb->asoc.send_queue)) {
-					tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
-				} else {
-					tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
-				}
+				tp1->do_rtt = 0;
+			}
+			SCTP_STAT_INCR(sctps_pdrpmark);
+			if (tp1->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			tp1->sent = SCTP_DATAGRAM_RESEND;
+			/*
+			 * mark it as if we were doing a FR, since
+			 * we will be getting gap ack reports behind
+			 * the info from the router.
+			 */
+			tp1->rec.data.doing_fast_retransmit = 1;
+			/*
+			 * mark the tsn with what sequences can
+			 * cause a new FR.
+			 */
+			if (TAILQ_EMPTY(&stcb->asoc.send_queue)) {
+				tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+			} else {
+				tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
+			}
 
-				/* restart the timer */
-				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
-				sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, tp1->whoTo);
+			/* restart the timer */
+			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+					stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
+			sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+					 stcb, tp1->whoTo);
 
-				/* fix counts and things */
+			/* fix counts and things */
 #ifdef SCTP_FLIGHT_LOGGING
+			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PDRP,
 					       tp1->whoTo->flight_size,
 					       tp1->book_size, 
 					       (uintptr_t)stcb, 
 					       tp1->rec.data.TSN_seq);
+			}
 #endif
-				sctp_flight_size_decrease(tp1);
-				sctp_total_flight_decrease(stcb, tp1);
-			} {
-				/* audit code */
-				unsigned int audit;
+			sctp_flight_size_decrease(tp1);
+			sctp_total_flight_decrease(stcb, tp1);
+		} {
+			/* audit code */
+			unsigned int audit;
 
-				audit = 0;
-				TAILQ_FOREACH(tp1, &stcb->asoc.sent_queue, sctp_next) {
-					if (tp1->sent == SCTP_DATAGRAM_RESEND)
-						audit++;
-				}
-				TAILQ_FOREACH(tp1, &stcb->asoc.control_send_queue,
-				    sctp_next) {
-					if (tp1->sent == SCTP_DATAGRAM_RESEND)
-						audit++;
-				}
-				if (audit != stcb->asoc.sent_queue_retran_cnt) {
-					SCTP_PRINTF("**Local Audit finds cnt:%d asoc cnt:%d\n",
-						    audit, stcb->asoc.sent_queue_retran_cnt);
+			audit = 0;
+			TAILQ_FOREACH(tp1, &stcb->asoc.sent_queue, sctp_next) {
+				if (tp1->sent == SCTP_DATAGRAM_RESEND)
+					audit++;
+			}
+			TAILQ_FOREACH(tp1, &stcb->asoc.control_send_queue,
+				      sctp_next) {
+				if (tp1->sent == SCTP_DATAGRAM_RESEND)
+					audit++;
+			}
+			if (audit != stcb->asoc.sent_queue_retran_cnt) {
+				SCTP_PRINTF("**Local Audit finds cnt:%d asoc cnt:%d\n",
+					    audit, stcb->asoc.sent_queue_retran_cnt);
 #ifndef SCTP_AUDITING_ENABLED
-					stcb->asoc.sent_queue_retran_cnt = audit;
+				stcb->asoc.sent_queue_retran_cnt = audit;
 #endif
-				}
 			}
 		}
-		break;
+	}
+	break;
 	case SCTP_ASCONF:
-		{
-			struct sctp_tmit_chunk *asconf;
+	{
+		struct sctp_tmit_chunk *asconf;
 
-			TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
-			    sctp_next) {
-				if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
-					break;
-				}
-			}
-			if (asconf) {
-				if (asconf->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				asconf->sent = SCTP_DATAGRAM_RESEND;
-				asconf->snd_count--;
+		TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
+			      sctp_next) {
+			if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
+				break;
 			}
 		}
-		break;
+		if (asconf) {
+			if (asconf->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			asconf->sent = SCTP_DATAGRAM_RESEND;
+			asconf->snd_count--;
+		}
+	}
+	break;
 	case SCTP_INITIATION:
 		/* resend the INIT */
 		stcb->asoc.dropped_special_cnt++;
@@ -2601,7 +2609,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			 * this, otherwise we let the timer fire.
 			 */
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep,
-			    stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
+					stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
 			sctp_send_initiate(stcb->sctp_ep, stcb);
 		}
 		break;
@@ -2620,24 +2628,24 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		sctp_send_shutdown_ack(stcb, net);
 		break;
 	case SCTP_COOKIE_ECHO:
-		{
-			struct sctp_tmit_chunk *cookie;
+	{
+		struct sctp_tmit_chunk *cookie;
 
-			cookie = NULL;
-			TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
-			    sctp_next) {
-				if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
-					break;
-				}
-			}
-			if (cookie) {
-				if (cookie->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				cookie->sent = SCTP_DATAGRAM_RESEND;
-				sctp_stop_all_cookie_timers(stcb);
+		cookie = NULL;
+		TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
+			      sctp_next) {
+			if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
+				break;
 			}
 		}
-		break;
+		if (cookie) {
+			if (cookie->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			cookie->sent = SCTP_DATAGRAM_RESEND;
+			sctp_stop_all_cookie_timers(stcb);
+		}
+	}
+	break;
 	case SCTP_COOKIE_ACK:
 		sctp_send_cookie_ack(stcb);
 		break;
@@ -3432,8 +3440,10 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 #ifdef SCTP_CWND_MONITOR
 		if (net->cwnd - old_cwnd != 0) {
 			/* log only changes */
-			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
-			    SCTP_CWND_LOG_FROM_SAT);
+			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+				sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
+					      SCTP_CWND_LOG_FROM_SAT);
+			}
 		}
 #endif
 	}

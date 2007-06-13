@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.22 2007/06/12 11:20:59 rrs
 #include "opt_inet.h"
 #include "opt_sctp.h"
 #include <sys/param.h>
+#include <sys/ktr.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/kernel.h>
