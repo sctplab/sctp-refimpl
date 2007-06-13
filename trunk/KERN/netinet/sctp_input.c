@@ -4841,7 +4841,7 @@ sctp_input(i_pak, va_alist)
 #endif
 	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__
-    /* Free the pak header as we already have the data chain */
+	/* Free the pak header as we already have the data chain */
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
 	(void)SCTP_RELEASE_HEADER(i_pak);
@@ -4854,12 +4854,14 @@ sctp_input(i_pak, va_alist)
 
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
-	mat = m;
-	while(mat) {
-		if(SCTP_BUF_IS_EXTENDED(mat)) {
-			sctp_log_mb(mat, SCTP_MBUF_INPUT);
+	if(sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+		mat = m;
+		while(mat) {
+			if(SCTP_BUF_IS_EXTENDED(mat)) {
+				sctp_log_mb(mat, SCTP_MBUF_INPUT);
+			}
+			mat = SCTP_BUF_NEXT(mat);
 		}
-		mat = SCTP_BUF_NEXT(mat);
 	}
 #endif
 #ifdef  SCTP_PACKET_LOGGING
@@ -5097,7 +5099,7 @@ sctp_input(i_pak, va_alist)
 	s = splsoftnet();
 #endif
 
-    /*sa_ignore NO_NULL_CHK*/
+	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 				     inp, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */

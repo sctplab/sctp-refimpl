@@ -506,5 +506,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_WAKE_LOGGING_ENABLE			0x00080000
 #define SCTP_LOG_MAXBURST_ENABLE			0x00100000
 #define SCTP_LOG_RWND_ENABLE    			0x00200000
+#define SCTP_LOG_SACK_ARRIVALS_ENABLE                   0x00400000
 
 #endif				/* !_NETINET_SCTP_H_ */
