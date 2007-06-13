@@ -172,6 +172,7 @@ sctp_allocate_vrf(int vrf_id)
 	vrf->vrf_id = vrf_id;
 	LIST_INIT(&vrf->ifnlist);
 	vrf->total_ifa_count = 0;
+	vrf->refcount = 0;
 	/* now also setup table ids */
 	SCTP_INIT_VRF_TABLEID(vrf);
 	/* Init the HASH of addresses */
@@ -231,6 +232,18 @@ sctp_find_vrf(uint32_t vrf_id)
 	return (NULL);
 }
 
+static void
+sctp_free_vrf(struct sctp_vrf *vrf)
+{
+	int ret;
+	ret = atomic_fetchadd_int(&vrf->refcount, -1);
+	if(ret == 1) {
+		/* We zero'd the count */
+		LIST_REMOVE(vrf, next_vrf);
+		SCTP_FREE(vrf, SCTP_M_VRF);
+		atomic_subtract_int(&sctppcbinfo.ipi_count_vrfs, 1);
+	}
+}
 
 void
 sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
@@ -239,6 +252,9 @@ sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 	ret = atomic_fetchadd_int(&sctp_ifnp->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
+		if (sctp_ifnp->vrf) {
+			sctp_free_vrf(sctp_ifnp->vrf);
+		}
 		SCTP_FREE(sctp_ifnp, SCTP_M_IFN);
 		atomic_subtract_int(&sctppcbinfo.ipi_count_ifns, 1);
 	}
@@ -263,6 +279,9 @@ sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
 	if(ret == 1) {
 		/* We zero'd the count */
+		if(sctp_ifap->ifn_p) {
+			sctp_free_ifn(sctp_ifap->ifn_p);
+		}
 		SCTP_FREE(sctp_ifap, SCTP_M_IFA);
 		atomic_subtract_int(&sctppcbinfo.ipi_count_ifas, 1);
 	}
@@ -306,15 +325,19 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 
 	/* How granular do we need the locks to be here? */
 	SCTP_IPI_ADDR_LOCK();
-	vrf = sctp_find_vrf(vrf_id);
-	if (vrf == NULL) {
-		vrf = sctp_allocate_vrf(vrf_id);
+	sctp_ifnp = sctp_find_ifn(ifn, ifn_index);
+	if(sctp_ifnp) {
+		vrf = sctp_ifnp->vrf;
+	} else {
+		vrf = sctp_find_vrf(vrf_id);
 		if (vrf == NULL) {
-			SCTP_IPI_ADDR_UNLOCK();
-			return (NULL);
+			vrf = sctp_allocate_vrf(vrf_id);
+			if (vrf == NULL) {
+				SCTP_IPI_ADDR_UNLOCK();
+				return (NULL);
+			}
 		}
 	}
-	sctp_ifnp = sctp_find_ifn(ifn, ifn_index);
 	if (sctp_ifnp == NULL) {
 		/* build one and add it, can't hold lock
 		 * until after malloc done though.
@@ -333,6 +356,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		sctp_ifnp->ifa_count = 0;
 		sctp_ifnp->refcount = 1;
 		sctp_ifnp->vrf = vrf;
+		atomic_add_int(&vrf->refcount, 1);
 		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, addr->sa_family);
 		if (if_name != NULL) {
 			memcpy(sctp_ifnp->ifn_name, if_name, SCTP_IFNAMSIZ);
@@ -352,10 +376,15 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		/* Hmm, it already exists? */
 		if ((sctp_ifap->ifn_p) &&
 		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
+			if (new_ifn_af) {
+				/* Remove the created one that we don't want */
+				sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+			}
 			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
 				sctp_ifap->localifa_flags = SCTP_ADDR_VALID;
 				sctp_ifap->ifn_p = sctp_ifnp;
+				atomic_add_int(&sctp_ifap->ifn_p->refcount, 1);
 			exit_stage_left:
 				SCTP_IPI_ADDR_UNLOCK();
 				return(sctp_ifap);
@@ -367,6 +396,10 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				/* The first IFN gets the address, duplicates
 				 * are ignored.
 				 */
+				if (new_ifn_af) {
+					/* Remove the created one that we don't want */
+					sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+				}
  				goto exit_stage_left;
 			}
 			else {
