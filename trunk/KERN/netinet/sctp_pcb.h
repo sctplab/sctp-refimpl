@@ -536,8 +536,8 @@ struct sctp_ifn *
 sctp_find_ifn(void *ifn, uint32_t ifn_index);
 
 struct sctp_vrf *sctp_allocate_vrf(int vrfid);
-
 struct sctp_vrf *sctp_find_vrf(uint32_t vrfid);
+void sctp_free_vrf(struct sctp_vrf *vrf);
 
 struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrfid,
@@ -562,11 +562,11 @@ struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct thread *);
-
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+		    struct thread *);
 #else
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct proc *);
-
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+		    struct proc *);
 #endif
 
 struct sctp_tcb *

@@ -4581,9 +4581,11 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
  * ifa_ifwithaddr() compares the entire sockaddr struct
  */
 struct sctp_ifa *
-sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr, int holds_lock) 
+sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
+		    int holds_lock) 
 {
 	struct sctp_laddr *laddr;
+
 	if (holds_lock == 0) {
 		SCTP_INP_RLOCK(inp);
 	}
@@ -6352,7 +6354,6 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 	return ((struct sctp_tcb *)NULL);
 }
 
-
 /*
  * sctp_bindx(ADD) for one address.
  * assumes all arguments are valid/checked by caller.
@@ -6433,7 +6434,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			return;
 		}
 #endif
-		*error = sctp_inpcb_bind(so, addr_touse, p);
+		*error = sctp_inpcb_bind(so, addr_touse, NULL, p);
 		return;
 	}
 	/*
@@ -6469,7 +6470,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			((struct sockaddr_in *)addr_touse)->sin_port = 0;
 			*error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
 						      SCTP_ADD_IP_ADDRESS,
-						      vrf_id);
+						      vrf_id, NULL);
 		} else {
 			*error = EADDRINUSE;
 		}
@@ -6563,7 +6564,7 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 		/* delete the address */
 		*error = sctp_addr_mgmt_ep_sa(inp, addr_touse,
 					      SCTP_DEL_IP_ADDRESS,
-					      vrf_id);
+					      vrf_id, NULL);
 	} else {
 		/*
 		 * FIX: decide whether we allow assoc based

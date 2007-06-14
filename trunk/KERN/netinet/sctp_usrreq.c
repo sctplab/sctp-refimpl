@@ -738,7 +738,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_bind(so, addr, p);
+	error = sctp_inpcb_bind(so, addr, NULL, p);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1726,7 +1726,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4344,7 +4344,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4494,7 +4494,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* We must do a bind. */
 		SOCK_UNLOCK(so);
 		SCTP_INP_RUNLOCK(inp);
-		if ((error = sctp_inpcb_bind(so, NULL, p))) {
+		if ((error = sctp_inpcb_bind(so, NULL, NULL, p))) {
 			/* bind error, probably perm */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
