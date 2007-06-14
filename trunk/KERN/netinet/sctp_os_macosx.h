@@ -110,6 +110,8 @@ extern struct fileops socketops;
 
 /* Empty ktr statement for mac */
 #define	CTR6(m, d, p1, p2, p3, p4, p5, p6)
+#define SCTP_LTRACE_CHK(a, b, c, d)
+#define SCTP_LTRACE_ERR(a, b, c, d) 
 
 /*
  * debug macro
