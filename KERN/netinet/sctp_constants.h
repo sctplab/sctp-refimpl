@@ -233,8 +233,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.21 2007/06/13 01:31:52 
 #define SCTP_LOG_MISC_EVENT 15 
 #define SCTP_LOG_EVENT_CLOSE 16
 #define SCTP_LOG_EVENT_MBUF 17
+#define SCTP_LOG_CHUNK_PROC 18
+#define SCTP_LOG_ERROR_RET  19
 
-#define SCTP_LOG_MAX_EVENT 18
+#define SCTP_LOG_MAX_EVENT 20
 
 #define SCTP_LOCK_UNKNOWN 2
 
