@@ -185,7 +185,7 @@ extern int sctp_logoff_stuff;
 } while (0)
 
 #define SCTP_INP_WLOCK(_inp)	do { 					\
-	sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
         mtx_lock(&(_inp)->inp_mtx);                                     \
 } while (0)
 
