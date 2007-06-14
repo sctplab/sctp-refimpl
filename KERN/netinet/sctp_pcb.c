@@ -232,7 +232,7 @@ sctp_find_vrf(uint32_t vrf_id)
 	return (NULL);
 }
 
-static void
+void
 sctp_free_vrf(struct sctp_vrf *vrf)
 {
 	int ret;
@@ -2574,9 +2574,11 @@ extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
+sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
+		struct sctp_ifa *sctp_ifap, struct thread *p)
 #else
-sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
+sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
+		struct sctp_ifa *sctp_ifap, struct proc *p)
 #endif
 {
 	/* bind a ep to a socket address */
@@ -2944,8 +2946,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
-					    vrf_id, 0);
+		if (sctp_ifap)
+		    ifa = sctp_ifap;
+		else
+		    ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
+						vrf_id, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -4145,7 +4150,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 * ephemerial bind for you.
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
-		    (struct sockaddr *)NULL,
+		    (struct sockaddr *)NULL, (struct sctp_ifa *)NULL,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		    (struct thread *)NULL
 #else
