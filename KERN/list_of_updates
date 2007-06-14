@@ -3,3 +3,6 @@
 - Allow sctp_ifa to be passed into inpcb_bind, addr_mgmt_ep_sa to bypass
   normal validation checks
 - turn auto-asconf off for subset bound sockets
+- Moves all logging to use KTR. This gets rid of most
+  of the logging #ifdef's with a few exceptions reducing
+  the number of config options for SCTP.
