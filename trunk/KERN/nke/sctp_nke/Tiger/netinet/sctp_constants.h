@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.20 2007/06/12 11:20:59 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.21 2007/06/13 01:31:52 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -73,7 +73,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.20 2007/06/12 11:20:59 
 #define SCTP_VERSION_STRING "KAME-BSD 1.1"
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
-#define SCTP_STAT_LOG_SIZE 80000
 
 #ifdef __FreeBSD__
 #define SCTP_USE_THREAD_BASED_ITERATOR 1
@@ -208,12 +207,13 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.20 2007/06/12 11:20:59 
 
 #define SCTP_LOG_MAX_TYPES 118
 /*
- * To turn on various logging, you must first define SCTP_STAT_LOGGING. Then
- * to get something to log you define one of the logging defines i.e.
+ * To turn on various logging, you must first enable 'options KTR' and
+ * you might want to bump the entires 'options KTR_ENTRIES=80000'.
+ * To get something to log you define one of the logging defines.
+ * (see LINT).
  *
- * SCTP_CWND_LOGGING SCTP_BLK_LOGGING SCTP_STR_LOGGING SCTP_FR_LOGGING
- *
- * Any one or a combination of the logging can be turned on.
+ * This gets the compile in place, but you still need to turn the 
+ * logging flag on too in the sysctl (see in sctp.h).
  */
 #define SCTP_LOG_EVENT_UNKNOWN 0
 #define SCTP_LOG_EVENT_CWND  1
@@ -756,7 +756,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.20 2007/06/12 11:20:59 
 
 #define SCTP_DEFAULT_MAXSEGMENT 65535
 
-#define SCTP_CHUNK_BUFFER_SIZE	2048
+#define SCTP_CHUNK_BUFFER_SIZE	512
 #define SCTP_PARAM_BUFFER_SIZE	512
 
 #define SCTP_DEFAULT_MINSEGMENT 512	/* MTU size ... if no mtu disc */

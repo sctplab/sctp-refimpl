@@ -76,18 +76,6 @@
 	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
 
 
-#define SCTP_STATLOG_GETREF(x) { \
-        lck_mtx_lock(sctppcbinfo.logging_mtx); \
-        x = global_sctp_cwnd_log_at; \
-        global_sctp_cwnd_log_at++; \
-        if(global_sctp_cwnd_log_at == SCTP_STAT_LOG_SIZE) { \
-           global_sctp_cwnd_log_at = 0; \
-           global_sctp_cwnd_log_rolled = 1; \
-        } \
-        lck_mtx_unlock(sctppcbinfo.logging_mtx); \
-}
-
-
 
 /* Lock for INP */
 #define SCTP_INP_LOCK_INIT(_inp)

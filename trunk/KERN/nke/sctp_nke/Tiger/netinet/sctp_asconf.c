@@ -2572,7 +2572,7 @@ sctp_check_address_list(struct sctp_tcb *stcb, struct mbuf *m, int offset,
  */
 uint32_t
 sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
-    uint32_t type, uint32_t vrf_id)
+    uint32_t type, uint32_t vrf_id, struct sctp_ifa *sctp_ifap)
 {
 	struct sctp_ifa *ifa;
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
@@ -2585,12 +2585,14 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 		return (EINVAL);
 	}
 
-	if (type == SCTP_ADD_IP_ADDRESS) {
+	if (sctp_ifap) {
+		ifa = sctp_ifap;
+	} else 	if (type == SCTP_ADD_IP_ADDRESS) {
 		/* For an add the address MUST be on the system */
 		ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	} else if (type == SCTP_DEL_IP_ADDRESS) {
-		/* For a delete we need to find it in the inp */
-		ifa = sctp_find_ifa_in_ep(inp, sa, 0);
+	    /* For a delete we need to find it in the inp */
+	    ifa = sctp_find_ifa_in_ep(inp, sa, 0);
 	} else {
 		ifa = NULL;
 	}

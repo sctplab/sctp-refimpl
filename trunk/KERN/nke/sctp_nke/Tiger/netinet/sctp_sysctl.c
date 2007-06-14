@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.9 2007/06/06 00:40:41 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.10 2007/06/13 01:31:53 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -60,11 +60,13 @@ uint32_t sctp_strict_init = 1;
 uint32_t sctp_abort_if_one_2_one_hits_limit = 0;
 uint32_t sctp_strict_data_order = 0;
 
-uint32_t sctp_peer_chunk_oh = sizeof(struct mbuf);
+uint32_t sctp_peer_chunk_oh = SCTPCTL_PEER_CHKOH_DEFAULT;
 uint32_t sctp_max_burst_default = SCTP_DEF_MAX_BURST;
 uint32_t sctp_use_cwnd_based_maxburst = 1;
 uint32_t sctp_do_drain = 1;
 uint32_t sctp_hb_maxburst = SCTP_DEF_MAX_BURST;
+uint32_t sctp_logging_level = SCTPCTL_LOGGING_LEVEL_DEFAULT;
+
 
 uint32_t sctp_max_chunks_on_queue = SCTP_ASOC_MAX_CHUNKS_ON_QUEUE;
 uint32_t sctp_delayed_sack_time_default = SCTP_RECV_MSEC;
@@ -753,6 +755,11 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, max_retran_chunk, CTLFLAG_RW,
 	   &sctp_max_retran_chunk, 0,
 	   SCTPCTL_MAX_RETRAN_CHUNK_DESC);
 
+SYSCTL_INT(_net_inet_sctp, OID_AUTO, sctp_logging, CTLFLAG_RW,
+	   &sctp_logging_level, 0,
+	   SCTPCTL_LOGGING_LEVEL_DESC);
+
+
 #ifdef SCTP_DEBUG
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
     &sctp_debug_on, 0, "Configure debug output");
@@ -761,180 +768,6 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
     &sctp_main_timer, 0, "Main timer interval in ms");
 #endif
-
-#elif defined(__OpenBSD__)
-int
-sctp_sysctl(name, namelen, oldp, oldlenp, newp, newlen)
-	int *name;
-	uint32_t namelen;
-	void *oldp;
-	size_t *oldlenp;
-	void *newp;
-	size_t newlen;
-{
-
-	/* All sysctl names at this level are terminal. */
-	if (namelen != 1)
-		return (ENOTDIR);
-	/* ?? whats this ?? sysctl_int(); */
-
-	switch (name[0]) {
-	case SCTPCTL_MAXDGRAM:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_sendspace));
-	case SCTPCTL_RECVSPACE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_recvspace));
-	case SCTPCTL_AUTOASCONF:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_auto_asconf));
-	case SCTPCTL_ECN_ENABLE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_ecn_enable));
-	case SCTPCTL_ECN_NONCE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_ecn_nonce));
-	case SCTPCTL_STRICT_SACK:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_strict_sacks));
-	case SCTPCTL_NOCSUM_LO:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_no_csum_on_loopback));
-	case SCTPCTL_STRICT_INIT:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_strict_init));
-	case SCTPCTL_PEER_CHK_OH:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_peer_chunk_oh));
-	case SCTPCTL_MAXBURST:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_max_burst_default));
-	case SCTPCTL_MAXCHUNKONQ:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_max_chunks_on_queue));
-
-	case SCTPCTL_TCBHASHSIZE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_hashtblsize));
-	case SCTPCTL_PCBHASHSIZE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_pcbtblsize));
-	case SCTPCTL_MINSPLIT:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_min_split_point));
-	case SCTPCTL_CHUNKSCALE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_chunkscale));
-	case SCTPCTL_ASOC_RESC:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_asoc_free_resc_limit));
-	case SCTPCTL_SYS_RESC:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_system_free_resc_limit));
-	case SCTPCTL_DELAYED_SACK:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_delayed_sack_time_default));
-	case SCTPCTL_SACK_FREQ:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_sack_freq_default));
-	case SCTPCTL_HB_INTERVAL:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_heartbeat_interval_default));
-	case SCTPCTL_PMTU_RAISE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_pmtu_raise_time_default));
-	case SCTPCTL_SHUTDOWN_GUARD:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_shutdown_guard_time_default));
-	case SCTPCTL_SECRET_LIFETIME:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_secret_lifetime_default));
-	case SCTPCTL_RTO_MAX:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_rto_max_default));
-	case SCTPCTL_RTO_MIN:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_rto_min_default));
-	case SCTPCTL_RTO_INITIAL:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_rto_initial_default));
-	case SCTPCTL_INIT_RTO_MAX:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_init_rto_max_default));
-	case SCTPCTL_COOKIE_LIFE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_valid_cookie_life_default));
-	case SCTPCTL_INIT_RTX_MAX:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_init_rtx_max_default));
-	case SCTPCTL_ASSOC_RTX_MAX:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_assoc_rtx_max_default));
-	case SCTPCTL_PATH_RTX_MAX:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_path_rtx_max_default));
-	case SCTPCTL_ADD_MORE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_add_more_threshold));
-	case SCTPCTL_NR_OUTGOING_STREAMS:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_nr_outgoing_streams_default));
-	case SCTPCTL_CMT_ON_OFF:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_cmt_on_off));
-	case SCTPCTL_CWND_MAXBURST:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_use_cwnd_based_maxburst));
-	case SCTPCTL_EARLY_FR:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_early_fr));
-	case SCTPCTL_DEADLOCK_DET:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_says_check_for_deadlock));
-	case SCTPCTL_EARLY_FR_MSEC:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_early_fr_msec));
-	case SCTPCTL_ASCONF_AUTH_NOCHK:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_auth_disable));
-	case SCTPCTL_AUTH_DISABLE:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_auth_disable));
-	case SCTPCTL_NAT_FRIENDLY:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_nat_friendly));
-	case SCTPCTL_ABC_L_VAR:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_L2_abc_variable));
-	case SCTPCTL_MAX_MBUF_CHAIN:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_max_mbuf_threshold_count));
-	case SCTPCTL_CMT_USE_DAC:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_cmt_use_dac));
-	case SCTPCTL_DO_DRAIN:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_do_drain));
-	case SCTPCTL_HB_MAXBURST:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_hb_maxburst));
-	case SCTPCTL_QLIMIT_ABORT:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_abort_if_one_2_one_hits_limit));
-	case SCTPCTL_STRICT_ORDER:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_strict_data_order));
-
-#ifdef SCTP_DEBUG
-	case SCTPCTL_DEBUG:
-		return (sysctl_int(oldp, oldlenp, newp, newlen,
-		    &sctp_debug_on));
-#endif
-	default:
-		return (ENOPROTOOPT);
-	}
-	/* NOTREACHED */
-}
 
 #elif defined(__NetBSD__)
 SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
@@ -1342,6 +1175,16 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 	    NULL, 0, &sctp_strict_data_order, 0,
 	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_ORDER,
 	    CTL_EOL);
+
+
+	sysctl_createv(clog, 0, NULL, NULL,
+	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
+	    CTLTYPE_INT, "sctp_logging",
+	    SYSCTL_DESCR( SCTPCTL_LOGGING_LEVEL_DESC ),
+	    NULL, 0, &sctp_logging_level, 0,
+	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_LOGGING_LEVEL,
+	    CTL_EOL);
+
 
 #ifdef SCTP_DEBUG
 	sysctl_createv(clog, 0, NULL, NULL,
