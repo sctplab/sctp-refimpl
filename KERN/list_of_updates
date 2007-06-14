@@ -2,3 +2,4 @@
 - Fix so VRF's will clean themselves up when no references are around.
 - Allow sctp_ifa to be passed into inpcb_bind, addr_mgmt_ep_sa to bypass
   normal validation checks
+- turn auto-asconf off for subset bound sockets
