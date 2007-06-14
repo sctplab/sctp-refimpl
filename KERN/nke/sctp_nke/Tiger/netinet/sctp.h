@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.12 2007/06/12 11:20:59 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.13 2007/06/13 01:31:52 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -374,6 +374,9 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PACKET_DROPPED	0x81
 /* draft-ietf-stewart-strreset-xxx */
 #define SCTP_STREAM_RESET       0x82
+
+/* RFC4820                         */
+#define SCTP_PAD_CHUNK          0x84
 /************0xc0 series ***********/
 /* RFC3758 */
 #define SCTP_FORWARD_CUM_TSN	0xc0
@@ -469,7 +472,40 @@ struct sctp_error_unrecognized_chunk {
 
 #include <netinet/sctp_uio.h>
 
+/* This dictates the size of the packet
+ * collection buffer. This only applies
+ * if SCTP_PACKET_LOGGING is enabled in
+ * your config.
+ */
 #define SCTP_PACKET_LOG_SIZE 65536
 
+/* Types of logging/KTR tracing  that can be enabled via the 
+ * sysctl net.inet.sctp.sctp_logging. You must also enable
+ * SUBSYS tracing.
+ * Note that you must have the SCTP option in the kernel
+ * to enable these as well.
+ */
+#define SCTP_BLK_LOGGING_ENABLE				0x00000001
+#define SCTP_CWND_MONITOR_ENABLE			0x00000002
+#define SCTP_CWND_LOGGING_ENABLE			0x00000004
+#define SCTP_EARLYFR_LOGGING_ENABLE			0x00000010
+#define SCTP_FLIGHT_LOGGING_ENABLE			0x00000020
+#define SCTP_FR_LOGGING_ENABLE				0x00000040
+#define SCTP_LOCK_LOGGING_ENABLE			0x00000080
+#define SCTP_MAP_LOGGING_ENABLE				0x00000100
+#define SCTP_MBCNT_LOGGING_ENABLE			0x00000200
+#define SCTP_MBUF_LOGGING_ENABLE			0x00000400
+#define SCTP_NAGLE_LOGGING_ENABLE			0x00000800
+#define SCTP_RECV_DETAIL_RWND_LOGGING_ENABLE		0x00001000
+#define SCTP_RECV_RWND_LOGGING_ENABLE			0x00002000
+#define SCTP_RTTVAR_LOGGING_ENABLE			0x00004000
+#define SCTP_SACK_LOGGING_ENABLE			0x00008000
+#define SCTP_SACK_RWND_LOGGING_ENABLE			0x00010000
+#define SCTP_SB_LOGGING_ENABLE				0x00020000
+#define SCTP_STR_LOGGING_ENABLE				0x00040000
+#define SCTP_WAKE_LOGGING_ENABLE			0x00080000
+#define SCTP_LOG_MAXBURST_ENABLE			0x00100000
+#define SCTP_LOG_RWND_ENABLE    			0x00200000
+#define SCTP_LOG_SACK_ARRIVALS_ENABLE                   0x00400000
 
 #endif				/* !_NETINET_SCTP_H_ */

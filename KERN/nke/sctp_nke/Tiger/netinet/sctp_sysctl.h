@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.5 2007/06/13 01:31:53 rrs Exp $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -103,7 +103,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs 
 #define SCTPCTL_PEER_CHKOH_DESC		"Amount to debit peers rwnd per chunk sent"
 #define SCTPCTL_PEER_CHKOH_MIN		0
 #define SCTPCTL_PEER_CHKOH_MAX		0xFFFFFFFF
-#define SCTPCTL_PEER_CHKOH_DEFAULT	0	/* sizeof struct mbuf */
+#define SCTPCTL_PEER_CHKOH_DEFAULT	256
 
 /* maxburst: Default max burst for sctp endpoints */
 #define SCTPCTL_MAXBURST		10
@@ -329,6 +329,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs 
 #define SCTPCTL_NAT_FRIENDLY_MAX	1
 #define SCTPCTL_NAT_FRIENDLY_DEFAULT	1
 
+
+
 /* abc_l_var: SCTP ABC max increase per SACK (L) */
 #define SCTPCTL_ABC_L_VAR		42
 #define SCTPCTL_ABC_L_VAR_DESC		"SCTP ABC max increase per SACK (L)"
@@ -392,19 +394,25 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs 
 #define SCTPCTL_MAX_RETRAN_CHUNK_MAX	65535
 #define SCTPCTL_MAX_RETRAN_CHUNK_DEFAULT	30
 
+/* sctp_logging: This gives us logging when the options are enabled */
+#define SCTPCTL_LOGGING_LEVEL		51
+#define SCTPCTL_LOGGING_LEVEL_DESC	"Ltrace/KTR trace logging level"
+#define SCTPCTL_LOGGING_LEVEL_MIN	0
+#define SCTPCTL_LOGGING_LEVEL_MAX	0x007fffff
+#define SCTPCTL_LOGGING_LEVEL_DEFAULT	0
 
 #ifdef SCTP_DEBUG
 /* debug: Configure debug output */
-#define SCTPCTL_DEBUG		51
+#define SCTPCTL_DEBUG		52
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
 #define SCTPCTL_DEBUG_DEFAULT	0	
 
 
-#define SCTPCTL_MAXID		    51
+#define SCTPCTL_MAXID		    52
 #else
-#define SCTPCTL_MAXID		    50
+#define SCTPCTL_MAXID		    51
 #endif
 
 /*
@@ -464,6 +472,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs 
 	{ "asoc_resource", CTLTYPE_INT }, \
 	{ "min_residual", CTLTYPE_INT }, \
 	{ "max_retran_chunk", CTLTYPE_INT }, \
+	{ "sctp_logging", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -519,6 +528,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.4 2007/05/08 17:01:11 rrs 
 	{ "asoc_resource", CTLTYPE_INT }, \
 	{ "min_residual", CTLTYPE_INT }, \
 	{ "max_retran_chunk", CTLTYPE_INT }, \
+	{ "sctp_logging", CTLTYPE_INT }, \
 }
 #endif
 
@@ -579,6 +589,7 @@ extern uint32_t sctp_abort_if_one_2_one_hits_limit;
 extern uint32_t sctp_strict_data_order;
 extern uint32_t sctp_min_residual;
 extern uint32_t sctp_max_retran_chunk;
+extern uint32_t sctp_logging_level;
 
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;

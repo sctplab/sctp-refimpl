@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.37 2007/06/12 11:20:59 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.38 2007/06/13 01:31:53 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -193,7 +193,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 			lnet->ssthresh = asoc->peers_rwnd;
 
 #if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
-			sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
+			if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
+			}
 #endif
 
 		}
@@ -243,7 +245,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
 #ifdef SCTP_MAP_LOGGING
-	sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+		sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+	}
 #endif
 	/* This is the next one we expect */
 	asoc->str_reset_seq_in = asoc->asconf_seq_in + 1;
@@ -1149,6 +1153,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				 * don't double things
 				 */
 				net->hb_responded = 1;
+				net->RTO = sctp_calculate_rto(stcb, asoc, net,
+							      &cookie->time_entered);
 
 				if (stcb->asoc.sctp_autoclose_ticks &&
 				    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
@@ -1719,9 +1725,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
-	if ((netp) && (*netp))
+	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered);
+	}
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
 }
@@ -2337,7 +2344,9 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		}
 		net->cwnd = net->ssthresh;
 #ifdef SCTP_CWND_MONITOR
-		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		}
 #endif
 		/*
 		 * we reduce once every RTT. So we will only lower cwnd at
@@ -2433,162 +2442,164 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
     struct sctp_nets *net, uint8_t flg)
 {
 	switch (desc->chunk_type) {
-		case SCTP_DATA:
+	case SCTP_DATA:
 		/* find the tsn to resend (possibly */
-		{
-			uint32_t tsn;
-			struct sctp_tmit_chunk *tp1;
+	{
+		uint32_t tsn;
+		struct sctp_tmit_chunk *tp1;
 
-			tsn = ntohl(desc->tsn_ifany);
+		tsn = ntohl(desc->tsn_ifany);
+		tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+		while (tp1) {
+			if (tp1->rec.data.TSN_seq == tsn) {
+				/* found it */
+				break;
+			}
+			if (compare_with_wrap(tp1->rec.data.TSN_seq, tsn,
+					      MAX_TSN)) {
+				/* not found */
+				tp1 = NULL;
+				break;
+			}
+			tp1 = TAILQ_NEXT(tp1, sctp_next);
+		}
+		if (tp1 == NULL) {
+			/*
+			 * Do it the other way , aka without paying
+			 * attention to queue seq order.
+			 */
+			SCTP_STAT_INCR(sctps_pdrpdnfnd);
 			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			while (tp1) {
 				if (tp1->rec.data.TSN_seq == tsn) {
 					/* found it */
 					break;
 				}
-				if (compare_with_wrap(tp1->rec.data.TSN_seq, tsn,
-				    MAX_TSN)) {
-					/* not found */
-					tp1 = NULL;
-					break;
-				}
 				tp1 = TAILQ_NEXT(tp1, sctp_next);
 			}
-			if (tp1 == NULL) {
-				/*
-				 * Do it the other way , aka without paying
-				 * attention to queue seq order.
-				 */
-				SCTP_STAT_INCR(sctps_pdrpdnfnd);
-				tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
-				while (tp1) {
-					if (tp1->rec.data.TSN_seq == tsn) {
-						/* found it */
-						break;
-					}
-					tp1 = TAILQ_NEXT(tp1, sctp_next);
-				}
-			}
-			if (tp1 == NULL) {
-				SCTP_STAT_INCR(sctps_pdrptsnnf);
-			}
-			if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
-				uint8_t *ddp;
+		}
+		if (tp1 == NULL) {
+			SCTP_STAT_INCR(sctps_pdrptsnnf);
+		}
+		if ((tp1) && (tp1->sent < SCTP_DATAGRAM_ACKED)) {
+			uint8_t *ddp;
 
-				if ((stcb->asoc.peers_rwnd == 0) &&
-				    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
-					SCTP_STAT_INCR(sctps_pdrpdiwnp);
-					return (0);
-				}
-				if (stcb->asoc.peers_rwnd == 0 &&
-				    (flg & SCTP_FROM_MIDDLE_BOX)) {
-					SCTP_STAT_INCR(sctps_pdrpdizrw);
-					return (0);
-				}
-				ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
-				    sizeof(struct sctp_data_chunk));
-				{
-					unsigned int iii;
+			if ((stcb->asoc.peers_rwnd == 0) &&
+			    ((flg & SCTP_FROM_MIDDLE_BOX) == 0)) {
+				SCTP_STAT_INCR(sctps_pdrpdiwnp);
+				return (0);
+			}
+			if (stcb->asoc.peers_rwnd == 0 &&
+			    (flg & SCTP_FROM_MIDDLE_BOX)) {
+				SCTP_STAT_INCR(sctps_pdrpdizrw);
+				return (0);
+			}
+			ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
+					   sizeof(struct sctp_data_chunk));
+			{
+				unsigned int iii;
 
-					for (iii = 0; iii < sizeof(desc->data_bytes);
-					    iii++) {
-						if (ddp[iii] != desc->data_bytes[iii]) {
-							SCTP_STAT_INCR(sctps_pdrpbadd);
-							return (-1);
-						}
+				for (iii = 0; iii < sizeof(desc->data_bytes);
+				     iii++) {
+					if (ddp[iii] != desc->data_bytes[iii]) {
+						SCTP_STAT_INCR(sctps_pdrpbadd);
+						return (-1);
 					}
 				}
-				/*
-				 * We zero out the nonce so resync not
-				 * needed
-				 */
-				tp1->rec.data.ect_nonce = 0;
+			}
+			/*
+			 * We zero out the nonce so resync not
+			 * needed
+			 */
+			tp1->rec.data.ect_nonce = 0;
 
-				if (tp1->do_rtt) {
-					/*
-					 * this guy had a RTO calculation
-					 * pending on it, cancel it
-					 */
-					tp1->do_rtt = 0;
-				}
-				SCTP_STAT_INCR(sctps_pdrpmark);
-				if (tp1->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				tp1->sent = SCTP_DATAGRAM_RESEND;
+			if (tp1->do_rtt) {
 				/*
-				 * mark it as if we were doing a FR, since
-				 * we will be getting gap ack reports behind
-				 * the info from the router.
+				 * this guy had a RTO calculation
+				 * pending on it, cancel it
 				 */
-				tp1->rec.data.doing_fast_retransmit = 1;
-				/*
-				 * mark the tsn with what sequences can
-				 * cause a new FR.
-				 */
-				if (TAILQ_EMPTY(&stcb->asoc.send_queue)) {
-					tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
-				} else {
-					tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
-				}
+				tp1->do_rtt = 0;
+			}
+			SCTP_STAT_INCR(sctps_pdrpmark);
+			if (tp1->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			tp1->sent = SCTP_DATAGRAM_RESEND;
+			/*
+			 * mark it as if we were doing a FR, since
+			 * we will be getting gap ack reports behind
+			 * the info from the router.
+			 */
+			tp1->rec.data.doing_fast_retransmit = 1;
+			/*
+			 * mark the tsn with what sequences can
+			 * cause a new FR.
+			 */
+			if (TAILQ_EMPTY(&stcb->asoc.send_queue)) {
+				tp1->rec.data.fast_retran_tsn = stcb->asoc.sending_seq;
+			} else {
+				tp1->rec.data.fast_retran_tsn = (TAILQ_FIRST(&stcb->asoc.send_queue))->rec.data.TSN_seq;
+			}
 
-				/* restart the timer */
-				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
-				sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, tp1->whoTo);
+			/* restart the timer */
+			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+					stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
+			sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+					 stcb, tp1->whoTo);
 
-				/* fix counts and things */
+			/* fix counts and things */
 #ifdef SCTP_FLIGHT_LOGGING
+			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PDRP,
 					       tp1->whoTo->flight_size,
 					       tp1->book_size, 
 					       (uintptr_t)stcb, 
 					       tp1->rec.data.TSN_seq);
+			}
 #endif
-				sctp_flight_size_decrease(tp1);
-				sctp_total_flight_decrease(stcb, tp1);
-			} {
-				/* audit code */
-				unsigned int audit;
+			sctp_flight_size_decrease(tp1);
+			sctp_total_flight_decrease(stcb, tp1);
+		} {
+			/* audit code */
+			unsigned int audit;
 
-				audit = 0;
-				TAILQ_FOREACH(tp1, &stcb->asoc.sent_queue, sctp_next) {
-					if (tp1->sent == SCTP_DATAGRAM_RESEND)
-						audit++;
-				}
-				TAILQ_FOREACH(tp1, &stcb->asoc.control_send_queue,
-				    sctp_next) {
-					if (tp1->sent == SCTP_DATAGRAM_RESEND)
-						audit++;
-				}
-				if (audit != stcb->asoc.sent_queue_retran_cnt) {
-					SCTP_PRINTF("**Local Audit finds cnt:%d asoc cnt:%d\n",
-						    audit, stcb->asoc.sent_queue_retran_cnt);
+			audit = 0;
+			TAILQ_FOREACH(tp1, &stcb->asoc.sent_queue, sctp_next) {
+				if (tp1->sent == SCTP_DATAGRAM_RESEND)
+					audit++;
+			}
+			TAILQ_FOREACH(tp1, &stcb->asoc.control_send_queue,
+				      sctp_next) {
+				if (tp1->sent == SCTP_DATAGRAM_RESEND)
+					audit++;
+			}
+			if (audit != stcb->asoc.sent_queue_retran_cnt) {
+				SCTP_PRINTF("**Local Audit finds cnt:%d asoc cnt:%d\n",
+					    audit, stcb->asoc.sent_queue_retran_cnt);
 #ifndef SCTP_AUDITING_ENABLED
-					stcb->asoc.sent_queue_retran_cnt = audit;
+				stcb->asoc.sent_queue_retran_cnt = audit;
 #endif
-				}
 			}
 		}
-		break;
+	}
+	break;
 	case SCTP_ASCONF:
-		{
-			struct sctp_tmit_chunk *asconf;
+	{
+		struct sctp_tmit_chunk *asconf;
 
-			TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
-			    sctp_next) {
-				if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
-					break;
-				}
-			}
-			if (asconf) {
-				if (asconf->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				asconf->sent = SCTP_DATAGRAM_RESEND;
-				asconf->snd_count--;
+		TAILQ_FOREACH(asconf, &stcb->asoc.control_send_queue,
+			      sctp_next) {
+			if (asconf->rec.chunk_id.id == SCTP_ASCONF) {
+				break;
 			}
 		}
-		break;
+		if (asconf) {
+			if (asconf->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			asconf->sent = SCTP_DATAGRAM_RESEND;
+			asconf->snd_count--;
+		}
+	}
+	break;
 	case SCTP_INITIATION:
 		/* resend the INIT */
 		stcb->asoc.dropped_special_cnt++;
@@ -2598,7 +2609,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			 * this, otherwise we let the timer fire.
 			 */
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep,
-			    stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
+					stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
 			sctp_send_initiate(stcb->sctp_ep, stcb);
 		}
 		break;
@@ -2617,24 +2628,24 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		sctp_send_shutdown_ack(stcb, net);
 		break;
 	case SCTP_COOKIE_ECHO:
-		{
-			struct sctp_tmit_chunk *cookie;
+	{
+		struct sctp_tmit_chunk *cookie;
 
-			cookie = NULL;
-			TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
-			    sctp_next) {
-				if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
-					break;
-				}
-			}
-			if (cookie) {
-				if (cookie->sent != SCTP_DATAGRAM_RESEND)
-					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-				cookie->sent = SCTP_DATAGRAM_RESEND;
-				sctp_stop_all_cookie_timers(stcb);
+		cookie = NULL;
+		TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue,
+			      sctp_next) {
+			if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
+				break;
 			}
 		}
-		break;
+		if (cookie) {
+			if (cookie->sent != SCTP_DATAGRAM_RESEND)
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			cookie->sent = SCTP_DATAGRAM_RESEND;
+			sctp_stop_all_cookie_timers(stcb);
+		}
+	}
+	break;
 	case SCTP_COOKIE_ACK:
 		sctp_send_cookie_ack(stcb);
 		break;
@@ -3429,8 +3440,10 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 #ifdef SCTP_CWND_MONITOR
 		if (net->cwnd - old_cwnd != 0) {
 			/* log only changes */
-			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
-			    SCTP_CWND_LOG_FROM_SAT);
+			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+				sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
+					      SCTP_CWND_LOG_FROM_SAT);
+			}
 		}
 #endif
 	}
@@ -3684,13 +3697,17 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-		} else if (ch->chunk_type == SCTP_COOKIE_ECHO) {
+		} else {
+			/* For cookies and all other chunks.
+			 * if the 
+			 */
 			if (chk_length > sizeof(chunk_buf)) {
 				/* use just the size of the chunk buffer
-				 * so the front part of our cookie is intact.
-				 * The rest of cookie processing should use
-				 * the sctp_m_getptr() function to access the
-				 * other parts.
+				 * so the front part of our chunks fit in
+				 * contiguous space up to the chunk buffer size (508 bytes).
+				 * For chunks that need to get more than that they mus
+				 * use the sctp_m_getptr() function or other means (know
+				 * how to parse mbuf chains). Cookies do this already.
 				 */
 				ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 									   (sizeof(chunk_buf) - 4), 
@@ -3704,44 +3721,16 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			} else {
 				/* We can fit it all */
-				goto all_fits;
-			}
-		} else {
-			/* get a complete chunk... */
-			if (chk_length > sizeof(chunk_buf)) {
-				struct mbuf *oper;
-				struct sctp_paramhdr *phdr;
-
-				oper = NULL;
-				if (stcb) {
-					oper = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-								     0, M_DONTWAIT, 1, MT_DATA);
-
-					if (oper) {
-						/* pre-reserve some space */
-						SCTP_BUF_RESV_UF(oper, sizeof(struct sctp_chunkhdr));
-						SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr);
-						phdr = mtod(oper, struct sctp_paramhdr *);
-						phdr->param_type = htons(SCTP_CAUSE_OUT_OF_RESC);
-						phdr->param_length = htons(sizeof(struct sctp_paramhdr));
-						sctp_queue_op_err(stcb, oper);
-					}
-				}
-				if (locked_tcb) {
-					SCTP_TCB_UNLOCK(locked_tcb);
-				}
-				return (NULL);
-			}
-		all_fits:
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
+				ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   chk_length, chunk_buf);
-			if (ch == NULL) {
-				SCTP_PRINTF("sctp_process_control: Can't get the all data....\n");
-				*offset = length;
-				if (locked_tcb) {
-					SCTP_TCB_UNLOCK(locked_tcb);
+				if (ch == NULL) {
+					SCTP_PRINTF("sctp_process_control: Can't get the all data....\n");
+					*offset = length;
+					if (locked_tcb) {
+						SCTP_TCB_UNLOCK(locked_tcb);
+					}
+					return (NULL);
 				}
-				return (NULL);
 			}
 		}
 		num_chunks++;
@@ -3820,6 +3809,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_TCB_UNLOCK(locked_tcb);
 			}
 			return (NULL);
+			break;
+		case SCTP_PAD_CHUNK:
 			break;
 		case SCTP_INITIATION_ACK:
 			/* must be first and only chunk */
@@ -4850,7 +4841,7 @@ sctp_input(i_pak, va_alist)
 #endif
 	m = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__
-    /* Free the pak header as we already have the data chain */
+	/* Free the pak header as we already have the data chain */
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
 	(void)SCTP_RELEASE_HEADER(i_pak);
@@ -4863,12 +4854,14 @@ sctp_input(i_pak, va_alist)
 
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
-	mat = m;
-	while(mat) {
-		if(SCTP_BUF_IS_EXTENDED(mat)) {
-			sctp_log_mb(mat, SCTP_MBUF_INPUT);
+	if(sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+		mat = m;
+		while(mat) {
+			if(SCTP_BUF_IS_EXTENDED(mat)) {
+				sctp_log_mb(mat, SCTP_MBUF_INPUT);
+			}
+			mat = SCTP_BUF_NEXT(mat);
 		}
-		mat = SCTP_BUF_NEXT(mat);
 	}
 #endif
 #ifdef  SCTP_PACKET_LOGGING
@@ -5106,7 +5099,7 @@ sctp_input(i_pak, va_alist)
 	s = splsoftnet();
 #endif
 
-    /*sa_ignore NO_NULL_CHK*/
+	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 				     inp, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */

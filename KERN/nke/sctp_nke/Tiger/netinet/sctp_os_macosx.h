@@ -108,6 +108,9 @@ extern struct fileops socketops;
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+/* Empty ktr statement for mac */
+#define	CTR6(m, d, p1, p2, p3, p4, p5, p6)
+
 /*
  * debug macro
  */
