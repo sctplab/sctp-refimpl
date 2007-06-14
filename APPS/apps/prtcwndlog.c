@@ -1086,12 +1086,16 @@ main(int argc, char **argv)
 	char buffer[512];
 	FILE *infile;
 	char *logfile=NULL, *ep=NULL, *nep=NULL;
-	char *logtype, *from, *log1, *log2, *log3, *log4;
+	char *logtype, *from, *log1, *log2, *log3, *log4, *sctp;
+	int quiet=0;
 	int seq, cnt=0;
 	struct sctp_cwnd_log log;
-	while((i= getopt(argc,argv,"l:sgc:rRa:")) != EOF)
+	while((i= getopt(argc,argv,"l:sgc:rRa:q")) != EOF)
 	{
 		switch(i) {
+		case 'q':
+			quiet = 1;
+			break;
 		case 'r':
 			time_relative = 1;
 			break;
@@ -1138,14 +1142,11 @@ main(int argc, char **argv)
 	} else {
 		infile = fopen(logfile,"r");
 	}
-	if(logfile == NULL) {
+	if(infile == NULL) {
 		printf("Can't open file %d\n",errno);	
 		return(3);
 	}
 	at = 0;
-	if(log.from >=  FROM_STRING_MAX)
-		log.from = FROM_STRING_MAX;
-
 	if(stat_only) {
 		memset(cnt_type,0, sizeof(cnt_type));
 		memset(cnt_event,0, sizeof(cnt_type));
@@ -1157,29 +1158,41 @@ main(int argc, char **argv)
 		seq = strtol(buffer, &ep, 0);
 		if(ep == NULL) {
 			/* ignore line */
-			printf("Skipping line %d no seq number\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no seq number\n", cnt);
 			continue;
 		}
 		log.time_event =  strtoull(ep, &nep, 0);
 		if (nep == NULL) {
 			/* No 64 bit value there */
-			printf("Skipping line %d no 64 bit ts\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no 64 bit ts\n", cnt);
 			continue;
 		}
-		logtype = strtok(nep, "[");
+		sctp = strtok(nep, "SCTP:");
+		if(sctp == NULL) {
+			if(quiet == 0) printf("Skipping line %d no SCTP:\n", cnt);
+			continue;
+		}
+		sctp = strtok(NULL, ":");
+		if(sctp == NULL) {
+			if(quiet == 0) printf("Skipping line %d no SCTP:\n", cnt);
+			continue;
+		}
+	
+		logtype = strtok(NULL, "[");
 		if(logtype == NULL) {
-			printf("Skipping line %d no logtype\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no logtype\n", cnt);
 			continue;
 		}
+
 		from = strtok(NULL, "]");
 		if(from == NULL) {
-			printf("Skipping line %d no from\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no from\n", cnt);
 			continue;
 		}
 		log1 = strtok(NULL, "-");
 		if(log1 == NULL) {
 		out:
-			printf("Skipping line %d no log1 skip\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no log1 skip\n", cnt);
 			continue;
 		}
 		if(log1[0] != ':') {
@@ -1188,17 +1201,17 @@ main(int argc, char **argv)
 		log1++;
 		log2 = strtok(NULL, "-");
 		if(log2 == NULL) {
-			printf("Skipping line %d no log2\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no log2\n", cnt);
 			continue;
 		}
 		log3 = strtok(NULL, "-");
 		if(log3 == NULL) {
-			printf("Skipping line %d no log3\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no log3\n", cnt);
 			continue;
 		}
 		log4 = strtok(NULL, "\n");
 		if(log4 == NULL) {
-			printf("Skipping line %d no log3\n", cnt);
+			if(quiet == 0) printf("Skipping line %d no log4\n", cnt);
 			continue;
 		}
 		log.from = (u_int8_t)strtoul(from, NULL, 0);
