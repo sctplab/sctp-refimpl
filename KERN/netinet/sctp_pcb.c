@@ -2976,12 +2976,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
 		/* allow bindx() to send ASCONF's for binding changes */
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
-		/* set the automatic addr changes from kernel flag */
-		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
-		} else {
-			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
-		}
+		/* clear automatic addr changes from kernel flag */
+		sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa, 0);
