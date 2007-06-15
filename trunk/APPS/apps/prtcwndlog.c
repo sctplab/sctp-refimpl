@@ -1066,11 +1066,6 @@ print_event_fr(struct sctp_cwnd_log *log)
 		       (u_int)log->x.fr.largest_new_tsn,
 		       (u_int)log->x.fr.tsn);
 	}
-
-#define SCTP_FR_T3_MARKED           27
-#define SCTP_FR_T3_STOPPED          28
-#define SCTP_FR_MARKED              30
-
 }
 
 static void
