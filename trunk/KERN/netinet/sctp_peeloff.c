@@ -47,10 +47,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.11 2007/06/14 22:59:02 rr
 #include <netinet/sctputil.h>
 #include <netinet/sctp_auth.h>
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif				/* SCTP_DEBUG */
-
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 5
 #endif
