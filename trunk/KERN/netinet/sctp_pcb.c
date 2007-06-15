@@ -2276,6 +2276,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
+#if defined(__FreeBSD__)
+	INP_LOCK_INIT(&inp.ip_inp.inp, "inp", "sctpinp");
+#endif
 	SCTP_INP_READ_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
