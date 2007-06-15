@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.32 2007/06/12 11:20:59 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.33 2007/06/14 22:59:03 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -175,7 +175,6 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			chk->rec.data.doing_fast_retransmit = 0;
-#ifdef SCTP_FLIGHT_LOGGING
 			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
 					       chk->whoTo->flight_size,
@@ -183,7 +182,6 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 					       (uintptr_t)chk->whoTo, 
 					       chk->rec.data.TSN_seq);
 			}
-#endif
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
 			sctp_flight_size_decrease(chk);

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.21 2007/06/13 01:31:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.22 2007/06/14 22:59:02 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -233,8 +233,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.21 2007/06/13 01:31:52 
 #define SCTP_LOG_MISC_EVENT 15 
 #define SCTP_LOG_EVENT_CLOSE 16
 #define SCTP_LOG_EVENT_MBUF 17
+#define SCTP_LOG_CHUNK_PROC 18
+#define SCTP_LOG_ERROR_RET  19
 
-#define SCTP_LOG_MAX_EVENT 18
+#define SCTP_LOG_MAX_EVENT 20
 
 #define SCTP_LOCK_UNKNOWN 2
 

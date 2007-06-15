@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.16 2007/06/08 10:57:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.18 2007/06/15 03:16:48 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -1727,6 +1727,12 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	LIST_FOREACH(l, &asc->list_of_work, sctp_nxt_addr) {
 		ifa = l->ifa;
 		type = l->action;
+
+		/* address's vrf_id must be the vrf_id of the assoc */
+		if (ifa->vrf_id != stcb->asoc.vrf_id) {
+			continue;
+		}
+		
 		/* Same checks again for assoc */
 		if (ifa->address.sa.sa_family == AF_INET6) {
 			/* invalid if we're not a v6 endpoint */

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.20 2007/06/13 01:31:53 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.21 2007/06/14 22:59:03 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -129,12 +129,10 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 					continue;
 				}
 			}
-#ifdef SCTP_EARLYFR_LOGGING
 			if(sctp_logging_level & SCTP_EARLYFR_LOGGING_ENABLE) {
 				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 					    4, SCTP_FR_MARKED_EARLY);
 			}
-#endif
 			SCTP_STAT_INCR(sctps_earlyfrmrkretrans);
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
@@ -148,11 +146,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		}
 	}
 	if (cnt) {
-#ifdef SCTP_CWND_MONITOR
 		int old_cwnd;
 
 		old_cwnd = net->cwnd;
-#endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 		/*
 		 * make a small adjustment to cwnd and force to CA.
@@ -164,11 +160,9 @@ sctp_early_fr_timer(struct sctp_inpcb *inp,
 		if (net->cwnd < net->ssthresh)
 			/* still in SS move to CA */
 			net->ssthresh = net->cwnd - 1;
-#ifdef SCTP_CWND_MONITOR
 		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
 		}
-#endif
 	} else if (cnt_resend) {
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
 	}
@@ -412,10 +406,8 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 	}
 	if ((win_probe == 0) && num_marked) {
 		/* We don't apply penalty to window probe scenarios */
-#ifdef SCTP_CWND_MONITOR
 		int old_cwnd = net->cwnd;
 
-#endif
 		net->ssthresh = net->cwnd >> 1;
 		if (net->ssthresh < (net->mtu << 1)) {
 			net->ssthresh = (net->mtu << 1);
@@ -424,11 +416,9 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 		/* floor of 1 mtu */
 		if (net->cwnd < net->mtu)
 			net->cwnd = net->mtu;
-#ifdef SCTP_CWND_MONITOR
 		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, net->cwnd - old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 		}
-#endif
 
 		net->partial_bytes_acked = 0;
 	}
@@ -487,7 +477,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	/* get cur rto in micro-seconds */
 	cur_rtt = (((net->lastsa >> 2) + net->lastsv) >> 1);
 	cur_rtt *= 1000;
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 		sctp_log_fr(cur_rtt,
 			    stcb->asoc.peers_rwnd,
@@ -499,7 +488,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			    SCTP_FR_CWND_REPORT);
 		sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 	}
-#endif
 	tv.tv_sec = cur_rtt / 1000000;
 	tv.tv_usec = cur_rtt % 1000000;
 #ifndef __FreeBSD__
@@ -517,12 +505,10 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 		sctp_log_fr(cur_rtt, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 		sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 	}
-#endif
 	/*
 	 * Our rwnd will be incorrect here since we are not adding back the
 	 * cnt * mbuf but we will fix that down below.
@@ -555,28 +541,24 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 */
 
 			/* validate its been outstanding long enough */
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 			if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 				sctp_log_fr(chk->rec.data.TSN_seq,
 					    chk->sent_rcv_time.tv_sec,
 					    chk->sent_rcv_time.tv_usec,
 					    SCTP_FR_T3_MARK_TIME);
 			}
-#endif
 			if ((chk->sent_rcv_time.tv_sec > min_wait.tv_sec) && (window_probe == 0)) {
 				/*
 				 * we have reached a chunk that was sent
 				 * some seconds past our min.. forget it we
 				 * will find no more to send.
 				 */
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 					sctp_log_fr(0,
 						    chk->sent_rcv_time.tv_sec,
 						    chk->sent_rcv_time.tv_usec,
 						    SCTP_FR_T3_STOPPED);
 				}
-#endif
 				continue;
 			} else if ((chk->sent_rcv_time.tv_sec == min_wait.tv_sec) &&
 				   (window_probe == 0)) {
@@ -589,14 +571,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					 * ok it was sent after our boundary
 					 * time.
 					 */
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 					if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 						sctp_log_fr(0,
 							    chk->sent_rcv_time.tv_sec,
 							    chk->sent_rcv_time.tv_usec,
 							    SCTP_FR_T3_STOPPED);
 					}
-#endif
 					continue;
 				}
 			}
@@ -635,13 +615,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					tsnfirst = chk->rec.data.TSN_seq;
 				}
 				tsnlast = chk->rec.data.TSN_seq;
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 				if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 					sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 						    0, SCTP_FR_T3_MARKED);
 				}
 
-#endif
 				if(chk->rec.data.chunk_was_revoked) {
 					/* deflate the cwnd */
 					chk->whoTo->cwnd -= chk->book_size;
@@ -649,7 +627,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				}
 				net->marked_retrans++;
 				stcb->asoc.marked_retrans++;
-#ifdef SCTP_FLIGHT_LOGGING
 				if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO, 
 						       chk->whoTo->flight_size,
@@ -657,7 +634,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						       (uintptr_t)chk->whoTo, 
 						       chk->rec.data.TSN_seq);
 				}
-#endif
 				sctp_flight_size_decrease(chk);
 				sctp_total_flight_decrease(stcb, chk);
 				stcb->asoc.peers_rwnd += chk->send_size;
@@ -701,11 +677,9 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		audit_tf = 1;
 	}
 
-#if defined(SCTP_FR_LOGGING) || defined(SCTP_EARLYFR_LOGGING)
 	if(sctp_logging_level & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
 		sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 	}
-#endif
 #ifdef SCTP_DEBUG
 	if (num_mk) {
 		SCTPDBG(SCTP_DEBUG_TIMER1, "LAST TSN marked was %x\n",
@@ -763,7 +737,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		}
 		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
-#ifdef SCTP_FLIGHT_LOGGING
 				if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 					sctp_misc_ints(SCTP_FLIGHT_LOG_UP, 
 						       chk->whoTo->flight_size,
@@ -771,7 +744,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						       (uintptr_t)chk->whoTo, 
 						       chk->rec.data.TSN_seq);
 				}
-#endif
 
 				sctp_flight_size_increase(chk);
 				sctp_total_flight_increase(stcb, chk);
@@ -850,11 +822,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
-#ifdef SCTP_FR_LOGGING
 	if(sctp_logging_level & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
 	}
-#ifdef SCTP_CWND_LOGGING
 	if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
 		struct sctp_nets *lnet;
 
@@ -866,8 +836,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
-#endif
-#endif
 	/* Find an alternate and mark those for retransmission */
 	if ((stcb->asoc.peers_rwnd == 0) &&
 	    (stcb->asoc.total_flight < net->mtu)) {
@@ -1022,11 +990,9 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			}
 		}
 	}
-#ifdef SCTP_CWND_MONITOR
 	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, net->cwnd, SCTP_CWND_LOG_FROM_RTX);
 	}
-#endif
 	return (0);
 }
 
