@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.38 2007/06/13 01:31:53 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.39 2007/06/14 22:59:02 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -192,11 +192,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
 
-#if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 			if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 			}
-#endif
 
 		}
 	}
@@ -244,11 +242,9 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
-#ifdef SCTP_MAP_LOGGING
 	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
 		sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 	}
-#endif
 	/* This is the next one we expect */
 	asoc->str_reset_seq_in = asoc->asconf_seq_in + 1;
 
@@ -2330,11 +2326,9 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		net = stcb->asoc.primary_destination;
 
 	if (compare_with_wrap(tsn, stcb->asoc.last_cwr_tsn, MAX_TSN)) {
-#ifdef SCTP_CWND_MONITOR
 		int old_cwnd;
 
 		old_cwnd = net->cwnd;
-#endif
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = net->cwnd / 2;
 		if (net->ssthresh < net->mtu) {
@@ -2343,11 +2337,9 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 			net->RTO <<= 1;
 		}
 		net->cwnd = net->ssthresh;
-#ifdef SCTP_CWND_MONITOR
 		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 		}
-#endif
 		/*
 		 * we reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the resync_tsn.
@@ -2547,7 +2539,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					 stcb, tp1->whoTo);
 
 			/* fix counts and things */
-#ifdef SCTP_FLIGHT_LOGGING
 			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PDRP,
 					       tp1->whoTo->flight_size,
@@ -2555,7 +2546,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					       (uintptr_t)stcb, 
 					       tp1->rec.data.TSN_seq);
 			}
-#endif
 			sctp_flight_size_decrease(tp1);
 			sctp_total_flight_decrease(stcb, tp1);
 		} {
@@ -3197,7 +3187,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct sctp_stream_reset_out_req
  */
 static void
 sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
-    struct sctp_tcb *stcb, struct sctp_nets *net)
+    struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t limit)
 {
 	uint32_t bottle_bw, on_queue;
 	uint16_t trunc_len;
@@ -3220,6 +3210,10 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		memset(&desc, 0, sizeof(desc));
 	}
 	trunc_len = (uint16_t) ntohs(cp->trunc_len);
+	if(trunc_len > limit) {
+		trunc_len = limit;
+	}
+	
 	/* now the chunks themselves */
 	while ((ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr))) {
 		desc.chunk_type = ch->chunk_type;
@@ -3339,10 +3333,8 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		uint32_t bw_avail;
 		int rtt, incr;
 
-#ifdef SCTP_CWND_MONITOR
 		int old_cwnd = net->cwnd;
 
-#endif
 		/* need real RTT for this calc */
 		rtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 		/* get bottle neck bw */
@@ -3437,7 +3429,6 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 			/* We always have 1 MTU */
 			net->cwnd = net->mtu;
 		}
-#ifdef SCTP_CWND_MONITOR
 		if (net->cwnd - old_cwnd != 0) {
 			/* log only changes */
 			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
@@ -3445,7 +3436,6 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 					      SCTP_CWND_LOG_FROM_SAT);
 			}
 		}
-#endif
 	}
 }
 
@@ -3671,6 +3661,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		chk_length = ntohs(ch->chunk_length);
 		SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_process_control: processing a chunk type=%u, len=%u\n", 
 			ch->chunk_type, chk_length);
+		SCTP_LTRACE_CHK(inp, stcb, ch->chunk_type, chk_length);
 		if (chk_length < sizeof(*ch) ||
 		    (*offset + (int)chk_length) > length) {
 			*offset = length;
@@ -4248,8 +4239,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_STREAM_RESET:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_STREAM_RESET\n");
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
-								   chk_length, chunk_buf);
 			if (((stcb == NULL) ||(ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req)))) {
 				/* Its not ours */
 				if (locked_tcb) {
@@ -4291,12 +4280,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
-								   chk_length, chunk_buf);
 
 			if (ch && (stcb) && netp && (*netp)){
 				sctp_handle_packet_dropped((struct sctp_pktdrop_chunk *)ch,
-							   stcb, *netp);
+							   stcb, *netp,
+							   min(chk_length, (sizeof(chunk_buf) - 4)));
+
 			}
 
 			break;
@@ -4330,8 +4319,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				/* skip this chunk... it's already auth'd */
 				goto next_chunk;
 			}
-			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
-								   chk_length, chunk_buf);
 			got_auth = 1;
 			if ((ch == NULL) || sctp_handle_auth(stcb, (struct sctp_auth_chunk *)ch,
 							     m, *offset)) {

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.38 2007/06/13 01:31:53 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.40 2007/06/15 03:16:48 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -422,7 +422,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 	memset(sctp_ifap, 0, sizeof(struct sctp_ifa));
 	sctp_ifap->ifn_p = sctp_ifnp;
 	atomic_add_int(&sctp_ifnp->refcount, 1);
-
+	sctp_ifap->vrf_id = vrf_id;
 	sctp_ifap->ifa = ifa;
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 	sctp_ifap->localifa_flags = SCTP_ADDR_VALID | SCTP_ADDR_DEFER_USE;
@@ -2976,12 +2976,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUNDALL;
 		/* allow bindx() to send ASCONF's for binding changes */
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
-		/* set the automatic addr changes from kernel flag */
-		if (sctp_auto_asconf == 0) {
-			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
-		} else {
-			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
-		}
+		/* clear automatic addr changes from kernel flag */
+		sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 
 		/* add this address to the endpoint list */
 		error = sctp_insert_laddr(&inp->sctp_addr_list, ifa, 0);
@@ -3954,11 +3950,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	sctp_set_initial_cc_param(stcb, net);
 
 
-#if defined(SCTP_CWND_MONITOR) || defined(SCTP_CWND_LOGGING)
 	if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
 	}
-#endif
 
 	/*
 	 * CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning

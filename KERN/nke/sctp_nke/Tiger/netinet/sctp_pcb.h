@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.21 2007/06/02 11:05:08 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.23 2007/06/15 03:16:48 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -111,6 +111,7 @@ struct sctp_ifa {
 	uint32_t refcount;	/* number of folks refering to this */
      	uint32_t flags;
 	uint32_t localifa_flags;
+	uint32_t vrf_id;	/* vrf_id of this addr (for deleting) */
 	uint8_t src_is_loop;
 	uint8_t src_is_priv;
 	uint8_t src_is_glob;
