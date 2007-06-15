@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.h,v 1.7 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.h,v 1.8 2007/06/15 17:59:57 rrs Exp $");
 #endif
 
 #ifndef __sctp_indata_h__
@@ -98,7 +98,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			 uint32_t rwnd, int nonce_sum_flag, int *abort_now);
 
 void
-sctp_handle_sack(struct sctp_sack_chunk *, struct sctp_tcb *,
+sctp_handle_sack(struct mbuf *m, int offset, struct sctp_sack_chunk *, struct sctp_tcb *,
 		 struct sctp_nets *, int *, int, uint32_t);
 
 /* draft-ietf-tsvwg-usctp */

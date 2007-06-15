@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.39 2007/06/14 22:59:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.41 2007/06/15 19:28:58 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3689,16 +3689,17 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 		} else {
-			/* For cookies and all other chunks.
-			 * if the 
-			 */
+			/* For cookies and all other chunks. */
 			if (chk_length > sizeof(chunk_buf)) {
-				/* use just the size of the chunk buffer
+				/*
+				 * use just the size of the chunk buffer
 				 * so the front part of our chunks fit in
-				 * contiguous space up to the chunk buffer size (508 bytes).
-				 * For chunks that need to get more than that they mus
-				 * use the sctp_m_getptr() function or other means (know
-				 * how to parse mbuf chains). Cookies do this already.
+				 * contiguous space up to the chunk buffer
+				 * size (508 bytes).
+				 * For chunks that need to get more than that
+				 * they must use the sctp_m_getptr() function
+				 * or other means (e.g. know how to parse mbuf
+				 * chains). Cookies do this already.
 				 */
 				ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 									   (sizeof(chunk_buf) - 4), 
@@ -3895,7 +3896,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								 &abort_now);
 				} else {
 					if(netp && *netp)
-						sctp_handle_sack(sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+						sctp_handle_sack(m, *offset, 
+								 sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
