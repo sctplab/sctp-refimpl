@@ -169,7 +169,7 @@ sctp6_input(i_pak, offp, proto)
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
 	pkt_len = SCTP_HEADER_LEN((*i_pak));
 #ifdef __Panda__
-    /* We dont need the pak hdr, free it */
+	/* We dont need the pak hdr, free it */
 	/* For BSD/MAC this does nothing */
 	SCTP_DETACH_HEADER_FROM_CHAIN(*i_pak);
 	(void)SCTP_RELEASE_HEADER(*i_pak);
@@ -532,10 +532,9 @@ sctp6_ctlinput(cmd, pktdst, d)
 	int s;
 #endif
 	int cm;
+
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__)
 	vrf_id = SCTP_DEFAULT_VRFID;
-#else
-	vrf_id = panda_get_vrf_from_call(); /* from connectx call? */
 #endif
 
 	if (pktdst->sa_family != AF_INET6 ||
