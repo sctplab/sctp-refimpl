@@ -3895,7 +3895,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 								 &abort_now);
 				} else {
 					if(netp && *netp)
-						sctp_handle_sack(sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+						sctp_handle_sack(m, *offset, 
+								 sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
