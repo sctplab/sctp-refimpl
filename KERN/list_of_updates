@@ -1,8 +1,1 @@
-- Fix so ifn's are properly deleted when the ref count goes to 0.
-- Fix so VRF's will clean themselves up when no references are around.
-- Allow sctp_ifa to be passed into inpcb_bind, addr_mgmt_ep_sa to bypass
-  normal validation checks
-- turn auto-asconf off for subset bound sockets
-- Moves all logging to use KTR. This gets rid of most
-  of the logging #ifdef's with a few exceptions reducing
-  the number of config options for SCTP.
+-
