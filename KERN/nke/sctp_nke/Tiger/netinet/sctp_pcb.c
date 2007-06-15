@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.40 2007/06/15 03:16:48 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.41 2007/06/15 19:28:58 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2276,6 +2276,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
+#if defined(__FreeBSD__)
+	INP_LOCK_INIT(&inp->ip_inp.inp, "inp", "sctpinp");
+#endif
 	SCTP_INP_READ_INIT(inp);
 	SCTP_ASOC_CREATE_LOCK_INIT(inp);
 	/* lock the new ep */
@@ -3608,6 +3611,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->sctp_tcbhash = NULL;
 	}
 	/* Now we must put the ep memory back into the zone pool */
+#if defined(__FreeBSD__)
+	INP_LOCK_DESTROY(&inp->ip_inp.inp);
+#endif
 	SCTP_INP_LOCK_DESTROY(inp);
 	SCTP_INP_READ_DESTROY(inp);
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
