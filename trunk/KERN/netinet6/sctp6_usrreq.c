@@ -190,7 +190,7 @@ sctp6_input(i_pak, offp, proto)
 	iphlen = off;
 	offset = iphlen + sizeof(*sh) + sizeof(*ch);
 	SCTPDBG(SCTP_DEBUG_INPUT1,
-		"sctp6_input() length:%d iphlen:%d", pkt_len, iphlen);
+		"sctp6_input() length:%d iphlen:%d\n", pkt_len, iphlen);
 
 
 #if defined(NFAITH) && NFAITH > 0
