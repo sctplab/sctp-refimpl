@@ -189,6 +189,9 @@ sctp6_input(i_pak, offp, proto)
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
 	iphlen = off;
 	offset = iphlen + sizeof(*sh) + sizeof(*ch);
+	SCTPDBG(SCTP_DEBUG_INPUT1,
+		"sctp6_input() length:%d iphlen:%d", pkt_len, iphlen);
+
 
 #if defined(NFAITH) && NFAITH > 0
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version <= 430000
