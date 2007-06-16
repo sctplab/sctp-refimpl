@@ -9822,7 +9822,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		 */
 		return;
 	}
-	if(stcb->sctp_socket == NULL) {
+	if (stcb->sctp_socket == NULL) {
 		return;
 	}
 	sctp_alloc_a_chunk(stcb, chk);
@@ -9832,6 +9832,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->copy_by_ref = 0;
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	if (iph->ip_v == IPVERSION) {
