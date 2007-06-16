@@ -9811,7 +9811,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int len;
 	int was_trunc=0;
 	struct ip *iph;
-	int fullsz=0, trimby=0;
+	int fullsz=0, extra=0;
 	long spc;
 
 	asoc = &stcb->asoc;
@@ -9841,6 +9841,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		len = chk->send_size = iph->ip_len;
 #else
 		len = chk->send_size = (iph->ip_len - iphlen);
+		extra = iphlen;
 #endif
 	} else {
 		struct ip6_hdr *ip6h;
@@ -9854,10 +9855,8 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* only send 1 mtu worth, trim off the
 		 * excess on the end.
 		 */
-		fullsz = len+SCTP_MAX_OVERHEAD;
+		fullsz = len - extra;
 		len = min(stcb->asoc.smallest_mtu,MCLBYTES) - SCTP_MAX_OVERHEAD;
-		trimby = len - fullsz;
-		m_adj(m, trimby);
 		was_trunc = 1;
 	}
 	chk->asoc = &stcb->asoc;
@@ -9883,7 +9882,7 @@ jump_out:
 		/* Len is already adjusted to size minus overhead above 
 		 * take out the pkt_drop chunk itself from it.
 		 */
-		chk->send_size = len -  sizeof(struct sctp_pktdrop_chunk);
+		chk->send_size = len - sizeof(struct sctp_pktdrop_chunk);
 		len = chk->send_size;
 	} else {
 		/* no truncation needed */

@@ -4879,7 +4879,7 @@ sctp_input(i_pak, va_alist)
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 	SCTPDBG(SCTP_DEBUG_INPUT1,
-		"sctp_input() length:%d iphlen:%d", mlen, iphlen);
+		"sctp_input() length:%d iphlen:%d\n", mlen, iphlen);
 
 	/* SCTP does not allow broadcasts or multicasts */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
