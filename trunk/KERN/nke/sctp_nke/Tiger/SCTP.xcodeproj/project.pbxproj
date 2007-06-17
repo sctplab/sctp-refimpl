@@ -292,7 +292,6 @@
 				50D42EF806D8C0DF004DAC5C /* sctp_indata.c */,
 				50D42EF906D8C0DF004DAC5C /* sctp_indata.h */,
 				50D42EFA06D8C0DF004DAC5C /* sctp_input.c */,
-				50D42EFB06D8C0DF004DAC5C /* sctp_input.h */,
 				50D42EFC06D8C0DF004DAC5C /* sctp_output.c */,
 				50D42EFD06D8C0DF004DAC5C /* sctp_output.h */,
 				500CFAD10AF33FEC002D28C1 /* sctp_lock_apple_fg.h */,
@@ -302,6 +301,7 @@
 				50D42F0106D8C0DF004DAC5C /* sctp_peeloff.h */,
 				50D42F0406D8C0DF004DAC5C /* sctp_structs.h */,
 				507ED5B90AEE0CA8005037C4 /* sctp_bsd_addr.c */,
+				50D42EFB06D8C0DF004DAC5C /* sctp_input.h */,
 				507ED5BA0AEE0CA8005037C4 /* sctp_bsd_addr.h */,
 				50D42F0506D8C0DF004DAC5C /* sctp_timer.c */,
 				50D42F0606D8C0DF004DAC5C /* sctp_timer.h */,
@@ -619,6 +619,11 @@
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_TYPECHECK_CALLS_TO_PRINTF = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
+				GCC_WARN_UNUSED_FUNCTION = NO;
+				GCC_WARN_UNUSED_LABEL = NO;
+				GCC_WARN_UNUSED_PARAMETER = NO;
+				GCC_WARN_UNUSED_VALUE = NO;
+				GCC_WARN_UNUSED_VARIABLE = NO;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(SYSTEM_LIBRARY_DIR)/Extensions";
@@ -626,6 +631,7 @@
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
 				MODULE_VERSION = 4.1.0;
+				OTHER_CFLAGS = "$(inherited)";
 				PRODUCT_NAME = SCTP;
 				WRAPPER_EXTENSION = kext;
 				ZERO_LINK = YES;
@@ -680,6 +686,12 @@
 		50C5C69A08560FAC0054138C /* Development */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+					ppc64,
+					x86_64,
+				);
 				COPY_PHASE_STRIP = NO;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
