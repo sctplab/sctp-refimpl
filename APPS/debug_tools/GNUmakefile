@@ -46,7 +46,7 @@ endif
 endif
 endif
 
-PROGSRCS= getcwndlog.c prtcwndlog.c gdbdump_to_bin.c cntcwndlog.c \
+PROGSRCS= prtcwndlog.c gdbdump_to_bin.c cntcwndlog.c \
 parse_log.c to_pcap.c
 
 OBJSRCS=hashWalk.c primelist.c stdintest.c
