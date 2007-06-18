@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.c,v 1.14 2007/06/09 13:46:57 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.c,v 1.15 2007/06/16 00:33:47 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -50,7 +50,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_auth.c,v 1.14 2007/06/09 13:46:57 rrs E
 #endif				/* SCTP_DEBUG */
 
 
-inline void
+void
 sctp_clear_chunklist(sctp_auth_chklist_t *chklist)
 {
 	bzero(chklist, sizeof(*chklist));
@@ -148,7 +148,7 @@ sctp_auth_delete_chunk(uint8_t chunk, sctp_auth_chklist_t *list)
 	return (0);
 }
 
-inline size_t
+size_t
 sctp_auth_get_chklist_size(const sctp_auth_chklist_t *list)
 {
 	if (list == NULL)
@@ -316,7 +316,7 @@ sctp_show_key(sctp_key_t *key, const char *str)
 	}
 }
 
-static inline uint32_t
+static uint32_t
 sctp_get_keylen(sctp_key_t *key)
 {
 	if (key != NULL)
@@ -805,7 +805,7 @@ sctp_free_authinfo(sctp_authinfo_t *authinfo)
 }
 
 
-inline uint32_t
+uint32_t
 sctp_get_auth_chunk_len(uint16_t hmac_algo)
 {
 	int size;

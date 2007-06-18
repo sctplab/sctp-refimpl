@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.6 2007/06/14 22:59:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.7 2007/06/16 03:28:18 rrs Exp $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -398,7 +398,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.6 2007/06/14 22:59:03 rrs 
 #define SCTPCTL_LOGGING_LEVEL		51
 #define SCTPCTL_LOGGING_LEVEL_DESC	"Ltrace/KTR trace logging level"
 #define SCTPCTL_LOGGING_LEVEL_MIN	0
-#define SCTPCTL_LOGGING_LEVEL_MAX	0x007fffff
+#define SCTPCTL_LOGGING_LEVEL_MAX	0xffffffff
 #define SCTPCTL_LOGGING_LEVEL_DEFAULT	0
 
 #ifdef SCTP_DEBUG
