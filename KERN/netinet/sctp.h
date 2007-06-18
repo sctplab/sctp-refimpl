@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.14 2007/06/14 22:59:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.15 2007/06/18 13:57:37 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -508,5 +508,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LOG_SACK_ARRIVALS_ENABLE                   0x00200000
 #define SCTP_LTRACE_CHUNK_ENABLE                        0x00400000
 #define SCTP_LTRACE_ERROR_ENABLE                        0x00800000
+#define SCTP_LAST_PACKET_TRACING                        0x01000000
 
 #endif				/* !_NETINET_SCTP_H_ */
