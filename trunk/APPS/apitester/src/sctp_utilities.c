@@ -61,7 +61,7 @@ sctp_get_local_port(int fd)
 	socklen_t addr_len;
 
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
-	getsockname (fd, (struct sockaddr *) &addr, &addr_len);
+	(void)getsockname(fd, (struct sockaddr *) &addr, &addr_len);
 	return ntohs(addr.sin_port);
 }
 
@@ -1239,7 +1239,7 @@ sctp_v4_address_mapping_enabled(int fd)
 	socklen_t length;
 	
 	length = (socklen_t)sizeof(int);
-	getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR, &onoff, &length);
+	(void)getsockopt(fd, IPPROTO_SCTP, SCTP_I_WANT_MAPPED_V4_ADDR, &onoff, &length);
 	return (onoff);
 }
 
@@ -1260,7 +1260,7 @@ sctp_v6_only_enabled(int fd)
 	socklen_t length;
 	
 	length = (socklen_t)sizeof(int);
-	getsockopt(fd, IPPROTO_IPV6, IPV6_BINDV6ONLY, &onoff, &length);
+	(void)getsockopt(fd, IPPROTO_IPV6, IPV6_BINDV6ONLY, &onoff, &length);
 	return (onoff);
 }
 
@@ -1308,11 +1308,14 @@ int sctp_get_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
 
 	len = sizeof(akey) + *keylen;
 	akey = (struct sctp_authkey *)alloca(len);
+	if (akey == NULL) {
+		printf("could not get memory for akey\n");
+		return (-1);
+	}
 	akey->sca_assoc_id = assoc_id;
 	akey->sca_keynumber = *keyid;
 	bcopy(keytext, akey->sca_key, *keylen);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY,
-			    akey, &len);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY, akey, &len);
 	if (result >= 0) {
 	    /* This should always fail */
 	    *keyid = akey->sca_keynumber;
@@ -1330,11 +1333,14 @@ int sctp_set_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
 
 	len = sizeof(*akey) + keylen;
 	akey = (struct sctp_authkey *)alloca(len);
+	if (akey == NULL) {
+		printf("could not get memory for akey\n");
+		return (-1);
+	}
 	akey->sca_assoc_id = assoc_id;
 	akey->sca_keynumber = keyid;
 	bcopy(keytext, akey->sca_key, keylen);
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY,
-			    akey, len);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY, akey, len);
 	return (result);
 }
 
