@@ -492,6 +492,9 @@ setup_a_socket()
 		       errno);
 		exit(-1);
 	}
+	if (verbose) {
+		printf("return socket %d\n", sd);
+	}
 	return (sd);
 }
 
