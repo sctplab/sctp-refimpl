@@ -10632,7 +10632,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 #if defined(__Panda__) 
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
-		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
+			(user_marks_eor ? M_EOR : 0));
 	if (m == NULL)
 		*error = ENOMEM;
 	else
