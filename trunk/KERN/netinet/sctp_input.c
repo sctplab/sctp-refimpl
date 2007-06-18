@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.43 2007/06/17 01:36:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.44 2007/06/18 13:57:37 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4854,7 +4854,8 @@ sctp_input(i_pak, va_alist)
 	}
 #endif
 #ifdef  SCTP_PACKET_LOGGING
-	sctp_packet_log(m, mlen);
+	if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+		sctp_packet_log(m, mlen);
 #endif
 	/* Must take out the iphlen, since mlen expects this (only effect lb case) */
 	mlen -= iphlen;
