@@ -1,7 +1,7 @@
 # This is the top level of make. We only deal with the common
 # directories.
 
-DIRS= baselib user apps tcl_tester apitester
+DIRS= baselib user debug_tools apps tcl_tester apitester
 
 all depend clean clobber release:
 	@for i in $(DIRS); do \
