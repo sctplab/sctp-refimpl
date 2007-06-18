@@ -599,13 +599,8 @@ main (int argc, char **argv)
 				       size_to_send, SEND_BUF_SIZE);
 				size_to_send = SEND_BUF_SIZE;
 			} else if ((size_to_send != 0) && (size_to_send < sizeof(testDgram_t))) {
-#ifdef __FreeBSD__
 				printf("Sorry need minimum size of %u bytes - overriding to minimum value\n",
-				       sizeof(testDgram_t));
-#else
-				printf("Sorry need minimum size of %u bytes - overriding to minimum value\n",
-				       sizeof(testDgram_t));
-#endif
+				       (uint32_t)sizeof(testDgram_t));
 				size_to_send = sizeof(testDgram_t);
 			}
 			break;
