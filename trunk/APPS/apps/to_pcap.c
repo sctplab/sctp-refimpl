@@ -122,19 +122,12 @@ main(int argc, char **argv)
 			tmp = htons(ip->ip_off);
 			ip->ip_off = tmp;
 			wlen = (((len+3) << 2) >> 2);
-			if(wlen < (header->datasize-8)) {
-				/* Ip header on input on
-				 * bsd will drop the header size
-				 */
-				wlen += 20;
-				len += 20;
-			}
 			ip->len = htons(len);
 			wlen = ((((len)+3) >> 2) << 2);
 		} else if (((header->data[0] & 0xf0) >> 4) == 6) {
 			ip6 = (struct part_ip6 *)header->data;
 			len = ip6->len;
-			wlen = header->datasize - 8;
+			wlen = header->datasize - 12;
 		} else {
 			printf("Not v6 or v4?\n");
 			break;
@@ -153,7 +146,6 @@ main(int argc, char **argv)
 			fclose(out);
 			return(0);
 		}
-		
 		if ((ret=fwrite(header->data, wlen, 1, out)) < 1) {
 			printf("Can't write body ret:%d errno=%d\n",
 			       ret,errno);
