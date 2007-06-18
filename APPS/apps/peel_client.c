@@ -332,24 +332,24 @@ my_handle_notification(int fd,char *notify_buf) {
 		       (u_int32_t)ssf->ssf_assoc_id);
 		break;
 	case SCTP_ADAPTION_INDICATION:
-	  {
-	    struct sctp_adaption_event *ae;
-	    ae = &snp->sn_adaption_event;
-	    printf("\nSCTP_adaption_indication bits:0x%x\n",
-		   (u_int)ae->sai_adaption_ind);
-	  }
-	  break;
+	{
+		struct sctp_adaption_event *ae;
+		ae = &snp->sn_adaption_event;
+		printf("\nSCTP_adaption_indication bits:0x%x\n",
+		       (u_int)ae->sai_adaption_ind);
+	}
+	break;
 	case SCTP_PARTIAL_DELIVERY_EVENT:
-	  {
-	    struct sctp_pdapi_event *pdapi;
-	    pdapi = &snp->sn_pdapi_event;
-	    printf("SCTP_PD-API event:%u\n",
-		   pdapi->pdapi_indication);
-	    if(pdapi->pdapi_indication == SCTP_PARTIAL_DELIVERY_ABORTED){
-		    printf("PDI- Aborted\n");
-	    }
-	  }
-	  break;
+	{
+		struct sctp_pdapi_event *pdapi;
+		pdapi = &snp->sn_pdapi_event;
+		printf("SCTP_PD-API event:%u\n",
+		       pdapi->pdapi_indication);
+		if(pdapi->pdapi_indication == SCTP_PARTIAL_DELIVERY_ABORTED){
+			printf("PDI- Aborted\n");
+		}
+	}
+	break;
 
 	case SCTP_SHUTDOWN_EVENT:
                 sse = &snp->sn_shutdown_event;
