@@ -10635,9 +10635,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 			(user_marks_eor ? M_EOR : 0));
 	if (m == NULL)
 		*error = ENOMEM;
-	else
+	else {
 		*sndout = m_length(m, NULL);
-	*new_tail = m_last(m);
+		*new_tail = m_last(m);
+	}
 	return (m);
 #elif defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
@@ -10645,9 +10646,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
 	if (m == NULL)
 		*error = ENOMEM;
-	else
+	else {
 		*sndout = m_length(m, NULL);
-	*new_tail = m_last(m);
+		*new_tail = m_last(m);
+	}
 	return (m);
 #else
 	int left, cancpy, willcpy;
