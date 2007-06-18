@@ -121,8 +121,17 @@ main(int argc, char **argv)
 			len = ip->len;
 			tmp = htons(ip->ip_off);
 			ip->ip_off = tmp;
+			ip->len = htons(header->datasize-16);
+			len = wlen = header->datasize-16;
+#ifdef fffff
 			wlen = (((len+3) << 2) >> 2);
-			ip->len = htons(len);
+			if ((wlen + 20) < header->datasize) {
+				wlen += 20;
+				ip->len = htons(len+20);
+			} else {
+				ip->len = htons(len);
+			}
+#endif
 			wlen = ((((len)+3) >> 2) << 2);
 		} else if (((header->data[0] & 0xf0) >> 4) == 6) {
 			ip6 = (struct part_ip6 *)header->data;
