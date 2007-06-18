@@ -196,16 +196,71 @@ there is.. you just need to be a bit more tricky.
 
 In kgdb do the following:
 
-(k)gdb> x/1 packet_log_end
-
+(k)gdb> x/1 &packet_log_end
+ <packet_log_end>:    0x00000138
 (k)gdb> x/16383 packet_log_buffer
+0xc0e86060 <packet_log_buffer>:         0x0000009c      0x00000000      0x000455f4      0x008c0045
+0xc0e86070 <packet_log_buffer+16>:      0x0000ca00      0x00008440      0x0bc211ac      0xb74613ac
+0xc0e86080 <packet_log_buffer+32>:      0xae08ae08      0x00000000      0x5e936948      0x6c000001
+0xc0e86090 <packet_log_buffer+48>:      0x7d1a4929      0x388e0300      0x0d000d00      0xb7db2f58
+0xc0e860a0 <packet_log_buffer+64>:      0x08000c00      0x06000500      0x080006c0      0x53524c50
+0xc0e860b0 <packet_log_buffer+80>:      0x04000080      0x040000c0      0x0a000880      0x81c080c1
+0xc0e860c0 <packet_log_buffer+96>:      0x00000f82      0x24000280      0xda0d7ca4      0xe468db6b
+0xc0e860d0 <packet_log_buffer+112>:     0xe0ad2dda      0xde14e9f2      0x91ae23ad      0x956c6be7
+0xc0e860e0 <packet_log_buffer+128>:     0x8dfd5bac      0x4fea9341      0x08000480      0x03000100
+0xc0e860f0 <packet_log_buffer+144>:     0x06000380      0x0000c180      0x00000000      0x0000009c
+0xc0e86100 <packet_log_buffer+160>:     0x0000009c      0x000459e6      0x008c0045      0x0000cb00
+0xc0e86110 <packet_log_buffer+176>:     0x00008440      0x0bc211ac      0xb74613ac      0xae08ae08
+0xc0e86120 <packet_log_buffer+192>:     0x00000000      0x0c8b996c      0x6c000001      0xfa565fdd
+0xc0e86130 <packet_log_buffer+208>:     0x388e0300      0x0d000d00      0xaff5c4d2      0x08000c00
+0xc0e86140 <packet_log_buffer+224>:     0x06000500      0x080006c0      0x53524c50      0x04000080
+0xc0e86150 <packet_log_buffer+240>:     0x040000c0      0x0a000880      0x81c080c1      0x00000f82
+0xc0e86160 <packet_log_buffer+256>:     0x24000280      0xf3597d91      0xa282b7c5      0x81bade57
+0xc0e86170 <packet_log_buffer+272>:     0x26b5fec2      0x204161e5      0xae74bdf0      0x98f9dd1c
+0xc0e86180 <packet_log_buffer+288>:     0x27607702      0x08000480      0x03000100      0x06000380
+0xc0e86190 <packet_log_buffer+304>:     0x0000c180      0x0000009c      0x00000000      0x00000000
+<lots of other stuff cut off, but its not needed here since I only have a single init in the
+ buffer for demo :-d>
+
+Now we need to make the packet_log_end look like its in the same buffer (the int
+at the beginning). So we edit the file to look like so:
+
+0xc0e8605c <packet_log_end>:            0x00000138
+0xc0e86060 <packet_log_buffer>:         0x0000009c      0x00000000      0x000455f4      0x008c0045
+0xc0e86070 <packet_log_buffer+16>:      0x0000ca00      0x00008440      0x0bc211ac      0xb74613ac
+0xc0e86080 <packet_log_buffer+32>:      0xae08ae08      0x00000000      0x5e936948      0x6c000001
+0xc0e86090 <packet_log_buffer+48>:      0x7d1a4929      0x388e0300      0x0d000d00      0xb7db2f58
+0xc0e860a0 <packet_log_buffer+64>:      0x08000c00      0x06000500      0x080006c0      0x53524c50
+0xc0e860b0 <packet_log_buffer+80>:      0x04000080      0x040000c0      0x0a000880      0x81c080c1
+0xc0e860c0 <packet_log_buffer+96>:      0x00000f82      0x24000280      0xda0d7ca4      0xe468db6b
+0xc0e860d0 <packet_log_buffer+112>:     0xe0ad2dda      0xde14e9f2      0x91ae23ad      0x956c6be7
+0xc0e860e0 <packet_log_buffer+128>:     0x8dfd5bac      0x4fea9341      0x08000480      0x03000100
+0xc0e860f0 <packet_log_buffer+144>:     0x06000380      0x0000c180      0x00000000      0x0000009c
+0xc0e86100 <packet_log_buffer+160>:     0x0000009c      0x000459e6      0x008c0045      0x0000cb00
+0xc0e86110 <packet_log_buffer+176>:     0x00008440      0x0bc211ac      0xb74613ac      0xae08ae08
+0xc0e86120 <packet_log_buffer+192>:     0x00000000      0x0c8b996c      0x6c000001      0xfa565fdd
+0xc0e86130 <packet_log_buffer+208>:     0x388e0300      0x0d000d00      0xaff5c4d2      0x08000c00
+0xc0e86140 <packet_log_buffer+224>:     0x06000500      0x080006c0      0x53524c50      0x04000080
+0xc0e86150 <packet_log_buffer+240>:     0x040000c0      0x0a000880      0x81c080c1      0x00000f82
+0xc0e86160 <packet_log_buffer+256>:     0x24000280      0xf3597d91      0xa282b7c5      0x81bade57
+0xc0e86170 <packet_log_buffer+272>:     0x26b5fec2      0x204161e5      0xae74bdf0      0x98f9dd1c
+0xc0e86180 <packet_log_buffer+288>:     0x27607702      0x08000480      0x03000100      0x06000380
+0xc0e86190 <packet_log_buffer+304>:     0x0000c180      0x0000009c      0x00000000      0x00000000
+
+Now take the output of these two command and get them all lined up
+with no extra text. 
+
+The conversion program looks at the front addresses to make sure that everything
+is in order... so we just "fool" it by adding an address 4 minus the one
+displayed for the packet log buffer's first address i.e. 0xc0e86060 - 4 = 0xc0e8605c
+Now the gdb dump program will happily make the buffer look just like what parse_log
+would have returned :-D
 
 Note that if you have a larger (or smaller) SCTP_PACKET_LOG_SIZE you need
 to take that number and divide by 4. Put the result of that in, in place
 of the 16383 above.
 
-Now take the output of these two command and get them all lined up
-with no extra text. And now do:
+And now do:
 
 gdbdump_to_bin -i input-file -o binary-output-file
 
