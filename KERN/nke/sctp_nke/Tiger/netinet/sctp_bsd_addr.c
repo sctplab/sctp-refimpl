@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.11 2007/06/14 22:59:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.12 2007/06/17 23:43:37 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -567,7 +567,7 @@ sctp_packet_log(struct mbuf *m, int length)
 
 
 int
-sctp_copy_out_packet_log(uint8_t *target , int length)
+sctp_copy_out_packet_log(uint8_t *target, int length)
 {
 	/* We wind through the packet log starting at
 	 * start copying up to length bytes out.
@@ -576,6 +576,7 @@ sctp_copy_out_packet_log(uint8_t *target , int length)
 	int tocopy, this_copy;
 	int *lenat;
 	int did_delay=0;
+
 	tocopy = length;
 	if(length < (2 * sizeof(int))) {
 		/* not enough room */
@@ -600,10 +601,11 @@ sctp_copy_out_packet_log(uint8_t *target , int length)
 	lenat = (int *)target;
 	*lenat = packet_log_end;
 	lenat++;
-	this_copy = min((length-sizeof(int)), packet_log_end);
+	this_copy = min((length - sizeof(int)), SCTP_PACKET_LOG_SIZE);
 	memcpy((void *)lenat, (void *)packet_log_buffer, this_copy);
-	if(SCTP_PKTLOG_WRITERS_NEED_LOCK) {
-		atomic_subtract_int(&packet_log_writers, SCTP_PKTLOG_WRITERS_NEED_LOCK);
+	if (SCTP_PKTLOG_WRITERS_NEED_LOCK) {
+		atomic_subtract_int(&packet_log_writers,
+				    SCTP_PKTLOG_WRITERS_NEED_LOCK);
 	}
 	SCTP_IP_PKTLOG_UNLOCK();
 	return (this_copy + sizeof(int));

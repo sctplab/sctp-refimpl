@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.28 2007/06/14 22:59:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.29 2007/06/17 01:36:02 rrs Exp $");
 #endif
 
 
@@ -189,6 +189,9 @@ sctp6_input(i_pak, offp, proto)
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
 	iphlen = off;
 	offset = iphlen + sizeof(*sh) + sizeof(*ch);
+	SCTPDBG(SCTP_DEBUG_INPUT1,
+		"sctp6_input() length:%d iphlen:%d\n", pkt_len, iphlen);
+
 
 #if defined(NFAITH) && NFAITH > 0
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version <= 430000

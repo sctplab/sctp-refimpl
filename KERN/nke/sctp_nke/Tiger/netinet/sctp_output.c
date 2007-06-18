@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.38 2007/06/15 19:49:13 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.41 2007/06/17 01:36:02 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3215,7 +3215,7 @@ sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
 }
 
 
-static __inline uint8_t
+static uint8_t
 sctp_get_ect(struct sctp_tcb *stcb,
     struct sctp_tmit_chunk *chk)
 {
@@ -5335,7 +5335,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 	}			/* if enabled in asoc */
 }
 
-__inline int
+int
 sctp_get_frag_point(struct sctp_tcb *stcb,
     struct sctp_association *asoc)
 {
@@ -6044,7 +6044,7 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 }
 
 
-static __inline void
+static void
 sctp_clean_up_datalist(struct sctp_tcb *stcb,
 
     struct sctp_association *asoc,
@@ -6133,7 +6133,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 	}
 }
 
-static __inline void
+static void
 sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
@@ -6171,7 +6171,7 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 }
 
 
-static __inline int 
+static int 
 sctp_can_we_split_this(struct sctp_tcb *stcb,
 		       struct sctp_stream_queue_pending *sp,
 		       uint32_t goal_mtu, uint32_t frag_point, int eeor_on)
@@ -6788,7 +6788,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	}
 }
 
-__inline void
+void
 sctp_fix_ecn_echo(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
@@ -9809,9 +9809,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_tmit_chunk *chk;
 	uint8_t *datap;
 	int len;
-	unsigned int small_one;
+	int was_trunc=0;
 	struct ip *iph;
-
+	int fullsz=0, extra=0;
 	long spc;
 
 	asoc = &stcb->asoc;
@@ -9822,7 +9822,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		 */
 		return;
 	}
-	if(stcb->sctp_socket == NULL) {
+	if (stcb->sctp_socket == NULL) {
 		return;
 	}
 	sctp_alloc_a_chunk(stcb, chk);
@@ -9832,6 +9832,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->copy_by_ref = 0;
 	iph = mtod(m, struct ip *);
 	if (iph == NULL) {
+		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
 	if (iph->ip_v == IPVERSION) {
@@ -9840,6 +9841,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		len = chk->send_size = iph->ip_len;
 #else
 		len = chk->send_size = (iph->ip_len - iphlen);
+		extra = iphlen;
 #endif
 	} else {
 		struct ip6_hdr *ip6h;
@@ -9847,6 +9849,15 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* IPv6 */
 		ip6h = mtod(m, struct ip6_hdr *);
 		len = chk->send_size = htons(ip6h->ip6_plen);
+	}
+	if ((len+SCTP_MAX_OVERHEAD+sizeof(struct sctp_pktdrop_chunk)) > 
+	    min(stcb->asoc.smallest_mtu, MCLBYTES)) {
+		/* only send 1 mtu worth, trim off the
+		 * excess on the end.
+		 */
+		fullsz = len - extra;
+		len = min(stcb->asoc.smallest_mtu,MCLBYTES) - SCTP_MAX_OVERHEAD;
+		was_trunc = 1;
 	}
 	chk->asoc = &stcb->asoc;
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
@@ -9862,20 +9873,16 @@ jump_out:
 		chk->data = NULL;
 		goto jump_out;
 	}
-	small_one = asoc->smallest_mtu;
-	if (small_one > MCLBYTES) {
-		/* Only one cluster worth of data MAX */
-		small_one = MCLBYTES;
-	}
 	chk->book_size = SCTP_SIZE32((chk->send_size + sizeof(struct sctp_pktdrop_chunk) +
 	    sizeof(struct sctphdr) + SCTP_MED_OVERHEAD));
 	chk->book_size_scale = 0;
-	if (chk->book_size > small_one) {
+	if (was_trunc) {
 		drp->ch.chunk_flags = SCTP_PACKET_TRUNCATED;
-		drp->trunc_len = htons(chk->send_size);
-		chk->send_size = small_one - (SCTP_MED_OVERHEAD +
-		    sizeof(struct sctp_pktdrop_chunk) +
-		    sizeof(struct sctphdr));
+		drp->trunc_len = htons(fullsz);
+		/* Len is already adjusted to size minus overhead above 
+		 * take out the pkt_drop chunk itself from it.
+		 */
+		chk->send_size = len - sizeof(struct sctp_pktdrop_chunk);
 		len = chk->send_size;
 	} else {
 		/* no truncation needed */

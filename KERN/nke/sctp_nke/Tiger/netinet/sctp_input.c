@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.41 2007/06/15 19:28:58 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.43 2007/06/17 01:36:02 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4397,7 +4397,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
  * Process the ECN bits we have something set so we must look to see if it is
  * ECN(0) or ECN(1) or CE
  */
-static __inline void
+static void
 sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
     uint8_t ecn_bits)
 {
@@ -4436,7 +4436,7 @@ sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 }
 
-static __inline void
+static void
 sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
     uint32_t high_tsn, uint8_t ecn_bits)
 {
@@ -4878,6 +4878,8 @@ sctp_input(i_pak, va_alist)
 
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
+	SCTPDBG(SCTP_DEBUG_INPUT1,
+		"sctp_input() length:%d iphlen:%d\n", mlen, iphlen);
 
 	/* SCTP does not allow broadcasts or multicasts */
 #if defined(__NetBSD__) || defined(__OpenBSD__)

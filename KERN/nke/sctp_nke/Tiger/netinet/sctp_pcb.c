@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.41 2007/06/15 19:28:58 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.43 2007/06/17 19:27:46 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3174,11 +3174,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 			}
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
 			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
-				/* Just abandon things in the front states */
-				if(asoc->asoc.total_output_queue_size == 0) {
-					sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2);
-					continue;
-				}
+				/* If we have data in queue, we don't want to just
+				 * free since the app may have done, send()/close
+				 * or connect/send/close. And it wants the data
+				 * to get across first.
+				 */
+                               if(asoc->asoc.total_output_queue_size == 0) {
+				       /* Just abandon things in the front states */
+				       sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2);
+				       continue;
+			       }
 			}
 			SCTP_TCB_LOCK(asoc);
 			/* Disconnect the socket please */
