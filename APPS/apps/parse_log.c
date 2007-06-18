@@ -75,7 +75,7 @@ main(int argc, char **argv)
 	 * First 4 bytes of buf will have the pkt_end_value.
 	 */
 
-	uint8_t buf[SCTP_PACKET_LOG_SIZE+4];
+	uint8_t buf[SCTP_PACKET_LOG_SIZE+4], *bufp;
 	FILE *io;
 	int sd;
 	int *point;
@@ -115,13 +115,13 @@ main(int argc, char **argv)
 	/* get end out */
 	point = (int *)buf;
 	end_at = *point;
-
+	bufp = &buf[4];
 	printf("end is at %d\n", end_at);
 	if((end_at > sizeof(buf) || (end_at < 4))) {
 		printf("nothing to print, end_at is %d\n", end_at);
 		return(0);
 	}
-	point = (int *)&buf[end_at];
+	point = (int *)&bufp[end_at];
 	point--;
 	notdone = 1;
 	last_at = 0;
@@ -133,7 +133,7 @@ main(int argc, char **argv)
 			continue;
 		}
 		cnt++;
-		header = (struct sctp_packet_log *)&buf[at];
+		header = (struct sctp_packet_log *)&bufp[at];
 		last_at = at;
 		at = header->prev_end;
 		if ((at > sizeof(buf)) || (at < 4) || (at == end_at)) {
@@ -144,7 +144,7 @@ main(int argc, char **argv)
 		/* Go to where the header says and decrement to
 		 * get to end of packet (and our start mark).
 		 */
-		point = (int *)&buf[at];
+		point = (int *)&bufp[at];
 		point--;
 	}
 	at = last_at;
@@ -160,7 +160,7 @@ main(int argc, char **argv)
 	}
 
 	while (cnt > 0) {
-		header = (struct sctp_packet_log *)&buf[at];
+		header = (struct sctp_packet_log *)&bufp[at];
 		printf("header:%p | %d - %d bytes (including pad), ts:%x ipversion:%x\n",
 		       header,
 		       cnt, 
@@ -185,7 +185,7 @@ main(int argc, char **argv)
 			printf("strange, size > limit:%d\n", limit);
 			break;
 		}
-		fwrite(&buf[at], header->datasize, 1, io);
+		fwrite(&bufp[at], header->datasize, 1, io);
 		at += header->datasize;
 		cnt--;
 	}
