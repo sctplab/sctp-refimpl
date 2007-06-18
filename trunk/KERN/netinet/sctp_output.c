@@ -10629,7 +10629,17 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+#if defined(__Panda__) 
+	struct mbuf *m;
+	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
+		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
+	if (m == NULL)
+		*error = ENOMEM;
+	else
+		*sndout = m_length(m, NULL);
+	*new_tail = m_last(m);
+	return (m);
+#elif defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
@@ -10646,9 +10656,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
         left = min(uio->uio_resid, max_send_len);
 	/* Always get a header just in case */
 	head = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
-    if (head == NULL) {
-        return (NULL);
-    }
+	if (head == NULL) {
+		*error = ENOMEM;
+		return (NULL);
+	}
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
