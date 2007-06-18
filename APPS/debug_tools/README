@@ -1,0 +1,229 @@
+So, you need to debug SCTP (otherwise you would not
+be looking in this directory :-D)
+
+First, before discussing the tools here I will give
+you some general pointers on whats present in the kernel
+and what you have to do. Note KTR is a FreeBSD feature
+(ltrace for panda) and is not available for MAC yet.
+We might be able to get it in with Leopard maybe but
+not yet.
+
+In BSD we have KTR, in Panda we have ltrace. These tools
+set so we can tracing things happening in the kernel.
+For Panda they are always enabled. For BSD you must
+add the lines:
+
+options KTR
+
+Now in BSD this only gives you 1024 entries by default,
+which for any type of tracing and logging is to small, so
+you will need to add:
+
+options KTR_ENTRIES=65536
+
+Note the number must be a power of 2, see man ktr(9) for
+more info.
+
+Once you have this built in the kernel, you are set
+to do most of the logging. SCTP has these in the kernel
+by default. But if you want to do debug tracing you will
+also need to add:
+options SCTP_LTRACE_CHUNKS
+options SCTP_LTRACE_ERRORS
+options SCTP_PACKET_LOGGING 
+
+There are also 3 types of logging not on by default:
+options SCTP_MBCNT_LOGGING
+options SCTP_LOCK_LOGGING
+options SCTP_MBUF_LOGGING
+
+They are more debug type logging so in BSD we left
+them off. Note for panda these are on so you don't
+need to do anything.
+
+Once you have your kernel setup properly you will need
+to turn on the trace point in panda, in BSD we turn
+on the ktr mask. For panda please refer to the panda
+side guide for the trace point(s). For BSD you 
+turn on KTR_SUBSYS, which is 0x20. To do this you
+have two options. 
+
+a) Make it the default KTR mask that is on (KTR_GEN
+   is the default if you do not change a kernel config)
+or
+
+b) Use a sysctl to turn it on. 
+
+For <a> you must add
+
+options KTR_MASK=KTR_SUBSYS
+
+to your build. For <b> you must do a sysctl -w as root
+like this:
+
+sysctl -w "debug.ktr.mask=0x20"
+
+So now you have the trace points enabled. You must also
+turn on the actual logging/debug points you are interested
+in with a sysctl as well. SCTP has a sysctl that is call
+the sctp_logging level (for Panda consult your panda side
+documentation on how to change a sysctl variable). For
+BSD we set this by doing:
+
+sysctl -w "net.inet.sctp.sctp_logging=mask"
+
+Where mask is the logging bit mask you want to turn on. The
+levels are found at the bottom of sctp.h and I repeate them
+here:
+
+SCTP_BLK_LOGGING_ENABLE				0x00000001
+SCTP_CWND_MONITOR_ENABLE			0x00000002
+SCTP_CWND_LOGGING_ENABLE			0x00000004
+SCTP_EARLYFR_LOGGING_ENABLE			0x00000010
+SCTP_FLIGHT_LOGGING_ENABLE			0x00000020
+SCTP_FR_LOGGING_ENABLE				0x00000040
+SCTP_LOCK_LOGGING_ENABLE			0x00000080
+SCTP_MAP_LOGGING_ENABLE				0x00000100
+SCTP_MBCNT_LOGGING_ENABLE			0x00000200
+SCTP_MBUF_LOGGING_ENABLE			0x00000400
+SCTP_NAGLE_LOGGING_ENABLE			0x00000800
+SCTP_RECV_RWND_LOGGING_ENABLE			0x00001000
+SCTP_RTTVAR_LOGGING_ENABLE			0x00002000
+SCTP_SACK_LOGGING_ENABLE			0x00004000
+SCTP_SACK_RWND_LOGGING_ENABLE			0x00008000
+SCTP_SB_LOGGING_ENABLE				0x00010000
+SCTP_STR_LOGGING_ENABLE				0x00020000
+SCTP_WAKE_LOGGING_ENABLE			0x00040000
+SCTP_LOG_MAXBURST_ENABLE			0x00080000
+SCTP_LOG_RWND_ENABLE    			0x00100000
+SCTP_LOG_SACK_ARRIVALS_ENABLE                   0x00200000
+SCTP_LTRACE_CHUNK_ENABLE                        0x00400000
+SCTP_LTRACE_ERROR_ENABLE                        0x00800000
+SCTP_LAST_PACKET_TRACING                        0x01000000
+
+Select the bits you want on and create a mask by or'ing them
+together. So for example if I wanted the two ltrace ones
+(errors and chunks) and the packet tracing I would do:
+
+sysctl -w "net.inet.sctp.sctp_logging=0x01c00000"
+
+Now run your SCTP tests, or whatever you are interested
+in. Once you have gathered your data you can use the
+following tools to help you debug it. And that even
+includes if you crash and get a kernel core.
+
+So what tools do you have available here and how
+do we use them. Here is a list.
+
+gdbdump_to_bin.c
+to_pcap.c
+parse_log.c
+prtcwndlog.c
+
+Note for panda pprtcwndlog is built into the ltracing
+system, all you need to do is display the ltrace point and
+it will give you the same output as BSD does when you get
+and print the points.
+
+So on BSD how do we display the two LTRACE points (or any
+of the logging but the packet tracing for that matter)?
+
+You first do a ktrdump as follows:
+
+ktrdump -q -t -o some_file_name
+
+This saves off the raw data (its ascii so you can
+look at if you want, its not to pretty though). Note
+you can dump this with a ktr command from ddb too.
+You must capture it into a file .. and I think there
+is a kgdb macro to pull it as well (if not I will put
+one in the gdb macro's file in KERN).
+
+Once you get your raw file "some_file_name" created you
+can display it by typing 
+
+prtcwndlog -l some_file_name
+
+Or if your system is up and function you could instead
+do one command line:
+
+ktrdump -q -t | prtcwndlog -l -
+
+But of course this is a dynamic log, so if you do the above
+you won't be able to do the command again and get the
+same results. Note you must also be root to do a ktrdump.
+prtcwndlog also as some options for graphing different
+types of logs and such.. but I won't document that here
+I need to write some other info on this somewhere else
+(late :-d).
+
+So what about the packet tracing stuff? 
+
+Packet tracing allows you to see the last packets your
+SCTP stack recieved (even ones with bad csums). Now
+you only get SCTP_PACKET_LOG_SIZE bytes of data (default
+65,535). So this means you will see the last 40 or so
+packets (depending on size.. maybe more). You must 
+run the function:
+
+parse_log file-to-write
+
+Where file-to-write is some file you want to create. It
+will be a binary dump of the data with a special format
+int <end-of-log>
+followed by up to
+SCTP_PACKET_LOG_SIZE bytes of data.
+
+Good but not to useful. This is where the tool to_pcap
+comes in. You run this on the "file-to-write" you created:
+
+to_pcap file-to-write file-to-write.pcap
+
+This then generates a pcap file that you can use your
+favorite tool (wireshark) to look at and debug.
+Life is good, you have the last N packets to see what
+came in.
+
+But wait, what do you do if you have a kernel crash?
+You can't run these commands.. what do you do?
+
+Well here it takes a bit more dedication. As I said
+for the ktr stuff, no problem you run the macro to
+get the text file on your screen. Cut and paste it
+into a file. Then run your prtcwndlog program. But
+what about the packet log, is there any hope? Of course
+there is.. you just need to be a bit more tricky.
+
+In kgdb do the following:
+
+(k)gdb> x/1 packet_log_end
+
+(k)gdb> x/16383 packet_log_buffer
+
+Note that if you have a larger (or smaller) SCTP_PACKET_LOG_SIZE you need
+to take that number and divide by 4. Put the result of that in, in place
+of the 16383 above.
+
+Now take the output of these two command and get them all lined up
+with no extra text. And now do:
+
+gdbdump_to_bin -i input-file -o binary-output-file
+
+This will generate your binary file.
+
+One thing that will make your life easier is to do
+(k)gdb .... ARGS.... | tee output_file
+
+Then when you do the command (k)gdb will recognize you
+have a tee and not page through the packet buffer.
+
+Then all you have to do is edit output_file to get
+rid of all extra text but the hex dump. With that
+you can then take the binary and do the same thing to
+it that you would have done with to_pcap.
+
+Tada.. life is good once again ;-D
+
+Have fun
+
+R
