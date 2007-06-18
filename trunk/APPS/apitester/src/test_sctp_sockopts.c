@@ -1389,15 +1389,15 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 		return strerror(errno);
 
 	if (asoc_maxrxt != 10) {
-		sprintf(error_buffer, "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
+		snprintf(error_buffer, sizeof(error_buffer), "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
 		return(error_buffer);
 	}
 	if (local_rwnd < 4096) {
-		sprintf(error_buffer, "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
+		snprintf(error_buffer, sizeof(error_buffer), "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
 		return(error_buffer);
 	}
 	if (cookie_life != 60000) {
-		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
+		snprintf(error_buffer, sizeof(error_buffer), "cookie_life:%d Not compliant with RFC4960", cookie_life);
 		return(error_buffer);
 	}
 	if(peer_rwnd != 0) {
@@ -1437,15 +1437,15 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 		return strerror(errno);
 
 	if (asoc_maxrxt != 10) {
-		sprintf(error_buffer, "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
+		snprintf(error_buffer, sizeof(error_buffer), "max_rxt:%d Not compliant with RFC4960", asoc_maxrxt);
 		return(error_buffer);
 	}
 	if (local_rwnd < 4096) {
-		sprintf(error_buffer, "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
+		snprintf(error_buffer, sizeof(error_buffer), "local_rwnd:%d Not compliant with RFC4960", local_rwnd);
 		return(error_buffer);
 	}
 	if (cookie_life != 60000) {
-		sprintf(error_buffer, "cookie_life:%d Not compliant with RFC4960", cookie_life);
+		snprintf(error_buffer, sizeof(error_buffer), "cookie_life:%d Not compliant with RFC4960", cookie_life);
 		return(error_buffer);
 	}
 	if(peer_rwnd != 0) {
