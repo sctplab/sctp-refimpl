@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.32 2007/06/16 00:33:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.33 2007/06/18 21:59:14 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3500,7 +3500,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* fix counts and things */
 			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND, 
-					       tp1->whoTo->flight_size,
+					       (tp1->whoTo ? (tp1->whoTo->flight_size) : 0),
 					       tp1->book_size, 
 					       (uintptr_t)tp1->whoTo, 
 					       tp1->rec.data.TSN_seq);

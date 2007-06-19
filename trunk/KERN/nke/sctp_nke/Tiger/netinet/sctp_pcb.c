@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.43 2007/06/17 19:27:46 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.44 2007/06/18 21:59:14 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -350,12 +350,13 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 #endif
 			return (NULL);
 		}
+		memset(sctp_ifnp, 0, sizeof(struct sctp_ifn));
 		sctp_ifnp->ifn_index = ifn_index;
 		sctp_ifnp->ifn_p = ifn;
 		sctp_ifnp->ifn_type = ifn_type;
-		sctp_ifnp->ifa_count = 0;
 		sctp_ifnp->refcount = 1;
 		sctp_ifnp->vrf = vrf;
+
 		atomic_add_int(&vrf->refcount, 1);
 		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, addr->sa_family);
 		if (if_name != NULL) {
@@ -4238,10 +4239,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 			asoc->mapping_array = NULL;
 		}
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
 		*error = ENOBUFS;
 		return (NULL);
@@ -5794,7 +5795,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			net_tmp->dest_state &= ~SCTP_ADDR_NOT_IN_ASSOC;
 		} else if (stcb_tmp != stcb) {
 			/* It belongs to another association? */
-			SCTP_TCB_UNLOCK(stcb_tmp);
+			if(stcb_tmp)
+				SCTP_TCB_UNLOCK(stcb_tmp);
 			return (-3);
 		}
 	}

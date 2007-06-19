@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.33 2007/06/14 22:59:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.34 2007/06/18 21:59:15 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -1692,7 +1692,8 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		/* Already have or am bring up an association */
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		creat_lock_on = 0;
-		SCTP_TCB_UNLOCK(stcb);
+		if(stcb)
+			SCTP_TCB_UNLOCK(stcb);
 		if (bad_addresses == 0) 
 			error = EALREADY;
 		goto out_now;
