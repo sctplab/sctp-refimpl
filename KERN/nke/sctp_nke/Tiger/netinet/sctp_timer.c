@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.21 2007/06/14 22:59:03 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.22 2007/06/18 22:36:52 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -1769,7 +1769,8 @@ select_a_new_ep:
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
 #endif
 			/* set a timer to continue this later */
-			SCTP_TCB_UNLOCK(it->stcb);
+			if(it->stcb) 
+				SCTP_TCB_UNLOCK(it->stcb);
 			sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR,
 			    (struct sctp_inpcb *)it, NULL, NULL);
 			SCTP_ITERATOR_UNLOCK();

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.46 2007/06/16 00:33:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.47 2007/06/18 21:59:15 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1080,6 +1080,9 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->timoshutdownack = 0;
 	(void)SCTP_GETTIME_TIMEVAL(&asoc->start_time);
 	asoc->discontinuity_time = asoc->start_time;
+	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later whe
+	 * the association is freed.
+	 */
 	return (0);
 }
 
@@ -1528,11 +1531,17 @@ sctp_timeout_handler(void *t)
 	/* call the handler for the appropriate timer type */
 	switch (tmr->type) {
 	case SCTP_TIMER_TYPE_ZERO_COPY:
+		if(inp == NULL) {
+			break;
+		}
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
 			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
 		}
 		break;
 	case SCTP_TIMER_TYPE_ZCOPY_SENDQ:
+		if(inp == NULL) {
+			break;
+		}
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
 		    SCTP_ZERO_COPY_SENDQ_EVENT(inp, inp->sctp_socket);
 		}
@@ -2740,6 +2749,9 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 {
 	uint32_t count;
 	uint8_t *ptr;
+	int maximum, cnt=0;
+	struct mbuf *prev=NULL;
+	maximum = (65536/MLEN) + 100;
 
 	ptr = in_ptr;
 	if ((off < 0) || (len <= 0))
@@ -2747,9 +2759,19 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 
 	/* find the desired start location */
 	while ((m != NULL) && (off > 0)) {
+		cnt++;
+		if (cnt > maximum) {
+			SCTP_PRINTF("at cnt:%d prev:%p m:%p m_len:%d - terminate\n",
+				   cnt, prev, m, SCTP_BUF_LEN(m));
+			if(prev == m) {
+				panic ("particle chain corrupted");
+			}
+			return(NULL);
+		}
 		if (off < SCTP_BUF_LEN(m))
 			break;
 		off -= SCTP_BUF_LEN(m);
+		prev = m;
 		m = SCTP_BUF_NEXT(m);
 	}
 	if (m == NULL)
@@ -2757,12 +2779,12 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 
 	/* is the current mbuf large enough (eg. contiguous)? */
 	if ((SCTP_BUF_LEN(m) - off) >= len) {
-		return (mtod(m, caddr_t)+off);
+		return (mtod(m, caddr_t) + off);
 	} else {
 		/* else, it spans more than one mbuf, so save a temp copy... */
 		while ((m != NULL) && (len > 0)) {
 			count = min(SCTP_BUF_LEN(m) - off, len);
-			bcopy(mtod(m, caddr_t)+off, ptr, count);
+			bcopy(mtod(m, caddr_t) + off, ptr, count);
 			len -= count;
 			ptr += count;
 			off = 0;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.41 2007/06/17 01:36:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.43 2007/06/18 22:36:52 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3536,7 +3536,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			return (ENOMEM);
 		}
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(m, packet_length);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(m, packet_length);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 
@@ -3780,7 +3781,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			return (ENOMEM);
 		}
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(m, packet_length);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(m, packet_length);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 
@@ -9495,7 +9497,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		iph_out->ip_len = htons(mlen);
 #endif
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, mlen);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 
@@ -9523,7 +9526,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 		mlen = SCTP_BUF_LEN(mout);
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, mlen);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
@@ -10401,7 +10405,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		/* out it goes */
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, len);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)	
+			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
@@ -10429,7 +10434,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, len);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
@@ -10542,7 +10548,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out->ip_len = htons(len);
 #endif
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, len);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 
@@ -10598,7 +10605,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)&fsa6);
 
 #ifdef  SCTP_PACKET_LOGGING
-		sctp_packet_log(mout, len);
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
@@ -10621,15 +10629,27 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 		 uint32_t *sndout,
 		 struct mbuf **new_tail)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+#if defined(__Panda__) 
+	struct mbuf *m;
+	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
+			(user_marks_eor ? M_EOR : 0));
+	if (m == NULL)
+		*error = ENOMEM;
+	else {
+		*sndout = m_length(m, NULL);
+		*new_tail = m_last(m);
+	}
+	return (m);
+#elif defined(__FreeBSD__) && __FreeBSD_version > 602000
 	struct mbuf *m;
 	m = m_uiotombuf(uio, M_WAITOK, max_send_len, 0,
 		(M_PKTHDR | (user_marks_eor ? M_EOR : 0)));
 	if (m == NULL)
 		*error = ENOMEM;
-	else
+	else {
 		*sndout = m_length(m, NULL);
-	*new_tail = m_last(m);
+		*new_tail = m_last(m);
+	}
 	return (m);
 #else
 	int left, cancpy, willcpy;
@@ -10638,9 +10658,10 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
         left = min(uio->uio_resid, max_send_len);
 	/* Always get a header just in case */
 	head = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
-    if (head == NULL) {
-        return (NULL);
-    }
+	if (head == NULL) {
+		*error = ENOMEM;
+		return (NULL);
+	}
 	cancpy = M_TRAILINGSPACE(head);
 	willcpy = min(cancpy, left);
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
