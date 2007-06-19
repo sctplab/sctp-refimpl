@@ -177,7 +177,15 @@ SCTP_PACKET_LOG_SIZE bytes of data.
 Good but not to useful. This is where the tool to_pcap
 comes in. You run this on the "file-to-write" you created:
 
-to_pcap file-to-write file-to-write.pcap
+to_pcap -i file-to-write -o file-to-write.pcap
+
+Note that if your file-to-write came from a
+network byte order machine (non-intel) and you
+are running to_pcap on an intel machine you need
+to add -e to the to_pcap.. e.g:
+to_pcap -e -i file-to-write -o file-to-write.pcap
+This will resolve byte order issues in the
+translation to pcap :-D
 
 This then generates a pcap file that you can use your
 favorite tool (wireshark) to look at and debug.
