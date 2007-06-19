@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.562 2006/11/02 00:54:33 mjacob Exp $
+# $FreeBSD: src/sys/conf/options,v 1.596 2007/06/16 04:57:04 alc Exp $
 #
 #        On the handling of kernel options
 #
@@ -16,7 +16,7 @@
 # <xxx>.[c|s] should be directed into "opt_<xxx>.h", while options
 # that affect multiple files should either go in "opt_global.h" if
 # this is a kernel-wide option (used just about everywhere), or in
-# "opt_<option-name-in-lower-case>.h" if it affect only some files.
+# "opt_<option-name-in-lower-case>.h" if it affects only some files.
 # Note that the effect of listing only an option without a
 # header-file-name in conf/options (and cousins) is that the last
 # convention is followed.
@@ -59,7 +59,7 @@ NO_SYSCTL_DESCR	opt_global.h
 
 # Miscellaneous options.
 ADAPTIVE_GIANT	opt_adaptive_mutexes.h
-NO_ADAPTIVE_MUTEXES	opt_adaptive_mutexes.h
+ADAPTIVE_SX
 ALQ
 AUDIT		opt_global.h
 CODA_COMPAT_5	opt_coda.h
@@ -74,7 +74,6 @@ DIRECTIO
 FULL_PREEMPTION	opt_sched.h
 IPI_PREEMPTION	opt_sched.h
 GEOM_AES	opt_geom.h
-GEOM_APPLE	opt_geom.h
 GEOM_BDE	opt_geom.h
 GEOM_BSD	opt_geom.h
 GEOM_CACHE	opt_geom.h
@@ -82,12 +81,15 @@ GEOM_CONCAT	opt_geom.h
 GEOM_ELI	opt_geom.h
 GEOM_FOX	opt_geom.h
 GEOM_GATE	opt_geom.h
-GEOM_GPT	opt_geom.h
 GEOM_JOURNAL	opt_geom.h
 GEOM_LABEL	opt_geom.h
 GEOM_MBR	opt_geom.h
 GEOM_MIRROR	opt_geom.h
+GEOM_MULTIPATH	opt_geom.h
 GEOM_NOP	opt_geom.h
+GEOM_PART_APM	opt_geom.h
+GEOM_PART_GPT	opt_geom.h
+GEOM_PART_MBR	opt_geom.h
 GEOM_PC98	opt_geom.h
 GEOM_RAID3	opt_geom.h
 GEOM_SHSEC	opt_geom.h
@@ -122,8 +124,10 @@ MFI_DEBUG	opt_mfi.h
 MFI_DECODE_LOG	opt_mfi.h
 MPROF_BUFFERS	opt_mprof.h
 MPROF_HASH_SIZE	opt_mprof.h
-MUTEX_WAKE_ALL
+NO_ADAPTIVE_MUTEXES	opt_adaptive_mutexes.h
+NO_ADAPTIVE_RWLOCKS
 NSWBUF_MIN	opt_swap.h
+MBUF_PACKET_ZONE_DISABLE	opt_global.h
 PANIC_REBOOT_WAIT_TIME	opt_panic.h
 PPC_DEBUG	opt_ppc.h
 PPC_PROBE_CHIPSET opt_ppc.h
@@ -131,7 +135,6 @@ PPS_SYNC	opt_ntp.h
 PREEMPTION	opt_sched.h
 QUOTA
 SCHED_4BSD	opt_sched.h
-SCHED_CORE	opt_sched.h
 SCHED_ULE	opt_sched.h
 SHOW_BUSYBUFS
 SLEEPQUEUE_PROFILING
@@ -193,6 +196,7 @@ PROCFS		opt_dontuse.h
 PSEUDOFS	opt_dontuse.h
 REISERFS	opt_dontuse.h
 SMBFS		opt_dontuse.h
+TMPFS		opt_dontuse.h
 UDF		opt_dontuse.h
 UMAPFS		opt_dontuse.h
 UNIONFS		opt_dontuse.h
@@ -254,9 +258,6 @@ NFS_ROOT	opt_nfsroot.h
 
 # SMB/CIFS requester
 NETSMB		opt_netsmb.h
-
-# Experimental support for large MS-DOS filesystems; SEE WARNING IN "NOTES"!
-MSDOSFS_LARGE	opt_msdosfs.h
 
 # Options used only in subr_param.c.
 HZ		opt_param.h
@@ -349,12 +350,12 @@ DEV_ENC			opt_enc.h
 DEV_PF			opt_pf.h
 DEV_PFLOG		opt_pf.h
 DEV_PFSYNC		opt_pf.h
+PF_MPSAFE_UGID		opt_pf.h
 ETHER_II		opt_ef.h
 ETHER_8023		opt_ef.h
 ETHER_8022		opt_ef.h
 ETHER_SNAP		opt_ef.h
 MROUTING		opt_mrouting.h
-PIM			opt_mrouting.h
 INET			opt_inet.h
 INET6			opt_inet6.h
 IPSEC			opt_ipsec.h
@@ -373,9 +374,9 @@ IPFIREWALL_VERBOSE	opt_ipfw.h
 IPFIREWALL_VERBOSE_LIMIT	opt_ipfw.h
 IPFIREWALL_DEFAULT_TO_ACCEPT	opt_ipfw.h
 IPFIREWALL_FORWARD	opt_ipfw.h
+IPFIREWALL_NAT		opt_ipfw.h
 IPSTEALTH
 IPX
-IPXIP			opt_ipx.h
 LIBMBPOOL
 LIBMCHAIN
 LIBALIAS
@@ -389,8 +390,6 @@ PPP_FILTER		opt_ppp.h
 SLIP_IFF_OPTS		opt_slip.h
 TCPDEBUG
 TCP_SIGNATURE		opt_inet.h
-TCP_SACK_DEBUG		opt_tcp_sack.h 
-TCP_DROP_SYNFIN		opt_tcp_input.h
 DEV_VLAN		opt_vlan.h
 VLAN_ARRAY		opt_vlan.h
 XBONEHACK
@@ -399,28 +398,18 @@ XBONEHACK
 # SCTP
 #
 SCTP			opt_sctp.h
-SCTP_DEBUG		opt_sctp.h
-SCTP_HIGH_SPEED		opt_sctp.h
-SCTP_LOG_MAXBURST       opt_sctp.h
-SCTP_LOG_RWND           opt_sctp.h	
-SCTP_STAT_LOGGING	opt_sctp.h
-SCTP_CWND_LOGGING	opt_sctp.h
-SCTP_CWND_MONITOR	opt_sctp.h
-SCTP_BLK_LOGGING	opt_sctp.h
-SCTP_STR_LOGGING	opt_sctp.h
-SCTP_FR_LOGGING		opt_sctp.h
-SCTP_MAP_LOGGING	opt_sctp.h
-SCTP_SACK_LOGGING	opt_sctp.h
-SCTP_LOCK_LOGGING       opt_sctp.h
-SCTP_RTTVAR_LOGGING     opt_sctp.h
-SCTP_SB_LOGGING         opt_sctp.h
-SCTP_WITH_NO_CSUM       opt_sctp.h
-SCTP_EARLYFR_LOGGING    opt_sctp.h
-SCTP_NAGLE_LOGGING      opt_sctp.h
-SCTP_WAKE_LOGGING       opt_sctp.h
-SCTP_RECV_RWND_LOGGING  opt_sctp.h
-SCTP_SACK_RWND_LOGGING  opt_sctp.h
-SCTP_MBUF_LOGGING       opt_sctp.h
+SCTP_DEBUG		opt_sctp.h # Enable debug printfs
+SCTP_HIGH_SPEED		opt_sctp.h # Enable Sally Floyds HS TCP CC
+SCTP_WITH_NO_CSUM       opt_sctp.h # Use this at your peril
+SCTP_LOCK_LOGGING       opt_sctp.h # Log to KTR lock activity
+SCTP_MBUF_LOGGING       opt_sctp.h # Log to KTR general mbuf aloc/free
+SCTP_MBCNT_LOGGING	opt_sctp.h # Log to KTR mbcnt activity
+SCTP_PACKET_LOGGING     opt_sctp.h # Log to a packet buffer last N packets
+SCTP_LTRACE_CHUNKS      opt_sctp.h # Log to KTR chunks processed
+SCTP_LTRACE_ERRORS      opt_sctp.h # Log to KTR error returns.
+#
+#
+#
 
 # Netgraph(4). Use option NETGRAPH to enable the base netgraph code.
 # Each netgraph node type can be either be compiled into the kernel
@@ -441,7 +430,9 @@ NETGRAPH_BLUETOOTH_UBT	opt_netgraph.h
 NETGRAPH_BLUETOOTH_UBTBCMFW	opt_netgraph.h
 NETGRAPH_BPF		opt_netgraph.h
 NETGRAPH_BRIDGE		opt_netgraph.h
+NETGRAPH_CAR		opt_netgraph.h
 NETGRAPH_CISCO		opt_netgraph.h
+NETGRAPH_DEFLATE	opt_netgraph.h
 NETGRAPH_DEVICE		opt_netgraph.h
 NETGRAPH_ECHO		opt_netgraph.h
 NETGRAPH_EIFACE		opt_netgraph.h
@@ -466,6 +457,7 @@ NETGRAPH_ONE2MANY	opt_netgraph.h
 NETGRAPH_PPP		opt_netgraph.h
 NETGRAPH_PPPOE		opt_netgraph.h
 NETGRAPH_PPTPGRE	opt_netgraph.h
+NETGRAPH_PRED1		opt_netgraph.h
 NETGRAPH_RFC1490	opt_netgraph.h
 NETGRAPH_SOCKET		opt_netgraph.h
 NETGRAPH_SPLIT		opt_netgraph.h
@@ -535,6 +527,8 @@ ENABLE_ALART		opt_intpm.h
 
 # These cause changes all over the kernel
 BLKDEV_IOSIZE		opt_global.h
+MAXPHYS 		opt_global.h
+DFLTPHYS		opt_global.h
 BURN_BRIDGES		opt_global.h
 DEBUG			opt_global.h
 DEBUG_LOCKS		opt_global.h
@@ -545,11 +539,13 @@ INVARIANTS		opt_global.h
 MCLSHIFT		opt_global.h
 MUTEX_DEBUG		opt_global.h
 MUTEX_NOINLINE		opt_global.h
-MUTEX_PROFILING		opt_global.h
+LOCK_PROFILING		opt_global.h
+LOCK_PROFILING_FAST	opt_global.h
 MSIZE			opt_global.h
 REGRESSION		opt_global.h
 RESTARTABLE_PANICS	opt_global.h
 RWLOCK_NOINLINE		opt_global.h
+SX_NOINLINE		opt_global.h
 VFS_BIO_DEBUG		opt_global.h
 
 # These are VM related options
@@ -559,7 +555,6 @@ VM_KMEM_SIZE_MAX	opt_vm.h
 NO_SWAPPING		opt_vm.h
 MALLOC_MAKE_FAILURES	opt_vm.h
 MALLOC_PROFILE		opt_vm.h
-PQ_NOOPT		opt_vmpage.h
 
 # The MemGuard replacement allocator used for tamper-after-free detection
 DEBUG_MEMGUARD		opt_vm.h
@@ -629,7 +624,6 @@ FDC_DEBUG		opt_fdc.h
 PCFCLOCK_VERBOSE	opt_pcfclock.h
 PCFCLOCK_MAX_RETRIES	opt_pcfclock.h
 
-KDTRACE			opt_kdtrace.h
 KTR			opt_global.h
 KTR_ALQ			opt_ktr.h
 KTR_MASK		opt_ktr.h
@@ -645,7 +639,6 @@ WITNESS_SKIPSPIN	opt_witness.h
 ACPI_DEBUG		opt_acpi.h
 ACPI_MAX_THREADS	opt_acpi.h
 ACPI_NO_SEMAPHORES	opt_acpi.h
-ACPICA_PEDANTIC		opt_acpi.h
 
 # ISA support
 DEV_ISA			opt_isa.h
@@ -657,6 +650,8 @@ DEV_MCA			opt_mca.h
 DEV_CARP		opt_carp.h
 DEV_SPLASH		opt_splash.h
 
+# EISA support
+DEV_EISA		opt_eisa.h
 EISA_SLOTS		opt_eisa.h
 
 # ed driver
@@ -702,6 +697,7 @@ SC_MOUSE_CHAR		opt_syscons.h
 SC_NO_CUTPASTE		opt_syscons.h
 SC_NO_FONT_LOADING	opt_syscons.h
 SC_NO_HISTORY		opt_syscons.h
+SC_NO_MODE_CHANGE	opt_syscons.h
 SC_NO_SUSPEND_VTYSWITCH	opt_syscons.h
 SC_NO_SYSMOUSE		opt_syscons.h
 SC_NORM_ATTR		opt_syscons.h
@@ -709,6 +705,9 @@ SC_NORM_REV_ATTR	opt_syscons.h
 SC_PIXEL_MODE		opt_syscons.h
 SC_RENDER_DEBUG		opt_syscons.h
 SC_TWOBUTTON_MOUSE	opt_syscons.h
+
+# options for printf
+PRINTF_BUFR_SIZE	opt_printf.h
 
 # kbd options
 KBD_DISABLE_KEYMAP_LOAD	opt_kbd.h
@@ -753,3 +752,6 @@ XFS
 
 # snd_emu10kx sound driver options
 SND_EMU10KX_MULTICHANNEL	opt_emu10kx.h
+
+# Interrupt filtering
+INTR_FILTER             opt_global.h
