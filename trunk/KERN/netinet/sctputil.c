@@ -2749,16 +2749,34 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 {
 	uint32_t count;
 	uint8_t *ptr;
-
+#ifdef __Panda__
+	int max,cnt=0;
+	struct mbuf *prev=NULL;
+	max = (65536/MLEN) + 100;
+#endif
 	ptr = in_ptr;
 	if ((off < 0) || (len <= 0))
 		return (NULL);
 
 	/* find the desired start location */
 	while ((m != NULL) && (off > 0)) {
+#ifdef __Panda__
+		cnt++;
+		if (cnt > max) {
+			SCTP_PRINT("at cnt:%d prev:%p m:%p m_len:%d - terminate\n",
+				   cnt, prev, m, SCTP_BUF_LEN(m));
+			if(prev == m) {
+				panic ("particle chain corrupted");
+			}
+			return(NULL);
+		}
+#endif
 		if (off < SCTP_BUF_LEN(m))
 			break;
 		off -= SCTP_BUF_LEN(m);
+#ifdef __Panda__
+		prev = m;
+#endif
 		m = SCTP_BUF_NEXT(m);
 	}
 	if (m == NULL)
