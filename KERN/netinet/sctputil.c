@@ -2749,9 +2749,9 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 {
 	uint32_t count;
 	uint8_t *ptr;
-	int max,cnt=0;
+	int maximum, cnt=0;
 	struct mbuf *prev=NULL;
-	max = (65536/MLEN) + 100;
+	maximum = (65536/MLEN) + 100;
 
 	ptr = in_ptr;
 	if ((off < 0) || (len <= 0))
@@ -2760,7 +2760,7 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 	/* find the desired start location */
 	while ((m != NULL) && (off > 0)) {
 		cnt++;
-		if (cnt > max) {
+		if (cnt > maximum) {
 			SCTP_PRINTF("at cnt:%d prev:%p m:%p m_len:%d - terminate\n",
 				   cnt, prev, m, SCTP_BUF_LEN(m));
 			if(prev == m) {
@@ -2779,12 +2779,12 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 
 	/* is the current mbuf large enough (eg. contiguous)? */
 	if ((SCTP_BUF_LEN(m) - off) >= len) {
-		return (mtod(m, caddr_t)+off);
+		return (mtod(m, caddr_t) + off);
 	} else {
 		/* else, it spans more than one mbuf, so save a temp copy... */
 		while ((m != NULL) && (len > 0)) {
 			count = min(SCTP_BUF_LEN(m) - off, len);
-			bcopy(mtod(m, caddr_t)+off, ptr, count);
+			bcopy(mtod(m, caddr_t) + off, ptr, count);
 			len -= count;
 			ptr += count;
 			off = 0;
