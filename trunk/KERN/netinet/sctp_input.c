@@ -3069,6 +3069,11 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 	}
 }
 
+#if !defined(__Panda__)
+#ifdef __GNUC__
+__attribute__ ((noinline))
+#endif
+#endif
 static int
 sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			 struct sctp_stream_reset_out_req *sr_req)
@@ -3140,7 +3145,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		if (param_len > sizeof(cstore)) {
 			trunc = 1;
 		} else {
-			trunc = 1;
+			trunc = 0;
 		}
 
 		if (num_param > SCTP_MAX_RESET_PARAMS) {
