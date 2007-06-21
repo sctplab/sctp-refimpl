@@ -2749,9 +2749,6 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 {
 	uint32_t count;
 	uint8_t *ptr;
-	int maximum, cnt=0;
-	struct mbuf *prev=NULL;
-	maximum = (65536/MLEN) + 100;
 
 	ptr = in_ptr;
 	if ((off < 0) || (len <= 0))
@@ -2759,19 +2756,9 @@ sctp_m_getptr(struct mbuf *m, int off, int len, uint8_t * in_ptr)
 
 	/* find the desired start location */
 	while ((m != NULL) && (off > 0)) {
-		cnt++;
-		if (cnt > maximum) {
-			SCTP_PRINTF("at cnt:%d prev:%p m:%p m_len:%d - terminate\n",
-				   cnt, prev, m, SCTP_BUF_LEN(m));
-			if(prev == m) {
-				panic ("particle chain corrupted");
-			}
-			return(NULL);
-		}
 		if (off < SCTP_BUF_LEN(m))
 			break;
 		off -= SCTP_BUF_LEN(m);
-		prev = m;
 		m = SCTP_BUF_NEXT(m);
 	}
 	if (m == NULL)
@@ -3525,11 +3512,11 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), SCTP_STRRESET_INBOUND_STR);
 		break;
 	case SCTP_NOTIFY_STR_RESET_FAILED_OUT:
-		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_OUTBOUND_STR | SCTP_STRRESET_INBOUND_STR));
+		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_OUTBOUND_STR | SCTP_STRRESET_FAILED));
 		break;
 
 	case SCTP_NOTIFY_STR_RESET_FAILED_IN:
-		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_INBOUND_STR | SCTP_STRRESET_INBOUND_STR));
+		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_INBOUND_STR | SCTP_STRRESET_FAILED));
 		break;
 
 	case SCTP_NOTIFY_ASCONF_ADD_IP:
