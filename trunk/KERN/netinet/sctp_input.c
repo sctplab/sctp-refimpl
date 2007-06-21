@@ -3138,11 +3138,11 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			/* bad param */
 			break;
 		}
-		ph = (struct sctp_paramhdr *)sctp_m_getptr(m, offset, min(param_len, sizeof(cstore)), 
+		ph = (struct sctp_paramhdr *)sctp_m_getptr(m, offset, min(param_len, (int)sizeof(cstore)), 
 							   (uint8_t *)&cstore);
 		ptype = ntohs(ph->param_type);
 		num_param++;
-		if (param_len > sizeof(cstore)) {
+		if (param_len > (int)sizeof(cstore)) {
 			trunc = 1;
 		} else {
 			trunc = 0;
