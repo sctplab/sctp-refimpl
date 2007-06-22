@@ -186,11 +186,19 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 	cpto = ((caddr_t)buf + sizeof(int));
 	/* validate all the addresses and get the size */
 	for (i = 0; i < addrcnt; i++) {
-		if (at->sa_family == AF_INET) {
+		if (at->sa_family == AF_INET) { 
+			if (at->sa_len != sizeof(struct sockaddr_in)) {
+				errno = EINVAL;
+				return (-1);
+			}
 			memcpy(cpto, at, at->sa_len);
 			cpto = ((caddr_t)cpto + at->sa_len);
 			len += at->sa_len;
 		} else if (at->sa_family == AF_INET6) {
+			if (at->sa_len != sizeof(struct sockaddr_in6)) {
+				errno = EINVAL;
+				return (-1);
+			}
 			if (IN6_IS_ADDR_V4MAPPED(&((struct sockaddr_in6 *)at)->sin6_addr)) {
 				len += sizeof(struct sockaddr_in);
 				in6_sin6_2_sin((struct sockaddr_in *)cpto, (struct sockaddr_in6 *)at);
@@ -220,7 +228,7 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 	aa = (int *)buf;
 	*aa = cnt;
 	ret = setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X, (void *)buf,
-	    (socklen_t)len);
+			 (socklen_t)len);
 	if ((ret == 0) && id) {
 		p_id = (sctp_assoc_t *)buf;
 		*id = *p_id;
@@ -233,7 +241,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 {
 	struct sctp_getaddresses *gaddrs;
 	struct sockaddr *sa;
-	int i, sz, fam, argsz;
+	int i, sz, argsz;
 
 	/* validate the flags */
 	if ((flags != SCTP_BINDX_ADD_ADDR) &&
@@ -253,23 +261,30 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 		errno = ENOMEM;
 		return (-1);
 	}
-	gaddrs->sget_assoc_id = 0;
 	sa = addrs;
 	for (i = 0; i < addrcnt; i++) {
 		sz = sa->sa_len;
-		fam = sa->sa_family;
-		if ((fam != AF_INET) && (fam != AF_INET6)) {
+		if (sa->sa_family == AF_INET) {
+			if (sa->sa_len != sizeof(struct sockaddr_in))
+				goto out_error;
+		} else if (sa->sa_family == AF_INET6) {
+			if (sa->sa_len != sizeof(struct sockaddr_in6))
+				goto out_error;
+		} else {
+			/* invalid address family specified */
+		out_error:
 			free(gaddrs);
 			errno = EINVAL;
 			return (-1);
 		}
+		memset(gaddrs, 0, argsz);
+		gaddrs->sget_assoc_id = 0;
 		memcpy(gaddrs->addr, sa, sz);
-		if (setsockopt(sd, IPPROTO_SCTP, flags,
-		    gaddrs, (socklen_t) argsz) != 0) {
+		if (setsockopt(sd, IPPROTO_SCTP, flags, gaddrs,
+			       (socklen_t)argsz) != 0) {
 			free(gaddrs);
 			return (-1);
 		}
-		memset(gaddrs, 0, argsz);
 		sa = (struct sockaddr *)((caddr_t)sa + sz);
 	}
 	free(gaddrs);
