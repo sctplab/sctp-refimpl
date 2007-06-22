@@ -1,1 +1,2 @@
--
+- Fix bindx() to allow port 0 throughout the address list since
+  sctp_bindx() in sctp_sys_calls.c has been changed
