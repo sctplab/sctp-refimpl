@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.47 2007/06/18 21:59:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.48 2007/06/22 13:50:56 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6302,8 +6302,18 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	if (assoc_id == 0) {
 		/* add the address */
 		struct sctp_inpcb *lep;
+		struct sockaddr_in *lsin = (struct sockaddr_in *)addr_touse;
 
-		((struct sockaddr_in *)addr_touse)->sin_port = inp->sctp_lport;
+		/* validate the incoming port */
+		if ((lsin->sin_port != 0) &&
+		    (lsin->sin_port != inp->sctp_lport)) {
+			*error = EINVAL;
+			return;
+		} else {
+			/* user specified 0 port, set it to existing port */
+			lsin->sin_port = inp->sctp_lport;
+		}
+
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
