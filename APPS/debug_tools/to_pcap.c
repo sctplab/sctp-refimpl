@@ -48,13 +48,15 @@ main(int argc, char **argv)
 {
 	uint8_t buf[SCTP_PACKET_LOG_SIZE];
 	FILE *io, *out;
-	int ret;
+	int ret, i;
 	struct pcap_file_header head;
 	uint32_t loopback = 0x00000002;
 	struct pcap_pkthdr phead;
 	struct part_ip *ip;
 	struct part_ip6 *ip6;
 	uint16_t len;
+	char *infile=NULL, *outfile=NULL;
+	int byte_order_rev=0;
 
 	int limit, at, wlen, cnt=0;
 	struct sctp_packet_log { 
@@ -64,16 +66,35 @@ main(int argc, char **argv)
 		/* we should always have at least 20 bytes */
 		char data[20];
 	} *header;
-	if (argc < 3) {
-		printf("Use %s file out\n", argv[0]);
-		return (0);
+
+	while ((i = getopt(argc,argv,"i:o:e?")) != EOF) {
+		switch (i) {
+		case 'i':
+			infile = optarg;
+			break;
+		case 'o':
+			outfile = optarg;
+			break;
+		case 'e':
+			byte_order_rev = 1;
+			break;
+		default:
+		case '?':
+			goto error_out;
+		}
 	}
-	io = fopen(argv[1], "r");
+	if((infile == NULL) || (outfile == NULL) ) {
+	error_out:
+		printf("Use %s -i input-file -o output-file [-e]\n", argv[0]);
+		printf(" -e is for dumps generated on a non intel byte order machine\n");
+		return (-1);
+	}
+	io = fopen(infile, "r");
 	if(io == NULL) {
 		printf("Can't open %s error:%d\n", argv[1], errno);
 		return (0);
 	}
-	out = fopen(argv[2], "w+");
+	out = fopen(outfile, "w+");
 	if (out == NULL) {
 		printf("Can't open %s error:%d\n", argv[2], errno);
 		return (0);
@@ -86,12 +107,21 @@ main(int argc, char **argv)
 	}
 	printf("Read in %d bytes\n", limit);
 	/* build pcap header and write */
-	head.magic = 0xa1b2c3d4;
-	head.version_major = PCAP_VERSION_MAJOR;
-	head.version_minor = PCAP_VERSION_MINOR;
+	if (byte_order_rev) {
+		head.magic = htonl(0xa1b2c3d4);
+		head.version_major = htons(PCAP_VERSION_MAJOR);
+		head.version_minor = htons(PCAP_VERSION_MINOR);
+		head.snaplen = htonl(0x0000ffff);
+	} else {
+		head.magic = 0xa1b2c3d4;
+		head.version_major = PCAP_VERSION_MAJOR;
+		head.version_minor = PCAP_VERSION_MINOR;
+		head.snaplen = 0x0000ffff;
+	}
 	head.thiszone = 0;
 	head.sigfigs = 0;
-	head.snaplen = 0x0000ffff;
+
+
 	head.linktype = 0;
 	if( (ret=fwrite(&head, sizeof(head), 1, out)) < 1) {
 		printf("Can't write header ret:%d errno=%d\n",
@@ -101,6 +131,13 @@ main(int argc, char **argv)
 	header = (struct sctp_packet_log *)buf;
 	at = 0;
 	while (at < limit) {
+		if(byte_order_rev) {
+			int x;
+			x = ntohl(header->datasize);
+			header->datasize = x;
+			x = ntohl(header->timestamp);
+			header->timestamp = x;
+		}
 		printf("%d - %d bytes (including pad), ts:%x ipversion:%x\n",
 		       cnt, 
 		       header->datasize, 
@@ -118,30 +155,32 @@ main(int argc, char **argv)
 		if(((header->data[0] & 0xf0) >> 4) == 4) {
 			uint16_t tmp;
 			ip = (struct part_ip *) header->data;
-			len = ip->len;
-			tmp = htons(ip->ip_off);
-			ip->ip_off = tmp;
-			ip->len = htons(header->datasize-16);
-			len = wlen = header->datasize-16;
-#ifdef fffff
-			wlen = (((len+3) << 2) >> 2);
-			if ((wlen + 20) < header->datasize) {
-				wlen += 20;
-				ip->len = htons(len+20);
+			if(byte_order_rev == 0) {
+				len = ip->len;
+				tmp = htons(ip->ip_off);
+				ip->ip_off = tmp;
+				ip->len = htons(header->datasize-16);
 			} else {
-				ip->len = htons(len);
+				len = ntohs(ip->len);
+
 			}
-#endif
+			len = wlen = header->datasize-16;
 			wlen = ((((len)+3) >> 2) << 2);
 		} else if (((header->data[0] & 0xf0) >> 4) == 6) {
 			ip6 = (struct part_ip6 *)header->data;
-			len = ip6->len;
+			if(byte_order_rev) 
+				len = ntohs(ip6->len);
+			else
+				len = ip6->len;
 			wlen = header->datasize - 12;
 		} else {
 			printf("Not v6 or v4?\n");
 			break;
 		}
-		phead.len = phead.caplen = wlen + 4;
+		if(byte_order_rev) 
+			phead.len = phead.caplen = htonl(wlen + 4);
+		else
+			phead.len = phead.caplen = wlen + 4;
 
 		if((ret=fwrite(&phead, sizeof(phead), 1, out)) < 1) {
 			printf("Can't write phead ret:%d errno=%d\n",
