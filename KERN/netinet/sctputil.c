@@ -884,7 +884,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_on_off = (uint8_t) sctp_cmt_on_off;
 	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip.ip_tos;
