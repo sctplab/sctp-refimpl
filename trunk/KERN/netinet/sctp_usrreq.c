@@ -654,7 +654,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUND_V6;	/* I'm not v6! */
 	ip_inp = &inp->ip_inp.inp;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) 
 	ip_inp->inp_vflag |= INP_IPV4;
 	ip_inp->inp_ip_ttl = ip_defttl;
 #else
@@ -2437,7 +2437,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				paddrp->spp_assoc_id = (sctp_assoc_t) 0;
 				/* get inp's default */
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
 				paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
 				paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip.ip_tos;
