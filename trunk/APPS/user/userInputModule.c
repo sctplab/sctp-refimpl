@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.104 2007-06-11 22:39:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.105 2007-06-26 15:53:35 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3556,7 +3556,7 @@ cmd_getstat(char *argv[], int argc)
 	}
 
 #define	p(f, n) \
-    printf("%-10.10s=%08lX%s", n, stat.f, ((cnt++&3)==3)?"\n":" ")
+    printf("%-10.10s=%08X%s", n, stat.f, ((cnt++&3)==3)?"\n":" ")
 #define nl(n) \
 	do { \
 		printf("%s%s\n", ((cnt&3)==0)?"":"\n", n);\
