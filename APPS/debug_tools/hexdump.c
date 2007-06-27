@@ -76,11 +76,11 @@ main(int argc, char **argv)
 			ccnt++;
 			buf[2] = 0;
 			val = strtoul(buf, NULL, 16);
-			fwrite(&val, 2, 1, out);
+			fwrite(&val, 1, 1, out);
 		}
 	}
 	fclose(in);
 	fclose(out);
-	printf("Collection end lines %d, byte-cnt %x\n", cnt, ccnt);
+	printf("Collection end lines %d, byte-cnt %d\n", cnt, ccnt);
 	return (0);
 }
