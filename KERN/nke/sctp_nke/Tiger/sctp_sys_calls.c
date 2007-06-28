@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.9 2007/06/22 13:59:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.10 2007/06/25 18:58:27 rrs Exp $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -215,7 +215,8 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 		}
 		if (len > (sizeof(buf) - sizeof(int))) {
 			/* Never enough memory */
-			return (E2BIG);
+			errno = E2BIG;
+			return (-1);
 		}
 		at = (struct sockaddr *)((caddr_t)at + at->sa_len);
 		cnt++;
@@ -332,7 +333,6 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		errno = ENOMEM;
 		return (-1);
 	}
-	memset(addrs, 0, siz);
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
@@ -397,7 +397,6 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		errno = ENOMEM;
 		return (-1);
 	}
-	memset(addrs, 0, siz);
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
