@@ -2228,7 +2228,7 @@ sctp_peeloff(td, uap)
 	error = fgetsock(td, uap->sd, &head, &fflag);
 	if (error)
 		goto done2;
-	error = sctp_can_peel_off(head, (sctp_assoc_t)uap->name);
+	error = sctp_can_peel_off(head, (sctp_assoc_t)(long)uap->name);
 	if (error)
 		goto done2;
 	/*
@@ -2265,7 +2265,7 @@ sctp_peeloff(td, uap)
 
 	ACCEPT_UNLOCK();
 
-	error = sctp_do_peeloff(head, so, (sctp_assoc_t)uap->name);
+	error = sctp_do_peeloff(head, so, (sctp_assoc_t)(long)uap->name);
 	if (error)
 		goto noconnection;
 	if (head->so_sigio != NULL)
