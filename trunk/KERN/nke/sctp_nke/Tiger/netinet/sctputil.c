@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.48 2007/06/22 13:50:56 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.49 2007/06/25 19:05:26 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -884,7 +884,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_on_off = (uint8_t) sctp_cmt_on_off;
 	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip.ip_tos;
