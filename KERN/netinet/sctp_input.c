@@ -4528,6 +4528,7 @@ sctp_clean_stream_queues(struct sctp_tcb *stcb)
 			sctp_free_a_strmoq(stcb, sp);
 		}
 	}
+	SCTP_TCB_SEND_UNLOCK(stcb);	
 }
 
 /*
