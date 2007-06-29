@@ -3824,8 +3824,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
     struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
-	uint16_t chk_length;
-	uint8_t chk_type;
+	unsigned int chk_length;
 
 	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
@@ -3839,19 +3838,28 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	    sizeof(*ch), (uint8_t *) & chunk_buf);
 	while (ch != NULL) {
 		chk_length = ntohs(ch->chunk_length);
-		chk_type = ch->chunk_type;
-
 		if (chk_length < sizeof(*ch)) {
 			/* break to abort land */
 			break;
 		}
-		if (chk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
-		}
-		if ((chk_type == SCTP_PACKET_DROPPED) ||
-		    (chk_type == SCTP_ABORT_ASSOCIATION) ||
-		    (chk_type == SCTP_SHUTDOWN_ACK)) {
+		switch (ch->chunk_type) {
+		case SCTP_PACKET_DROPPED:
+			/* we don't respond to pkt-dropped */
 			return;
+		case SCTP_ABORT_ASSOCIATION:
+			/* we don't respond with an ABORT to an ABORT */
+			return;
+		case SCTP_SHUTDOWN_COMPLETE:
+			/*
+			 * we ignore it since we are not waiting for it and
+			 * peer is gone
+			 */
+			return;
+		case SCTP_SHUTDOWN_ACK:
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
+			return;
+		default:
+			break;
 		}
 		offset += SCTP_SIZE32(chk_length);
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
