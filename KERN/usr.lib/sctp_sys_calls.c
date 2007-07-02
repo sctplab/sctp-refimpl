@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.11 2007/06/26 02:07:47 mjacob Exp $");
+__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.12 2007/07/02 10:52:34 rrs Exp $");
 #endif
 #include <stdio.h>
 #include <string.h>
