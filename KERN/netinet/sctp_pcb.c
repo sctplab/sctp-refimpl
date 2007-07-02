@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.44 2007/06/18 21:59:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.45 2007/07/01 11:38:27 gnn Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2161,12 +2161,12 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
-#ifdef IPSEC
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
+#ifdef FAST_IPSEC
+#if !(defined(__APPLE__))
 	{
 		struct inpcbpolicy *pcb_sp = NULL;
 
-		error = ipsec_init_pcbpolicy(so, &pcb_sp);
+		error = ipsec_init_policy(so, &pcb_sp);
 		/* Arrange to share the policy */
 		inp->ip_inp.inp.inp_sp = pcb_sp;
 		((struct in6pcb *)(&inp->ip_inp.inp))->in6p_sp = pcb_sp;
@@ -2183,7 +2183,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_INP_INFO_WUNLOCK();
 		return error;
 	}
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
@@ -3470,36 +3470,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	 */
 	cnt = 0;
 	if (so) {
-#ifdef IPSEC
-#ifdef __OpenBSD__
-		/* XXX IPsec cleanup here */
-		{
-			int s2 = spltdb();
-
-			if (ip_pcb->inp_tdb_in)
-				TAILQ_REMOVE(&ip_pcb->inp_tdb_in->tdb_inp_in,
-				    ip_pcb, inp_tdb_in_next);
-			if (ip_pcb->inp_tdb_out)
-				TAILQ_REMOVE(&ip_pcb->inp_tdb_out->tdb_inp_out, ip_pcb,
-				    inp_tdb_out_next);
-			if (ip_pcb->inp_ipsec_localid)
-				ipsp_reffree(ip_pcb->inp_ipsec_localid);
-			if (ip_pcb->inp_ipsec_remoteid)
-				ipsp_reffree(ip_pcb->inp_ipsec_remoteid);
-			if (ip_pcb->inp_ipsec_localcred)
-				ipsp_reffree(ip_pcb->inp_ipsec_localcred);
-			if (ip_pcb->inp_ipsec_remotecred)
-				ipsp_reffree(ip_pcb->inp_ipsec_remotecred);
-			if (ip_pcb->inp_ipsec_localauth)
-				ipsp_reffree(ip_pcb->inp_ipsec_localauth);
-			if (ip_pcb->inp_ipsec_remoteauth)
-				ipsp_reffree(ip_pcb->inp_ipsec_remoteauth);
-			splx(s2);
-		}
-#else
+#ifdef FAST_IPSEC
 		ipsec4_delete_pcbpolicy(ip_pcb);
-#endif
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 
 #ifdef  __NetBSD__
 		sofree(so);
