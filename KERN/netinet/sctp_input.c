@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.46 2007/06/22 14:40:09 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.47 2007/07/01 11:38:27 gnn Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4775,15 +4775,6 @@ sctp_input(i_pak, va_alist)
 	int refcount_up = 0;
 	int length, mlen, offset;
 
-#if defined(__OpenBSD__)
-#if defined(IPSEC)
-	struct inpcb *i_inp;
-	struct m_tag *mtag;
-	struct tdb_ident *tdbi;
-	struct tdb *tdb;
-	int error;
-#endif
-#endif
 #ifdef __Panda__
 	/*-
 	 * This is Evil, but its the only way to make
@@ -4981,76 +4972,16 @@ sctp_input(i_pak, va_alist)
 	} else if (stcb == NULL) {
 		refcount_up = 1;
 	}
-#ifdef IPSEC
+#ifdef FAST_IPSEC
 	/*
 	 * I very much doubt any of the IPSEC stuff will work but I have no
 	 * idea, so I will leave it in place.
 	 */
-
-#ifdef __OpenBSD__
-	/* FIX ME: this don't work... :) */
-	{
-		/* Find most recent IPsec tag */
-		i_inp = &inp->ip_inp.inp;
-		mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL);
-		s = splsoftnet();
-		if (mtag != NULL) {
-			tdbi = (struct tdb_ident *)(mtag + 1);
-			tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
-		} else
-			tdb = NULL;
-		ipsp_spd_lookup(m, af, iphlen, &error, IPSP_DIRECTION_IN,
-				tdb, i_inp);
-		if (error) {
-			splx(s);
-			SCTP_STAT_INCR(sctps_hdrops);
-			goto bad;
-		}
-		/* Latch SA */
-		if (i_inp->inp_tdb_in != tdb) {
-			if (tdb) {
-				tdb_add_inp(tdb, i_inp, 1);
-				if (i_inp->inp_ipo == NULL) {
-					i_inp->inp_ipo = ipsec_add_policy(i_inp, af,
-									  IPSP_DIRECTION_OUT);
-					if (i_inp->inp_ipo == NULL) {
-						splx(s);
-						SCTP_STAT_INCR(sctps_hdrops);
-						goto bad;
-					}
-				}
-				if (i_inp->inp_ipo->ipo_dstid == NULL &&
-				    tdb->tdb_srcid != NULL) {
-					i_inp->inp_ipo->ipo_dstid = tdb->tdb_srcid;
-					tdb->tdb_srcid->ref_count++;
-				}
-				if (i_inp->inp_ipsec_remotecred == NULL &&
-				    tdb->tdb_remote_cred != NULL) {
-					i_inp->inp_ipsec_remotecred =
-						tdb->tdb_remote_cred;
-					tdb->tdb_remote_cred->ref_count++;
-				}
-				if (i_inp->inp_ipsec_remoteauth == NULL &&
-				    tdb->tdb_remote_auth != NULL) {
-					i_inp->inp_ipsec_remoteauth =
-						tdb->tdb_remote_auth;
-					tdb->tdb_remote_auth->ref_count++;
-				}
-			} else {/* Just reset */
-				TAILQ_REMOVE(&i_inp->inp_tdb_in->tdb_inp_in, i_inp,
-					     inp_tdb_in_next);
-				i_inp->inp_tdb_in = NULL;
-			}
-		}
-		splx(s);
-	}
-#else
 	if (inp && ipsec4_in_reject(m, &inp->ip_inp.inp)) {
-		ipsecstat.in_polvio++;
+                ipsec4stat.in_polvio++;
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
-#endif
 #endif				/* IPSEC */
 
 	/*
