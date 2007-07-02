@@ -175,7 +175,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
  */
 
 int
-sctp_is_there_unsent_data(struct sctp_stcb *stcb)
+sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 {
 	int unsent_data=0;
 	struct sctp_stream_queue_pending *sp;
