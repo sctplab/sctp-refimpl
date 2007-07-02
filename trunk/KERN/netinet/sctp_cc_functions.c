@@ -1056,6 +1056,8 @@ htcp_reset(struct htcp *ca)
 	ca->last_cong = ticks;
 }
 
+#ifdef SCTP_NOT_USED
+
 static uint32_t
 htcp_cwnd_undo(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
@@ -1064,6 +1066,8 @@ htcp_cwnd_undo(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->htcp_ca.old_maxB = net->htcp_ca.undo_old_maxB;
 	return max(net->cwnd, ((net->ssthresh/net->mtu<<7)/net->htcp_ca.beta)*net->mtu);
 }
+
+#endif
 
 static inline void
 measure_rtt(struct sctp_tcb *stcb, struct sctp_nets *net)
@@ -1271,12 +1275,14 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 }
 
+#ifdef SCTP_NOT_USED
 /* Lower bound on congestion window. */
 static uint32_t
 htcp_min_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	return net->ssthresh;
 }
+#endif
 
 static void
 htcp_init(struct sctp_tcb *stcb, struct sctp_nets *net)
