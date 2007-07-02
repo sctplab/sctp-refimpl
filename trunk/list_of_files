@@ -66,6 +66,8 @@ KERN/netinet/sctp.h
 KERN/netinet/sctp_asconf.h
 KERN/netinet/sctp_callout.h
 KERN/netinet/sctp_constants.h
+KERN/netinet/sctp_cc_functions.c
+KERN/netinet/sctp_cc_functions.h
 KERN/netinet/sctp_crc32.c
 KERN/netinet/sctp_crc32.h
 KERN/netinet/sctp_hashdriver.c
