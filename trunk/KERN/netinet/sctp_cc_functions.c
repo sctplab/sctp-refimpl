@@ -248,7 +248,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 */
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
-		   // @@@ Do something
+		     @@@ Do something
 		 }	   
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
@@ -734,7 +734,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 */
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
-		   // @@@ Do something
+		    @@@ Do something
 		 }	   
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
@@ -1092,7 +1092,7 @@ measure_achieved_throughput(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return;
 
 	/* achieved throughput calculations */
-	// JRS - not 100% sure of this statement
+	/* JRS - not 100% sure of this statement */
 	if (net->fast_retran_ip == 1) {
 		net->htcp_ca.bytecount = 0;
 		net->htcp_ca.lasttime = now;
@@ -1413,7 +1413,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 */
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
-		   // @@@ Do something
+		    @@@ Do something
 		 }	   
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
