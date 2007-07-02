@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.29 2007/06/17 01:36:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.30 2007/07/01 11:38:28 gnn Exp $");
 #endif
 
 
@@ -59,6 +59,12 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.29 2007/06/17 01:36:02 r
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
+#ifdef FAST_IPSEC
+#include <netipsec/ipsec.h>
+#if defined(INET6)
+#include <netipsec/ipsec6.h>
+#endif /* INET6 */
+#endif /* FAST_IPSEC */
 
 extern struct protosw inetsw[];
 
@@ -310,76 +316,10 @@ sctp_skip_csum:
 		refcount_up = 1;
 	}
 	in6p_ip = (struct inpcb *)in6p;
-#ifdef IPSEC
+#ifdef FAST_IPSEC
 	/*
 	 * Check AH/ESP integrity.
 	 */
-#ifdef __OpenBSD__
-	{
-		struct inpcb *i_inp;
-		struct m_tag *mtag;
-		struct tdb_ident *tdbi;
-		struct tdb *tdb;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		int s;
-#endif
-		int error;
-
-		/* Find most recent IPsec tag */
-		i_inp = (struct inpcb *)in6p;
-		mtag = m_tag_find(m, PACKET_TAG_IPSEC_IN_DONE, NULL);
-		s = splsoftnet();
-		if (mtag != NULL) {
-			tdbi = (struct tdb_ident *)(mtag + 1);
-			tdb = gettdb(tdbi->spi, &tdbi->dst, tdbi->proto);
-		} else
-			tdb = NULL;
-
-		ipsp_spd_lookup(m, af, iphlen, &error, IPSP_DIRECTION_IN,
-		    tdb, i_inp);
-		if (error) {
-			splx(s);
-			goto bad;
-		}
-		/* Latch SA */
-		if (i_inp->inp_tdb_in != tdb) {
-			if (tdb) {
-				tdb_add_inp(tdb, i_inp, 1);
-				if (i_inp->inp_ipo == NULL) {
-					i_inp->inp_ipo = ipsec_add_policy(i_inp,
-					    af, IPSP_DIRECTION_OUT);
-					if (i_inp->inp_ipo == NULL) {
-						splx(s);
-						goto bad;
-					}
-				}
-				if (i_inp->inp_ipo->ipo_dstid == NULL &&
-				    tdb->tdb_srcid != NULL) {
-					i_inp->inp_ipo->ipo_dstid =
-					    tdb->tdb_srcid;
-					tdb->tdb_srcid->ref_count++;
-				}
-				if (i_inp->inp_ipsec_remotecred == NULL &&
-				    tdb->tdb_remote_cred != NULL) {
-					i_inp->inp_ipsec_remotecred =
-					    tdb->tdb_remote_cred;
-					tdb->tdb_remote_cred->ref_count++;
-				}
-				if (i_inp->inp_ipsec_remoteauth == NULL &&
-				    tdb->tdb_remote_auth != NULL) {
-					i_inp->inp_ipsec_remoteauth =
-					    tdb->tdb_remote_auth;
-					tdb->tdb_remote_auth->ref_count++;
-				}
-			} else {/* Just reset */
-				TAILQ_REMOVE(&i_inp->inp_tdb_in->tdb_inp_in,
-				    i_inp, binp_tdb_in_next);
-				i_inp->inp_tdb_in = NULL;
-			}
-		}
-		splx(s);
-	}
-#else
 	if (in6p_ip && (ipsec6_in_reject(m, in6p_ip))) {
 /* XXX */
 #ifdef __APPLE__
@@ -390,8 +330,7 @@ sctp_skip_csum:
 #endif
 		goto bad;
 	}
-#endif
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 
 	/*
 	 * CONTROL chunk processing
