@@ -50,10 +50,6 @@ int sctp_usrreq
 __P((struct socket *, int, struct mbuf *, struct mbuf *,
      struct mbuf *, struct proc *p));
 
-#elif defined(__OpenBSD__)
-int sctp_usrreq
-__P((struct socket *, int, struct mbuf *, struct mbuf *,
-     struct mbuf *));
 #endif
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
