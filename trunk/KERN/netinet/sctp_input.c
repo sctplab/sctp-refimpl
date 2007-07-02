@@ -173,6 +173,65 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 /*
  * process peer "INIT/INIT-ACK" chunk returns value < 0 on error
  */
+
+int
+sctp_is_there_unsent_data(struct sctp_stcb *stcb)
+{
+	int unsent_data=0;
+	struct sctp_stream_queue_pending *sp;
+	struct sctp_stream_out *strq;	
+	struct sctp_association *asoc;
+	
+	/* This function returns the number of streams that have
+	 * true unsent data on them. Note that as it looks through
+	 * it will clean up any places that have old data that
+	 * has been sent but left at top of stream queue.
+	 */
+ 	asoc = &stcb->asoc;
+	SCTP_TCB_SEND_LOCK(stcb);
+	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
+		/* Check to see if some data queued */
+		TAILQ_FOREACH(strq, &asoc->out_wheel, next_spoke) {
+			/*sa_ignore FREED_MEMORY*/
+		is_there_another:
+			sp = TAILQ_FIRST(&strq->outqueue);
+			if (sp == NULL) {
+				continue;
+			}
+			if ((sp->msg_is_complete) && 
+			    (sp->length == 0)  && 
+			    (sp->sender_all_done)) {
+				/* We are doing differed cleanup. Last
+				 * time through when we took all the data
+				 * the sender_all_done was not set.
+				 */
+				if (sp->put_last_out == 0) {
+					SCTP_PRINTF("Gak, put out entire msg with NO end!-1\n");
+					SCTP_PRINTF("sender_done:%d len:%d msg_comp:%d put_last_out:%d\n",
+						    sp->sender_all_done,
+						    sp->length,
+						    sp->msg_is_complete,
+						    sp->put_last_out);
+				}
+				atomic_subtract_int(&stcb->asoc.stream_queue_cnt, 1);
+				TAILQ_REMOVE(&strq->outqueue, sp, next);
+				sctp_free_remote_addr(sp->net);
+				if(sp->data) {
+					sctp_m_freem(sp->data);
+					sp->data = NULL;
+				}
+				sctp_free_a_strmoq(stcb, sp);
+				goto is_there_another;
+			} else {
+				unsent_data++;
+				continue;
+			}
+		}
+	}
+	SCTP_TCB_SEND_UNLOCK(stcb);
+	return (unsent_data);
+}
+
 static int
 sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
@@ -575,19 +634,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		 */
 		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
 	}
-	/* Now are we there yet? */
-	some_on_streamwheel = 0;
-	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
-		/* Check to see if some data queued */
-		struct sctp_stream_out *outs;
+	/* Now is there unsent data on a stream somewhere? */
+	some_on_streamwheel = sctp_is_there_unsent_data(stcb);
 
-		TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
-			if (!TAILQ_EMPTY(&outs->outqueue)) {
-				some_on_streamwheel = 1;
-				break;
-			}
-		}
-	}
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    some_on_streamwheel) {
@@ -4488,49 +4537,6 @@ sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 }
 
-static void
-sctp_clean_stream_queues(struct sctp_tcb *stcb)
-{
-	struct sctp_stream_queue_pending *sp;
-	struct sctp_stream_out *strq;
-	int i;
-	SCTP_TCB_LOCK_ASSERT(stcb);
-
-	SCTP_TCB_SEND_LOCK(stcb);
-	for (i=0; i<stcb->asoc.streamoutcnt; i++ ) {
-		strq = &stcb->asoc.strmout[i];
-		/*sa_ignore FREED_MEMORY*/
-		sp = TAILQ_FIRST(&strq->outqueue);
-		if (sp == NULL) {
-			continue;
-		}
-		if ((sp->msg_is_complete) &&  (sp->length == 0)  && 
-		    (sp->sender_all_done)) {
-			/* We are doing differed cleanup. Last
-			 * time through when we took all the data
-			 * the sender_all_done was not set.
-			 */
-			if (sp->put_last_out == 0) {
-				SCTP_PRINTF("Gak, put out entire msg with NO end!-1\n");
-				SCTP_PRINTF("sender_done:%d len:%d msg_comp:%d put_last_out:%d\n",
-					    sp->sender_all_done,
-					    sp->length,
-					    sp->msg_is_complete,
-					    sp->put_last_out);
-			}
-			atomic_subtract_int(&stcb->asoc.stream_queue_cnt, 1);
-			TAILQ_REMOVE(&strq->outqueue, sp, next);
-			sctp_free_remote_addr(sp->net);
-			if(sp->data) {
-				sctp_m_freem(sp->data);
-				sp->data = NULL;
-			}
-			sctp_free_a_strmoq(stcb, sp);
-		}
-	}
-	SCTP_TCB_SEND_UNLOCK(stcb);	
-}
-
 /*
  * common input chunk processing (v4 and v6)
  */
@@ -4771,9 +4777,6 @@ trigger_send:
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");
-	} else if ((un_sent) && (stcb->asoc.stream_queue_cnt > 0)) {
-		/* We have un-cleaned up entries on stream queues */
-		sctp_clean_stream_queues(stcb);
 	}
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 3);

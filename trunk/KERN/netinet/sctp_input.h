@@ -51,5 +51,8 @@ sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq,
 void sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries,
     uint16_t *list);
 
+
+int sctp_is_there_unsent_data(struct sctp_stcb *stcb);
+
 #endif
 #endif
