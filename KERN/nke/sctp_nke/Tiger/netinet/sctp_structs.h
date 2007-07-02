@@ -145,12 +145,34 @@ struct sctp_asconf_iterator {
 	int cnt;
 };
 
-
 struct sctp_net_route {
     sctp_rtentry_t *ro_rt;
     union sctp_sockstore _l_addr;	/* remote peer addr */
     struct sctp_ifa *_s_addr;		/* our selected src addr */
 };
+
+struct htcp {
+	uint16_t	alpha;		/* Fixed point arith, << 7 */
+	uint8_t		beta;           /* Fixed point arith, << 7 */
+	uint8_t		modeswitch;     /* Delay modeswitch until we had at least one congestion event */
+	uint32_t	last_cong;	/* Time since last congestion event end */
+	uint32_t	undo_last_cong;
+	uint16_t	bytes_acked;
+	uint32_t	bytecount;
+	uint32_t	minRTT;
+	uint32_t	maxRTT;
+
+	uint32_t	undo_maxRTT;
+	uint32_t	undo_old_maxB;
+
+	/* Bandwidth estimation */
+	uint32_t	minB;
+	uint32_t	maxB;
+	uint32_t	old_maxB;
+	uint32_t	Bi;
+	uint32_t	lasttime;
+};
+
 
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
@@ -197,6 +219,12 @@ struct sctp_nets {
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
+
+	/*
+	 * JRS - 5/8/07 - Variable to track last time
+	 *  a destination was active for CMT PF
+	 */
+	uint32_t last_active;
 
 	/*
 	 * CMT variables (iyengar@cis.udel.edu)
@@ -264,9 +292,9 @@ struct sctp_nets {
 					 * rtx-pseudo-cumack has been received */
 	uint8_t window_probe;		/* Doing a window probe? */
 	uint8_t RTO_measured;		/* Have we done the first measure */
-#ifdef SCTP_HIGH_SPEED
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
-#endif
+	/* JRS - struct used in HTCP algorithm */
+	struct htcp htcp_ca;
 };
 
 
@@ -484,6 +512,31 @@ struct sctp_nonpad_sndrcvinfo {
 };
 
 /*
+ * JRS - Structure to hold function pointers to the functions responsible
+ * for congestion control.
+ */
+
+struct sctp_cc_functions {
+	void (*sctp_set_initial_cc_param)(struct sctp_tcb *stcb, struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
+		 	struct sctp_association *asoc, 
+		 	int accum_moved ,int reneged_all, int will_exit);
+	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
+			struct sctp_association *asoc);
+	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
+			struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_ecn_echo)(struct sctp_tcb *stcb,
+			struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_packet_dropped)(struct sctp_tcb *stcb,
+			struct sctp_nets *net, struct sctp_pktdrop_chunk *cp,
+			uint32_t *bottle_bw, uint32_t *on_queue);
+	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
+			struct sctp_nets *net, int burst_limit);
+	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp, 
+			struct sctp_tcb *stcb, struct sctp_nets *net);
+};
+
+/*
  * Here we have information about each individual association that we track.
  * We probably in production would be more dynamic. But for ease of
  * implementation we will have a fixed array that we hunt for in a linear
@@ -599,6 +652,11 @@ struct sctp_association {
 
 	/* queue of chunks waiting to be sent into the local stack */
 	struct sctp_readhead pending_reply_queue;
+
+	/* JRS - the congestion control functions are in this struct */
+	struct sctp_cc_functions cc_functions;
+	/* JRS - value to store the currently loaded congestion control module */
+	uint32_t congestion_control_module;
 
 	uint32_t vrf_id;
 
@@ -929,6 +987,8 @@ struct sctp_association {
 	uint8_t sctp_cmt_on_off;
 	uint8_t iam_blocking;
 	uint8_t cookie_how[8];
+	/* JRS 5/21/07 - CMT PF variable */
+	uint8_t sctp_cmt_pf;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

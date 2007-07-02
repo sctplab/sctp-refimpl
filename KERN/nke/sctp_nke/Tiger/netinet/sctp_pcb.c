@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.44 2007/06/18 21:59:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.46 2007/07/02 19:22:22 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2161,12 +2161,12 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
-#ifdef IPSEC
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
+#ifdef FAST_IPSEC
+#if !(defined(__APPLE__))
 	{
 		struct inpcbpolicy *pcb_sp = NULL;
 
-		error = ipsec_init_pcbpolicy(so, &pcb_sp);
+		error = ipsec_init_policy(so, &pcb_sp);
 		/* Arrange to share the policy */
 		inp->ip_inp.inp.inp_sp = pcb_sp;
 		((struct in6pcb *)(&inp->ip_inp.inp))->in6p_sp = pcb_sp;
@@ -2183,7 +2183,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_INP_INFO_WUNLOCK();
 		return error;
 	}
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
@@ -3470,36 +3470,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	 */
 	cnt = 0;
 	if (so) {
-#ifdef IPSEC
-#ifdef __OpenBSD__
-		/* XXX IPsec cleanup here */
-		{
-			int s2 = spltdb();
-
-			if (ip_pcb->inp_tdb_in)
-				TAILQ_REMOVE(&ip_pcb->inp_tdb_in->tdb_inp_in,
-				    ip_pcb, inp_tdb_in_next);
-			if (ip_pcb->inp_tdb_out)
-				TAILQ_REMOVE(&ip_pcb->inp_tdb_out->tdb_inp_out, ip_pcb,
-				    inp_tdb_out_next);
-			if (ip_pcb->inp_ipsec_localid)
-				ipsp_reffree(ip_pcb->inp_ipsec_localid);
-			if (ip_pcb->inp_ipsec_remoteid)
-				ipsp_reffree(ip_pcb->inp_ipsec_remoteid);
-			if (ip_pcb->inp_ipsec_localcred)
-				ipsp_reffree(ip_pcb->inp_ipsec_localcred);
-			if (ip_pcb->inp_ipsec_remotecred)
-				ipsp_reffree(ip_pcb->inp_ipsec_remotecred);
-			if (ip_pcb->inp_ipsec_localauth)
-				ipsp_reffree(ip_pcb->inp_ipsec_localauth);
-			if (ip_pcb->inp_ipsec_remoteauth)
-				ipsp_reffree(ip_pcb->inp_ipsec_remoteauth);
-			splx(s2);
-		}
-#else
+#ifdef FAST_IPSEC
 		ipsec4_delete_pcbpolicy(ip_pcb);
-#endif
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 
 #ifdef  __NetBSD__
 		sofree(so);
@@ -3676,19 +3649,6 @@ sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 	}
 #endif
 }
-
-void 
-sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
-{
-	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
-	/* we always get at LEAST 2 MTU's */
-	if (net->cwnd < (2 * net->mtu)) {
-		net->cwnd = 2 * net->mtu;
-	}
-	net->ssthresh = stcb->asoc.peers_rwnd;
-}
-
-
 
 /*
  * add's a remote endpoint address, done with the INIT/INIT-ACK as well as
@@ -3955,16 +3915,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 		stcb->asoc.smallest_mtu = net->mtu;
 	}
-	/*
-	 * We take the max of the burst limit times a MTU or the
-	 * INITIAL_CWND. We then limit this to 4 MTU's of sending.
-	 */
-	sctp_set_initial_cc_param(stcb, net);
 
-
-	if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
-		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
-	}
+	/* JRS - Use the congestion control given in the CC module */
+	stcb->asoc.cc_functions.sctp_set_initial_cc_param(stcb, net);
 
 	/*
 	 * CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning
@@ -6457,7 +6410,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;

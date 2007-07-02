@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.43 2007/06/18 22:36:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.44 2007/07/02 19:22:22 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.43 2007/06/18 22:36:52 rrs
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_input.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
@@ -3374,12 +3375,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 		if (nofragment_flag) {
 #if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || defined(__APPLE__)
-#ifdef __OpenBSD__
-			/* OpenBSD has WITH_CONVERT_IP_OFF defined?? */
-			ip->ip_off = htons(IP_DF);
-#else
 			ip->ip_off = IP_DF;
-#endif
 #else
 			ip->ip_off = htons(IP_DF);
 #endif
@@ -3493,6 +3489,20 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 								(void *)net);
 						net->dest_state &= ~SCTP_ADDR_REACHABLE;
 						net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+						/*
+						 * JRS 5/14/07 - If a destination is unreachable, the PF bit
+						 *  is turned off.  This allows an unambiguous use of the PF bit
+						 *  for destinations that are reachable but potentially failed.
+						 *  If the destination is set to the unreachable state, also set
+						 *  the destination to the PF state.
+						 */
+						/* Add debug message here if destination is not in PF state. */
+						/* Stop any running T3 timers here? */
+						if (sctp_cmt_pf) {
+							net->dest_state &= ~SCTP_ADDR_PF;
+							SCTPDBG(SCTP_DEBUG_OUTPUT1, "Destination %p moved from PF to unreachable.\n",
+								net);
+						}
 					}
 				}
 				if (stcb) {
@@ -5771,9 +5781,12 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		asoc = &stcb->asoc;
 		if(ca->sndrcv.sinfo_flags & SCTP_EOF) {
 			/* shutdown this assoc */
+			int cnt;
+			cnt = sctp_is_there_unsent_data(stcb);
+
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
-			    (asoc->stream_queue_cnt == 0)) {
+			    (cnt == 0)) {
 				if(asoc->locked_on_sending) {
 					goto abort_anyway;
 				}
@@ -6011,8 +6024,6 @@ sctp_toss_old_cookies(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			if (chk->whoTo)
-				sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;
@@ -6038,8 +6049,6 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			if (chk->whoTo)
-				sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		}
 	}
@@ -6161,7 +6170,6 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		} else if (chk->rec.chunk_id.id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
@@ -6811,7 +6819,15 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 	struct sctp_nets *a_net;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	a_net = sctp_find_alternate_net(stcb, net, 0);
+	/*
+	 * JRS 5/14/07 - If CMT PF is turned on, find an alternate destination
+	 *  using the PF algorithm for finding alternate destinations.
+	 */
+	if(sctp_cmt_pf) {
+		a_net = sctp_find_alternate_net(stcb, net, 2);
+	} else {
+		a_net = sctp_find_alternate_net(stcb, net, 0);
+	}
 	if ((a_net != net) &&
 	    ((a_net->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE)) {
 		/*
@@ -6865,6 +6881,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
+	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
+		the destination. */
+	int pf_hbflag = 0;
 
 	*num_out = 0;
 	cwnd_full_ind = 0;
@@ -7154,8 +7173,11 @@ again_one_more_time:
 				    (chk->rec.chunk_id.id == SCTP_PACKET_DROPPED) ||
 				    (chk->rec.chunk_id.id == SCTP_ASCONF_ACK)) {
 
-					if (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST)
+					if (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) {
 						hbflag = 1;
+						/* JRS 5/14/07 - Set the flag to say a heartbeat is being sent. */
+						pf_hbflag = 1;
+					}
 					/* remove these chunks at the end */
 					if (chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) {
 						/* turn off the timer */
@@ -7452,6 +7474,13 @@ again_one_more_time:
 				/*
 				 * no timer running on this destination
 				 * restart it.
+				 */
+				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
+			} else if (sctp_cmt_pf && pf_hbflag && ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)
+						&& (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer))) {
+				/*
+				 * JRS 5/14/07 - If a HB has been sent to a PF destination and no T3 timer is currently
+				 *  running, start the T3 timer to track the HBs that were sent.
 				 */
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 			}
@@ -8685,6 +8714,14 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 */
 			if (net->ref_count > 1)
 				sctp_move_to_an_alt(stcb, asoc, net);
+		} else if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+					SCTP_ADDR_PF)) {
+			/*
+			 * JRS 5/14/07 - If CMT PF is on and the current destination is in
+			 *  PF state, move all queued data to an alternate desination.
+			 */
+			if (net->ref_count > 1)
+				sctp_move_to_an_alt(stcb, asoc, net);
 		} else {
 			/*-
 			 * if ((asoc->sat_network) || (net->addr_is_local))
@@ -8693,17 +8730,8 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 */
 			if (sctp_use_cwnd_based_maxburst) {
 				if ((net->flight_size + (burst_limit * net->mtu)) < net->cwnd) {
-					int old_cwnd;
-
-					if (net->ssthresh < net->cwnd)
-						net->ssthresh = net->cwnd;
-					old_cwnd = net->cwnd;
-					net->cwnd = (net->flight_size + (burst_limit * net->mtu));
-
-					if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
-						sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
-					}
-
+					/* JRS - Use the congestion control given in the congestion control module */
+					asoc->cc_functions.sctp_cwnd_update_after_output(stcb, net, burst_limit);
 					if(sctp_logging_level & SCTP_LOG_MAXBURST_ENABLE) {
 						sctp_log_maxburst(stcb, net, 0, burst_limit, SCTP_MAX_BURST_APPLIED);
 					}
@@ -9127,8 +9155,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			sctp_m_freem(a_chk->data);
 			a_chk->data = NULL;
 		}
-		if (a_chk->whoTo)
-			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, a_chk);
 		if (stcb->asoc.delayed_ack) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
@@ -9722,25 +9748,31 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 		/* huh compiler bug */
 		return (0);
 	}
-	/* ok we have a destination that needs a beat */
-	/* lets do the theshold management Qiaobing style */
 
-	if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
-				      stcb->asoc.max_send_times)) {
-		/*-
-		 * we have lost the association, in a way this is
-		 * quite bad since we really are one less time since
-		 * we really did not send yet. This is the down side
-		 * to the Q's style as defined in the RFC and not my
-		 * alternate style defined in the RFC.
-		 */
-		atomic_subtract_int(&chk->whoTo->ref_count, 1);
-		if (chk->data != NULL) {
-			sctp_m_freem(chk->data);
-			chk->data = NULL;
+	/*
+	 * JRS 5/14/07 - In CMT PF, the T3 timer is used to track PF-heartbeats.  Because of this,
+	 *  threshold management is done by the t3 timer handler, and does not need to be done
+	 *  upon the send of a PF-heartbeat.
+	 *  If CMT PF is on and the destination to which a heartbeat is being sent is in PF state,
+	 *  do NOT do threshold management.
+	 */
+	if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF)) {
+		/* ok we have a destination that needs a beat */
+		/* lets do the theshold management Qiaobing style */
+		if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
+			      stcb->asoc.max_send_times)) {
+			/*-
+			 * we have lost the association, in a way this is
+			 * quite bad since we really are one less time since
+			 * we really did not send yet. This is the down side
+			 * to the Q's style as defined in the RFC and not my
+			 * alternate style defined in the RFC.
+			 */
+			if (chk->data != NULL) {
+				sctp_m_freem(chk->data);
+				chk->data = NULL;
+			}
 		}
-		sctp_free_a_chunk(stcb, chk);
-		return (-1);
 	}
 	net->hb_responded = 0;
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
@@ -12063,15 +12095,17 @@ sctp_lower_sosend(struct socket *so,
 	    (got_all_of_the_send == 1) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
+		int cnt;
 		SCTP_STAT_INCR(sctps_sends_with_eof);
 		error = 0;
 		if(hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
+		cnt = sctp_is_there_unsent_data(stcb);
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
-		    (asoc->stream_queue_cnt == 0)) {
+		    (cnt == 0)) {
 			if(asoc->locked_on_sending) {
 				goto abort_anyway;
 			}

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.13 2007/05/08 17:01:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.14 2007/07/02 19:22:22 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -50,10 +50,6 @@ int sctp_usrreq
 __P((struct socket *, int, struct mbuf *, struct mbuf *,
      struct mbuf *, struct proc *p));
 
-#elif defined(__OpenBSD__)
-int sctp_usrreq
-__P((struct socket *, int, struct mbuf *, struct mbuf *,
-     struct mbuf *));
 #endif
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
@@ -103,6 +99,11 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_free_a_chunk(_stcb, _chk) { \
+        SCTP_TCB_LOCK_ASSERT((_stcb)); \
+        if ((_chk)->whoTo) { \
+                sctp_free_remote_addr((_chk)->whoTo); \
+                (_chk)->whoTo = NULL; \
+	} \
 	if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
 	    (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
@@ -119,6 +120,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		(_chk) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk, struct sctp_tmit_chunk); \
 		if ((_chk)) { \
 			SCTP_INCR_CHK_COUNT(); \
+                        (_chk)->whoTo = NULL; \
 		} \
 	} else { \
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
