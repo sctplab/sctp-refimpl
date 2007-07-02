@@ -70,10 +70,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.7 2007/05/08 17:01:10 rrs Exp 
 #include <netinet/sctp_os_netbsd.h>
 #endif
 
-#if defined(__OpenBSD__)
-#include <netinet/sctp_os_openbsd.h>
-#endif
-
 #if defined(__Panda__)
 #include <ip/sctp/sctp_os_iox.h>
 #endif

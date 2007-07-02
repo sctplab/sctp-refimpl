@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.34 2007/06/18 21:59:15 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.35 2007/07/01 11:38:27 gnn Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -53,6 +53,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.34 2007/06/18 21:59:15 rrs
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_cc_functions.h>
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
@@ -66,9 +67,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.34 2007/06/18 21:59:15 rrs
 void
 sctp_init(void)
 {
-#ifdef __OpenBSD__
-#define nmbclusters	nmbclust
-#endif
 	/* Init the SCTP pcb in sctp_pcb.c */
 #if !defined(__Panda__)
 	u_long sb_max_adj;
@@ -80,34 +78,22 @@ sctp_init(void)
 	sctp_sendspace = SB_MAX;
 	sctp_recvspace = SB_MAX;
 #else
-#ifndef __OpenBSD__
+
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		sctp_max_chunks_on_queue = (nmbclusters / 8);
-#else
-	if ((nmbclust / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-		sctp_max_chunks_on_queue = nmbclust / 8;
-#endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters or
 	 * the SB_MAX whichever is smaller for the send window.
 	 */
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 	sctp_sendspace = min((min(SB_MAX, sb_max_adj)),
-#ifndef __OpenBSD__
 	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
-#else
-	    ((nmbclust / 2) * SCTP_DEFAULT_MAXSEGMENT));
-#endif
 	/*
 	 * Now for the recv window, should we take the same amount? or
 	 * should I do 1/2 the SB_MAX instead in the SB_MAX min above. For
 	 * now I will just copy.
 	 */
 	sctp_recvspace = sctp_sendspace;
-#endif
-
-#ifdef __OpenBSD__
-#undef nmbclusters
 #endif
 
 #if defined(__APPLE__)
@@ -307,6 +293,20 @@ sctp_notify(struct sctp_inpcb *inp,
 
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+				/*
+				 * JRS 5/14/07 - If a destination is unreachable, the PF bit
+				 *  is turned off.  This allows an unambiguous use of the PF bit
+				 *  for destinations that are reachable but potentially failed.
+				 *  If the destination is set to the unreachable state, also set
+				 *  the destination to the PF state.
+				 */
+				/* Add debug message here if destination is not in PF state. */
+				/* Stop any running T3 timers here? */
+				if (sctp_cmt_pf) {
+					net->dest_state &= ~SCTP_ADDR_PF;
+					SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
+						net);
+				}
 				net->error_count = net->failure_threshold + 1;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 				    stcb, SCTP_FAILED_THRESHOLD,
@@ -622,7 +622,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #if !defined(__Panda__)
 	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
 #endif
-#ifdef IPSEC	
+#ifdef FAST_IPSEC	
 	uint32_t flags;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -662,9 +662,9 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	inp->inp_ip_ttl = ip_defttl;
 #endif
 
-#ifdef IPSEC
-#if !(defined(__OpenBSD__) || defined(__APPLE__))
-	error = ipsec_init_pcbpolicy(so, &ip_inp->inp_sp);
+#ifdef FAST_IPSEC
+#if !(defined(__APPLE__))
+	error = ipsec_init_policy(so, &ip_inp->inp_sp);
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 17);
 #endif
@@ -684,7 +684,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 		return error;
 	}
 #endif
-#endif				/* IPSEC */
+#endif				/* FAST_IPSEC */
 	SCTP_INP_WUNLOCK(inp);
 #if defined(__NetBSD__)
 	so->so_send = sctp_sosend;
@@ -1946,6 +1946,22 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			*optsize = sizeof(*av); 
 		}
 		break;
+	/* JRS - Get socket option for pluggable congestion control */
+	case SCTP_PLUGGABLE_CC:
+		{
+			struct sctp_assoc_value *av;
+
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+			if(stcb) {
+				av->assoc_value = stcb->asoc.congestion_control_module;
+				SCTP_TCB_UNLOCK(stcb);
+			} else {
+				error = ENOTCONN;
+			}
+			*optsize = sizeof(*av);
+		}
+		break;
 	case SCTP_GET_ADDR_LEN:
 		{
 			struct sctp_assoc_value *av;
@@ -2956,6 +2972,73 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		} else {
 			error = ENOPROTOOPT;
+		}
+	}
+	break;
+	/* JRS - Set socket option for pluggable congestion control */
+	case SCTP_PLUGGABLE_CC:
+	{
+		struct sctp_assoc_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if(stcb) {
+			switch(av->assoc_value) {
+				/* JRS - Standard TCP congestion control */
+				case SCTP_CC_RFC2581:
+				{
+					stcb->asoc.congestion_control_module = SCTP_CC_RFC2581;
+					stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_set_initial_cc_param;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_cwnd_update_after_sack;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_cwnd_update_after_fr;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_cwnd_update_after_timeout;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_cwnd_update_after_ecn_echo;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_cwnd_update_after_fr_timer;
+					SCTP_TCB_UNLOCK(stcb);
+					break;
+				}
+				/* JRS - High Speed TCP congestion control (Floyd) */
+				case SCTP_CC_HSTCP:
+				{
+					stcb->asoc.congestion_control_module = SCTP_CC_HSTCP;
+					stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_set_initial_cc_param;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_hs_cwnd_update_after_sack;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_hs_cwnd_update_after_fr;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_cwnd_update_after_timeout;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_cwnd_update_after_ecn_echo;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_cwnd_update_after_fr_timer;
+					SCTP_TCB_UNLOCK(stcb);
+					break;
+				}
+				/* JRS - HTCP congestion control */
+				case SCTP_CC_HTCP:
+				{
+					stcb->asoc.congestion_control_module = SCTP_CC_HTCP;
+					stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_htcp_set_initial_cc_param;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_htcp_cwnd_update_after_sack;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_htcp_cwnd_update_after_fr;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_htcp_cwnd_update_after_timeout;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_htcp_cwnd_update_after_ecn_echo;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
+					stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_htcp_cwnd_update_after_fr_timer;
+					SCTP_TCB_UNLOCK(stcb);
+					break;
+				}
+				/* JRS - All other values are invalid */
+				default:
+				{
+					error = EINVAL;
+					SCTP_TCB_UNLOCK(stcb);
+					break;
+				}
+			}
+		} else {
+			error = ENOTCONN;
 		}
 	}
 	break;
