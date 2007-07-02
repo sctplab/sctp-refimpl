@@ -5771,9 +5771,12 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		asoc = &stcb->asoc;
 		if(ca->sndrcv.sinfo_flags & SCTP_EOF) {
 			/* shutdown this assoc */
+			int cnt;
+			cnt = sctp_is_there_unsent_data(stcb);
+
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
-			    (asoc->stream_queue_cnt == 0)) {
+			    (cnt == 0)) {
 				if(asoc->locked_on_sending) {
 					goto abort_anyway;
 				}
@@ -12063,15 +12066,17 @@ sctp_lower_sosend(struct socket *so,
 	    (got_all_of_the_send == 1) &&
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)
 		) {
+		int cnt;
 		SCTP_STAT_INCR(sctps_sends_with_eof);
 		error = 0;
 		if(hold_tcblock == 0) {
 			SCTP_TCB_LOCK(stcb);
 			hold_tcblock = 1;
 		}
+		cnt = sctp_is_there_unsent_data(stcb);
 		if (TAILQ_EMPTY(&asoc->send_queue) &&
 		    TAILQ_EMPTY(&asoc->sent_queue) &&
-		    (asoc->stream_queue_cnt == 0)) {
+		    (cnt == 0)) {
 			if(asoc->locked_on_sending) {
 				goto abort_anyway;
 			}
