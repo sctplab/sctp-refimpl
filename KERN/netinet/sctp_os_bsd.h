@@ -78,15 +78,15 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.25 2007/06/16 00:33:47 rrs
 #include <netinet/icmp_var.h>
 
 
-#ifdef IPSEC
-#include <netinet6/ipsec.h>
-#include <netkey/key.h>
-#endif /* IPSEC */
+#ifdef FAST_IPSEC
+#include <netipsec/ipsec.h>
+#include <netipsec/key.h>
+#endif				/* IPSEC */
 
 #ifdef INET6
 #include <sys/domain.h>
-#ifdef IPSEC
-#include <netinet6/ipsec6.h>
+#ifdef FAST_IPSEC
+#include <netipsec/ipsec6.h>
 #endif
 #include <netinet/ip6.h>
 #include <netinet6/ip6_var.h>
