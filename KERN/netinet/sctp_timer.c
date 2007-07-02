@@ -282,7 +282,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 	int once;
 	/* JRS 5/14/07 - Initialize min_errors to an impossible value. */
 	int min_errors = -1;
-	int max_cwnd = 0;
+	uint32_t max_cwnd = 0;
 
 	if (stcb->asoc.numnets == 1) {
 		/* No others but net */
