@@ -52,6 +52,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.43 2007/06/18 22:36:52 rrs
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_input.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
