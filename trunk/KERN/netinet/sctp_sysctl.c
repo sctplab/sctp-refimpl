@@ -99,7 +99,7 @@ uint32_t sctp_cmt_pf = 0;
 uint32_t sctp_max_retran_chunk = SCTPCTL_MAX_RETRAN_CHUNK_DEFAULT;
 
 /* JRS - Variable for default congestion control module */
-uint32_t sctp_default_cc_module = 0;
+uint32_t sctp_default_cc_module = SCTPCTL_DEFAULT_CC_MODULE_DEFAULT;
 
 uint32_t sctp_L2_abc_variable = 1;
 uint32_t sctp_early_fr = 0;
