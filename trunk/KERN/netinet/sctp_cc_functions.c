@@ -67,7 +67,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 		struct sctp_association *asoc)
 {
 	struct sctp_nets *net;
-		/*
+	/*-
 	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
@@ -483,9 +483,9 @@ sctp_hs_cwnd_increase(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 	cur_val = net->cwnd >> 10;
 	indx = SCTP_HS_TABLE_SIZE - 1;
-
+#ifdef SCTP_DEBUG
 	printf("HS CC CAlled.\n");
-
+#endif
 	if (cur_val < sctp_cwnd_adjust[0].cwnd) {
 		/* normal mode */
 		if (net->net_ack > net->mtu) {
@@ -1204,10 +1204,11 @@ htcp_recalc_ssthresh(struct sctp_tcb *stcb, struct sctp_nets *net)
 static void
 htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	// How to handle these functions?
-//	if (!tcp_is_cwnd_limited(sk, in_flight))
-//		return;
-
+	/*-
+	 * How to handle these functions?
+         *	if (!tcp_is_cwnd_limited(sk, in_flight)) RRS - good question.
+	 *		return;
+	 */
         if (net->cwnd <= net->ssthresh) {
 		/* We are in slow start */
 		if (net->flight_size + net->net_ack >= net->cwnd) {
@@ -1242,10 +1243,12 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* In dangerous area, increase slowly.
 		 * In theory this is net->cwnd += alpha / net->cwnd
 		 */
-		// What is snd_cwnd_cnt??
+		/* What is snd_cwnd_cnt?? */
 		if (((net->partial_bytes_acked/net->mtu * net->htcp_ca.alpha) >> 7)*net->mtu >= net->cwnd) {
-			// Does SCTP have a cwnd clamp?
-			//if (net->snd_cwnd < net->snd_cwnd_clamp)
+                        /*-
+			 * Does SCTP have a cwnd clamp?
+			 * if (net->snd_cwnd < net->snd_cwnd_clamp) - Nope (RRS).
+			 */
 			net->cwnd += net->mtu;
 			net->partial_bytes_acked = 0;
 			htcp_alpha_update(&net->htcp_ca);
