@@ -103,6 +103,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_free_a_chunk(_stcb, _chk) { \
+        SCTP_TCB_LOCK_ASSERT((_stcb)); \
         if ((_chk)->whoTo) { \
                 sctp_free_remote_addr((_chk)->whoTo); \
                 (_chk)->whoTo = NULL; \
