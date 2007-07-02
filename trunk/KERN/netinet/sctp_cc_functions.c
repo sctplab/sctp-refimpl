@@ -1142,7 +1142,7 @@ htcp_beta_update(struct htcp *ca, uint32_t minRTT, uint32_t maxRTT)
 		}
 	}
 
-	if (ca->modeswitch && minRTT > MSEC_TO_TICKS(10) && maxRTT) {
+	if (ca->modeswitch && minRTT > (uint32_t)MSEC_TO_TICKS(10) && maxRTT) {
 		ca->beta = (minRTT<<7)/maxRTT;
 		if (ca->beta < BETA_MIN)
 			ca->beta = BETA_MIN;
@@ -1161,7 +1161,7 @@ htcp_alpha_update(struct htcp *ca)
 	uint32_t factor = 1;
 	uint32_t diff = htcp_cong_time(ca);
 
-	if (diff > hz) {
+	if (diff > (uint32_t)hz) {
 		diff -= hz;
 		factor = 1+ ( 10*diff + ((diff/2)*(diff/2)/hz) )/hz;
 	}
