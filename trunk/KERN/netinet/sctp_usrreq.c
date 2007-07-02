@@ -67,9 +67,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.35 2007/07/01 11:38:27 gnn
 void
 sctp_init(void)
 {
-#ifdef __OpenBSD__
-#define nmbclusters	nmbclust
-#endif
 	/* Init the SCTP pcb in sctp_pcb.c */
 #if !defined(__Panda__)
 	u_long sb_max_adj;
@@ -81,34 +78,22 @@ sctp_init(void)
 	sctp_sendspace = SB_MAX;
 	sctp_recvspace = SB_MAX;
 #else
-#ifndef __OpenBSD__
+
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		sctp_max_chunks_on_queue = (nmbclusters / 8);
-#else
-	if ((nmbclust / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-		sctp_max_chunks_on_queue = nmbclust / 8;
-#endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters or
 	 * the SB_MAX whichever is smaller for the send window.
 	 */
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 	sctp_sendspace = min((min(SB_MAX, sb_max_adj)),
-#ifndef __OpenBSD__
 	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
-#else
-	    ((nmbclust / 2) * SCTP_DEFAULT_MAXSEGMENT));
-#endif
 	/*
 	 * Now for the recv window, should we take the same amount? or
 	 * should I do 1/2 the SB_MAX instead in the SB_MAX min above. For
 	 * now I will just copy.
 	 */
 	sctp_recvspace = sctp_sendspace;
-#endif
-
-#ifdef __OpenBSD__
-#undef nmbclusters
 #endif
 
 #if defined(__APPLE__)
