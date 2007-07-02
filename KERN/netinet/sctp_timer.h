@@ -48,7 +48,7 @@ sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *,
-    struct sctp_nets *, int high_ssthresh);
+    struct sctp_nets *, int mode);
 
 int
 sctp_threshold_management(struct sctp_inpcb *, struct sctp_tcb *,

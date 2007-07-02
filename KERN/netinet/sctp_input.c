@@ -553,6 +553,24 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
 		}
 	}
+	/*
+	 * JRS 5/14/07 - If CMT PF is on and the destination is in PF state,
+	 *  set the destination to active state and set the cwnd to one or two
+	 *  MTU's based on whether PF1 or PF2 is being used. If a T3 timer is running,
+	 *  for the destination, stop the timer because a PF-heartbeat was received.
+	 */
+	if (sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) ==
+		SCTP_ADDR_PF) {
+		if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+				stcb, net,
+				SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
+		}
+		net->dest_state &= ~SCTP_ADDR_PF;
+		net->cwnd = net->mtu * sctp_cmt_pf;
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Destination %p moved from PF to reachable with cwnd %d.\n",
+			net, net->cwnd);
+	}
 	/* Now lets do a RTO with this */
 	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv);
 }
@@ -566,7 +584,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 		return;
 
 	/* stop any receive timers */
-	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
+	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 	/* notify user of the abort and clean up... */
 	sctp_abort_notification(stcb, 0);
 	/* free the tcb */
@@ -633,7 +651,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		 * stop the shutdown timer, since we WILL move to
 		 * SHUTDOWN-ACK-SENT.
 		 */
-		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
+		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_8);
 	}
 	/* Now is there unsent data on a stream somewhere? */
 	some_on_streamwheel = sctp_is_there_unsent_data(stcb);
@@ -697,7 +715,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		sctp_report_all_outbound(stcb, 0);
 	}
 	/* stop the timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_8);
+	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_9);
 	/* send SHUTDOWN-COMPLETE */
 	sctp_send_shutdown_complete(stcb, net);
 	/* notify upper layer protocol */
@@ -712,7 +730,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
-			SCTP_FROM_SCTP_INPUT+SCTP_LOC_9);
+			SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
 }
 
 /*
@@ -838,7 +856,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				    asoc->max_init_times) {
 					sctp_abort_notification(stcb, 0);
 					/* now free the asoc */
-					sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
+					sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
 					return (-1);
 				}
 				/* blast back to INIT state */
@@ -1160,8 +1178,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				}
 				/* we have already processed the INIT so no problem */
 				sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb,
-						net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
-				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
+						net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_12);
+				sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
 				/* update current state */
 				if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)
 					SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
@@ -1277,7 +1295,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		}
 		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 8;
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_13);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_14);
 		sctp_stop_all_cookie_timers(stcb);
 		/*
 		 * since we did not send a HB make sure we don't double
@@ -1386,8 +1404,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* temp code */
 		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 12;
-		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_14);
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_15);
+		sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_15);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 
 		*sac_assoc_id = sctp_get_associd(stcb);
 		/* notify upper layer */
@@ -2376,20 +2394,8 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		net = stcb->asoc.primary_destination;
 
 	if (compare_with_wrap(tsn, stcb->asoc.last_cwr_tsn, MAX_TSN)) {
-		int old_cwnd;
-
-		old_cwnd = net->cwnd;
-		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
-		net->ssthresh = net->cwnd / 2;
-		if (net->ssthresh < net->mtu) {
-			net->ssthresh = net->mtu;
-			/* here back off the timer as well, to slow us down */
-			net->RTO <<= 1;
-		}
-		net->cwnd = net->ssthresh;
-		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
-			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
-		}
+		/* JRS - Use the congestion control given in the pluggable CC module */
+		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb,net);
 		/*
 		 * we reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the resync_tsn.
@@ -2471,10 +2477,10 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		}
 	}
 	/* stop the timer */
-	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_21);
+	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_22);
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
-	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_22);
+	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
 	return;
 }
 
@@ -2583,7 +2589,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 
 			/* restart the timer */
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-					stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
+					stcb, tp1->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 					 stcb, tp1->whoTo);
 
@@ -2648,7 +2654,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			 * this, otherwise we let the timer fire.
 			 */
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep,
-					stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_24);
+					stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_25);
 			sctp_send_initiate(stcb->sctp_ep, stcb);
 		}
 		break;
@@ -2819,7 +2825,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	}
 	asoc = &stcb->asoc;
 
-	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_25);
+	sctp_timer_stop(SCTP_TIMER_TYPE_STRRESET, stcb->sctp_ep, stcb, chk->whoTo, SCTP_FROM_SCTP_INPUT+SCTP_LOC_26);
 	TAILQ_REMOVE(&asoc->control_send_queue,
 	    chk,
 	    sctp_next);
@@ -3215,7 +3221,6 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			struct sctp_stream_reset_in_request *req_in;
 			num_req++;
 
-
 			req_in = (struct sctp_stream_reset_in_request *)ph;
 
 			sctp_handle_str_reset_request_in(stcb, chk, req_in, trunc);
@@ -3409,112 +3414,8 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 		 * Note if a T3 timer has went off, we will prohibit any
 		 * changes to cwnd until we exit the t3 loss recovery.
 		 */
-		uint32_t bw_avail;
-		int rtt, incr;
-
-		int old_cwnd = net->cwnd;
-
-		/* need real RTT for this calc */
-		rtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
-		/* get bottle neck bw */
-		bottle_bw = ntohl(cp->bottle_bw);
-		/* and whats on queue */
-		on_queue = ntohl(cp->current_onq);
-		/*
-		 * adjust the on-queue if our flight is more it could be
-		 * that the router has not yet gotten data "in-flight" to it
-		 */
-		if (on_queue < net->flight_size)
-			on_queue = net->flight_size;
-
-		/* calculate the available space */
-		bw_avail = (bottle_bw * rtt) / 1000;
-		if (bw_avail > bottle_bw) {
-			/*
-			 * Cap the growth to no more than the bottle neck.
-			 * This can happen as RTT slides up due to queues.
-			 * It also means if you have more than a 1 second
-			 * RTT with a empty queue you will be limited to the
-			 * bottle_bw per second no matter if other points
-			 * have 1/2 the RTT and you could get more out...
-			 */
-			bw_avail = bottle_bw;
-		}
-		if (on_queue > bw_avail) {
-			/*
-			 * No room for anything else don't allow anything
-			 * else to be "added to the fire".
-			 */
-			int seg_inflight, seg_onqueue, my_portion;
-
-			net->partial_bytes_acked = 0;
-
-			/* how much are we over queue size? */
-			incr = on_queue - bw_avail;
-			if (stcb->asoc.seen_a_sack_this_pkt) {
-				/*
-				 * undo any cwnd adjustment that the sack
-				 * might have made
-				 */
-				net->cwnd = net->prev_cwnd;
-			}
-			/* Now how much of that is mine? */
-			seg_inflight = net->flight_size / net->mtu;
-			seg_onqueue = on_queue / net->mtu;
-			my_portion = (incr * seg_inflight) / seg_onqueue;
-
-			/* Have I made an adjustment already */
-			if (net->cwnd > net->flight_size) {
-				/*
-				 * for this flight I made an adjustment we
-				 * need to decrease the portion by a share
-				 * our previous adjustment.
-				 */
-				int diff_adj;
-
-				diff_adj = net->cwnd - net->flight_size;
-				if (diff_adj > my_portion)
-					my_portion = 0;
-				else
-					my_portion -= diff_adj;
-			}
-			/*
-			 * back down to the previous cwnd (assume we have
-			 * had a sack before this packet). minus what ever
-			 * portion of the overage is my fault.
-			 */
-			net->cwnd -= my_portion;
-
-			/* we will NOT back down more than 1 MTU */
-			if (net->cwnd <= net->mtu) {
-				net->cwnd = net->mtu;
-			}
-			/* force into CA */
-			net->ssthresh = net->cwnd - 1;
-		} else {
-			/*
-			 * Take 1/4 of the space left or max burst up ..
-			 * whichever is less.
-			 */
-			incr = min((bw_avail - on_queue) >> 2,
-			    stcb->asoc.max_burst * net->mtu);
-			net->cwnd += incr;
-		}
-		if (net->cwnd > bw_avail) {
-			/* We can't exceed the pipe size */
-			net->cwnd = bw_avail;
-		}
-		if (net->cwnd < net->mtu) {
-			/* We always have 1 MTU */
-			net->cwnd = net->mtu;
-		}
-		if (net->cwnd - old_cwnd != 0) {
-			/* log only changes */
-			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
-				sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
-					      SCTP_CWND_LOG_FROM_SAT);
-			}
-		}
+		stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped(stcb,
+			net, cp, &bottle_bw, &on_queue);
 	}
 }
 
@@ -3896,7 +3797,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					}
 					*offset = length;
 					if (stcb) {
-						sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_26);
+						sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 					}
 					return (NULL);
 				}
@@ -4303,7 +4204,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*fwd_tsn_seen = 1;
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
-					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_28);
+					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
 					*offset = length;
 					return (NULL);
 				}
@@ -4331,7 +4232,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
+				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30);
 				*offset = length;
 				return (NULL);
 			}
