@@ -2316,7 +2316,7 @@ int sctp_generic_sendmsg (td, uap)
 #ifdef SCTP
 	struct sctp_sndrcvinfo sinfo, *u_sinfo=NULL;
 	struct socket *so;
-	struct file *fp;
+	struct file *fp = NULL;
 	int use_rcvinfo=1;
 	int error=0, len;
 	struct sockaddr *to=NULL;
@@ -2396,7 +2396,8 @@ int sctp_generic_sendmsg (td, uap)
 	}
 #endif
  sctp_bad:
-	fdrop(fp, td);
+	if (fp)
+		fdrop(fp, td);
  sctp_bad2:
 	if (to)
 		FREE(to, M_SONAME);
@@ -2422,7 +2423,7 @@ int sctp_generic_sendmsg_iov(td, uap)
 #ifdef SCTP
 	struct sctp_sndrcvinfo sinfo, *u_sinfo=NULL;
 	struct socket *so;
-	struct file *fp;
+	struct file *fp = NULL;
 	int use_rcvinfo=1;
 	int error=0, len, i;
 	struct sockaddr *to;
@@ -2512,7 +2513,8 @@ int sctp_generic_sendmsg_iov(td, uap)
  sctp_bad:
 	free(iov, M_IOV);
  sctp_bad1:
-	fdrop(fp, td);
+	if (fp)
+		fdrop(fp, td);
  sctp_bad2:
 	if (to)
 		FREE(to, M_SONAME);
@@ -2541,7 +2543,7 @@ int sctp_generic_recvmsg(td, uap)
 	struct iovec *iov, *tiov;
 	struct sctp_sndrcvinfo sinfo;
 	struct socket *so;
-	struct file *fp;
+	struct file *fp = NULL;
 	struct sockaddr *fromsa;
 	int fromlen;
 	int len, i, msg_flags;
@@ -2649,7 +2651,8 @@ int sctp_generic_recvmsg(td, uap)
 out:
 	free(iov, M_IOV);
 out1:
-	fdrop(fp, td);
+	if (fp)
+		fdrop(fp, td);
 	return (error);
 #else
 	return (EOPNOTSUPP);
