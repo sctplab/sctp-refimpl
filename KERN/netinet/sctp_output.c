@@ -6015,8 +6015,6 @@ sctp_toss_old_cookies(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			if (chk->whoTo)
-				sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		}
 		chk = nchk;
@@ -6042,8 +6040,6 @@ sctp_toss_old_asconf(struct sctp_tcb *stcb)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			if (chk->whoTo)
-				sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		}
 	}
@@ -6165,7 +6161,6 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
-			sctp_free_remote_addr(chk->whoTo);
 			sctp_free_a_chunk(stcb, chk);
 		} else if (chk->rec.chunk_id.id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
@@ -9131,8 +9126,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			sctp_m_freem(a_chk->data);
 			a_chk->data = NULL;
 		}
-		if (a_chk->whoTo)
-			atomic_subtract_int(&a_chk->whoTo->ref_count, 1);
 		sctp_free_a_chunk(stcb, a_chk);
 		if (stcb->asoc.delayed_ack) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
@@ -9738,7 +9731,6 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 		 * to the Q's style as defined in the RFC and not my
 		 * alternate style defined in the RFC.
 		 */
-		atomic_subtract_int(&chk->whoTo->ref_count, 1);
 		if (chk->data != NULL) {
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
