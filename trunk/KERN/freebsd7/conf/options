@@ -1,4 +1,4 @@
-# $FreeBSD: src/sys/conf/options,v 1.596 2007/06/16 04:57:04 alc Exp $
+# $FreeBSD: src/sys/conf/options,v 1.597 2007/06/25 05:06:55 rafan Exp $
 #
 #        On the handling of kernel options
 #
@@ -198,7 +198,6 @@ REISERFS	opt_dontuse.h
 SMBFS		opt_dontuse.h
 TMPFS		opt_dontuse.h
 UDF		opt_dontuse.h
-UMAPFS		opt_dontuse.h
 UNIONFS		opt_dontuse.h
 
 # Pseudofs debugging
