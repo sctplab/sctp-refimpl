@@ -9763,7 +9763,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	 *  If CMT PF is on and the destination to which a heartbeat is being sent is in PF state,
 	 *  do NOT do threshold management.
 	 */
-	if ((sctp_cmt_pf == 0) || (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF))) {
+	if ((sctp_cmt_pf == 0) || ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF)) {
 		/* ok we have a destination that needs a beat */
 		/* lets do the theshold management Qiaobing style */
 		if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
