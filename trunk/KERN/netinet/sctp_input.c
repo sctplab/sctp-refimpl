@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.48 2007/07/02 19:22:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.49 2007/07/03 12:13:43 gnn Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4973,7 +4973,7 @@ sctp_input(i_pak, va_alist)
 	} else if (stcb == NULL) {
 		refcount_up = 1;
 	}
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 	/*
 	 * I very much doubt any of the IPSEC stuff will work but I have no
 	 * idea, so I will leave it in place.

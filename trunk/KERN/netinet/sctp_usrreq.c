@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.35 2007/07/01 11:38:27 gnn Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.36 2007/07/03 12:13:43 gnn Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -622,7 +622,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #if !defined(__Panda__)
 	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
 #endif
-#ifdef FAST_IPSEC	
+#ifdef IPSEC	
 	uint32_t flags;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -662,7 +662,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	inp->inp_ip_ttl = ip_defttl;
 #endif
 
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 #if !(defined(__APPLE__))
 	error = ipsec_init_policy(so, &ip_inp->inp_sp);
 #ifdef SCTP_LOG_CLOSING
@@ -684,7 +684,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 		return error;
 	}
 #endif
-#endif				/* FAST_IPSEC */
+#endif				/* IPSEC */
 	SCTP_INP_WUNLOCK(inp);
 #if defined(__NetBSD__)
 	so->so_send = sctp_sosend;

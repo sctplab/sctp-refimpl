@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.46 2007/07/02 19:22:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.47 2007/07/03 12:13:43 gnn Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2161,7 +2161,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
 
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 #if !(defined(__APPLE__))
 	{
 		struct inpcbpolicy *pcb_sp = NULL;
@@ -2183,7 +2183,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_INP_INFO_WUNLOCK();
 		return error;
 	}
-#endif				/* FAST_IPSEC */
+#endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
 #if defined(__FreeBSD__) || defined(__APPLE__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
@@ -3470,9 +3470,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	 */
 	cnt = 0;
 	if (so) {
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 		ipsec4_delete_pcbpolicy(ip_pcb);
-#endif				/* FAST_IPSEC */
+#endif				/* IPSEC */
 
 #ifdef  __NetBSD__
 		sofree(so);
