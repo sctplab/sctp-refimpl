@@ -1957,7 +1957,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				av->assoc_value = stcb->asoc.congestion_control_module;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				error = ENOTCONN;
+				av->assoc_value = inp->sctp_ep.sctp_default_cc_module;
 			}
 			*optsize = sizeof(*av);
 		}
@@ -3038,7 +3038,16 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				}
 			}
 		} else {
-			error = ENOTCONN;
+			switch(av->assoc_value) {
+			case SCTP_CC_RFC2581:				
+			case SCTP_CC_HSTCP:
+			case SCTP_CC_HTCP:
+				inp->sctp_ep.sctp_default_cc_module = av->assoc_value;
+				break;
+			default:
+				error = EINVAL;
+				break;
+			};
 		}
 	}
 	break;

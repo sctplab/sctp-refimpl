@@ -1021,7 +1021,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	 * JRS - Pick the default congestion control module
 	 * based on the sysctl.
 	 */
-	switch(sctp_default_cc_module) {
+	switch(m->sctp_ep.sctp_default_cc_module) {
 		/* JRS - Standard TCP congestion control */
 		case SCTP_CC_RFC2581:
 		{
