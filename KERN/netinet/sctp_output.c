@@ -9779,7 +9779,15 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk);
+			/* Here we do NOT use the macro since the
+			 * association is now gone.
+			 */
+ 			if (chk->whoTo) {
+				sctp_free_remote_addr(chk->whoTo);
+				chk->whoTo = NULL;
+			}
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+			SCTP_DECR_CHK_COUNT();
 			return (-1);
 		}
 	}
