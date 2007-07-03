@@ -316,7 +316,7 @@ do_sender()
 			printf("sz set to %d\n",
 			       msg_sz);
 			if(msg_sz > sizeof(msg)) {
-#ifdef __APPLE__
+#if defined(_LP64) || defined(__LP64__) || defined(__APPLE__)
 				printf("Sorry max size is %lu, override to this value\n",
 #else
 				printf("Sorry max size is %u, override to this value\n",
