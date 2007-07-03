@@ -200,9 +200,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 {
 	if((log->from == SCTP_CWND_LOG_NOADV_CA) ||
 	   (log->from == SCTP_CWND_LOG_NOADV_SS)) {
-		printf("%s: Net:%x Cwnd:%d flt:%d flt+acked:%d (atpc:%d npc:%d) %s (pc=%x, sendcnt:%d,strcnt:%d)\n",
+		printf("%s: Net:%p Cwnd:%d flt:%d flt+acked:%d (atpc:%d npc:%d) %s (pc=%x, sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       (int)log->x.cwnd.cwnd_new_value,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cwnd_augment,
@@ -215,9 +215,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 			);
 
 	} else if (log->from == SCTP_CWND_LOG_FROM_T3){
-		printf("%s Network:%x at T3 cwnd:%d flight:%d pc:%x (net==lnet ?:%d,sendcnt:%d,strcnt:%d)\n",
+		printf("%s Network:%p at T3 cwnd:%d flight:%d pc:%x (net==lnet ?:%d,sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (int)log->x.cwnd.pseudo_cumack,
@@ -226,10 +226,10 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str);
 
 	} else if (log->from == SCTP_CWND_LOG_FILL_OUTQ_FILLS) {
-		printf("%s fill_outqueue adds %d bytes onto net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+		printf("%s fill_outqueue adds %d bytes onto net:%p cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
 		       ts,
 		       (int)log->x.cwnd.cwnd_augment,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cnt_in_send,
@@ -237,9 +237,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 
 
 	} else if (log->from == SCTP_CWND_LOG_FILL_OUTQ_CALLED) {
-		printf("%s fill_outqueue called on net:%x cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+		printf("%s fill_outqueue called on net:%p cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cnt_in_send,
@@ -252,9 +252,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_send,
 		       (int)log->x.cwnd.cnt_in_str);
 	} else if (log->from == SCTP_CWND_LOG_FROM_BRST){
-		printf("%s Network:%x at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d (sendcnt:%d,strcnt:%d)\n",
+		printf("%s Network:%p at cwnd_event (BURST) cwnd:%d flight:%d decrease by %d (sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (u_int)log->x.cwnd.cwnd_augment,
@@ -262,9 +262,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str);
 
 	} else if (log->from == SCTP_CWND_LOG_FROM_SACK){
-		printf("%s Net:%x at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
+		printf("%s Net:%p at cwnd_event (SACK) cwnd:%d flight:%d pq:%x atpc:%d needpc:%d (tsn:%x,sendcnt:%d,strcnt:%d) \n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (u_int)log->x.cwnd.pseudo_cumack,
@@ -275,9 +275,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str);
 
 	} else if (log->from == SCTP_CWND_INITIALIZATION){
-		printf("%s Network:%x initializes cwnd:%d flight:%d pq:%x (sendcnt:%d,strcnt:%d)\n",
+		printf("%s Network:%p initializes cwnd:%d flight:%d pq:%x (sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (u_int)log->x.cwnd.pseudo_cumack,
@@ -285,9 +285,9 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str);
 	} else if ((log->from == SCTP_CWND_LOG_FROM_SEND) ||
 		   (log->from == SCTP_CWND_LOG_FROM_RESEND)){
-		printf("%s Network:%x cwnd:%d flight:%d pq:%x %s tsn:%x (sendcnt:%d,strcnt:%d)\n",
+		printf("%s Network:%p cwnd:%d flight:%d pq:%x %s tsn:%x (sendcnt:%d,strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (u_int)log->x.cwnd.pseudo_cumack,
@@ -296,10 +296,10 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_send,
 		       (int)log->x.cwnd.cnt_in_str);
 	}else {
-		printf("%s:CWND %s net:%x cwnd:%d flight:%d aug:%d (sendcnt:%d,strcnt:%d)\n",
+		printf("%s:CWND %s net:%p cwnd:%d flight:%d aug:%d (sendcnt:%d,strcnt:%d)\n",
 		       ts,
 		       from_str[log->from],
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       log->x.cwnd.inflight,
 		       (u_int)log->x.cwnd.cwnd_augment,
@@ -343,14 +343,14 @@ print_event_sb(struct sctp_cwnd_log *log)
 static void
 print_event_mbuf(struct sctp_cwnd_log *log) 
 {
-	printf("%s mbuf:%x data:%x len:%d flags:%x refcnt:%d extbuf:%x %s\n",
+	printf("%s mbuf:%p data:%p len:%d flags:%x refcnt:%d extbuf:%p %s\n",
 	       ts,
-	       (uint32_t)log->x.mb.mp,
-	       (uint32_t)log->x.mb.data,
+	       log->x.mb.mp,
+	       log->x.mb.data,
 	       (int)log->x.mb.size,
 	       (uint32_t)log->x.mb.mbuf_flags,
 	       (int)log->x.mb.refcnt,
-	       (uint32_t)log->x.mb.ext,
+	       log->x.mb.ext,
 	       from_str[log->from]);
 }
 
@@ -381,11 +381,11 @@ print_event_close(struct sctp_cwnd_log *log)
 	if(log->x.close.loc > 18) {
 		log->x.close.loc = 18;
 	}
-	printf("%s: inp:%x sctp_flags:%x stcb:%x asoc state:%x e:%d-%s\n",
+	printf("%s: inp:%p sctp_flags:%x stcb:%p asoc state:%x e:%d-%s\n",
 	       ts,
-	       (u_int)log->x.close.inp,
+	       log->x.close.inp,
 	       (u_int)log->x.close.sctp_flags,
-	       (u_int)log->x.close.stcb,
+	       log->x.close.stcb,
 	       (u_int)log->x.close.state,
 	       log->x.close.loc,
 	       close_events[log->x.close.loc]);
@@ -501,9 +501,9 @@ static void
 print_event_maxburst(struct sctp_cwnd_log *log) 
 {
 	if(log->from == SCTP_MAX_BURST_ERROR_STOP) {
-		printf("%s: Network:%x Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
+		printf("%s: Network:%p Flight:%d burst cnt:%d - send error:%d %s (sendcnt:%d strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cwnd_augment,
 		       (int)log->x.cwnd.cwnd_new_value,
@@ -512,9 +512,9 @@ print_event_maxburst(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str
 			);
 	} else if (log->from == SCTP_MAX_BURST_APPLIED) {
-		printf("%s: Network:%x Flight:%d burst cnt:%d %s (sendcnt:%d strcnt:%d)\n",
+		printf("%s: Network:%p Flight:%d burst cnt:%d %s (sendcnt:%d strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cwnd_augment,
 		       from_str[log->from],
@@ -522,9 +522,9 @@ print_event_maxburst(struct sctp_cwnd_log *log)
 		       (int)log->x.cwnd.cnt_in_str
 			);
 	} else if (log->from == SCTP_MAX_IFP_APPLIED) {
-		printf("%s: Network:%x Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s (sendcnt:%d strcnt:%d)\n",
+		printf("%s: Network:%p Flight:%d ifp_send_qsize: %d ifp_send_qlimit:%d %s (sendcnt:%d strcnt:%d)\n",
 		       ts,
-		       (u_int)log->x.cwnd.net,
+		       log->x.cwnd.net,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cwnd_new_value,
 		       (int)log->x.cwnd.cwnd_augment,
