@@ -1127,7 +1127,7 @@ do_print_of_log(struct sctp_cwnd_log *log)
 		return;
 	}
 	if(time_relative == 0){ 
-		sprintf(ts, "%ju", log->time_event);
+		sprintf(ts, "%llu", (unsigned long long)log->time_event);
 	} else {
 		if (seen_time == 0) {
 			first_timeevent = log->time_event;
@@ -1136,7 +1136,7 @@ do_print_of_log(struct sctp_cwnd_log *log)
 			first_timeevent -= prev_time;
 		}
 		/* Now print and continue. */
-		sprintf(ts, "%ju", log->time_event);
+		sprintf(ts, "%llu", (unsigned long long)log->time_event);
 		prev_time = log->time_event;
 	}
 	switch( log->event_type) {
