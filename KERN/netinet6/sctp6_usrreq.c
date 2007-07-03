@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.30 2007/07/01 11:38:28 gnn Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.31 2007/07/03 12:13:44 gnn Exp $");
 #endif
 
 
@@ -59,12 +59,12 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.30 2007/07/01 11:38:28 g
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
 #endif
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 #include <netipsec/ipsec.h>
 #if defined(INET6)
 #include <netipsec/ipsec6.h>
 #endif /* INET6 */
-#endif /* FAST_IPSEC */
+#endif /* IPSEC */
 
 extern struct protosw inetsw[];
 
@@ -316,7 +316,7 @@ sctp_skip_csum:
 		refcount_up = 1;
 	}
 	in6p_ip = (struct inpcb *)in6p;
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 	/*
 	 * Check AH/ESP integrity.
 	 */
@@ -330,7 +330,7 @@ sctp_skip_csum:
 #endif
 		goto bad;
 	}
-#endif				/* FAST_IPSEC */
+#endif /* IPSEC */
 
 	/*
 	 * CONTROL chunk processing
