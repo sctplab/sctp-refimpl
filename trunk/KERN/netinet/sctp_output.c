@@ -9779,6 +9779,8 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			sctp_free_a_chunk(stcb, chk);
+			return (-1);
 		}
 	}
 	net->hb_responded = 0;
