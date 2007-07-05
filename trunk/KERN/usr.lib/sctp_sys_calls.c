@@ -553,16 +553,16 @@ sctp_sendmsg(int s,
 sctp_assoc_t
 sctp_getassocid(int sd, struct sockaddr *sa)
 {
-	struct sctp_paddrparams sp;
+	struct sctp_paddrinfo sp;
 	socklen_t siz;
 
 	/* First get the assoc id */
-	siz = sizeof(struct sctp_paddrparams);
+	siz = sizeof(sp);
 	memset(&sp, 0, sizeof(sp));
 	memcpy((caddr_t)&sp.spp_address, sa, sa->sa_len);
 	errno = 0;
 	if (getsockopt(sd, IPPROTO_SCTP,
-	    SCTP_PEER_ADDR_PARAMS, &sp, &siz) != 0) {
+	    SCTP_GET_PEER_ADDR_INFO, &sp, &siz) != 0) {
 		return ((sctp_assoc_t) 0);
 	}
 	/* We depend on the fact that 0 can never be returned */
