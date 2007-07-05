@@ -559,14 +559,14 @@ sctp_getassocid(int sd, struct sockaddr *sa)
 	/* First get the assoc id */
 	siz = sizeof(sp);
 	memset(&sp, 0, sizeof(sp));
-	memcpy((caddr_t)&sp.spp_address, sa, sa->sa_len);
+	memcpy((caddr_t)&sp.spinfo_address, sa, sa->sa_len);
 	errno = 0;
 	if (getsockopt(sd, IPPROTO_SCTP,
 	    SCTP_GET_PEER_ADDR_INFO, &sp, &siz) != 0) {
 		return ((sctp_assoc_t) 0);
 	}
 	/* We depend on the fact that 0 can never be returned */
-	return (sp.spp_assoc_id);
+	return (sp.spinfo_assoc_id);
 }
 
 ssize_t
