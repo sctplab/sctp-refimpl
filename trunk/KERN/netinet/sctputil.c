@@ -1545,7 +1545,7 @@ sctp_timeout_handler(void *t)
 	tmr->stopped_from = 0xa005;
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer type %d goes off\n", tmr->type);
 #ifndef __NetBSD__
-	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
+	if (SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
