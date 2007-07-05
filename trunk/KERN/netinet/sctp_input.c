@@ -120,7 +120,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		return;
 	}
 	/* validate parameters */
-z	if (init->initiate_tag == 0) {
+	if (init->initiate_tag == 0) {
 		/* protocol error... send abort */
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
