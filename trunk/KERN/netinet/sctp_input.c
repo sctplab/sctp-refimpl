@@ -2673,7 +2673,10 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		break;
 	case SCTP_HEARTBEAT_REQUEST:
 		/* resend a demand HB */
-		(void)sctp_send_hb(stcb, 1, net);
+		if ((stcb->asoc.overall_error_count + 3) < stcb->asoc.max_send_times) {
+			/* Only retransmit if we KNOW we wont destroy the tcb */
+			(void)sctp_send_hb(stcb, 1, net);
+		}
 		break;
 	case SCTP_SHUTDOWN:
 		sctp_send_shutdown(stcb, net);
