@@ -1007,7 +1007,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 					 * no recent feed back in an RTO or
 					 * more, request a RTT update
 					 */
-					(void)sctp_send_hb(stcb, 1, net);
+					if(sctp_send_hb(stcb, 1, net) < 0) 
+						return 1;
 				}
 			}
 		}
@@ -1064,7 +1065,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 * JRS 5/14/07 - If the destination hasn't failed completely but is in PF
 		 *  state, a PF-heartbeat needs to be sent manually.
 		 */
-		sctp_send_hb(stcb, 1, net);
+		if(sctp_send_hb(stcb, 1, net) < 0)
+			return 1;
 	}
 	/*
 	 * Special case for cookie-echo'ed case, we don't do output but must
@@ -1514,6 +1516,7 @@ int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
 {
+	int ret;
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
@@ -1563,7 +1566,10 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 						net->src_addr_selected = 0;
 					}
 				}
-				if (sctp_send_hb(stcb, 1, net) == 0) {
+				ret = sctp_send_hb(stcb, 1, net);
+				if (ret < 0)
+					return 1;
+				else if (ret == 0) {
 					break;
 				}
 				if (cnt_sent >= sctp_hb_maxburst)

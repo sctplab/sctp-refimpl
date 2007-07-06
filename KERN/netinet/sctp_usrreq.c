@@ -3765,7 +3765,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				/************************NET SPECIFIC SET ******************/
 				if (paddrp->spp_flags & SPP_HB_DEMAND) {
 					/* on demand HB */
-					(void)sctp_send_hb(stcb, 1, net);
+					if(sctp_send_hb(stcb, 1, net) < 0) {
+						/* asoc destroyed */
+						error = EINVAL;
+						break;
+					}
 				}
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					net->dest_state |= SCTP_ADDR_NOHB;
