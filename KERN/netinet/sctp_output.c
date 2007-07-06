@@ -6992,7 +6992,8 @@ one_more_time:
 			/* got to pick up the beginning stuff. */
 			old_startat = start_at;
 			start_at = net = TAILQ_FIRST(&asoc->nets);
-			goto one_more_time;
+			if(old_startat)
+				goto one_more_time;
 		}
 	}
 skip_the_fill_from_streams:
@@ -7607,7 +7608,8 @@ again_one_more_time:
 	if (old_startat == NULL) {
 		old_startat = send_start_at;
 		send_start_at = TAILQ_FIRST(&asoc->nets);
-		goto again_one_more_time;
+		if(old_startat)
+			goto again_one_more_time;
 	}
 	/*
 	 * At the end there should be no NON timed chunks hanging on this
