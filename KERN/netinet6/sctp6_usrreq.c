@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.31 2007/07/03 12:13:44 gnn Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.32 2007/07/05 16:23:49 delphij Exp $");
 #endif
 
 
@@ -67,12 +67,9 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.31 2007/07/03 12:13:44 g
 #endif /* IPSEC */
 
 extern struct protosw inetsw[];
-
 #ifdef __Panda__
 int ip6_v6only=0;
 #endif
-
-
 #if !(defined(__FreeBSD__) || defined(__APPLE__))
 extern void 
 in6_sin_2_v4mapsin6(struct sockaddr_in *sin,
@@ -131,10 +128,7 @@ sctp6_input(struct mbuf **i_pak, int *offp)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type *i_pak)
 #else
-sctp6_input(i_pak, offp, proto)
-	struct mbuf **i_pak;
-	int *offp;
-	int proto;
+sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #endif
 {
 	struct mbuf *m;
@@ -384,11 +378,8 @@ void
 #else
 static void
 #endif
-sctp6_notify_mbuf(struct sctp_inpcb *inp,
-    struct icmp6_hdr *icmp6,
-    struct sctphdr *sh,
-    struct sctp_tcb *stcb,
-    struct sctp_nets *net)
+sctp6_notify_mbuf(struct sctp_inpcb *inp, struct icmp6_hdr *icmp6, 
+		  struct sctphdr *sh, struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	uint32_t nxtsz;
 
@@ -462,10 +453,7 @@ out:
 
 #if !defined(__Panda__)
 void
-sctp6_ctlinput(cmd, pktdst, d)
-	int cmd;
-	struct sockaddr *pktdst;
-	void *d;
+sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 {
 	struct sctphdr sh;
 	struct ip6ctlparam *ip6cp = NULL;
