@@ -6690,7 +6690,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *strq, *strqn, *strqt;
-	int goal_mtu, moved_how_much, total_moved=0, bail;
+	int goal_mtu, moved_how_much, total_moved=0, bail=0;
 	int locked, giveup;
 	struct sctp_stream_queue_pending *sp;
 
