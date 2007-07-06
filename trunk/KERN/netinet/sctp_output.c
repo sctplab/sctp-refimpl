@@ -6239,7 +6239,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	uint32_t frag_point,
 	int *locked,
         int *giveup,
-	int eeor_mode)
+	int eeor_mode,
+        int *bail)
 {
 	/* Move from the stream to the send_queue keeping track of the total */
 	struct sctp_association *asoc;
@@ -6431,6 +6432,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		if (chk->data == NULL) {
 			sp->some_taken = some_taken;
 			sctp_free_a_chunk(stcb, chk);
+			*bail = 1;
 			goto out_gu;
 		}
 		/* Pull off the data */
@@ -6501,6 +6503,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			sp->some_taken = some_taken;
 			atomic_add_int(&sp->length, to_move);
 			chk->data = NULL;
+			*bail = 1;
 			sctp_free_a_chunk(stcb, chk);
 			goto out_gu;
 		} else {
@@ -6519,6 +6522,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		SCTP_PRINTF("prepend fails HELP?\n");
 		sctp_free_a_chunk(stcb, chk);
 #endif
+		*bail = 1;
 		goto out_gu;
 	}
 	sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
@@ -6682,11 +6686,11 @@ sctp_select_a_stream(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 static void
 sctp_fill_outqueue(struct sctp_tcb *stcb,
-    struct sctp_nets *net, int frag_point, int eeor_mode)
+    struct sctp_nets *net, int frag_point, int eeor_mode, int *quit_now)
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *strq, *strqn, *strqt;
-	int goal_mtu, moved_how_much, total_moved=0;
+	int goal_mtu, moved_how_much, total_moved=0, bail;
 	int locked, giveup;
 	struct sctp_stream_queue_pending *sp;
 
@@ -6750,12 +6754,13 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 			}
 		}
 		giveup = 0;
+		bail = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, 
-						       &giveup, eeor_mode);
+						       &giveup, eeor_mode, &bail);
 		asoc->last_out_stream = strq;
 		if (locked) {
 			asoc->locked_on_sending = strq;
-			if ((moved_how_much == 0) || (giveup))
+			if ((moved_how_much == 0) || (giveup) || bail)
 				/* no more to move for now */
 				break;
 		} else {
@@ -6774,7 +6779,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 				}
 				sctp_remove_from_wheel(stcb, asoc, strq);
 			}
-			if(giveup) {
+			if((giveup) || bail) {
 				break;
 			}
 			strq = strqt;
@@ -6786,6 +6791,9 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		goal_mtu -= (moved_how_much + sizeof(struct sctp_data_chunk));
 		goal_mtu &= 0xfffffffc;
 	}
+	if (bail)
+		*quit_now = 1;
+
 	if(total_moved == 0) {
 		if ((sctp_cmt_on_off == 0) &&
 		    (net == stcb->asoc.primary_destination)) {
@@ -6884,6 +6892,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 		the destination. */
 	int pf_hbflag = 0;
+	int quit_now = 0;
 
 	*num_out = 0;
 	cwnd_full_ind = 0;
@@ -6986,7 +6995,12 @@ one_more_time:
 			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
 				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 			}
-			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode);
+			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode, &quit_now);
+			if(quit_now) {
+				/* memory alloc failure */
+				no_data_chunks = 1;
+				goto skip_the_fill_from_streams;
+			}
 		}
 		if (start_at != TAILQ_FIRST(&asoc->nets)) {
 			/* got to pick up the beginning stuff. */
@@ -7005,7 +7019,11 @@ skip_the_fill_from_streams:
 		*reason_code = 8;
 		return (0);
 	}
-	chk = TAILQ_FIRST(&asoc->send_queue);
+	if(no_data_chunks) {
+		chk = TAILQ_FIRST(&asoc->control_send_queue);
+	} else {
+		chk = TAILQ_FIRST(&asoc->send_queue);
+	}
 	if (chk) {
 		send_start_at = chk->whoTo;
 	} else {
