@@ -1644,6 +1644,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
+				SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -1696,7 +1698,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			/* auth HMAC failed, dump the assoc and packet */
 			SCTPDBG(SCTP_DEBUG_AUTH1,
 				"COOKIE-ECHO: AUTH failed\n");
+			atomic_add_int(&stcb->asoc.refcnt, 1);
 			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18);
+			atomic_add_int(&stcb->asoc.refcnt, -1);
 			return (NULL);
 		} else {
 			/* remaining chunks checked... good to go */
