@@ -491,7 +491,15 @@ struct sctp_tsn_log {
 	uint16_t flgs;
 };
 
-
+#define SCTP_FS_SPEC_LOG_SIZE 200
+struct sctp_fs_spec_log {
+	uint32_t sent;
+	uint32_t total_flight;
+	uint32_t tsn;
+	uint16_t book;
+	uint8_t incr;
+	uint8_t decr;
+};
 
 /* This struct is here to cut out the compatiabilty
  * pad that bulks up both the inp and stcb. The non
@@ -757,6 +765,11 @@ struct sctp_association {
 	uint16_t tsn_in_wrapped;
 	uint16_t tsn_out_wrapped;
 #endif /* SCTP_ASOCLOG_OF_TSNS */
+#ifdef SCTP_FS_SPEC_LOG
+	struct sctp_fs_spec_log fslog[SCTP_FS_SPEC_LOG_SIZE];
+	uint16_t fs_index;
+#endif
+
 	/*
 	 * window state information and smallest MTU that I use to bound
 	 * segmentation
