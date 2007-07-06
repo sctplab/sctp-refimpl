@@ -1,0 +1,9 @@
+- sctp_input.c had a missing incr of cookie case when
+  auth was bad. This meant a free was called without an
+  increment to refcnt, added increment like rest of code.
+- There was a case, unlikely, when the scope of the destination
+  changed (this is a TSNH case). In that case, it would not free
+  the alloc'ed asoc (in sctp_input.c).
+- When listed addresses found a colliding cookie/Init, then
+  the collided upon tcb was not unlocked in sctp_pcb.c
+
