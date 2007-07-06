@@ -1424,6 +1424,7 @@ sctp_timeout_handler(void *t)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
+	int retcode=0;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
@@ -1639,11 +1640,14 @@ sctp_timeout_handler(void *t)
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
 		}
-		if (sctp_t3rxt_timer(inp, stcb, net)) {
+		SCTP_TCB_LOCK_ASSERT(stcb);
+		retcode = sctp_t3rxt_timer(inp, stcb, net);
+		if (retcode) {
 			/* no need to unlock on tcb its gone */
 
 			goto out_decr;
 		}
+		SCTP_TCB_LOCK_ASSERT(stcb);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
