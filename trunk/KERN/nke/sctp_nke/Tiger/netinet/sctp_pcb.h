@@ -297,6 +297,7 @@ struct sctp_pcb {
 	uint32_t sctp_sws_sender;
 	uint32_t sctp_sws_receiver;
 
+	uint32_t sctp_default_cc_module;
 	/* authentication related fields */
 	struct sctp_keyhead shared_keys;
 	sctp_auth_chklist_t *local_auth_chunks;

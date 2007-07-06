@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.48 2007/07/02 19:22:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.49 2007/07/03 12:13:43 gnn Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -134,6 +134,8 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_INVALID_PARAM);
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
 				       vrf_id);
+		if (stcb)
+			*abort_no_unlock = 1;
 		return;
 	}
 	if (init->num_inbound_streams == 0) {
@@ -1324,6 +1326,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		        TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 				if(chk->sent < SCTP_DATAGRAM_RESEND) {
 					chk->sent = SCTP_DATAGRAM_RESEND;
+					sctp_flight_size_decrease(chk);
+					sctp_total_flight_decrease(stcb, chk);
 					sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 					spec_flag++;
 				}
@@ -1642,6 +1646,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
+		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
+				SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -1694,7 +1700,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			/* auth HMAC failed, dump the assoc and packet */
 			SCTPDBG(SCTP_DEBUG_AUTH1,
 				"COOKIE-ECHO: AUTH failed\n");
+			atomic_add_int(&stcb->asoc.refcnt, 1);
 			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18);
+			atomic_add_int(&stcb->asoc.refcnt, -1);
 			return (NULL);
 		} else {
 			/* remaining chunks checked... good to go */
@@ -1789,6 +1797,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
+	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered);
@@ -4436,6 +4445,21 @@ sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 }
 
+#ifdef INVARIANTS
+static void
+sctp_validate_no_locks(struct sctp_inpcb *inp)
+{
+#ifndef __APPLE__
+	struct sctp_tcb *stcb;
+	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		if (mtx_owned(&stcb->tcb_mtx)) {
+			panic("Own lock on stcb at return from input");
+		}
+	}
+#endif
+}
+#endif
+
 /*
  * common input chunk processing (v4 and v6)
  */
@@ -4506,7 +4530,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 		}
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
@@ -4515,7 +4539,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
@@ -4524,7 +4548,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 		}
 	}
 	
@@ -4537,7 +4561,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-		return;
+		goto out_now;
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -4590,7 +4614,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -4601,7 +4625,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 			break;
 		case SCTP_STATE_OPEN:
 		case SCTP_STATE_SHUTDOWN_SENT:
@@ -4623,7 +4647,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 		}
 		data_processed = 1;
 		if (retval == 0) {
@@ -4653,7 +4677,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
-			return;
+			goto out_now;
 		}
 	}
 	/* trigger send of any chunks in queue... */
@@ -4684,6 +4708,10 @@ trigger_send:
 	SCTP_TCB_UNLOCK(stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
+ out_now:
+#ifdef INVARIANTS
+	sctp_validate_no_locks(inp);
 #endif
 	return;
 }
@@ -4972,7 +5000,7 @@ sctp_input(i_pak, va_alist)
 	} else if (stcb == NULL) {
 		refcount_up = 1;
 	}
-#ifdef FAST_IPSEC
+#ifdef IPSEC
 	/*
 	 * I very much doubt any of the IPSEC stuff will work but I have no
 	 * idea, so I will leave it in place.
