@@ -1021,7 +1021,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	 * JRS - Pick the default congestion control module
 	 * based on the sysctl.
 	 */
-	switch(sctp_default_cc_module) {
+	switch(m->sctp_ep.sctp_default_cc_module) {
 		/* JRS - Standard TCP congestion control */
 		case SCTP_CC_RFC2581:
 		{
@@ -1573,8 +1573,19 @@ sctp_timeout_handler(void *t)
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
 		atomic_add_int(&stcb->asoc.refcnt, -1);
+		if ((tmr->type != SCTP_TIMER_TYPE_ASOCKILL) &&
+		    ((stcb->asoc.state == 0) ||
+		     (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED))) {
+			SCTP_TCB_UNLOCK(stcb);
+			if (inp) {
+#if defined(SCTP_PER_SOCKET_LOCKING)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
+				SCTP_INP_DECR_REF(inp);
+			}
+			return;
+		}
 	}
-
 	/* record in stopped what t-o occured */
 	tmr->stopped_from = tmr->type;
 

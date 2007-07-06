@@ -7566,7 +7566,14 @@ again_one_more_time:
 			if (bundle_at) {
 				/* setup for a RTO measurement */
 				tsns_sent = data_list[0]->rec.data.TSN_seq;
-
+				/* fill time if not already filled */
+				if (*now_filled == 0) {
+					(void)SCTP_GETTIME_TIMEVAL(&asoc->time_last_sent);
+					*now_filled = 1;
+					*now = asoc->time_last_sent;
+				} else {
+					asoc->time_last_sent = *now;
+				}
 				data_list[0]->do_rtt = 1;
 				SCTP_STAT_INCR_BY(sctps_senddata, bundle_at);
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
@@ -9756,7 +9763,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	 *  If CMT PF is on and the destination to which a heartbeat is being sent is in PF state,
 	 *  do NOT do threshold management.
 	 */
-	if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF)) {
+	if ((sctp_cmt_pf == 0) || ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF)) {
 		/* ok we have a destination that needs a beat */
 		/* lets do the theshold management Qiaobing style */
 		if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
@@ -9772,6 +9779,16 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			/* Here we do NOT use the macro since the
+			 * association is now gone.
+			 */
+ 			if (chk->whoTo) {
+				sctp_free_remote_addr(chk->whoTo);
+				chk->whoTo = NULL;
+			}
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+			SCTP_DECR_CHK_COUNT();
+			return (-1);
 		}
 	}
 	net->hb_responded = 0;

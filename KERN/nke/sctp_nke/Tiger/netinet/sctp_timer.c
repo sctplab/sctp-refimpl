@@ -730,6 +730,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			SCTP_STAT_INCR(sctps_markedretrans);
 
 			/* reset the TSN for striking and other FR stuff */
+			chk->window_probe = 0;
 			chk->rec.data.doing_fast_retransmit = 0;
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
