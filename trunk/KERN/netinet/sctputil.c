@@ -1572,9 +1572,9 @@ sctp_timeout_handler(void *t)
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		if ((stcb->asoc.state == 0) ||
 		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
-			atomic_add_int(&stcb->asoc.refcnt, -1);
 			SCTP_TCB_UNLOCK(stcb);
 			if (inp) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
