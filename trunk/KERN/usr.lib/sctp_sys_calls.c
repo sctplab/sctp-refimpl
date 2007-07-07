@@ -645,6 +645,12 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 		    msg, msg_len, addrs, l, sinfo, flags));
 	}
 #endif
+	
+	if (addrs == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	len = sizeof(int);
 	at = addrs;
 	cnt = 0;
@@ -669,7 +675,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	}
 	buf = malloc(len);
 	if (buf == NULL) {
-		return (ENOMEM);
+		return (-1);
 	}
 	aa = (int *)buf;
 	*aa = cnt;
