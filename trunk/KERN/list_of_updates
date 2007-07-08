@@ -6,4 +6,7 @@
   the alloc'ed asoc (in sctp_input.c).
 - When listed addresses found a colliding cookie/Init, then
   the collided upon tcb was not unlocked in sctp_pcb.c
-
+- Add error checking on arguments of sctp_sendx(3) to prevent to
+  reference NULL pointer.
+- Fix the error return of sctp_sendx(3), it was returing the
+  ENOMEM not -1.
