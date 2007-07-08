@@ -589,7 +589,8 @@ sctp_send(int sd, const void *data, size_t len,
 	struct cmsghdr *cmsg;
 
 	if (sinfo == NULL) {
-		return (EINVAL);
+		errno = EINVAL;
+		return (-1);
 	}
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
