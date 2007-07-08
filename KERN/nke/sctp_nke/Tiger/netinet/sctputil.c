@@ -1417,6 +1417,9 @@ sctp_handle_addr_wq(void)
  * stcb->sctp_socket is locked.
  */
 #endif
+int retcode=0;
+int cur_oerr=0;
+
 void
 sctp_timeout_handler(void *t)
 {
@@ -1639,11 +1642,15 @@ sctp_timeout_handler(void *t)
 		if (stcb->asoc.num_send_timers_up < 0) {
 			stcb->asoc.num_send_timers_up = 0;
 		}
-		if (sctp_t3rxt_timer(inp, stcb, net)) {
+		SCTP_TCB_LOCK_ASSERT(stcb);
+		cur_oerr = stcb->asoc.overall_error_count;
+		retcode = sctp_t3rxt_timer(inp, stcb, net);
+		if (retcode) {
 			/* no need to unlock on tcb its gone */
 
 			goto out_decr;
 		}
+		SCTP_TCB_LOCK_ASSERT(stcb);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
