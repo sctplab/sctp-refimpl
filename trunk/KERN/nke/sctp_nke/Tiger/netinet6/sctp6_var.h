@@ -32,7 +32,7 @@
 #define _NETINET6_SCTP6_VAR_H_
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.6 2007/06/12 11:21:00 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.7 2007/07/05 16:29:40 delphij Exp $");
 #endif
 
 #if defined(_KERNEL)
@@ -63,8 +63,9 @@ int sctp6_input (pakhandle_type *);
 #else
 int sctp6_input __P((struct mbuf **, int *, int));
 #endif
-int sctp6_output __P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
-		      struct mbuf *, struct proc *));
+int sctp6_output
+__P((struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+     struct mbuf *, struct proc *));
 void sctp6_ctlinput __P((int, struct sockaddr *, void *));
 
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

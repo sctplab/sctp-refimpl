@@ -349,6 +349,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	stcb->asoc.fslog[stcb->asoc.fs_index].sent = tp1->sent; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].incr = 0; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].decr = 1; \
+	stcb->asoc.fs_index++; \
 	if (stcb->asoc.total_flight >= tp1->book_size) { \
 		stcb->asoc.total_flight -= tp1->book_size; \
 		if (stcb->asoc.total_flight_count > 0) \
@@ -368,6 +369,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	stcb->asoc.fslog[stcb->asoc.fs_index].sent = tp1->sent; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].incr = 1; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].decr = 0; \
+	stcb->asoc.fs_index++; \
        (stcb)->asoc.total_flight_count++; \
        (stcb)->asoc.total_flight += (tp1)->book_size; \
 } while (0)

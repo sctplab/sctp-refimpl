@@ -589,7 +589,8 @@ sctp_send(int sd, const void *data, size_t len,
 	struct cmsghdr *cmsg;
 
 	if (sinfo == NULL) {
-		return (EINVAL);
+		errno = EINVAL;
+		return (-1);
 	}
 	iov[0].iov_base = (char *)data;
 	iov[0].iov_len = len;
@@ -645,6 +646,12 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 		    msg, msg_len, addrs, l, sinfo, flags));
 	}
 #endif
+	
+	if (addrs == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+
 	len = sizeof(int);
 	at = addrs;
 	cnt = 0;
@@ -669,7 +676,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	}
 	buf = malloc(len);
 	if (buf == NULL) {
-		return (ENOMEM);
+		return (-1);
 	}
 	aa = (int *)buf;
 	*aa = cnt;
