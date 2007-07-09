@@ -6680,6 +6680,8 @@ sctp_select_a_stream(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	if (strq == NULL) {
 		strq = asoc->last_out_stream = TAILQ_FIRST(&asoc->out_wheel);
 	}
+	/* Save off the last stream */
+	asoc->last_out_stream = strq;
 	return(strq);
 
 }
@@ -11184,7 +11186,8 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* now we must find the assoc */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb == NULL) {
@@ -11316,9 +11319,14 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			hold_tcblock = 1;
 		}
+		if (t_inp != inp) {
+			error = ENOTCONN;
+			goto out_unlocked;
+		}
 	}
 	if(stcb == NULL) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			error = ENOTCONN;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
