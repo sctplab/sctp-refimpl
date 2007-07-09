@@ -242,7 +242,10 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 {
 	struct sctp_getaddresses *gaddrs;
 	struct sockaddr *sa;
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
 	int i, sz, argsz;
+	uint16_t sport=0;
 
 	/* validate the flags */
 	if ((flags != SCTP_BINDX_ADD_ADDR) &&
@@ -262,7 +265,59 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 		errno = ENOMEM;
 		return (-1);
 	}
+	/* First pre-screen the addresses */
 	sa = addrs;
+	for (i = 0; i < addrcnt; i++) {
+		sz = sa->sa_len;
+		if (sa->sa_family == AF_INET) {
+			if (sa->sa_len != sizeof(struct sockaddr_in))
+				goto out_error;
+			sin = (struct sockaddr_in *)sa;
+			if (sin->sin_port) {
+				/* non-zero port, check or save */
+				if(sport) {
+					/* Check against our port */
+					if(sport != sin->sin_port) {
+						goto out_error;
+					}
+				} else {
+					/* save off the port */
+					sport = sin->sin_port;
+				}
+			}
+		} else if (sa->sa_family == AF_INET6) {
+			if (sa->sa_len != sizeof(struct sockaddr_in6))
+				goto out_error;
+			sin6 = (struct sockaddr_in6 *)sa;
+			if (sin6->sin6_port) {
+				/* non-zero port, check or save */
+				if(sport) {
+					/* Check against our port */
+					if(sport != sin6->sin6_port) {
+						goto out_error;
+					}
+				} else {
+					/* save off the port */
+					sport = sin6->sin6_port;
+				}
+			}
+
+		} else {
+			/* invalid address family specified */
+			goto out_error;
+		}
+		
+		
+	}
+	sa = addrs;
+	/* Now if there was a port mentioned, assure that
+	 * the first address has that port to make sure it fails
+	 * or succeeds correctly.
+	 */
+ 	if (sport) {
+		sin = (struct sockaddr_in *)sa;
+		sin->sin_port = sport;
+	}
 	for (i = 0; i < addrcnt; i++) {
 		sz = sa->sa_len;
 		if (sa->sa_family == AF_INET) {
