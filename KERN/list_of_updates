@@ -1,4 +1,5 @@
 - Modular congestion control, with RFC2581 being the default.
+- CMT_PF states added (w/sysctl to turn the PF version on)
 - sctp_input.c had a missing incr of cookie case when the
   auth was bad. This meant a free was called without an
   increment to refcnt, added increment like rest of code.
@@ -11,7 +12,12 @@
   referencing a NULL pointer.
 - Fix an error return of sctp_sendx(3), it was returing 
   ENOMEM not -1.
+- Get assoc id was changed to use the sanctified socket api
+  method for getting a assoc id (PEER_ADDR_INFO instead of
+  PEER_ADDR_PARAMS).
 - Fix it so a peeled off socket will get a proper error return
   if it trys to send to a different address then it is connected to.
 - Fix so that select_a_stream can avoid an endless loop that
   could hang a caller.
+- time_entered (state set time) was not being set in all cases
+  to the time we went established.
