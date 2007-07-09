@@ -1,4 +1,5 @@
-- sctp_input.c had a missing incr of cookie case when
+- Modular congestion control, with RFC2581 being the default.
+- sctp_input.c had a missing incr of cookie case when the
   auth was bad. This meant a free was called without an
   increment to refcnt, added increment like rest of code.
 - There was a case, unlikely, when the scope of the destination
@@ -6,7 +7,11 @@
   the alloc'ed asoc (in sctp_input.c).
 - When listed addresses found a colliding cookie/Init, then
   the collided upon tcb was not unlocked in sctp_pcb.c
-- Add error checking on arguments of sctp_sendx(3) to prevent to
-  reference NULL pointer.
-- Fix the error return of sctp_sendx(3), it was returing the
+- Add error checking on arguments of sctp_sendx(3) to prevent it from 
+  referencing a NULL pointer.
+- Fix an error return of sctp_sendx(3), it was returing 
   ENOMEM not -1.
+- Fix it so a peeled off socket will get a proper error return
+  if it trys to send to a different address then it is connected to.
+- Fix so that select_a_stream can avoid an endless loop that
+  could hang a caller.
