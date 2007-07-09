@@ -11318,7 +11318,8 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	if(stcb == NULL) {
-		if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			error = ENOTCONN;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
