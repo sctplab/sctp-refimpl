@@ -66,7 +66,7 @@ sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 	if (stcb == NULL) {
 		return (ENOTCONN);
 	}
-	state = SCTP_GET_STATE(stcb->asoc.state);
+	state = SCTP_GET_STATE((&stcb->asoc));
 	if ((state == SCTP_STATE_EMPTY) ||
 	    (state == SCTP_STATE_INUSE) ||
 	    (state == SCTP_STATE_COOKIE_WAIT) ||
@@ -93,7 +93,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	if (stcb == NULL)
 		return (ENOTCONN);
 
-	state = SCTP_GET_STATE(stcb->asoc.state);
+	state = SCTP_GET_STATE((&stcb->asoc));
 	if ((state == SCTP_STATE_EMPTY) ||
 	    (state == SCTP_STATE_INUSE) ||
 	    (state == SCTP_STATE_COOKIE_WAIT) ||
