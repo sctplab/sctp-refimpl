@@ -11184,7 +11184,8 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* now we must find the assoc */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
 		SCTP_INP_RLOCK(inp);
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		if (stcb == NULL) {
@@ -11315,6 +11316,10 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_INP_WUNLOCK(inp);
 		} else {
 			hold_tcblock = 1;
+		}
+		if (t_inp != inp) {
+			error = ENOTCONN;
+			goto out_unlocked;
 		}
 	}
 	if(stcb == NULL) {
