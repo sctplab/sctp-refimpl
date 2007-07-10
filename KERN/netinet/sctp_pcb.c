@@ -5382,8 +5382,8 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
-		if (stcb->asoc.numnets < 2) {
+	    sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+		if (stcb->sctp_ep->laddr_count < 2) {
 			/* can't delete last address */
 			return;
 		}
