@@ -332,7 +332,7 @@ struct sctp_pcb {
 	struct sctp_timer zero_copy_timer;
         /* Zero copy app to transport (sendq) read repulse timer */
 	struct sctp_timer zero_copy_sendq_timer;
-	int def_cookie_life;
+	uint32_t def_cookie_life;
 	/* defaults to 0 */
 	int auto_close_time;
 	uint32_t initial_sequence_debug;
