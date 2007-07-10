@@ -24,8 +24,9 @@
 -------------------New items below here above this is re-patch 9------------
 - added pre-checks to the bindx call.
 - use proper tick gathering macro instead of ticks directly.
-- Cookie life is converted to ticks and on some platform an
-     overflow could occur. In such a case don't set the value
-     to 0.
+- Placed reasonable boundaries on sets that a user can do
+  that are converted to ticks from ms.
+- Fix CMT_PF to always check to be sure CMT is on.
+- Fix ticks use of CMT_PF.
 - put back code to allow asconfs to be queued while INITs are in flight
   and before the assoc is established.
