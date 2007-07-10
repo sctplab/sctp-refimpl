@@ -3421,7 +3421,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->no_fr_allowed = 1;
 				alt = tp1->whoTo;
 				/*sa_ignore NO_NULL_CHK*/
-				if(sctp_cmt_pf) {
+				if(sctp_cmt_on_off && sctp_cmt_pf) {
 					/* JRS 5/18/07 - If CMT PF is on, use the PF version of find_alt_net() */
 					alt = sctp_find_alternate_net(stcb, alt, 2);
 				} else {

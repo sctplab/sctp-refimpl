@@ -3498,7 +3498,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 						 */
 						/* Add debug message here if destination is not in PF state. */
 						/* Stop any running T3 timers here? */
-						if (sctp_cmt_pf) {
+						if (sctp_cmt_on_off && sctp_cmt_pf) {
 							net->dest_state &= ~SCTP_ADDR_PF;
 							SCTPDBG(SCTP_DEBUG_OUTPUT1, "Destination %p moved from PF to unreachable.\n",
 								net);
@@ -6833,7 +6833,7 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 	 * JRS 5/14/07 - If CMT PF is turned on, find an alternate destination
 	 *  using the PF algorithm for finding alternate destinations.
 	 */
-	if(sctp_cmt_pf) {
+	if(sctp_cmt_on_off && sctp_cmt_pf) {
 		a_net = sctp_find_alternate_net(stcb, net, 2);
 	} else {
 		a_net = sctp_find_alternate_net(stcb, net, 0);
@@ -7497,7 +7497,7 @@ again_one_more_time:
 				 * restart it.
 				 */
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
-			} else if (sctp_cmt_pf && pf_hbflag && ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)
+			} else if (sctp_cmt_on_off && sctp_cmt_pf && pf_hbflag && ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)
 						&& (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer))) {
 				/*
 				 * JRS 5/14/07 - If a HB has been sent to a PF destination and no T3 timer is currently
@@ -8743,7 +8743,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 */
 			if (net->ref_count > 1)
 				sctp_move_to_an_alt(stcb, asoc, net);
-		} else if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+		} else if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
 					SCTP_ADDR_PF)) {
 			/*
 			 * JRS 5/14/07 - If CMT PF is on and the current destination is in

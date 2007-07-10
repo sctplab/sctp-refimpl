@@ -234,7 +234,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
 					SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
 				net->cwnd = net->mtu * sctp_cmt_pf;
@@ -720,7 +720,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
 					SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
 				net->cwnd = net->mtu * sctp_cmt_pf;
@@ -1405,7 +1405,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
 					SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
 				net->cwnd = net->mtu * sctp_cmt_pf;
