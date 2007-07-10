@@ -3927,6 +3927,12 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		return;
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_msg);
+	/*
+	 * assume peer supports asconf in order to be able to queue
+	 * local address changes while an INIT is in flight and before
+	 * the assoc is established.
+	 */
+	stcb->asoc.peer_supports_asconf = 1;
 	/* Now lets put the SCTP header in place */
 	initm = mtod(m, struct sctp_init_msg *);
 	initm->sh.src_port = inp->sctp_lport;
