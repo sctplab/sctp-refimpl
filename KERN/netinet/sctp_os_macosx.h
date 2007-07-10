@@ -443,6 +443,10 @@ struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, 
 		      int want_header, int how, int allonebuf, int type);
 
+/*************************/
+/*     Ticks gathering   */
+/*************************/
+#define SCTP_GETTICKS()  ticks
 
 /*
  * SCTP AUTH
