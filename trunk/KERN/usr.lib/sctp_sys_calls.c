@@ -349,13 +349,14 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 
 
 int
-sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t * size)
+sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 {
 	if (arg == NULL) {
 		errno = EINVAL;
 		return (-1);
 	}
-	*(sctp_assoc_t *) arg = id;
+	if (*size >= sizeof(id))
+	    *(sctp_assoc_t *)arg = id;
 	return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 }
 
