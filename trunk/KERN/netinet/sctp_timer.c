@@ -934,15 +934,16 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	}
 
 	/*
-	 * JRS 5/14/07 - If CMT PF is on and the destination if not already in PF state,
-	 *  set the destination to PF state and store the current time as the time that 
-	 *  the destination was last active.
-	 *  In addition, find an alternate destination with PF-based find_alt_net().
+	 * JRS 5/14/07 - If CMT PF is on and the destination if not already
+	 * in PF state, set the destination to PF state and store the current
+	 * time as the time that the destination was last active.
+	 * In addition, find an alternate destination with PF-based
+	 * find_alt_net().
 	 */
 	if (sctp_cmt_pf) {
 		if ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF) {
 			net->dest_state |= SCTP_ADDR_PF;
-			net->last_active = ticks;
+			net->last_active = sctp_get_tick_count();
 			SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from active to PF.\n",
 				net);
 		}
