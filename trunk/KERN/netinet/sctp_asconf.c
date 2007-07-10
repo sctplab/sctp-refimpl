@@ -100,15 +100,14 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 /*
  * draft-ietf-tsvwg-addip-sctp
  *
- * Address management only currently supported For the bound all case: the asoc
- * local addr list is always a "DO NOT USE" list For the subset bound case:
- * If ASCONFs are allowed: the endpoint local addr list is the usable address
- * list the asoc local addr list is the "DO NOT USE" list If ASCONFs are not
- * allowed: the endpoint local addr list is the default usable list the asoc
- * local addr list is the usable address list
- *
  * An ASCONF parameter queue exists per asoc which holds the pending address
  * operations.  Lists are updated upon receipt of ASCONF-ACK.
+ *
+ * A restricted_addrs list exists per assoc to hold local addresses that are
+ * not (yet) usable by the assoc as a source address.  These addresses are
+ * either pending an ASCONF operation (and exist on the ASCONF parameter
+ * queue), or they are permanently restricted (the peer has returned an
+ * ERROR indication to an ASCONF(ADD), or the peer does not support ASCONF).
  *
  * Deleted addresses are always immediately removed from the lists as they will
  * (shortly) no longer exist in the kernel.  We send ASCONFs as a courtesy,
@@ -116,10 +115,10 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
  */
 
 /*
- * ASCONF parameter processing response_required: set if a reply is required
- * (eg. SUCCESS_REPORT) returns a mbuf to an "error" response parameter or
- * NULL/"success" if ok FIX: allocating this many mbufs on the fly is pretty
- * inefficient...
+ * ASCONF parameter processing.
+ * response_required: set if a reply is required (eg. SUCCESS_REPORT).
+ * returns a mbuf to an "error" response parameter or NULL/"success" if ok.
+ * FIX: allocating this many mbufs on the fly is pretty inefficient...
  */
 static struct mbuf *
 sctp_asconf_success_response(uint32_t id)
@@ -205,13 +204,13 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	struct sockaddr_in6 *sin6;
 	struct sctp_ipv6addr_param *v6addr;
 
-#endif				/* INET6 */
+#endif /* INET6 */
 
 	aparam_length = ntohs(aph->ph.param_length);
 	v4addr = (struct sctp_ipv4addr_param *)(aph + 1);
 #ifdef INET6
 	v6addr = (struct sctp_ipv6addr_param *)(aph + 1);
-#endif				/* INET6 */
+#endif /* INET6 */
 	param_type = ntohs(v4addr->ph.param_type);
 	param_length = ntohs(v4addr->ph.param_length);
 
@@ -346,7 +345,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	struct sockaddr_in6 *sin6;
 	struct sctp_ipv6addr_param *v6addr;
 
-#endif				/* INET6 */
+#endif /* INET6 */
 
 	/* get the source IP address for src and 0.0.0.0/::0 delete checks */
 	sctp_asconf_get_source_ip(m, (struct sockaddr *)&sa_source);
@@ -355,7 +354,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	v4addr = (struct sctp_ipv4addr_param *)(aph + 1);
 #ifdef INET6
 	v6addr = (struct sctp_ipv6addr_param *)(aph + 1);
-#endif				/* INET6 */
+#endif /* INET6 */
 	param_type = ntohs(v4addr->ph.param_type);
 	param_length = ntohs(v4addr->ph.param_length);
 
@@ -481,13 +480,13 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 	struct sockaddr_in6 *sin6;
 	struct sctp_ipv6addr_param *v6addr;
 
-#endif				/* INET6 */
+#endif /* INET6 */
 
 	aparam_length = ntohs(aph->ph.param_length);
 	v4addr = (struct sctp_ipv4addr_param *)(aph + 1);
 #ifdef INET6
 	v6addr = (struct sctp_ipv6addr_param *)(aph + 1);
-#endif				/* INET6 */
+#endif /* INET6 */
 	param_type = ntohs(v4addr->ph.param_type);
 	param_length = ntohs(v4addr->ph.param_length);
 
@@ -858,7 +857,7 @@ sctp_asconf_addr_match(struct sctp_asconf_addr *aa, struct sockaddr *sa)
 			return (1);
 		}
 	} else
-#endif				/* INET6 */
+#endif /* INET6 */
 	if (sa->sa_family == AF_INET) {
 		/* IPv4 sa address */
 		struct sockaddr_in *sin = (struct sockaddr_in *)sa;
@@ -1241,8 +1240,9 @@ sctp_asconf_process_error(struct sctp_tcb *stcb,
 }
 
 /*
- * process an asconf queue param aparam: parameter to process, will be
- * removed from the queue flag: 1=success, 0=failure
+ * process an asconf queue param.
+ * aparam: parameter to process, will be removed from the queue.
+ * flag: 1=success case, 0=failure case
  */
 static void
 sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
@@ -1551,13 +1551,6 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	}
 	/* put this address on the "pending/do not use yet" list */
-	/*
-	 * Note: we do this primarily for the subset bind case We don't have
-	 * scoping flags at the EP level, so we must add link local/site
-	 * local addresses to the EP, then need to "negate" them here.
-	 * Recall that this routine is only called for the subset bound
-	 * w/ASCONF allowed case.
-	 */
 	sctp_add_local_addr_assoc(stcb, ifa, 1);
 	/*
 	 * check address scope if address is out of scope, don't queue
@@ -2041,8 +2034,8 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
 }
 
 /*
- * builds an ASCONF chunk from queued ASCONF params returns NULL on error (no
- * mbuf, no ASCONF params queued, etc)
+ * builds an ASCONF chunk from queued ASCONF params.
+ * returns NULL on error (no mbuf, no ASCONF params queued, etc).
  */
 struct mbuf *
 sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
@@ -2374,7 +2367,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 	if (
 #ifdef INET6
 	    (sa->sa_family != AF_INET6) &&
-#endif				/* INET6 */
+#endif /* INET6 */
 	    (sa->sa_family != AF_INET))
 		return (0);
 
@@ -2422,7 +2415,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 				return (1);
 			}
 		} else
-#endif				/* INET6 */
+#endif /* INET6 */
 
 			if (ptype == SCTP_IPV4_ADDRESS &&
 			    sa->sa_family == AF_INET) {
