@@ -30,3 +30,6 @@
 - Fix ticks use of CMT_PF.
 - put back code to allow asconfs to be queued while INITs are in flight
   and before the assoc is established.
+- bug in ADD-IP for the subset bound socket case when the peer has only
+  one address
+- fix ASCONF implicit success/error handling case
