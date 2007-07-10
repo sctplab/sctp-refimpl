@@ -23,4 +23,4 @@
   to the time we went established.
 -------------------New items below here above this is re-patch 9------------
 - added pre-checks to the bindx call.
-
+- use proper tick gathering macro instead of ticks directly.
