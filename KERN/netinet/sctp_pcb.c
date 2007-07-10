@@ -5760,6 +5760,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		/* the assoc was freed? */
 		return (-4);
 	}
+	/*
+	 * peer must explicitly turn this on. This may have been initialized
+	 * to be "on" in order to allow local addr changes while INIT's are
+	 * in flight.
+	 */
+	stcb->asoc.peer_supports_asconf = 0;
 	/* now we must go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
 	while (phdr) {

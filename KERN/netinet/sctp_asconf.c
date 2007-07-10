@@ -1843,9 +1843,7 @@ sctp_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 					stcb->asoc.site_scope,0) == 0) {
 					continue;
 				}
-
 			}
-
 		}
 		/* queue an asconf for this address add/delete */
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
@@ -2597,8 +2595,8 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 		/* For an add the address MUST be on the system */
 		ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	} else if (type == SCTP_DEL_IP_ADDRESS) {
-	    /* For a delete we need to find it in the inp */
-	    ifa = sctp_find_ifa_in_ep(inp, sa, 0);
+		/* For a delete we need to find it in the inp */
+		ifa = sctp_find_ifa_in_ep(inp, sa, 0);
 	} else {
 		ifa = NULL;
 	}

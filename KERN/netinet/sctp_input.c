@@ -413,6 +413,17 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		*abort_no_unlock = 1;
 		return (-1);
 	}
+	/* if the peer doesn't support asconf, flush the asconf queue */
+	if (asoc->peer_supports_asconf == 0) {	
+		struct sctp_asconf_addr *aparam;
+		while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
+			/* sa_ignore FREED_MEMORY */
+			aparam = TAILQ_FIRST(&asoc->asconf_queue);
+			TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
+			SCTP_FREE(aparam, SCTP_M_ASC_ADDR);
+		}
+	}
+
 	stcb->asoc.peer_hmac_id = sctp_negotiate_hmacid(stcb->asoc.peer_hmacs,
 	    stcb->asoc.local_hmacs);
 	if (op_err) {
