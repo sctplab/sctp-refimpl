@@ -24,3 +24,6 @@
 -------------------New items below here above this is re-patch 9------------
 - added pre-checks to the bindx call.
 - use proper tick gathering macro instead of ticks directly.
+- Cookie life is converted to ticks and on some platform an
+     overflow could occur. In such a case don't set the value
+     to 0.
