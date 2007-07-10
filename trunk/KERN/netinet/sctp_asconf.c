@@ -925,7 +925,8 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
  * for add.  If a duplicate operation is found, ignore the new one.
  */
 static uint32_t
-sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type)
+sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
+		      uint16_t type)
 {
 	struct sctp_asconf_addr *aa, *aa_next;
 	struct sockaddr *sa;
@@ -947,10 +948,10 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa, uint16_t type
 		}
 		/* is the negative request already in queue, and not sent */
 		if (aa->sent == 0 &&
-		/* add requested, delete already queued */
+		    /* add requested, delete already queued */
 		    ((type == SCTP_ADD_IP_ADDRESS &&
 		    aa->ap.aph.ph.param_type == SCTP_DEL_IP_ADDRESS) ||
-		/* delete requested, add already queued */
+		     /* delete requested, add already queued */
 		    (type == SCTP_DEL_IP_ADDRESS &&
 		    aa->ap.aph.ph.param_type == SCTP_ADD_IP_ADDRESS))) {
 			/* delete the existing entry in the queue */
@@ -1099,7 +1100,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			SCTP_FREE(aa, SCTP_M_ASC_ADDR);
 			return (-1);
 		}
-	}			/* for each aa */
+	} /* for each aa */
 	if (stcb) {
 		vrf_id = stcb->asoc.vrf_id;
 	} else {
@@ -1440,7 +1441,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	 * at any given time
 	 */
 	if (last_error_id == 0)
-		last_error_id--;/* set to "max" value */
+		last_error_id--;	/* set to "max" value */
 	for (aa = TAILQ_FIRST(&stcb->asoc.asconf_queue); aa != NULL;
 	    aa = aa_next) {
 		aa_next = TAILQ_NEXT(aa, next);
@@ -1450,11 +1451,9 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 			 * < last_error_id, then success else, failure
 			 */
 			if (aa->ap.aph.correlation_id < last_error_id)
-				sctp_asconf_process_param_ack(stcb, aa,
-				    SCTP_SUCCESS_REPORT);
+				sctp_asconf_process_param_ack(stcb, aa, 1);
 			else
-				sctp_asconf_process_param_ack(stcb, aa,
-				    SCTP_ERROR_CAUSE_IND);
+				sctp_asconf_process_param_ack(stcb, aa, 0);
 		} else {
 			/*
 			 * since we always process in order (FIFO queue) if
