@@ -561,7 +561,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	 *  MTU's based on whether PF1 or PF2 is being used. If a T3 timer is running,
 	 *  for the destination, stop the timer because a PF-heartbeat was received.
 	 */
-	if (sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) ==
+	if (sctp_cmt_on_off && sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) ==
 		SCTP_ADDR_PF) {
 		if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,

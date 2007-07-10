@@ -211,7 +211,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				/* Add debug message here if destination is not in PF state. */
 				/* Stop any running T3 timers here? */
-				if (sctp_cmt_pf) {
+				if (sctp_cmt_on_off && sctp_cmt_pf) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
 						net);
@@ -940,7 +940,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	 * In addition, find an alternate destination with PF-based
 	 * find_alt_net().
 	 */
-	if (sctp_cmt_pf) {
+	if (sctp_cmt_on_off && sctp_cmt_pf) {
 		if ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF) {
 			net->dest_state |= SCTP_ADDR_PF;
 			net->last_active = sctp_get_tick_count();
@@ -1061,7 +1061,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 			}
 		}
-	} else if (sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
+	} else if (sctp_cmt_on_off && sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
 		/*
 		 * JRS 5/14/07 - If the destination hasn't failed completely but is in PF
 		 *  state, a PF-heartbeat needs to be sent manually.

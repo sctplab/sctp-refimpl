@@ -302,7 +302,7 @@ sctp_notify(struct sctp_inpcb *inp,
 				 */
 				/* Add debug message here if destination is not in PF state. */
 				/* Stop any running T3 timers here? */
-				if (sctp_cmt_pf) {
+				if (sctp_cmt_on_off && sctp_cmt_pf) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
 						net);
