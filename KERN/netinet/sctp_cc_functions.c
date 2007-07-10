@@ -1038,7 +1038,7 @@ between(uint32_t seq1, uint32_t seq2, uint32_t seq3)
 static inline uint32_t 
 htcp_cong_time(struct htcp *ca)
 {
-	return SCTP_GETTICKS() - ca->last_cong;
+	return sctp_get_tick_count() - ca->last_cong;
 }
 
 static inline uint32_t
@@ -1053,7 +1053,7 @@ htcp_reset(struct htcp *ca)
 	ca->undo_last_cong = ca->last_cong;
 	ca->undo_maxRTT = ca->maxRTT;
 	ca->undo_old_maxB = ca->old_maxB;
-	ca->last_cong = SCTP_GETTICKS();
+	ca->last_cong = sctp_get_tick_count();
 }
 
 #ifdef SCTP_NOT_USED
@@ -1090,7 +1090,7 @@ measure_rtt(struct sctp_tcb *stcb, struct sctp_nets *net)
 static void
 measure_achieved_throughput(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	uint32_t now = SCTP_GETTICKS();
+	uint32_t now = sctp_get_tick_count();
 
 	if (net->fast_retran_ip == 0)
 		net->htcp_ca.bytes_acked = net->net_ack;
@@ -1291,7 +1291,7 @@ htcp_init(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->htcp_ca.alpha = ALPHA_BASE;
 	net->htcp_ca.beta = BETA_MIN;
 	net->htcp_ca.bytes_acked = net->mtu;
-	net->htcp_ca.last_cong = SCTP_GETTICKS();
+	net->htcp_ca.last_cong = sctp_get_tick_count();
 }
 
 void 
@@ -1573,7 +1573,7 @@ sctp_htcp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 	old_cwnd = net->cwnd;
 
 	sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR);
-	net->htcp_ca.last_cong = SCTP_GETTICKS();
+	net->htcp_ca.last_cong = sctp_get_tick_count();
 	/*
 	 * make a small adjustment to cwnd and force to CA.
 	 */

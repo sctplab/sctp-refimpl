@@ -343,10 +343,6 @@ typedef struct callout sctp_os_timer_t;
 /* (de-)register interface event notifications */
 #define SCTP_REGISTER_INTERFACE(ifhandle, af)
 #define SCTP_DEREGISTER_INTERFACE(ifhandle, af)
-/*************************/
-/*     Ticks gathering   */
-/*************************/
-#define SCTP_GETTICKS()  ticks
 
 
 /*************************/
