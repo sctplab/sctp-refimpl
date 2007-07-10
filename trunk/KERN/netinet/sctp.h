@@ -491,6 +491,14 @@ struct sctp_error_unrecognized_chunk {
  */
 #define SCTP_PACKET_LOG_SIZE 65536
 
+/* Maximum delays and such a user can set for options that
+ * take ms.
+ */
+#define SCTP_MAX_SACK_DELAY 500 /* per RFC4960 */
+#define SCTP_MAX_HB_INTERVAL 14400000 /* 4 hours in ms */
+#define SCTP_MAX_COOKIE_LIFE  3600000 /* 1 hour in ms */
+
+
 /* Types of logging/KTR tracing  that can be enabled via the 
  * sysctl net.inet.sctp.sctp_logging. You must also enable
  * SUBSYS tracing.
