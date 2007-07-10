@@ -27,3 +27,5 @@
 - Cookie life is converted to ticks and on some platform an
      overflow could occur. In such a case don't set the value
      to 0.
+- put back code to allow asconfs to be queued while INITs are in flight
+  and before the assoc is established.
