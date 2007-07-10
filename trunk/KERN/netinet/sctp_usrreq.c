@@ -2618,24 +2618,25 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_ASSOCINFO:
 		{
 			struct sctp_assocparams *sasoc;
-
+			uint32_t oldval;
 			SCTP_CHECK_AND_CAST(sasoc, optval, struct sctp_assocparams, *optsize);
 			SCTP_FIND_STCB(inp, stcb, sasoc->sasoc_assoc_id);
 
 			if (stcb) {
+				oldval = sasoc->sasoc_cookie_life;
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
 				sasoc->sasoc_asocmaxrxt = stcb->asoc.max_send_times;
 				sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
 				sasoc->sasoc_peer_rwnd = stcb->asoc.peers_rwnd;
 				sasoc->sasoc_local_rwnd = stcb->asoc.my_rwnd;
-				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
 				sasoc->sasoc_asocmaxrxt = inp->sctp_ep.max_send_times;
 				sasoc->sasoc_number_peer_destinations = 0;
 				sasoc->sasoc_peer_rwnd = 0;
 				sasoc->sasoc_local_rwnd = sbspace(&inp->sctp_socket->so_rcv);
-				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sasoc);
@@ -3972,6 +3973,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_ASSOCINFO:
 	{
 		struct sctp_assocparams *sasoc;
+		uint32_t life;
 
 		SCTP_CHECK_AND_CAST(sasoc, optval, struct sctp_assocparams, optsize);
 		SCTP_FIND_STCB(inp, stcb, sasoc->sasoc_assoc_id);
@@ -3985,7 +3987,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			if (sasoc->sasoc_cookie_life) {
 				if (sasoc->sasoc_cookie_life < 1000)
 					sasoc->sasoc_cookie_life = 1000;
-				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+				life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+				if(life)
+					stcb->asoc.cookie_life = life;
+				
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
@@ -3998,7 +4003,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			if (sasoc->sasoc_cookie_life) {
 				if (sasoc->sasoc_cookie_life < 1000)
 					sasoc->sasoc_cookie_life = 1000;
-				inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+				life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+				if(life)
+					inp->sctp_ep.def_cookie_life = life;
 			}
 			SCTP_INP_WUNLOCK(inp);
 		}
