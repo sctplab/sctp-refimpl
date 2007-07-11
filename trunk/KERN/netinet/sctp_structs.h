@@ -760,10 +760,13 @@ struct sctp_association {
 	 */
         struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
         struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
+	uint32_t cumack_log[SCTP_TSN_LOG_SIZE];
 	uint16_t tsn_in_at;
  	uint16_t tsn_out_at;
 	uint16_t tsn_in_wrapped;
 	uint16_t tsn_out_wrapped;
+	uint16_t cumack_log_at;
+
 #endif /* SCTP_ASOCLOG_OF_TSNS */
 #ifdef SCTP_FS_SPEC_LOG
 	struct sctp_fs_spec_log fslog[SCTP_FS_SPEC_LOG_SIZE];
