@@ -924,6 +924,16 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	else
 		asoc->hb_is_disabled = 0;
 
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->tsn_in_at = 0;
+ 	asoc->tsn_out_at = 0;
+	asoc->tsn_in_wrapped = 0;
+	asoc->tsn_out_wrapped = 0;
+	asoc->cumack_log_at = 0;
+#endif
+#ifdef SCTP_FS_SPEC_LOG
+	asoc->fs_index = 0;
+#endif
 	asoc->refcnt = 0;
 	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
