@@ -353,6 +353,16 @@ struct sctp_pcb {
 
 #define sctp_lport ip_inp.inp.inp_lport
 
+struct sctp_pcbtsn_rlog {
+	uint32_t vtag;
+	uint16_t strm;
+	uint16_t seq;
+	uint16_t sz;
+	uint16_t flgs;
+}
+#define SCTP_READ_LOG_SIZE 135	/* we choose the number to make a pcb a page */
+
+
 struct sctp_inpcb {
 	/*-
 	 * put an inpcb in front of it all, kind of a waste but we need to
@@ -468,6 +478,10 @@ struct sctp_inpcb {
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
 	uint32_t total_nospaces;
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	struct sctp_pcbtsn_rlog readlog[SCTP_READ_LOG_SIZE];
+	uint32_t readlog_index;
+#endif
 };
 
 struct sctp_tcb {
