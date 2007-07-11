@@ -790,8 +790,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 #ifdef INVARIANTS
-		SCTP_PRINTF("Local Audit says there are %d for retran asoc cnt:%d\n",
-			    cnt_mk, stcb->asoc.sent_queue_retran_cnt);
+		SCTP_PRINTF("Local Audit says there are %d for retran asoc cnt:%d we marked:%d this time\n",
+			    cnt_mk, stcb->asoc.sent_queue_retran_cnt, num_mk);
 #endif
 #ifndef SCTP_AUDITING_ENABLED
 		stcb->asoc.sent_queue_retran_cnt = cnt_mk;
