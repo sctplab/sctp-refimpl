@@ -359,7 +359,7 @@ struct sctp_pcbtsn_rlog {
 	uint16_t seq;
 	uint16_t sz;
 	uint16_t flgs;
-}
+};
 #define SCTP_READ_LOG_SIZE 135	/* we choose the number to make a pcb a page */
 
 
