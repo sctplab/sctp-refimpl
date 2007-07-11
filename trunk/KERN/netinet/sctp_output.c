@@ -6584,16 +6584,19 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	SCTP_TCB_LOCK_ASSERT(stcb);
+	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_out_at = 0;
+		asoc->tsn_out_wrapped = 1;
+	}
 	asoc->out_tsnlog[asoc->tsn_out_at].tsn = chk->rec.data.TSN_seq;
 	asoc->out_tsnlog[asoc->tsn_out_at].strm = chk->rec.data.stream_number;
 	asoc->out_tsnlog[asoc->tsn_out_at].seq = chk->rec.data.stream_seq;
 	asoc->out_tsnlog[asoc->tsn_out_at].sz = chk->send_size;
 	asoc->out_tsnlog[asoc->tsn_out_at].flgs =  chk->rec.data.rcv_flags;
+	asoc->out_tsnlog[asoc->tsn_out_at].stcb =  (void *)stcb;
+	asoc->out_tsnlog[asoc->tsn_out_at].in_pos =  asoc->tsn_out_at;
+	asoc->out_tsnlog[asoc->tsn_out_at].in_out =  2;
 	asoc->tsn_out_at++;
-	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
-		asoc->tsn_out_at = 0;
-		asoc->tsn_out_wrapped = 1;
-	}
 #endif
 
 	dchkh->ch.chunk_type = SCTP_DATA;
