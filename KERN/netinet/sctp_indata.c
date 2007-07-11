@@ -1611,16 +1611,19 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	strmseq = ntohs(ch->dp.stream_sequence);
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	SCTP_TCB_LOCK_ASSERT(stcb);
+	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_in_at = 0;
+		asoc->tsn_in_wrapped = 1;
+	}
 	asoc->in_tsnlog[asoc->tsn_in_at].tsn = tsn;
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
 	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
 	asoc->in_tsnlog[asoc->tsn_in_at].sz = chk_length;
 	asoc->in_tsnlog[asoc->tsn_in_at].flgs =  chunk_flags;
+	asoc->in_tsnlog[asoc->tsn_in_at].stcb =  (void *)stcb;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_pos =  asoc->tsn_in_at;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_out =  1;
 	asoc->tsn_in_at++;
-	if(asoc->tsn_in_at >= SCTP_TSN_LOG_SIZE) {
-		asoc->tsn_in_at = 0;
-		asoc->tsn_in_wrapped = 1;
-	}
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
 	    (TAILQ_EMPTY(&asoc->resetHead)) &&

@@ -484,11 +484,14 @@ struct sctp_scoping {
 #define SCTP_TSN_LOG_SIZE 40
 
 struct sctp_tsn_log {
+	void     *stcb;
 	uint32_t tsn;
 	uint16_t strm;
 	uint16_t seq;
 	uint16_t sz;
 	uint16_t flgs;
+	uint16_t in_pos;
+	uint16_t in_out;
 };
 
 #define SCTP_FS_SPEC_LOG_SIZE 200
