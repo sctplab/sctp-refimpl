@@ -5323,6 +5323,22 @@ sctp_sorecvmsg(struct socket *so,
 			sinfo->sinfo_flags |= SCTP_UNORDERED;
 		}
 	}
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	{
+		int index, newindex;
+		struct sctp_pcbtsn_rlog *entry;
+		do {
+			index = inp->readlog_index;
+			newindex = (index + 1) & (SCTP_READ_LOG_SIZE - 1);
+		} while (atomic_cmpset_int(&inp->readlog_index, index, newindex) == 0);
+		entry = &inp->readlog[index];
+		entry->vtag = control->sinfo_assoc_id;
+		entry->strm = control->sinfo_stream;
+		entry->seq = control->sinfo_ssn;
+		entry->sz = control->length;
+		entry->flgs = control->sinfo_flags;
+	}
+#endif
 	if (fromlen && from) {
 		struct sockaddr *to;
 
