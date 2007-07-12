@@ -4478,15 +4478,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		}
 		tail = m;
 	}
-	if (end) {
-		/* message is complete */
-		if (stcb && (control == stcb->asoc.control_pdapi)) {
-			stcb->asoc.control_pdapi = NULL;
-		}
-		control->held_length = 0;
-		control->end_added = 1;
-	}
-	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
 		SCTP_BUF_NEXT(control->tail_mbuf) = m;
@@ -4500,6 +4491,15 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 #endif
 		control->data = m;
 		control->tail_mbuf = tail;
+	}
+	atomic_add_int(&control->length, len);
+	if (end) {
+		/* message is complete */
+		if (stcb && (control == stcb->asoc.control_pdapi)) {
+			stcb->asoc.control_pdapi = NULL;
+		}
+		control->held_length = 0;
+		control->end_added = 1;
 	}
 	if (stcb == NULL) {
 		control->do_not_ref_stcb = 1;
