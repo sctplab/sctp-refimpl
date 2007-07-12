@@ -4906,9 +4906,6 @@ sctp_sorecvmsg(struct socket *so,
 	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-#if defined(__FreeBSD__)
-	int alen = 0;
-#endif
 	int slen = 0;
 	uint32_t held_length = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
@@ -5480,14 +5477,7 @@ sctp_sorecvmsg(struct socket *so,
 					embuf = m;
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
-#ifdef __FreeBSD__
-					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if (alen < cp_len) {
-						panic("Control length goes negative?");
-					}
-#else
 					atomic_subtract_int(&control->length, cp_len);
-#endif
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
@@ -5536,14 +5526,7 @@ sctp_sorecvmsg(struct socket *so,
 						sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 							   SCTP_LOG_SBRESULT, 0);
 					}
-#ifdef __FreeBSD__
-					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if (alen < cp_len) {
-						panic("Control length goes negative2?");
-					}
-#else
 					atomic_subtract_int(&control->length, cp_len);
-#endif
 				} else {
 					copied_so_far += cp_len;
 				}
