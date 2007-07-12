@@ -302,7 +302,7 @@ sctp_notify(struct sctp_inpcb *inp,
 				 */
 				/* Add debug message here if destination is not in PF state. */
 				/* Stop any running T3 timers here? */
-				if (sctp_cmt_pf) {
+				if (sctp_cmt_on_off && sctp_cmt_pf) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
 						net);
@@ -2618,24 +2618,25 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_ASSOCINFO:
 		{
 			struct sctp_assocparams *sasoc;
-
+			uint32_t oldval;
 			SCTP_CHECK_AND_CAST(sasoc, optval, struct sctp_assocparams, *optsize);
 			SCTP_FIND_STCB(inp, stcb, sasoc->sasoc_assoc_id);
 
 			if (stcb) {
+				oldval = sasoc->sasoc_cookie_life;
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
 				sasoc->sasoc_asocmaxrxt = stcb->asoc.max_send_times;
 				sasoc->sasoc_number_peer_destinations = stcb->asoc.numnets;
 				sasoc->sasoc_peer_rwnd = stcb->asoc.peers_rwnd;
 				sasoc->sasoc_local_rwnd = stcb->asoc.my_rwnd;
-				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(stcb->asoc.cookie_life);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
 				SCTP_INP_RLOCK(inp);
+				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
 				sasoc->sasoc_asocmaxrxt = inp->sctp_ep.max_send_times;
 				sasoc->sasoc_number_peer_destinations = 0;
 				sasoc->sasoc_peer_rwnd = 0;
 				sasoc->sasoc_local_rwnd = sbspace(&inp->sctp_socket->so_rcv);
-				sasoc->sasoc_cookie_life = TICKS_TO_MSEC(inp->sctp_ep.def_cookie_life);
 				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sasoc);
@@ -3203,6 +3204,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(sack, optval, struct sctp_sack_info, optsize);
 		SCTP_FIND_STCB(inp, stcb, sack->sack_assoc_id);
+		if(sack->sack_delay) {
+			if (sack->sack_delay > SCTP_MAX_SACK_DELAY)
+				sack->sack_delay = SCTP_MAX_SACK_DELAY;
+		}
 		if (stcb) {
 			if(sack->sack_delay) {
 				if (MSEC_TO_TICKS(sack->sack_delay) < 1) {
@@ -3902,8 +3907,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 			if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
 				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = 0;
-			else if (paddrp->spp_hbinterval)
+			else if (paddrp->spp_hbinterval) {
+				if (paddrp->spp_hbinterval > SCTP_MAX_HB_INTERVAL)
+					paddrp->spp_hbinterval= SCTP_MAX_HB_INTERVAL;
 				inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
+			}
 
 			if (paddrp->spp_flags & SPP_HB_ENABLE) {
 				sctp_feature_off(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
@@ -3975,7 +3983,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(sasoc, optval, struct sctp_assocparams, optsize);
 		SCTP_FIND_STCB(inp, stcb, sasoc->sasoc_assoc_id);
-
+		if(sasoc->sasoc_cookie_life) {
+			/* boundary check the cookie life */
+			if (sasoc->sasoc_cookie_life < 1000)
+				sasoc->sasoc_cookie_life = 1000;
+			if(sasoc->sasoc_cookie_life > SCTP_MAX_COOKIE_LIFE) {
+				sasoc->sasoc_cookie_life = SCTP_MAX_COOKIE_LIFE;
+			}
+		}
 		if (stcb) {
 			if (sasoc->sasoc_asocmaxrxt)
 				stcb->asoc.max_send_times = sasoc->sasoc_asocmaxrxt;
@@ -3983,9 +3998,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life) {
-				if (sasoc->sasoc_cookie_life < 1000)
-					sasoc->sasoc_cookie_life = 1000;
-				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+				stcb->asoc.cookie_life = sasoc->sasoc_cookie_life;
+				
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
@@ -3996,9 +4010,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life) {
-				if (sasoc->sasoc_cookie_life < 1000)
-					sasoc->sasoc_cookie_life = 1000;
-				inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
+					inp->sctp_ep.def_cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
 			}
 			SCTP_INP_WUNLOCK(inp);
 		}
