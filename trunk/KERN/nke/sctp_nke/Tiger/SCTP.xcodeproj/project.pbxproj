@@ -76,6 +76,8 @@
 		50D42F2F06D8C0F3004DAC5C /* sctp6_usrreq.c in Sources */ = {isa = PBXBuildFile; fileRef = 50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */; };
 		50D42F3006D8C0F3004DAC5C /* sctp6_var.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */; };
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
+		50DE01150C3998AA0009809A /* sctp_cc_functions.c in Sources */ = {isa = PBXBuildFile; fileRef = 50DE01110C3998AA0009809A /* sctp_cc_functions.c */; };
+		50DE01160C3998AA0009809A /* sctp_cc_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = 50DE01120C3998AA0009809A /* sctp_cc_functions.h */; };
 		873563F70AF82CB6008231DC /* sha1.h in Headers */ = {isa = PBXBuildFile; fileRef = 873563F60AF82CB6008231DC /* sha1.h */; };
 		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
 		876D69470AF6812C003372FB /* sctp_os.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69450AF6812C003372FB /* sctp_os.h */; };
@@ -165,6 +167,8 @@
 		50D42F2D06D8C0F3004DAC5C /* sctp6_usrreq.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp6_usrreq.c; sourceTree = "<group>"; };
 		50D42F2E06D8C0F3004DAC5C /* sctp6_var.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp6_var.h; sourceTree = "<group>"; };
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
+		50DE01110C3998AA0009809A /* sctp_cc_functions.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_cc_functions.c; sourceTree = "<group>"; };
+		50DE01120C3998AA0009809A /* sctp_cc_functions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_cc_functions.h; sourceTree = "<group>"; };
 		873563F60AF82CB6008231DC /* sha1.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = sha1.h; path = crypto/sha1.h; sourceTree = "<group>"; };
 		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
 		876D69450AF6812C003372FB /* sctp_os.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os.h; sourceTree = "<group>"; };
@@ -273,6 +277,8 @@
 		50D42EED06D8C0DF004DAC5C /* netinet */ = {
 			isa = PBXGroup;
 			children = (
+				50DE01110C3998AA0009809A /* sctp_cc_functions.c */,
+				50DE01120C3998AA0009809A /* sctp_cc_functions.h */,
 				50BDE7BE0BAB46ED00ED41D7 /* sctp_sysctl.c */,
 				50BDE7BF0BAB46ED00ED41D7 /* sctp_sysctl.h */,
 				876D69450AF6812C003372FB /* sctp_os.h */,
@@ -423,6 +429,7 @@
 				876D6D430AF6C9D9003372FB /* sha2.h in Headers */,
 				873563F70AF82CB6008231DC /* sha1.h in Headers */,
 				50BDE7C90BAB46ED00ED41D7 /* sctp_sysctl.h in Headers */,
+				50DE01160C3998AA0009809A /* sctp_cc_functions.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -558,6 +565,7 @@
 				507ED5BF0AEE0CA8005037C4 /* sctp_bsd_addr.c in Sources */,
 				879DD26F0B2F48B7005FFF83 /* sctp_callout.c in Sources */,
 				50BDE7C80BAB46ED00ED41D7 /* sctp_sysctl.c in Sources */,
+				50DE01150C3998AA0009809A /* sctp_cc_functions.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -592,6 +600,7 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					SCTP_TRACK_FREED_ASOCS,
 					SCTP_APPLE_AUTO_ASCONF,
 					INVARIANTS,
 					SCTP_DEBUG,
