@@ -3816,8 +3816,8 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 void
 sctp_print_out_track_log(struct sctp_tcb *stcb)
 {
-	int i;
 #ifdef NOSIY_PRINTS
+	int i;
 	SCTP_PRINTF("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
 	SCTP_PRINTF("IN bound TSN log-aaa\n");
 	if ((stcb->asoc.tsn_in_at == 0) && (stcb->asoc.tsn_in_wrapped == 0)) {
