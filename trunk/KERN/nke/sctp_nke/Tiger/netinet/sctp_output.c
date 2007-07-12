@@ -3498,7 +3498,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 						 */
 						/* Add debug message here if destination is not in PF state. */
 						/* Stop any running T3 timers here? */
-						if (sctp_cmt_pf) {
+						if (sctp_cmt_on_off && sctp_cmt_pf) {
 							net->dest_state &= ~SCTP_ADDR_PF;
 							SCTPDBG(SCTP_DEBUG_OUTPUT1, "Destination %p moved from PF to unreachable.\n",
 								net);
@@ -3927,6 +3927,12 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		return;
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_msg);
+	/*
+	 * assume peer supports asconf in order to be able to queue
+	 * local address changes while an INIT is in flight and before
+	 * the assoc is established.
+	 */
+	stcb->asoc.peer_supports_asconf = 1;
 	/* Now lets put the SCTP header in place */
 	initm = mtod(m, struct sctp_init_msg *);
 	initm->sh.src_port = inp->sctp_lport;
@@ -6577,16 +6583,20 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	 */
 
 #ifdef SCTP_ASOCLOG_OF_TSNS
+	SCTP_TCB_LOCK_ASSERT(stcb);
+	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
+		asoc->tsn_out_at = 0;
+		asoc->tsn_out_wrapped = 1;
+	}
 	asoc->out_tsnlog[asoc->tsn_out_at].tsn = chk->rec.data.TSN_seq;
 	asoc->out_tsnlog[asoc->tsn_out_at].strm = chk->rec.data.stream_number;
 	asoc->out_tsnlog[asoc->tsn_out_at].seq = chk->rec.data.stream_seq;
 	asoc->out_tsnlog[asoc->tsn_out_at].sz = chk->send_size;
 	asoc->out_tsnlog[asoc->tsn_out_at].flgs =  chk->rec.data.rcv_flags;
+	asoc->out_tsnlog[asoc->tsn_out_at].stcb =  (void *)stcb;
+	asoc->out_tsnlog[asoc->tsn_out_at].in_pos =  asoc->tsn_out_at;
+	asoc->out_tsnlog[asoc->tsn_out_at].in_out =  2;
 	asoc->tsn_out_at++;
-	if(asoc->tsn_out_at >= SCTP_TSN_LOG_SIZE) {
-		asoc->tsn_out_at = 0;
-		asoc->tsn_out_wrapped = 1;
-	}
 #endif
 
 	dchkh->ch.chunk_type = SCTP_DATA;
@@ -6833,7 +6843,7 @@ sctp_move_to_an_alt(struct sctp_tcb *stcb,
 	 * JRS 5/14/07 - If CMT PF is turned on, find an alternate destination
 	 *  using the PF algorithm for finding alternate destinations.
 	 */
-	if(sctp_cmt_pf) {
+	if(sctp_cmt_on_off && sctp_cmt_pf) {
 		a_net = sctp_find_alternate_net(stcb, net, 2);
 	} else {
 		a_net = sctp_find_alternate_net(stcb, net, 0);
@@ -7497,7 +7507,7 @@ again_one_more_time:
 				 * restart it.
 				 */
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
-			} else if (sctp_cmt_pf && pf_hbflag && ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)
+			} else if (sctp_cmt_on_off && sctp_cmt_pf && pf_hbflag && ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)
 						&& (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer))) {
 				/*
 				 * JRS 5/14/07 - If a HB has been sent to a PF destination and no T3 timer is currently
@@ -8743,7 +8753,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 */
 			if (net->ref_count > 1)
 				sctp_move_to_an_alt(stcb, asoc, net);
-		} else if (sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
+		} else if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
 					SCTP_ADDR_PF)) {
 			/*
 			 * JRS 5/14/07 - If CMT PF is on and the current destination is in

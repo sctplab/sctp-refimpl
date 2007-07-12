@@ -5382,8 +5382,8 @@ sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 	inp = stcb->sctp_ep;
 	/* if subset bound and don't allow ASCONF's, can't delete last */
 	if (((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) &&
-	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF) == 0)) {
-		if (stcb->asoc.numnets < 2) {
+	    sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
+		if (stcb->sctp_ep->laddr_count < 2) {
 			/* can't delete last address */
 			return;
 		}
@@ -5760,6 +5760,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		/* the assoc was freed? */
 		return (-4);
 	}
+	/*
+	 * peer must explicitly turn this on. This may have been initialized
+	 * to be "on" in order to allow local addr changes while INIT's are
+	 * in flight.
+	 */
+	stcb->asoc.peer_supports_asconf = 0;
 	/* now we must go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));
 	while (phdr) {

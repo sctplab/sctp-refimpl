@@ -924,6 +924,16 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	else
 		asoc->hb_is_disabled = 0;
 
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	asoc->tsn_in_at = 0;
+ 	asoc->tsn_out_at = 0;
+	asoc->tsn_in_wrapped = 0;
+	asoc->tsn_out_wrapped = 0;
+	asoc->cumack_log_at = 0;
+#endif
+#ifdef SCTP_FS_SPEC_LOG
+	asoc->fs_index = 0;
+#endif
 	asoc->refcnt = 0;
 	asoc->assoc_up_sent = 0;
 	asoc->assoc_id = asoc->my_vtag;
@@ -3806,6 +3816,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 void
 sctp_print_out_track_log(struct sctp_tcb *stcb)
 {
+#ifdef NOSIY_PRINTS
 	int i;
 	SCTP_PRINTF("Last ep reason:%x\n", stcb->sctp_ep->last_abort_code);
 	SCTP_PRINTF("IN bound TSN log-aaa\n");
@@ -3859,6 +3870,7 @@ sctp_print_out_track_log(struct sctp_tcb *stcb)
 				    stcb->asoc.out_tsnlog[i].sz);
 		}
 	}
+#endif
 }
 #endif
 
@@ -5323,6 +5335,25 @@ sctp_sorecvmsg(struct socket *so,
 			sinfo->sinfo_flags |= SCTP_UNORDERED;
 		}
 	}
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	{
+		int index, newindex;
+		struct sctp_pcbtsn_rlog *entry;
+		do {
+			index = inp->readlog_index;
+			newindex = index + 1;
+			if (newindex >= SCTP_READ_LOG_SIZE) {
+				newindex = 0;
+			}
+		} while (atomic_cmpset_int(&inp->readlog_index, index, newindex) == 0);
+		entry = &inp->readlog[index];
+		entry->vtag = control->sinfo_assoc_id;
+		entry->strm = control->sinfo_stream;
+		entry->seq = control->sinfo_ssn;
+		entry->sz = control->length;
+		entry->flgs = control->sinfo_flags;
+	}
+#endif
 	if (fromlen && from) {
 		struct sockaddr *to;
 
