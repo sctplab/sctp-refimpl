@@ -5339,7 +5339,10 @@ sctp_sorecvmsg(struct socket *so,
 		struct sctp_pcbtsn_rlog *entry;
 		do {
 			index = inp->readlog_index;
-			newindex = (index + 1) & (SCTP_READ_LOG_SIZE - 1);
+			newindex = index + 1;
+			if (newindex >= SCTP_READ_LOG_SIZE) {
+				newindex = 0;
+			}
 		} while (atomic_cmpset_int(&inp->readlog_index, index, newindex) == 0);
 		entry = &inp->readlog[index];
 		entry->vtag = control->sinfo_assoc_id;
