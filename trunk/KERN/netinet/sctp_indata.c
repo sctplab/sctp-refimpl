@@ -3699,7 +3699,6 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 
 	/* First setup this one and get it moved back */
 	tp1->sent = SCTP_DATAGRAM_UNSENT;
-	tp1->window_probe = 0;
 	if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_WP, 
 			       tp1->whoTo->flight_size,
@@ -3720,7 +3719,6 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
 			/* Another chunk to move */
 			chk->sent = SCTP_DATAGRAM_UNSENT;
-			chk->window_probe = 0;
 			/* It should not be in flight */
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
 			TAILQ_INSERT_AFTER(&asoc->send_queue, tp1, chk, sctp_next);
