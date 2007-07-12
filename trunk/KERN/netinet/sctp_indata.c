@@ -3747,11 +3747,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
+#ifdef SCTP_ASOCLOG_OF_TSNS
 	stcb->asoc.cumack_log[stcb->asoc.cumack_log_at] = cumack;
 	stcb->asoc.cumack_log_at++;
 	if(stcb->asoc.cumack_log_at > SCTP_TSN_LOG_SIZE) {
 		stcb->asoc.cumack_log_at = 0;
 	}
+#endif
 	asoc = &stcb->asoc;
 	old_rwnd = asoc->peers_rwnd;
 	if(compare_with_wrap(asoc->last_acked_seq, cumack, MAX_TSN)) {
@@ -4231,11 +4233,13 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	SCTP_STAT_INCR(sctps_slowpath_sack);
 	nonce_sum_flag = ch->ch.chunk_flags & SCTP_SACK_NONCE_SUM;
 	cum_ack = last_tsn = ntohl(sack->cum_tsn_ack);
+#ifdef SCTP_ASOCLOG_OF_TSNS
 	stcb->asoc.cumack_log[stcb->asoc.cumack_log_at] = cum_ack;
 	stcb->asoc.cumack_log_at++;
 	if(stcb->asoc.cumack_log_at > SCTP_TSN_LOG_SIZE) {
 		stcb->asoc.cumack_log_at = 0;
 	}
+#endif
 	num_seg = ntohs(sack->num_gap_ack_blks);
 	a_rwnd = rwnd;
 
