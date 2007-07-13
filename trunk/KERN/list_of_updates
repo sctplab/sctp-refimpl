@@ -44,3 +44,4 @@
   one address
 - fix ASCONF implicit success/error handling case
 - proper support of jails in Freebsd 6>
+- copy out the timeval for the 64 bit sparc world
