@@ -43,3 +43,4 @@
 - bug in ADD-IP for the subset bound socket case when the peer has only
   one address
 - fix ASCONF implicit success/error handling case
+- proper support of jails in Freebsd 6>
