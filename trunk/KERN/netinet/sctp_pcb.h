@@ -578,10 +578,10 @@ struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct thread *);
 #else
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct proc *);
 #endif
 

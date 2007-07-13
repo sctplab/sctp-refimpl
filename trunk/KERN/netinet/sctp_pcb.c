@@ -2586,10 +2586,10 @@ extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
-		struct sctp_ifa *sctp_ifap, struct thread *p)
+		struct thread *p)
 #else
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
-		struct sctp_ifa *sctp_ifap, struct proc *p)
+		struct proc *p)
 #endif
 {
 	/* bind a ep to a socket address */
@@ -2597,6 +2597,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	struct sctp_inpcb *inp, *inp_tmp;
 	struct inpcb *ip_inp;
 	int bindall;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+	int prison = 0;
+#endif
 #ifdef SCTP_MVRF
 	int i;
 #endif
@@ -2624,6 +2627,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		/* already did a bind, subsequent binds NOT allowed ! */
 		return (EINVAL);
 	}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+	if(jailed(p->td_ucred)) {
+		prison = 1;
+	}
+#endif
 	if (addr != NULL) {
 		if (addr->sa_family == AF_INET) {
 			struct sockaddr_in *sin;
@@ -2637,7 +2645,16 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			sin = (struct sockaddr_in *)addr;
 			lport = sin->sin_port;
-
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			if(prison) {
+				/* For INADDR_ANY and  LOOPBACK the prison_ip()
+				 * call will tranmute the ip address to the proper
+				 * valie.
+				 */
+				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr))
+					return(EINVAL);
+			}
+#endif
 			if (sin->sin_addr.s_addr != INADDR_ANY) {
 				bindall = 0;
 			}
@@ -2651,6 +2668,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				return (EINVAL);
 
 			lport = sin6->sin6_port;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			/* 
+			 * Jail checks for IPv6 should go HERE!
+			 * i.e. add the prison_ip() equivilant 
+			 * in this postion to transmute the addresses
+			 * to the proper one jailed.
+			 */
+#endif
 			if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 				bindall = 0;
 #ifdef SCTP_EMBEDDED_V6_SCOPE
@@ -2957,11 +2982,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		if (sctp_ifap)
-		    ifa = sctp_ifap;
-		else
-		    ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
-						vrf_id, 0);
+		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
+					    vrf_id, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -4116,7 +4138,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 * ephemerial bind for you.
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
-		    (struct sockaddr *)NULL, (struct sctp_ifa *)NULL,
+		    (struct sockaddr *)NULL, 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		    (struct thread *)NULL
 #else
