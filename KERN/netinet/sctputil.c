@@ -2726,7 +2726,7 @@ uint32_t
 sctp_calculate_rto(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_nets *net,
-    struct timeval *old)
+    struct timeval *told)
 {
 	/*
 	 * given an association and the starting time of the current RTT
@@ -2736,8 +2736,11 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	int o_calctime;
 	uint32_t new_rto = 0;
 	int first_measure = 0;
-	struct timeval now;
+	struct timeval now, then, *old;
 
+	/* Copy it out for sparc64 */
+	old = &then;
+	memcpy(&then, told, sizeof(struct timeval));
 	/************************/
 	/* 1. calculate new RTT */
 	/************************/
