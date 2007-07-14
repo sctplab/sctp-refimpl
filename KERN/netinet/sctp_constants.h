@@ -87,6 +87,10 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.23 2007/07/14 09:36:27 
  */
 #define SCTP_DEFAULT_VRF_SIZE 4
 
+/* constants for rto calc */
+#define sctp_align_safe_nocopy 0
+#define sctp_align_unsafe_makecopy 1
+
 /* JRS - Values defined for the HTCP algorithm */
 #define ALPHA_BASE	(1<<7)  /* 1.0 with shift << 7 */
 #define BETA_MIN	(1<<6)  /* 0.5 with shift << 7 */

@@ -2724,11 +2724,12 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
  */
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *stcb,
-    struct sctp_association *asoc,
-    struct sctp_nets *net,
-    struct timeval *told)
+		   struct sctp_association *asoc,
+		   struct sctp_nets *net,
+		   struct timeval *told,
+		   int safe)
 {
-	/*
+	/*-
 	 * given an association and the starting time of the current RTT
 	 * period (in value1/value2) return RTO in number of msecs.
 	 */
@@ -2739,8 +2740,16 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	struct timeval now, then, *old;
 
 	/* Copy it out for sparc64 */
-	old = &then;
-	memcpy(&then, told, sizeof(struct timeval));
+	if (safe == sctp_align_unsafe_makecopy) {
+		old = &then;
+		memcpy(&then, told, sizeof(struct timeval));
+	} else if (safe == sctp_align_safe_nocopy) {
+		old = told;
+	} else {
+		/* error */
+		SCTP_PRINTF("Huh, bad rto calc call\n");
+		return (0);
+	}
 	/************************/
 	/* 1. calculate new RTT */
 	/************************/
