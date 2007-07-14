@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.105 2007-06-26 15:53:35 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.106 2007-07-14 19:27:39 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -2842,6 +2842,7 @@ cmd_bindx(char *argv[], int argc)
 	}
 	sin6 = (struct sockaddr_in6 *)bindx_ss;
 	sin = (struct sockaddr_in *)bindx_ss;
+	bzero(bindx_ss, sizeof(bindx_ss));
 	if (inet_pton(AF_INET6, argv[1], &sin6->sin6_addr)) {
 		/* ipv6 address specified */
 		sin6->sin6_family = AF_INET6;
