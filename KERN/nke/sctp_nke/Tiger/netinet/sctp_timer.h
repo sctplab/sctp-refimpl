@@ -31,7 +31,7 @@
 /* $KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.h,v 1.4 2007/06/08 10:57:11 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.h,v 1.5 2007/07/14 09:36:27 rrs Exp $");
 #endif
 
 #ifndef __sctp_timer_h__
