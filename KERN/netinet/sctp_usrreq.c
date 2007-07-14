@@ -4178,7 +4178,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_BINDX_ADD_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-		int sz;
+		size_t sz;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		struct thread *td;
 		int prison = 0;
@@ -4218,7 +4218,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_BINDX_REM_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-		int sz;
+		size_t sz;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		struct thread *td;
 		int prison = 0;
