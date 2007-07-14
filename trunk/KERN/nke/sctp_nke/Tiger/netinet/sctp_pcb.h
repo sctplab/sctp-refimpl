@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.23 2007/06/15 03:16:48 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.24 2007/07/14 09:36:27 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -578,10 +578,10 @@ struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct thread *);
 #else
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, struct sctp_ifa *,
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct proc *);
 #endif
 

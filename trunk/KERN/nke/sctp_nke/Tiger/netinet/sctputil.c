@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.50 2007/07/02 19:22:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.51 2007/07/14 09:36:27 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2726,7 +2726,7 @@ uint32_t
 sctp_calculate_rto(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_nets *net,
-    struct timeval *old)
+    struct timeval *told)
 {
 	/*
 	 * given an association and the starting time of the current RTT
@@ -2736,8 +2736,11 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	int o_calctime;
 	uint32_t new_rto = 0;
 	int first_measure = 0;
-	struct timeval now;
+	struct timeval now, then, *old;
 
+	/* Copy it out for sparc64 */
+	old = &then;
+	memcpy(&then, told, sizeof(struct timeval));
 	/************************/
 	/* 1. calculate new RTT */
 	/************************/
@@ -4478,15 +4481,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		}
 		tail = m;
 	}
-	if (end) {
-		/* message is complete */
-		if (stcb && (control == stcb->asoc.control_pdapi)) {
-			stcb->asoc.control_pdapi = NULL;
-		}
-		control->held_length = 0;
-		control->end_added = 1;
-	}
-	atomic_add_int(&control->length, len);
 	if (control->tail_mbuf) {
 		/* append */
 		SCTP_BUF_NEXT(control->tail_mbuf) = m;
@@ -4500,6 +4494,15 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 #endif
 		control->data = m;
 		control->tail_mbuf = tail;
+	}
+	atomic_add_int(&control->length, len);
+	if (end) {
+		/* message is complete */
+		if (stcb && (control == stcb->asoc.control_pdapi)) {
+			stcb->asoc.control_pdapi = NULL;
+		}
+		control->held_length = 0;
+		control->end_added = 1;
 	}
 	if (stcb == NULL) {
 		control->do_not_ref_stcb = 1;
@@ -4906,9 +4909,6 @@ sctp_sorecvmsg(struct socket *so,
 	uint32_t rwnd_req=0;
 	int hold_sblock = 0;
 	int hold_rlock = 0;
-#if defined(__FreeBSD__)
-	int alen = 0;
-#endif
 	int slen = 0;
 	uint32_t held_length = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
@@ -5480,14 +5480,7 @@ sctp_sorecvmsg(struct socket *so,
 					embuf = m;
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
-#ifdef __FreeBSD__
-					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if (alen < cp_len) {
-						panic("Control length goes negative?");
-					}
-#else
 					atomic_subtract_int(&control->length, cp_len);
-#endif
 					control->data = sctp_m_free(m);
 					m = control->data;
 					/* been through it all, must hold sb lock ok to null tail */
@@ -5536,14 +5529,7 @@ sctp_sorecvmsg(struct socket *so,
 						sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 							   SCTP_LOG_SBRESULT, 0);
 					}
-#ifdef __FreeBSD__
-					alen = atomic_fetchadd_int(&control->length, -(cp_len));
-					if (alen < cp_len) {
-						panic("Control length goes negative2?");
-					}
-#else
 					atomic_subtract_int(&control->length, cp_len);
-#endif
 				} else {
 					copied_so_far += cp_len;
 				}
@@ -6399,7 +6385,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			return;
 		}
 #endif
-		*error = sctp_inpcb_bind(so, addr_touse, NULL, p);
+		*error = sctp_inpcb_bind(so, addr_touse, p);
 		return;
 	}
 	/*

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.36 2007/07/03 12:13:43 gnn Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.37 2007/07/14 09:36:27 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -736,7 +736,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_bind(so, addr, NULL, p);
+	error = sctp_inpcb_bind(so, addr, p);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1725,7 +1725,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4178,9 +4178,38 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_BINDX_ADD_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-
+		size_t sz;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		struct thread *td;
+		int prison = 0;
+		td = (struct thread *)p;
+		if (jailed(td->td_ucred)) {
+			prison = 1;
+		}
+#endif
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses,
-optsize);
+				    optsize);
+		if (addrs->addr->sa_family == AF_INET) {
+			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in);
+			if( optsize < sz) {
+				error = EINVAL;
+				break;
+			}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			if(prison && prison_ip(td->td_ucred, 0, &(((struct sockaddr_in *)(addrs->addr))->sin_addr.s_addr))) {
+				error = EADDRNOTAVAIL;
+			}
+#endif
+		} else if (addrs->addr->sa_family == AF_INET6) {
+			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in6);
+			if(optsize < sz) {
+				error = EINVAL;
+				break;
+			}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			/* JAIL XXXX Add else here for V6 */
+#endif
+		}
 		sctp_bindx_add_address(so, inp, addrs->addr,
 				       addrs->sget_assoc_id, vrf_id,
 				       &error, p);
@@ -4189,8 +4218,37 @@ optsize);
 	case SCTP_BINDX_REM_ADDR:
 	{
 		struct sctp_getaddresses *addrs;
-		
+		size_t sz;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		struct thread *td;
+		int prison = 0;
+		td = (struct thread *)p;
+		if(jailed(td->td_ucred)) {
+			prison = 1;
+		}
+#endif
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
+		if (addrs->addr->sa_family == AF_INET) {
+			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in);
+			if(optsize < sz) {
+				error = EINVAL;
+				break;
+			}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			if (prison && prison_ip(td->td_ucred, 0, &(((struct sockaddr_in *)(addrs->addr))->sin_addr.s_addr))) {
+				error = EADDRNOTAVAIL;
+			}
+#endif
+		} else if (addrs->addr->sa_family == AF_INET6) {
+			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in6);
+			if(optsize < sz) {
+				error = EINVAL;
+				break;
+			}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			/* JAIL XXXX Add else here for V6 */
+#endif
+		}
 		sctp_bindx_delete_address(so, inp, addrs->addr,
 					  addrs->sget_assoc_id, vrf_id,
 					  &error);
@@ -4451,7 +4509,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4601,7 +4659,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* We must do a bind. */
 		SOCK_UNLOCK(so);
 		SCTP_INP_RUNLOCK(inp);
-		if ((error = sctp_inpcb_bind(so, NULL, NULL, p))) {
+		if ((error = sctp_inpcb_bind(so, NULL, p))) {
 			/* bind error, probably perm */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
