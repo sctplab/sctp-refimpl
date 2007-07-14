@@ -445,7 +445,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    asoc->primary_destination, SCTP_FROM_SCTP_INPUT+SCTP_LOC_4);
 
 	/* calculate the RTO */
-	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered);
+	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered, sctp_align_safe_nocopy);
 
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
@@ -585,7 +585,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			net, net->cwnd);
 	}
 	/* Now lets do a RTO with this */
-	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv);
+	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy);
 }
 
 static void
@@ -1231,7 +1231,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				 */
 				net->hb_responded = 1;
 				net->RTO = sctp_calculate_rto(stcb, asoc, net,
-							      &cookie->time_entered);
+							      &cookie->time_entered, sctp_align_unsafe_makecopy);
 
 				if (stcb->asoc.sctp_autoclose_ticks &&
 				    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
@@ -1811,7 +1811,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
-						  &cookie->time_entered);
+						  &cookie->time_entered, sctp_align_unsafe_makecopy);
 	}
 	sctp_send_cookie_ack(stcb);
 	return (stcb);
@@ -2325,7 +2325,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		if (asoc->overall_error_count == 0) {
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
-			    &asoc->time_entered);
+			    &asoc->time_entered, sctp_align_safe_nocopy);
 		}
 		(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL);
