@@ -52,7 +52,7 @@ PROGSRCS= pdapi_server.c
 
 #PROGSRCS= sctp_test_app.c cmp_server.c cmp_client.c
 #
-OBJSRCS=pdapi_csum.c
+OBJSRCS=
 #
 
 SRCS= $(OBJSRCS) $(PROGSRCS) # for creating depend 
