@@ -1,6 +1,7 @@
 #ifndef __pdapi_req_h__
 #define __pdapi_req_h__
 
+#define PDAPI_DATA_BLOCK_SIZE 16000
 
 #define PDAPI_DATA_MESSAGE    1
 #define PDAPI_REQUEST_MESSAGE 2
@@ -17,8 +18,8 @@ struct data_block {
 struct requests {
   sctp_assoc_t assoc_id;
   struct sockaddr_in who;
-  struct sctp_requests *next;
-  struct sctp_requests *prev;
+  struct requests *next;
+  struct requests *prev;
   struct data_block *first;
   struct data_block *tail;
 };

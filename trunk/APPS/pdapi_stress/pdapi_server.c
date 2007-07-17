@@ -11,7 +11,6 @@
 #include <sys/signal.h>
 #include "pdapi_req.h"
 
-#define PDAPI_DATA_BLOCK_SIZE 16000
 
 int verbose = 0;
 
@@ -30,7 +29,7 @@ static int rdlog_wrap=0;
 void
 clean_up_broken_msg(struct requests *who)
 {
-	struct data_block *blk,*nxt;	
+	struct data_block *blk;	
 	struct pdapi_request *msg;
 	ushort ssn;
 	int killed=0;
@@ -51,7 +50,7 @@ clean_up_broken_msg(struct requests *who)
 		who->first = blk->next;
 		blk->next = NULL;
 		if(blk == who->tail) {
-			tail = NULL;
+			who->tail = NULL;
 		}
 		free(blk);
 		killed++;
@@ -62,7 +61,7 @@ clean_up_broken_msg(struct requests *who)
 		who->first = blk->next;
 		blk->next = NULL;
 		if(blk == who->tail) {
-			tail = NULL;
+			who->tail = NULL;
 		}
 		free(blk);
 		killed++;
@@ -73,7 +72,7 @@ clean_up_broken_msg(struct requests *who)
 		who->first = blk->next;
 		blk->next = NULL;
 		if(blk == who->tail) {
-			tail = NULL;
+			who->tail = NULL;
 		}
 		free(blk);
 		killed++;
@@ -90,8 +89,8 @@ clean_up_broken_msg(struct requests *who)
 int
 audit_a_msg (struct requests *who)
 {
-	struct data_block *blk,*nxt, *end_blk;	
-	struct pdapi_request *msg, *end, *datafirst=NULL;
+	struct data_block *blk, *end_blk;	
+	struct pdapi_request *msg, *end;
 	int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
 	uint32_t base_crc = 0xffffffff, passed_sum;
 
@@ -197,7 +196,7 @@ audit_all_msg(struct requests *who)
 	struct data_block *blk,*nxt;	
 	int cnt=0,ret;
 	ushort ssn;
-	int notset=1, notdone=1;
+	int notset=1, not_done=1;
 
 	blk = who->first;
 	while(blk) {
@@ -257,7 +256,7 @@ pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
 		base = who;
 	} else {
 		who->next = base;
-		who->base->prev = who;
+		who->next->prev = who;
 		base = who;
 	}
 }
@@ -272,18 +271,18 @@ pdapi_clean_all(struct requests *who)
 		nxt = blk->next;
 		blk->next = NULL;
 		free(blk);
-		blk = next;
+		blk = nxt;
 		cnt++;
 	}
 	return (cnt);
 }
 
 void
-pdapi_delasoc( struct sctp_assoc_change *asoc)
+pdapi_delasoc(sctp_assoc_t id)
 {
 	struct requests *who;
 	for(who=base; who; who=who->next) {
-		if(who->assoc_id == asoc->sac_assoc_id) {
+		if(who->assoc_id == id) {
 			if(who->next) {
 				who->next->prev = who->prev;
 			}
@@ -349,6 +348,11 @@ pdapi_process_data(unsigned char *buffer,
 	}
 }
 
+static void
+pdapi_abortrecption(struct sctp_pdapi_event *pdapi)
+{
+	/* What do we do here? */
+}
 
 void
 pdapi_notification(unsigned char *buffer, 
@@ -358,17 +362,17 @@ pdapi_notification(unsigned char *buffer,
 {
 	struct sctp_tlv *sn_header;
 	sn_header = (struct sctp_tlv *)buffer;
-	struct sctp_assoc_change  *asoc;
 	struct sctp_shutdown_event *shut;
+	struct sctp_assoc_change  *asoc;
 	struct sctp_pdapi_event *pdapi;
 
 	switch (sn_header->sn_type) {
 	case SCTP_ASSOC_CHANGE:
 		asoc = (struct sctp_assoc_change  *)sn_header;
 		if (asoc->sac_state == SCTP_COMM_UP) {
-			pdapi_addasoc( from, asoc );
+			pdapi_addasoc(from, asoc);
 		} else if (asoc->sac_state == SCTP_COMM_LOST) {
-			pdapi_delasoc( from, asoc );
+			pdapi_delasoc(asoc->sac_assoc_id);
 		}
 		break;
 	case SCTP_PARTIAL_DELIVERY_EVENT:
@@ -376,10 +380,12 @@ pdapi_notification(unsigned char *buffer,
 		pdapi_abortrecption(pdapi);
 		break;
 	case SCTP_SHUTDOWN_EVENT:
+		shut = (struct sctp_shutdown_event *)sn_header;
+		pdapi_delasoc(shut->sse_assoc_id);
 		break;
 	case SCTP_REMOTE_ERROR:
 	case SCTP_SEND_FAILED:
-	case SCTP_ADAPTION:
+	case SCTP_ADAPTATION_INDICATION:
 	case SCTP_STREAM_RESET_EVENT:
 	case SCTP_PEER_ADDR_CHANGE:
 	default:
@@ -412,17 +418,16 @@ pdapi_process_msg(unsigned char *buffer,
 int
 main(int argc, char **argv)
 {
-	char buffer[PDAPI_DATA_BLOCK_SIZE]
-		u_int16_t port=0;
-	ssize_t len;
+	uint8_t buffer[PDAPI_DATA_BLOCK_SIZE];
+	int i, fd, flags=0;
+	u_int16_t port=0;
+	size_t len;
+	socklen_t slen;
 	socklen_t fromlen;
-	int flag;
 	struct sctp_sndrcvinfo sndrcv;
 	struct sockaddr_in bindto,got,from;
 	struct sctp_event_subscribe event;
 	
-	optlen = sizeof(optval);
-	sb = 0;
 	while((i= getopt(argc,argv,"p:v")) != EOF){
 		switch(i){
 		case 'v':
@@ -442,16 +447,17 @@ main(int argc, char **argv)
 		return(-1);
 	}
 	memset(&bindto,0,sizeof(bindto));
-	len = sizeof(bindto);
+	slen = sizeof(bindto);
 	bindto.sin_len = sizeof(bindto);
 	bindto.sin_family = AF_INET;
 	bindto.sin_port = htons(port);
-	if(bind(fd,(struct sockaddr *)&bindto, len) < 0){
+	if(bind(fd,(struct sockaddr *)&bindto, slen) < 0){
 		printf("can't bind a socket:%d\n",errno);
 		close(fd);
 		return(-1);
 	}
-	if(getsockname(fd,(struct sockaddr *)&got,&len) < 0){
+	slen = sizeof(got);
+	if(getsockname(fd, (struct sockaddr *)&got, &slen) < 0){
 		printf("get sockname failed err:%d\n",errno);
 		close(fd);
 		return(-1);
@@ -473,7 +479,7 @@ main(int argc, char **argv)
 	event.sctp_peer_error_event = 0;
 	event.sctp_shutdown_event = 1;
 	event.sctp_partial_delivery_event = 1;
-	event.sctp_adaption_layer_event = 0;
+	event.sctp_adaptation_layer_event = 0;
 	event.sctp_stream_reset_events = 0;
 
 	if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
@@ -487,19 +493,20 @@ main(int argc, char **argv)
 	while(1) {
 		fromlen = sizeof(from);
 		memset(&sndrcv, 0, sizeof(sndrcv));
+		flags = 0;
 		len = sctp_recvmsg(fd, buffer, (size_t)PDAPI_DATA_BLOCK_SIZE, 
 				   (struct sockaddr *)&from, &fromlen,
 				   &sndrcv, &flags);
 		rdlog[rdlog_at].sz = len;
 		rdlog[rdlog_at].flags = flags;
-		rdlog[rdlog_at].assoc_id = sinfo->sinfo_assoc_id;
+		rdlog[rdlog_at].assoc_id = sndrcv.sinfo_assoc_id;
 		rdlog_at++;
 		if(rdlog_at >= READ_LOG_SIZE) {
 			rdlog_at = 0;
 			rdlog_wrap++;
 		}
-		if(len) {
-			pdapi_process_msg(buffer, len, sndrcv, from, flags);
+		if(len > 0) {
+			pdapi_process_msg(buffer, len, &sndrcv, &from, flags);
 		}
 	}
 }
