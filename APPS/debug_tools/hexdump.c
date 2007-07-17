@@ -20,7 +20,7 @@ main(int argc, char **argv)
 {
 	int i,cnt=0, len, times, ccnt=0;
 	FILE *in, *out;
-	char *infile=NULL, *outfile=NULL, pos;
+	char *infile=NULL, *outfile=NULL;
 	char buf[3], linebuffer[200];
 	uint8_t val;
 
