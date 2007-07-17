@@ -23,3 +23,5 @@
 - copy out the timeval for the 64 bit sparc world on cookie-echo 
   alignment error crashes without this).
 *******************patch 10 above - new items below ************
+- remove dead (duplicate) code from sctp_asconf.c
+
