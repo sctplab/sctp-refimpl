@@ -2019,9 +2019,6 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
 		if (laddr->ifa == NULL) {
 			continue;
 		}
-		if (laddr->ifa == NULL) {
-			continue;
-		}
 		/* is the address restricted ? */
 		if (sctp_is_addr_restricted(stcb, laddr->ifa))
 			continue;
