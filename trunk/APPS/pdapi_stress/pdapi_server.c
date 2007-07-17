@@ -331,9 +331,9 @@ pdapi_process_data(unsigned char *buffer,
 		printf("Huh, can't find asoc %x\n", (u_int)sinfo->sinfo_assoc_id);
 		abort();
 	}
-	blk = malloc(sizeof(struct data_block));
+	blk = malloc(sizeof(struct data_block) + len);
 	blk->next = NULL;
-	blk->info = *sinfo;
+	memcpy(&blk->info, sinfo, sizeof(struct sctp_sndrcvinfo));
 	blk->sz = len;
 	memcpy(blk->data, buffer, len);
 	if(who->tail) {
