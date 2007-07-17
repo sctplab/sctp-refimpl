@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.30 2007-06-11 22:39:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.31 2007-07-17 12:54:50 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -213,6 +213,10 @@ handle_notification(int fd,char *notify_buf) {
 		strrst = (struct sctp_stream_reset_event *)&snp->sn_strreset_event;
 		printf("SCTP_STREAM_RESET_EVENT: assoc=0x%x\n",
 		       (uint32_t)strrst->strreset_assoc_id);
+		if(strrst->strreset_flags & SCTP_STRRESET_FAILED) {
+			printf("Failed\n");
+			break;
+		}
 		if (strrst->strreset_flags & SCTP_STRRESET_INBOUND_STR) {
 			strscope = "inbound";
 		} else if (strrst->strreset_flags & SCTP_STRRESET_OUTBOUND_STR) {
