@@ -204,7 +204,7 @@ OBJDIR=aix
 EXEDIR=aix
 MACHINE=AIX
 
-CC=$(COMPILER)
+CC=$(COMPILER) -Wall
 
 endif
 
