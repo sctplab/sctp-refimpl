@@ -352,6 +352,7 @@ static void
 pdapi_abortrecption(struct sctp_pdapi_event *pdapi)
 {
 	/* What do we do here? */
+	printf("Help I have fallen and I can't get up\n");
 }
 
 void
@@ -421,6 +422,8 @@ main(int argc, char **argv)
 	uint8_t buffer[PDAPI_DATA_BLOCK_SIZE];
 	int i, fd, flags=0;
 	u_int16_t port=0;
+	int level=SCTP_FRAG_LEVEL_1;
+	int val;
 	size_t len;
 	socklen_t slen;
 	socklen_t fromlen;
@@ -428,8 +431,18 @@ main(int argc, char **argv)
 	struct sockaddr_in bindto,got,from;
 	struct sctp_event_subscribe event;
 	
-	while((i= getopt(argc,argv,"p:v")) != EOF){
+	while((i= getopt(argc,argv,"p:vl:")) != EOF){
 		switch(i){
+		case 'l':
+			val = strtol(optarg, NULL, 0);
+			if ((val < SCTP_FRAG_LEVEL_0) ||
+			    (val > SCTP_FRAG_LEVEL_2)) {
+				printf("Sorry level must be %d >= %d <= %d\n",
+				       SCTP_FRAG_LEVEL_0,
+				       val,
+				       SCTP_FRAG_LEVEL_2);
+				return (-1);
+			}
 		case 'v':
 			verbose = 1;
 			break;
@@ -445,6 +458,12 @@ main(int argc, char **argv)
 	if(fd == -1){
 		printf("can't open socket:%d\n",errno);
 		return(-1);
+	}
+	if (setsockopt(fd, IPPROTO_SCTP, 
+		       SCTP_FRAGMENT_INTERLEAVE, 
+		       &level, sizeof(level)) != 0) {
+		printf("Can't set FRAGMENT_INTERLEAVE socket option! err:%d\n", errno);
+		return (-1);
 	}
 	memset(&bindto,0,sizeof(bindto));
 	slen = sizeof(bindto);
