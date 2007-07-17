@@ -46,13 +46,13 @@ endif
 endif
 endif
 
-PROGSRCS= pdap_server.c
+PROGSRCS= pdapi_server.c
 
 #LOCAL_LIBS+=
 
 #PROGSRCS= sctp_test_app.c cmp_server.c cmp_client.c
 #
-OBJSRCS=hashWalk.c primelist.c stdintest.c
+OBJSRCS=pdapi_csum.c
 #
 
 SRCS= $(OBJSRCS) $(PROGSRCS) # for creating depend 
