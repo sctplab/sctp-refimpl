@@ -12,29 +12,30 @@
 
 
 struct data_block {
-  struct data_block *next;
-  struct sctp_sndrcvinfo info;
-  int sz;
-  unsigned char data[4];
+	struct data_block *next;
+	struct sctp_sndrcvinfo info;
+	int sz;
+	unsigned char data[4];
 };
 
 struct requests {
-  sctp_assoc_t assoc_id;
-  struct sockaddr_in who;
-  struct requests *next;
-  struct requests *prev;
-  struct data_block *first;
-  struct data_block *tail;
+	sctp_assoc_t assoc_id;
+	struct sockaddr_in who;
+	struct requests *next;
+	struct requests *prev;
+	struct data_block *first;
+	struct data_block *tail;
 };
 
 
 struct pdapi_request {
-  unsigned char request;
-  union {  
-    uint32_t checksum;
-    int size;
-    unsigned char data[0];
-  }msg;
+	unsigned char request;
+	unsigned char filler[3];
+	union {  
+		uint32_t checksum;
+		int size;
+		unsigned char data[0];
+	}msg;
 };
 
 
