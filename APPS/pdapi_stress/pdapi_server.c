@@ -11,6 +11,7 @@
 #include <sys/signal.h>
 #include "pdapi_req.h"
 
+FILE *sum_out=NULL;
 
 int verbose = 0;
 
@@ -86,13 +87,29 @@ clean_up_broken_msg(struct requests *who)
 	abort();
 }
 
+int chars_out=0;
+void
+sum_it_out(uint8_t *data, int size)
+{
+	int i;
+	for(i=0; i<size; i++) {
+		fprintf(sum_out, "%2.2x ", data[i]);
+		chars_out++;
+		if(chars_out == 16){
+			fprintf(sum_out, "\n");
+			chars_out = 0;
+		}
+	}
+}
+
+
 int
 audit_a_msg (struct requests *who)
 {
 	struct data_block *blk, *end_blk;	
 	struct pdapi_request *msg, *end;
 	int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
-	uint32_t base_crc = 0xffffffff, passed_sum;
+	uint32_t base_crc = 0xffffffff, passed_sum, final_sum;
 
 	msg = (struct pdapi_request *)who->first->data;
 	ushort ssn_req, ssn_data, ssn_end;
@@ -100,7 +117,7 @@ audit_a_msg (struct requests *who)
 		/* not a request at the head? */
 		return(0);
 	} else {
-		tot_size = msg->msg.size;
+		tot_size = ntohl(msg->msg.size);
 	}
 	ssn_req = who->first->info.sinfo_ssn;
 	ssn_data = ssn_req + 1;
@@ -121,9 +138,6 @@ audit_a_msg (struct requests *who)
 	}
 	if(cnt_data && cnt_end) {
 		/* we have at least ONE complete message */
-		printf("We have %d data blocks and %d ends\n", 
-		       cnt_data, cnt_end);
-
 		/* get rid of request */
 		blk = who->first;
 		who->first = blk->next;
@@ -143,7 +157,10 @@ audit_a_msg (struct requests *who)
 			return (0);
 		}
 		/* csum the first msg */
-		calc_size = blk->sz - 1;
+		calc_size = blk->sz - sizeof(struct pdapi_request) + sizeof(int);
+		if(sum_out) {
+			sum_it_out(msg->msg.data, calc_size);
+		}
 		base_crc = update_crc32(base_crc, msg->msg.data, calc_size);
 		who->first = blk->next;
 		if(blk == who->tail) {
@@ -154,6 +171,9 @@ audit_a_msg (struct requests *who)
 		blk = who->first;
 		while(blk && (blk != end_blk)) {
 			base_crc = update_crc32(base_crc, blk->data, blk->sz);
+			if(sum_out) {
+				sum_it_out(blk->data, blk->sz);
+			}
 			calc_size += blk->sz;
 			who->first = blk->next;
 			if(blk == who->tail) {
@@ -164,8 +184,18 @@ audit_a_msg (struct requests *who)
 			blk = who->first;
 		}
 		if(who->first == end_blk) {
-			printf("Ate all data and saw %d bytes\n", calc_size);
-			base_crc = sctp_csum_finalize(base_crc);
+			final_sum = sctp_csum_finalize(base_crc);
+                        if(sum_out) {
+				fprintf(sum_out, "\n");
+				fflush(sum_out);
+			}
+			msg = (struct pdapi_request *)end_blk->data;
+			if (msg->request != PDAPI_END_MESSAGE) {
+				printf("Last msg not END?\n");
+				passed_sum = 0;
+			} else {
+				passed_sum = msg->msg.checksum;
+			}
 			who->first = end_blk->next;
 			if(who->tail == end_blk) {
 				/* may happen */
@@ -180,13 +210,12 @@ audit_a_msg (struct requests *who)
 			printf("Message size was supposed to be %d but saw %d\n",
 			       tot_size, calc_size);
 		}
-		if(passed_sum != base_crc) {
+		if(passed_sum != final_sum) {
 			printf("Checksum mis-match should be %x but is %x\n",
-			       (u_int)passed_sum, (u_int)base_crc);
+			       (u_int)passed_sum, (u_int)final_sum);
 		}
 		return(1);
 	}
-	printf("Not a complete msg yet\n");
 	return (1);
 }
 
@@ -220,11 +249,6 @@ audit_all_msg(struct requests *who)
 	nxt_msg:
 		blk = nxt;      
 	}
-	printf("assoc:%x has %d messages %s",
-	       who->assoc_id,
-	       cnt,
-	       (((cnt % 3) == 0) ? "which is normal" :
-		"Which is incorrect"));
 	while(not_done) {
 		if(who->first == NULL) {
 			/* all gone */
@@ -249,6 +273,7 @@ pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
 		abort();
 	}
 	who->assoc_id = asoc->sac_assoc_id;
+	who->msg_cnt = 0;
 	who->who = *from;
 	who->prev = who->next = NULL;
 	who->first = NULL;
@@ -344,7 +369,10 @@ pdapi_process_data(unsigned char *buffer,
 		who->tail = blk;
 	}
 	if(flags & MSG_EOR) {
-		(void)audit_a_msg (who);
+		who->msg_cnt++;
+		if ((who->msg_cnt % 3) == 0) {
+			(void)audit_a_msg (who);
+		}
 	}
 }
 
@@ -431,8 +459,12 @@ main(int argc, char **argv)
 	struct sockaddr_in bindto,got,from;
 	struct sctp_event_subscribe event;
 	
-	while((i= getopt(argc,argv,"p:vl:")) != EOF){
+	while((i= getopt(argc,argv,"p:vl:S:")) != EOF){
 		switch(i){
+		case 'S':
+			sum_out = fopen(optarg, "w+");
+			printf("Putting sum log out to %s\n", optarg);
+			break;
 		case 'l':
 			val = strtol(optarg, NULL, 0);
 			if ((val < SCTP_FRAG_LEVEL_0) ||

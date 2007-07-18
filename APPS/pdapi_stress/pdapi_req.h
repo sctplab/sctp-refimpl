@@ -20,6 +20,7 @@ struct data_block {
 
 struct requests {
 	sctp_assoc_t assoc_id;
+	uint32_t msg_cnt;
 	struct sockaddr_in who;
 	struct requests *next;
 	struct requests *prev;
