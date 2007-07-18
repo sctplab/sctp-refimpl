@@ -2871,7 +2871,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
  plan_d:
 	/*
 	 * plan_d: We are in trouble. No preferred address on the emit
-	 * interface. And not even a perfered address on all interfaces.
+	 * interface. And not even a preferred address on all interfaces.
 	 * Go out and see if we can find an acceptable address somewhere
 	 * amongst all interfaces.
 	 */
@@ -2911,8 +2911,8 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	}
 	/*
 	 * Ok we can find NO address to source from that is not on our
-	 * negative list and non_asoc_address is NOT ok, or its on
-	 * our negative list. We cant source to it :-(
+	 * restricted list and non_asoc_address is NOT ok, or it is on
+	 * our restricted list. We can't source to it :-(
 	 */
 	return (NULL);
 }
@@ -2985,7 +2985,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 * Decisions:
 	 * 
 	 * - count the number of addresses on the interface. 
-         * - if its one, no  problem except case <c>. 
+         * - if it is one, no problem except case <c>. 
          *   For <a> we will assume a NAT out there.
 	 * - if there are more than one, then we need to worry about scope P
 	 *   or G. We should prefer G -> G and P -> P if possible. 
@@ -3041,8 +3041,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)to);
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
-		 * When bound to all if the address list is set it is a
-		 * negative list. Addresses being added by asconf.
+		 * Bound all case
 		 */
 		answer = sctp_choose_boundall(inp, stcb, net, ro, vrf_id,
 					      dest_is_priv, dest_is_loop, 
@@ -3050,23 +3049,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		return (answer);
 	}
 	/*
-	 * Three possiblities here:
-	 * 
-	 * a) stcb is NULL, which means we operate only from the list of
-	 * addresses (ifa's) bound to the endpoint and we care not about the
-	 * list. 
-	 * b) stcb is NOT-NULL, which means we have an assoc structure
-	 * and auto-asconf is on. This means that the list of addresses is a
-	 * NOT list. We use the list from the inp, but any listed address in
-	 * our list is NOT yet added. However if the non_asoc_addr_ok is set
-	 * we CAN use an address NOT available (i.e. being added). Its a
-	 * negative list. 
-	 *c) stcb is NOT-NULL, which means we have an assoc
-	 * structure and auto-asconf is off. This means that the list of
-	 * addresses is the ONLY addresses I can use.. its positive.
-	 * 
-	 * Note we collapse b & c into the same function just like in the v6
-	 * address selection.
+	 * Subset bound case
 	 */
 	if (stcb) {
 		answer = sctp_choose_boundspecific_stcb(inp, stcb, net, ro,
@@ -3428,29 +3411,35 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 		/* call the routine to select the src address */
 		if (net) {
-			if(net->ro._s_addr && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+			if (net->ro._s_addr && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
 			}
 			if (net->src_addr_selected == 0) {
+				if (out_of_asoc_ok) {
+					/* do not cache */
+					goto temp_v4_src;
+				}
 				/* Cache the source address */
 				net->ro._s_addr = sctp_source_address_selection(inp,stcb,
 										ro, net, out_of_asoc_ok, 
 										vrf_id);
 				net->src_addr_selected = 1;
 			}
-			if(net->ro._s_addr == NULL) {
+			if (net->ro._s_addr == NULL) {
 				/* No route to host */
 				net->src_addr_selected = 0;
 				goto no_route;
 			}
-
 			ip->ip_src = net->ro._s_addr->address.sin.sin_addr;
 		} else {
 			struct sctp_ifa *_lsrc;
-			_lsrc = sctp_source_address_selection(inp,
-							      stcb, ro, net, out_of_asoc_ok, vrf_id);
+		temp_v4_src:
+			_lsrc = sctp_source_address_selection(inp, stcb, ro,
+							      net,
+							      out_of_asoc_ok,
+							      vrf_id);
 			if (_lsrc == NULL) {
 				goto no_route;
 			}
@@ -3699,6 +3688,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				net->src_addr_selected = 0;
 			}
 			if (net->src_addr_selected == 0) {
+				if (out_of_asoc_ok) {
+					/* do not cache */
+					goto temp_v6_src;
+				}
 				/* Cache the source address */
 				net->ro._s_addr = sctp_source_address_selection(inp,
 										stcb, 
@@ -3716,7 +3709,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			lsa6->sin6_addr = net->ro._s_addr->address.sin6.sin6_addr;
 		} else {
 			struct sctp_ifa *_lsrc;
-			_lsrc = sctp_source_address_selection(inp, stcb, ro, net, out_of_asoc_ok, vrf_id);
+		temp_v6_src:
+			_lsrc = sctp_source_address_selection(inp, stcb, ro,
+							      net,
+							      out_of_asoc_ok,
+							      vrf_id);
 			if (_lsrc == NULL) {
 				goto no_route;
 			}
@@ -7979,14 +7976,13 @@ void
 sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/*
-	 * formulate and queue an ASCONF to the peer ASCONF parameters
-	 * should be queued on the assoc queue
+	 * formulate and queue an ASCONF to the peer.
+	 * ASCONF parameters should be queued on the assoc queue.
 	 */
 	struct sctp_tmit_chunk *chk;
 	struct mbuf *m_asconf;
 	struct sctp_asconf_chunk *acp;
 	int len;
-
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	/* compose an ASCONF chunk, maximum length is PMTU */
@@ -8021,8 +8017,8 @@ void
 sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 {
 	/*
-	 * formulate and queue a asconf-ack back to sender the asconf-ack
-	 * must be stored in the tcb
+	 * formulate and queue a asconf-ack back to sender.
+	 * the asconf-ack must be stored in the tcb.
 	 */
 	struct sctp_tmit_chunk *chk;
 	struct mbuf *m_ack, *m;
@@ -8033,10 +8029,10 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 		return;
 	}
 	/* copy the asconf_ack */
-	m_ack = SCTP_M_COPYM(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL, M_DONTWAIT);
+	m_ack = SCTP_M_COPYM(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL,
+			     M_DONTWAIT);
 	if (m_ack == NULL) {
 		/* couldn't copy it */
-
 		return;
 	}
 	sctp_alloc_a_chunk(stcb, chk);
@@ -8078,7 +8074,7 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
 	chk->send_size = 0;
 	/* Get size */
 	m = m_ack;
-	while(m) {
+	while (m) {
 		chk->send_size += SCTP_BUF_LEN(m);
 		m = SCTP_BUF_NEXT(m);
 	}
