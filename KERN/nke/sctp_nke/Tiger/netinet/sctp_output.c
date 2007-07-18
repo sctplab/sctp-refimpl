@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.45 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.46 2007/07/17 20:58:25 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -11369,7 +11369,13 @@ sctp_lower_sosend(struct socket *so,
 			}
 			/* get an asoc/stcb struct */
 			vrf_id = inp->def_vrf_id;
-			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
+			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
+#ifndef __Panda__
+					       p
+#else
+					       (struct proc *)NULL
+#endif
+);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 #if defined(__NetBSD__) || defined(__OpenBSD__)

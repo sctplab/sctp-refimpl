@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.48 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.49 2007/07/17 20:58:25 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2185,7 +2185,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	}
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -2628,7 +2628,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		return (EINVAL);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	if(jailed(p->td_ucred)) {
+#ifdef INVARIANTS
+	if (p == NULL)
+		panic("null proc/thread");
+#endif
+	if(p && jailed(p->td_ucred)) {
 		prison = 1;
 	}
 #endif
@@ -4055,8 +4059,16 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
-    int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id)
+		int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		struct thread *p
+#else
+		struct proc *p
+#endif
+)
 {
+	/* note the p argument is only valid in unbound sockets */
+
 	struct sctp_tcb *stcb;
 	struct sctp_association *asoc;
 	struct sctpasochead *head;
@@ -4139,10 +4151,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL, 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		    (struct thread *)NULL
+#ifndef __Panda__
+					   p
 #else
-		    (struct proc *)NULL
+					   (struct proc *)NULL
 #endif
 		    ))) {
 			/* bind error, probably perm */
@@ -5865,7 +5877,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
+                    if (stcb_tmp)
+    					SCTP_TCB_UNLOCK(stcb_tmp);
+
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-12);
@@ -5937,7 +5951,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
+                    if (stcb_tmp)
+                        SCTP_TCB_UNLOCK(stcb_tmp);
+
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-21);

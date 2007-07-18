@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.20 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.21 2007/07/17 20:58:25 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -2016,9 +2016,6 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
 	struct sctp_laddr *laddr;
 
 	LIST_FOREACH(laddr, &stcb->sctp_ep->sctp_addr_list, sctp_nxt_addr) {
-		if (laddr->ifa == NULL) {
-			continue;
-		}
 		if (laddr->ifa == NULL) {
 			continue;
 		}

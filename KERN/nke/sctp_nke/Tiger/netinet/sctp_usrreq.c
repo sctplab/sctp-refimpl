@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.37 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.38 2007/07/17 20:58:25 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -1735,7 +1735,13 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	vrf_id = inp->def_vrf_id;
 
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id);
+	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id, 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			       (struct thread *)p
+#else
+			       (struct proc *)p
+#endif
+		);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		goto out_now;
@@ -4563,7 +4569,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 #endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, p);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
