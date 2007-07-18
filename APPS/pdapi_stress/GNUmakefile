@@ -46,7 +46,7 @@ endif
 endif
 endif
 
-PROGSRCS= pdapi_server.c
+PROGSRCS= pdapi_server.c pdapi_client.c
 
 #LOCAL_LIBS+=
 
