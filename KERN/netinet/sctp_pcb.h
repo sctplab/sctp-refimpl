@@ -623,9 +623,15 @@ int sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id);
 
 void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t, uint32_t);
+    int, int *, uint32_t, uint32_t, struct thread *);
+#else
+struct sctp_tcb *
+sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
+    int, int *, uint32_t, uint32_t, struct proc *);
+#endif
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 

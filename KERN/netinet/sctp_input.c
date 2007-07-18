@@ -1619,8 +1619,21 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * now that we know the INIT/INIT-ACK are in place, create a new TCB
 	 * and popluate
 	 */
+
+        /* 
+	 * Here we do a trick, we set in NULL for the proc/thread argument. We
+	 * do this since in effect we only use the p argument when
+	 * the socket is unbound and we must do an implicit bind. 
+	 * Since we are getting a cookie, we cannot be unbound.
+	 */
 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
-	    ntohl(initack_cp->init.initiate_tag), vrf_id);
+			       ntohl(initack_cp->init.initiate_tag), vrf_id,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			       (struct thread *)NULL
+#else
+			       (struct proc *)NULL
+#endif
+			       );
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 

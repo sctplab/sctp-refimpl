@@ -1735,7 +1735,13 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	vrf_id = inp->def_vrf_id;
 
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id);
+	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id, 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			       (struct thread *)p
+#else
+			       (struct proc *)p
+#endif
+		);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		goto out_now;
@@ -4563,7 +4569,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 #endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
+	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, p);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
