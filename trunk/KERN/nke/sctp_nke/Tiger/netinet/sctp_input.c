@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.50 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.51 2007/07/17 20:58:25 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -194,8 +194,8 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 		/* Check to see if some data queued */
 		TAILQ_FOREACH(strq, &asoc->out_wheel, next_spoke) {
-			/*sa_ignore FREED_MEMORY*/
 		is_there_another:
+			/*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&strq->outqueue);
 			if (sp == NULL) {
 				continue;
@@ -1619,8 +1619,21 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * now that we know the INIT/INIT-ACK are in place, create a new TCB
 	 * and popluate
 	 */
+
+        /* 
+	 * Here we do a trick, we set in NULL for the proc/thread argument. We
+	 * do this since in effect we only use the p argument when
+	 * the socket is unbound and we must do an implicit bind. 
+	 * Since we are getting a cookie, we cannot be unbound.
+	 */
 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
-	    ntohl(initack_cp->init.initiate_tag), vrf_id);
+			       ntohl(initack_cp->init.initiate_tag), vrf_id,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+			       (struct thread *)NULL
+#else
+			       (struct proc *)NULL
+#endif
+			       );
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 
@@ -4629,6 +4642,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			goto out_now;
+            /*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -4640,6 +4654,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			goto out_now;
+            /*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_OPEN:
 		case SCTP_STATE_SHUTDOWN_SENT:

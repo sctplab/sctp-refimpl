@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.37 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.38 2007/07/17 20:58:25 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3431,6 +3431,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					alt = sctp_find_alternate_net(stcb, alt, 2);
 				} else {
 					/* JRS 5/18/07 - If only CMT is on, use the CMT version of find_alt_net() */
+                                        /*sa_ignore NO_NULL_CHK*/
 					alt = sctp_find_alternate_net(stcb, alt, 1);
 				}
 				if( alt == NULL ) {

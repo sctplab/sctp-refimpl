@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.24 2007/07/14 09:36:27 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.25 2007/07/17 20:58:25 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -623,9 +623,15 @@ int sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id);
 
 void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t, uint32_t);
+    int, int *, uint32_t, uint32_t, struct thread *);
+#else
+struct sctp_tcb *
+sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
+    int, int *, uint32_t, uint32_t, struct proc *);
+#endif
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
