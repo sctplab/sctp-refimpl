@@ -1,2 +1,3 @@
 - remove dead (duplicate) code from sctp_asconf.c
-
+- remove duplicate #include <sys/priv.h> that is not under #ifdef FreeBSD
+  version to allow compile on 6.1
