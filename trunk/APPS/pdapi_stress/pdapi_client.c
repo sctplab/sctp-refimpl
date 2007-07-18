@@ -13,12 +13,28 @@
 #include <sys/signal.h>
 #include "pdapi_req.h"
 
-
+FILE *sum_out;
 struct pdapi_request request;
 uint8_t large_buffer[132096];
 struct pdapi_request sum;
 struct sockaddr_in peer;
 int sd;
+
+int chars_out=0;
+void
+sum_it_out(uint8_t *data, int size)
+{
+	int i;
+	for(i=0; i<size; i++) {
+		fprintf(sum_out, "%2.2x ", data[i]);
+		chars_out++;
+		if(chars_out == 16){
+			fprintf(sum_out, "\n");
+			chars_out = 0;
+		}
+	}
+}
+
 
 int
 send_a_request()
@@ -35,34 +51,38 @@ send_a_request()
 	memset(large_buffer,0, sizeof(large_buffer));
 	memset(&sinfo, 0, sizeof(sinfo));
 	msg = (struct pdapi_request *)&large_buffer[0];
-	request.request = PDAPI_DATA_MESSAGE;
-	msg->request = PDAPI_REQUEST_MESSAGE;
+	request.request = PDAPI_REQUEST_MESSAGE;
+	msg->request = PDAPI_DATA_MESSAGE;
 	sum.request = PDAPI_END_MESSAGE;
 	/* First we must generate the size of
 	 * the message. 
 	 */
-	request.msg.size = rand() & 0x0003ffff;
+	sz = rand() & 0x0003ffff;
 	/* round it down to even word boundary */
-	request.msg.size &= ~0x03;
+	sz &= ~0x03;
 	p = (int *)msg->msg.data;
-	sz = request.msg.size;
-	for(i=0;i<sz;i+=sizeof(int)) {
+	for(i=0;i<sz/4;i+=sizeof(int)) {
 		*p = rand();
 		p++;
 	}
 	/* now we need to csum it */
-	base_crc = update_crc32(base_crc, msg->msg.data, request.msg.size);
+	if (sum_out)
+		sum_it_out(msg->msg.data, sz);
+	base_crc = update_crc32(base_crc, msg->msg.data, sz);
 	sum.msg.checksum = sctp_csum_finalize(base_crc);
+	if(sum_out) {
+		fprintf(sum_out, "\n");
+	}
 	/* now our messages are formed. Send them */
 
-	/* network-ify the size after increase to include
-	 * the sizeo of the structure header.
+	/* network-ify the size 
 	 */
-	sz += sizeof(request);
-	request.msg.size = ntohl(sz);
+	request.msg.size = htonl(sz);
+
+	/* Increase it to include the header */
+	sz += sizeof(request) - sizeof(int);
 
 	/* Note for now we just send in stream 0 */
-	printf("sending a message set\n");
 	ret = sctp_sendx(sd, &request, sizeof(request), 
 			 (struct sockaddr *)&peer, 1,
 			 &sinfo, 0);
@@ -88,7 +108,6 @@ send_a_request()
 		       ret, errno);
 		return(0);
 	}
-	printf("message set sent\n");
 	return (1);
 }
 
@@ -142,8 +161,12 @@ main(int argc, char **argv)
 	struct sctp_event_subscribe event;
 	
 	memset (&peer, 0, sizeof(peer));
-	while((i= getopt(argc,argv,"p:h:s:l:")) != EOF){
+	while((i= getopt(argc,argv,"p:h:s:l:S:")) != EOF){
 		switch(i){
+		case 'S':
+			sum_out = fopen(optarg, "w+");
+			printf("Putting sum log out to %s\n", optarg);
+			break;
 		case 's':
 			seed = strtoul(optarg, NULL, 0);
 			break;
@@ -211,10 +234,12 @@ main(int argc, char **argv)
 		if ((ret > 0) && (flags & MSG_NOTIFICATION)) {
 			not_done = handle_notification(read_buffer);
 		}
-		if(cnt >= limit) {
+		if(limit && (cnt >= limit)) {
 			printf("Sends complete\n");
 			not_done = 0;
 		}
 	}
+	if(sum_out)
+		fclose(sum_out);
 	return (0);
 }
