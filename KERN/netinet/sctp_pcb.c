@@ -5865,7 +5865,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
+                    if (stcb_tmp)
+    					SCTP_TCB_UNLOCK(stcb_tmp);
+
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-12);
@@ -5937,7 +5939,9 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 					 * strange, address is in another
 					 * assoc? straighten out locks.
 					 */
-					SCTP_TCB_UNLOCK(stcb_tmp);
+                    if (stcb_tmp)
+                        SCTP_TCB_UNLOCK(stcb_tmp);
+
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-21);

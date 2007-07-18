@@ -194,8 +194,8 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 	if (!TAILQ_EMPTY(&asoc->out_wheel)) {
 		/* Check to see if some data queued */
 		TAILQ_FOREACH(strq, &asoc->out_wheel, next_spoke) {
-			/*sa_ignore FREED_MEMORY*/
 		is_there_another:
+			/*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&strq->outqueue);
 			if (sp == NULL) {
 				continue;
@@ -4629,6 +4629,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			goto out_now;
+            /*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -4640,6 +4641,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			goto out_now;
+            /*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_OPEN:
 		case SCTP_STATE_SHUTDOWN_SENT:
