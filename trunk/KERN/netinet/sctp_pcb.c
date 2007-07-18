@@ -2628,7 +2628,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		return (EINVAL);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	if(jailed(p->td_ucred)) {
+#ifdef INVARIANTS
+	if (p == NULL)
+		panic("null proc/thread");
+#endif
+	if(p && jailed(p->td_ucred)) {
 		prison = 1;
 	}
 #endif
@@ -4055,8 +4059,16 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
-    int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id)
+		int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+		struct thread *p
+#else
+		struct proc *p
+#endif
+)
 {
+	/* note the p argument is only valid in unbound sockets */
+
 	struct sctp_tcb *stcb;
 	struct sctp_association *asoc;
 	struct sctpasochead *head;
@@ -4139,10 +4151,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL, 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		    (struct thread *)NULL
+#ifndef __Panda__
+					   p
 #else
-		    (struct proc *)NULL
+					   (struct proc *)NULL
 #endif
 		    ))) {
 			/* bind error, probably perm */

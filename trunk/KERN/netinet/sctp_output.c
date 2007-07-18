@@ -11369,7 +11369,13 @@ sctp_lower_sosend(struct socket *so,
 			}
 			/* get an asoc/stcb struct */
 			vrf_id = inp->def_vrf_id;
-			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id);
+			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
+#ifndef __Panda__
+					       p
+#else
+					       (struct proc *)NULL
+#endif
+);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
