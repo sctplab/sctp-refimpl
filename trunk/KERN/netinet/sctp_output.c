@@ -11805,11 +11805,6 @@ sctp_lower_sosend(struct socket *so,
 				goto out;
 			}
 			SCTP_TCB_SEND_LOCK(stcb);
-#ifdef INVARIANTS
-			msp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
-			if(msp && (msp->msg_is_complete == 0)) 
-				panic("Huh, new mesg and old not done?");
-#endif
 			if(sp->msg_is_complete) {
 				strm->last_msg_incomplete = 0;
 				asoc->stream_locked = 0;
