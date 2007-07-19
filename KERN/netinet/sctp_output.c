@@ -11770,9 +11770,6 @@ sctp_lower_sosend(struct socket *so,
 	atomic_add_int(&stcb->total_sends, 1);
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
-#ifdef INVARIANTS
-		struct sctp_stream_queue_pending *msp;
-#endif
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
 		int user_marks_eor;
