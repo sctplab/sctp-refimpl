@@ -1406,15 +1406,15 @@ sctp_handle_addr_wq(void)
 	if(asc->cnt == 0) {
 		SCTP_FREE(asc, SCTP_M_ASC_IT);
 	} else {
-		(void)sctp_initiate_iterator(sctp_iterator_ep, 
-				       sctp_iterator_stcb, 
-				       NULL, 	/* No ep end for boundall */
-				       SCTP_PCB_FLAGS_BOUNDALL,
-				       SCTP_PCB_ANY_FEATURES, 
-				       SCTP_ASOC_ANY_STATE, (void *)asc, 0,
-				       sctp_iterator_end, NULL, 0);
+		(void)sctp_initiate_iterator(sctp_asconf_iterator_ep, 
+					     sctp_asconf_iterator_stcb, 
+					     NULL, /* No ep end for boundall */
+					     SCTP_PCB_FLAGS_BOUNDALL,
+					     SCTP_PCB_ANY_FEATURES, 
+					     SCTP_ASOC_ANY_STATE,
+					     (void *)asc, 0,
+					     sctp_asconf_iterator_end, NULL, 0);
 	}
-
 }
 
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2218,8 +2218,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_STRRESET:
 		/*
-		 * Here the timer comes from the inp but its value is from
-		 * the RTO.
+		 * Here the timer comes from the stcb but its value is from
+		 * the net's RTO.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
 			return;
@@ -2262,8 +2262,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		/*
-		 * Here the timer comes from the inp but its value is from
-		 * the RTO.
+		 * Here the timer comes from the stcb but its value is from
+		 * the net's RTO.
 		 */
 		if ((stcb == NULL) || (net == NULL)) {
 			return;
@@ -6541,4 +6541,133 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 		 * bindx
 		 */
 	}
+}
+
+/*
+ * returns the valid local address count for an assoc, taking into account
+ * all scoping rules
+ */
+int
+sctp_local_addr_count(struct sctp_tcb *stcb)
+{
+	int loopback_scope, ipv4_local_scope, local_scope, site_scope;
+	int ipv4_addr_legal, ipv6_addr_legal;
+	struct sctp_vrf *vrf;
+	struct sctp_ifn *sctp_ifn;
+	struct sctp_ifa *sctp_ifa;
+	int count = 0;
+
+	/* Turn on all the appropriate scopes */
+	loopback_scope = stcb->asoc.loopback_scope;
+	ipv4_local_scope = stcb->asoc.ipv4_local_scope;
+	local_scope = stcb->asoc.local_scope;
+	site_scope = stcb->asoc.site_scope;
+	ipv4_addr_legal = ipv6_addr_legal = 0;
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+		ipv6_addr_legal = 1;
+		if (SCTP_IPV6_V6ONLY(stcb->sctp_ep) == 0) {
+			ipv4_addr_legal = 1;
+		}
+	} else {
+		ipv4_addr_legal = 1;
+	}
+
+	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
+	if (vrf == NULL) {
+		/* no vrf, no addresses */
+		return (0);
+	}
+
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
+		/*
+		 * bound all case: go through all ifns on the vrf
+		 */
+		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+			if ((loopback_scope == 0) &&
+			    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
+				continue;
+			}
+			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+				if (sctp_is_addr_restricted(stcb, sctp_ifa))
+					continue;
+
+				if ((sctp_ifa->address.sa.sa_family == AF_INET) &&
+				    (ipv4_addr_legal)) {
+					struct sockaddr_in *sin;
+
+					sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
+					if (sin->sin_addr.s_addr == 0) {
+						/* skip unspecified addrs */
+						continue;
+					}
+					if ((ipv4_local_scope == 0) &&
+					    (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))) {
+						continue;
+					}
+					/* count this one */
+					count++;
+				} else if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
+					   (ipv6_addr_legal)) {
+					struct sockaddr_in6 *sin6;
+
+#if defined(SCTP_EMBEDDED_V6_SCOPE) && !defined(SCTP_KAME)
+					struct sockaddr_in6 lsa6;
+#endif
+					sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
+					if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+						continue;
+					}
+					if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
+						if (local_scope == 0)
+							continue;
+#if defined(SCTP_EMBEDDED_V6_SCOPE)
+						if (sin6->sin6_scope_id == 0) {
+#ifdef SCTP_KAME
+							if (sa6_recoverscope(sin6) != 0)
+								/*
+								 * bad link
+								 * local
+								 * address
+								 */
+								continue;
+#else
+							lsa6 = *sin6;
+							if (in6_recoverscope(&lsa6,
+									     &lsa6.sin6_addr,
+									     NULL))
+								/*
+								 * bad link
+								 * local
+								 * address
+								 */
+								continue;
+							sin6 = &lsa6;
+#endif /* SCTP_KAME */
+						}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
+					}
+					if ((site_scope == 0) &&
+					    (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr))) {
+						continue;
+					}
+					/* count this one */
+					count++;
+				}
+			}
+		}
+	} else {
+		/*
+		 * subset bound case
+		 */
+		struct sctp_laddr *laddr;
+		LIST_FOREACH(laddr, &stcb->sctp_ep->sctp_addr_list,
+			     sctp_nxt_addr) {
+			if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
+				continue;
+			}
+			/* count this one */
+			count++;
+		}
+	}
+	return (count);
 }

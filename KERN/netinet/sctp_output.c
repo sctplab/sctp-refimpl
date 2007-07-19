@@ -2413,9 +2413,12 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 	if (sctp_ifn) {
 		/* is a preferred one on the interface we route out? */
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
-			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) && (non_asoc_addr_ok == 0)) 
+			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) &&
+			    (non_asoc_addr_ok == 0)) 
 				continue;
-			sifa = sctp_is_ifa_addr_preferred(sctp_ifa, dest_is_loop, dest_is_priv, fam);
+			sifa = sctp_is_ifa_addr_preferred(sctp_ifa,
+							  dest_is_loop,
+							  dest_is_priv, fam);
 			if (sifa == NULL)
 				continue;
 			if (sctp_is_addr_in_ep(inp, sifa)) {
@@ -2436,12 +2439,14 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 		inp->next_addr_touse = LIST_FIRST(&inp->sctp_addr_list);
 		resettotop = 1;
 	}
-	for (laddr = inp->next_addr_touse; laddr ; laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+	for (laddr = inp->next_addr_touse; laddr;
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
 			continue;
 		}
-		sifa = sctp_is_ifa_addr_preferred(laddr->ifa, dest_is_loop, dest_is_priv, fam);
+		sifa = sctp_is_ifa_addr_preferred(laddr->ifa, dest_is_loop,
+						  dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
 		atomic_add_int(&sifa->refcount, 1);
@@ -2461,12 +2466,14 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 	}
 
 	/* ok, what about an acceptable address in the inp */
-	for (laddr = inp->next_addr_touse; laddr ; laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
+	for (laddr = inp->next_addr_touse; laddr;
+	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
 			continue;
 		}
-		sifa = sctp_is_ifa_addr_acceptable(laddr->ifa, dest_is_loop, dest_is_priv, fam);
+		sifa = sctp_is_ifa_addr_acceptable(laddr->ifa, dest_is_loop,
+						   dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
 		atomic_add_int(&sifa->refcount, 1);
@@ -2741,7 +2748,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
 
-	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn( ifn, ifn_index);
+	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn(ifn, ifn_index);
 	if (sctp_ifn == NULL) {
 		/* ?? We don't have this guy ?? */
 		goto bound_all_plan_b;
@@ -7233,6 +7240,12 @@ again_one_more_time:
 						 */
 						hbflag = 1;
 						asconf = 1;
+						/*
+						 * should sysctl this: don't
+						 * bundle data with ASCONF
+						 * since it requires AUTH
+						 */
+						no_data_chunks = 1;
 					}
 					chk->sent = SCTP_DATAGRAM_SENT;
 					chk->snd_count++;
@@ -7246,7 +7259,12 @@ again_one_more_time:
 					 */
 					if (asconf) {
 						sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp, stcb, net);
-						asconf = 0;
+						/*
+						 * do NOT clear the asconf
+						 * flag as it is used to do
+						 * appropriate source address
+						 * selection.
+						 */
 					}
 					if (cookie) {
 						sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
@@ -7490,8 +7508,12 @@ again_one_more_time:
 		if (outchain) {
 			/* We may need to start a control timer or two */
 			if (asconf) {
-				sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp, stcb, net);
-				asconf = 0;
+				sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp,
+						 stcb, net);
+				/*
+				 * do NOT clear the asconf flag as it is used
+				 * to do appropriate source address selection.
+				 */
 			}
 			if (cookie) {
 				sctp_timer_start(SCTP_TIMER_TYPE_COOKIE, inp, stcb, net);
