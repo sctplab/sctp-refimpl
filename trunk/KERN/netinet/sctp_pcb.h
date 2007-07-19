@@ -579,10 +579,10 @@ struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
-		    struct thread *);
+		    struct sctp_ifa *,struct thread *);
 #else
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
-		    struct proc *);
+		    struct sctp_ifa *, struct proc *);
 #endif
 
 struct sctp_tcb *

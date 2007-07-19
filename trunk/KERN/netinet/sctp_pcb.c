@@ -2583,13 +2583,14 @@ extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
 #endif
 
 
+/* sctp_ifap is used to bypass normal local address validation checks */
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
-		struct thread *p)
+		struct sctp_ifa *sctp_ifap, struct thread *p)
 #else
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
-		struct proc *p)
+		struct sctp_ifa *sctp_ifap, struct proc *p)
 #endif
 {
 	/* bind a ep to a socket address */
@@ -2986,8 +2987,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 * zero out the port to find the address! yuck! can't do
 		 * this earlier since need port for sctp_pcb_findep()
 		 */
-		ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
-					    vrf_id, 0);
+		if (sctp_ifap != NULL)
+			ifa = sctp_ifap;
+		else
+			ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
+						    vrf_id, 0);
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
@@ -4151,6 +4155,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL, 
+		    (struct sctp_ifa *)NULL, 
 #ifndef __Panda__
 					   p
 #else
