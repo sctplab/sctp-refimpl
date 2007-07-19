@@ -688,6 +688,10 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	int add_len, len, no_end_cx = 0;
 	struct sockaddr *at;
 
+	if (addrs == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
 
 #ifdef SYS_sctp_generic_sendmsg
 	if (addrcnt < SCTP_SMALL_IOVEC_SIZE) {
@@ -702,11 +706,6 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 		    msg, msg_len, addrs, l, sinfo, flags));
 	}
 #endif
-	
-	if (addrs == NULL) {
-		errno = EINVAL;
-		return (-1);
-	}
 
 	len = sizeof(int);
 	at = addrs;

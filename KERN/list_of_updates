@@ -6,3 +6,5 @@
    o some checks for NULL before unlock.
    o type corrections int -> size_t
 - Fix copywrite in sctp.h (a stay 'v' drifted in).
+- Fix addrs's error checking of sctp_sendx(3) when addrcnt is less than
+  SCTP_SMALL_IOVEC_SIZE
