@@ -5,6 +5,9 @@
    o some SA_IGNORE comments
    o some checks for NULL before unlock.
    o type corrections int -> size_t
-- Fix copywrite in sctp.h (a stay 'v' drifted in).
+- Fix it so alloc_asoc takes a thread/proc argument. Without this
+  we pass a NULL in to bind on implicit assoc setup and crash :-(
+**************************************above is patch 11 **********
+- take out a needless panic under invariants for sctp_output.c
 - Fix addrs's error checking of sctp_sendx(3) when addrcnt is less than
   SCTP_SMALL_IOVEC_SIZE
