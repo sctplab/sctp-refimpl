@@ -654,9 +654,8 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-void sctp_add_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *, int);
-
-void sctp_del_local_addr_assoc(struct sctp_tcb *, struct sctp_ifa *);
+void sctp_add_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
+void sctp_del_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 
 int
 sctp_load_addresses_from_init(struct sctp_tcb *, struct mbuf *, int, int,

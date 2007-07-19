@@ -5306,13 +5306,12 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 }
 
 /*
- * Add the addr to the TCB local address list For the BOUNDALL or dynamic
- * case, this is a "pending" address list (eg. addresses waiting for an
- * ASCONF-ACK response) For the subset binding, static case, this is a
- * "valid" address list
+ * Add the address to the TCB local address restricted list.
+ * This is a "pending" address list (eg. addresses waiting for an
+ * ASCONF-ACK response) and cannot be used as a valid source address.
  */
 void
-sctp_add_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa, int restricted_list)
+sctp_add_local_addr_restricted(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_laddr *laddr;
@@ -5400,10 +5399,10 @@ sctp_remove_laddr(struct sctp_laddr *laddr)
 }
 
 /*
- * Remove an address from the TCB local address list
+ * Remove a local address from the TCB local address restricted list
  */
 void
-sctp_del_local_addr_assoc(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
+sctp_del_local_addr_restricted(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 {
 	struct sctp_inpcb *inp;
 	struct sctp_laddr *laddr;
