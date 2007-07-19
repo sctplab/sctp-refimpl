@@ -6394,7 +6394,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			return;
 		}
 #endif
-		*error = sctp_inpcb_bind(so, addr_touse, p);
+		*error = sctp_inpcb_bind(so, addr_touse, NULL, p);
 		return;
 	}
 	/*

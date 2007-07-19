@@ -905,7 +905,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				s = splsoftnet();
 #endif
-				error = sctp_inpcb_bind(so, (struct sockaddr *)&sin, p);
+				error = sctp_inpcb_bind(so, (struct sockaddr *)&sin, NULL, p);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
 #endif
@@ -931,7 +931,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_bind(so, addr, p);
+	error = sctp_inpcb_bind(so, addr, NULL, p);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
