@@ -12,3 +12,35 @@
 - Fix addrs's error checking of sctp_sendx(3) when addrcnt is less than
   SCTP_SMALL_IOVEC_SIZE
 - re-add back inpcb_bind local address check bypass capability
+
+*** asconf changes ***
+More comment changes/clarifications related to the old local address "not"
+list which is now an explicit restricted list.
+
+Rename some functions for clarity:
+- sctp_add/del_local_addr_assoc to xxx_local_addr_restricted() 
+- asconf related iterator functions to sctp_asconf_iterator_xxx()
+
+Fix bug when the same address is deleted and added (and removed from the
+asconf queue) where the ifa is "freed" twice refcount wise, possibly
+freeing it completely.
+
+Fix bug in output where the first ASCONF would not go out after the last
+address is changed (e.g. only goes out when retransmitted).
+
+Fix bug where multiple ASCONFs can be bundled in the same packet with the
+and with the same serial numbers.
+
+Fix asconf stcb iterator to not send ASCONF until after all work queue
+entries have been processed.
+
+Change behavior so that when the last address is deleted (auto asconf on
+a bound all endpoint) no action is taken until an address is added; at
+that time, an ASCONF add+delete is sent (if the assoc is still up).
+
+Fix local address counting so that address scoping is taken into account.
+
+#ifdef SCTP_TIMER_BASED_ASCONF the old timer triggered sending of ASCONF
+(after an RTO).  The default now is to send ASCONF immediately (except for
+the case of changing/deleting the last usable address).
+
