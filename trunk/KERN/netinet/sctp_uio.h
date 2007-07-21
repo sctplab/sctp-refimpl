@@ -404,8 +404,9 @@ union sctp_notification {
  */
 
 struct sctp_paddrparams {
-	struct sockaddr_storage spp_address;
 	sctp_assoc_t spp_assoc_id;
+    uint8_t spp_padding[4];
+	struct sockaddr_storage spp_address;
 	uint32_t spp_hbinterval;
 	uint32_t spp_pathmtu;
 	uint32_t spp_flags;
@@ -424,8 +425,9 @@ struct sctp_paddrparams {
 #define SPP_IPV4_TOS            0x00000200
 
 struct sctp_paddrinfo {
-	struct sockaddr_storage spinfo_address;
 	sctp_assoc_t spinfo_assoc_id;
+	uint8_t spinfo_padding[4];
+	struct sockaddr_storage spinfo_address;
 	int32_t spinfo_state;
 	uint32_t spinfo_cwnd;
 	uint32_t spinfo_srtt;
@@ -450,15 +452,15 @@ struct sctp_assocparams {
 };
 
 struct sctp_setprim {
-	struct sockaddr_storage ssp_addr;
 	sctp_assoc_t ssp_assoc_id;
 	uint8_t ssp_padding[4];
+	struct sockaddr_storage ssp_addr;
 };
 
 struct sctp_setpeerprim {
-	struct sockaddr_storage sspp_addr;
 	sctp_assoc_t sspp_assoc_id;
 	uint8_t sspp_padding[4];
+	struct sockaddr_storage sspp_addr;
 };
 
 struct sctp_getaddresses {
