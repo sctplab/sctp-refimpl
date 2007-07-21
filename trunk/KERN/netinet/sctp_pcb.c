@@ -2989,9 +2989,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 */
 		if (sctp_ifap != NULL)
 			ifa = sctp_ifap;
-		else
+		else {
+			/* Note for BSD we hit here always other
+			 * O/S's will pass things in via the
+			 * sctp_ifap argument (Panda).
+			 */
 			ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
 						    vrf_id, 0);
+		}
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
 			SCTP_INP_WUNLOCK(inp);
