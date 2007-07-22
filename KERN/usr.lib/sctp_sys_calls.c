@@ -355,8 +355,55 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		errno = EINVAL;
 		return (-1);
 	}
-	if (*size >= sizeof(id))
-	    *(sctp_assoc_t *)arg = id;
+	switch (opt) {
+	case SCTP_RTOINFO:
+		((struct sctp_rtoinfo *)arg)->srto_assoc_id = id;
+		break;
+	case SCTP_ASSOCINFO:
+		((struct sctp_assocparams *)arg)->sasoc_assoc_id = id;
+		break;
+	case SCTP_DEFAULT_SEND_PARAM:
+		((struct sctp_assocparams *)arg)->sasoc_assoc_id = id;
+		break;
+	case SCTP_SET_PEER_PRIMARY_ADDR:
+		((struct sctp_setpeerprim *)arg)->sspp_assoc_id = id;
+		break;
+	case SCTP_PRIMARY_ADDR:
+		((struct sctp_setprim *)arg)->ssp_assoc_id = id;
+		break;
+	case SCTP_PEER_ADDR_PARAMS:
+		((struct sctp_paddrparams *)arg)->spp_assoc_id = id;
+		break;
+	case SCTP_MAXSEG:
+		((struct sctp_assoc_value *)arg)->assoc_id = id;
+		break;
+	case SCTP_AUTH_KEY:
+		((struct sctp_authkey *)arg)->sca_assoc_id = id;
+		break;
+	case SCTP_AUTH_ACTIVE_KEY:
+		((struct sctp_authkeyid *)arg)->scact_assoc_id = id;
+		break;
+	case SCTP_DELAYED_SACK:
+		((struct sctp_sack_info *)arg)->sack_assoc_id = id;
+		break;
+	case SCTP_CONTEXT:
+		((struct sctp_assoc_value *)arg)->assoc_id = id;
+		break;
+	case SCTP_STATUS:
+		((struct sctp_status *)arg)->sstat_assoc_id = id;
+		break;
+	case SCTP_GET_PEER_ADDR_INFO:
+		((struct sctp_paddrinfo *)arg)->spinfo_assoc_id = id;
+		break;
+	case SCTP_PEER_AUTH_CHUNKS:
+		((struct sctp_authchunks *)arg)->gauth_assoc_id = id;
+		break;
+	case SCTP_LOCAL_AUTH_CHUNKS:
+		((struct sctp_authchunks *)arg)->gauth_assoc_id = id;
+		break;
+	default:
+		break;
+	}
 	return (getsockopt(sd, IPPROTO_SCTP, opt, arg, size));
 }
 
