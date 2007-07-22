@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.38 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.39 2007/07/21 21:41:31 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -736,7 +736,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-	error = sctp_inpcb_bind(so, addr, p);
+	error = sctp_inpcb_bind(so, addr, NULL, p);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
@@ -1508,7 +1508,6 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 		}
 	} else {
 		struct sctp_laddr *laddr;
-		/* The list is a NEGATIVE list */
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (stcb) {
 				if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
@@ -1725,7 +1724,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4515,7 +4514,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) ==
 	    SCTP_PCB_FLAGS_UNBOUND) {
 		/* Bind a ephemeral port */
-		error = sctp_inpcb_bind(so, NULL, p);
+		error = sctp_inpcb_bind(so, NULL, NULL, p);
 		if (error) {
 			goto out_now;
 		}
@@ -4665,7 +4664,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* We must do a bind. */
 		SOCK_UNLOCK(so);
 		SCTP_INP_RUNLOCK(inp);
-		if ((error = sctp_inpcb_bind(so, NULL, p))) {
+		if ((error = sctp_inpcb_bind(so, NULL, NULL, p))) {
 			/* bind error, probably perm */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);

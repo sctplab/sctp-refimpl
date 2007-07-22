@@ -5,7 +5,7 @@
  * modification, are permitted provided that the following conditions are met:
  * 
  * a) Redistributions of source code must retain the above copyright notice, 
- *   this list of conditions andv the following disclaimer.
+ *   this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright 
  *    notice, this list of conditions and the following disclaimer in 
