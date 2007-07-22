@@ -4003,7 +4003,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_peer_rwnd = 0;
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life) {
-				stcb->asoc.cookie_life = sasoc->sasoc_cookie_life;
+				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
 				
 			}
 			SCTP_TCB_UNLOCK(stcb);
