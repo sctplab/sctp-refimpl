@@ -2,8 +2,8 @@
 - Fix addrs's error checking of sctp_sendx(3) when addrcnt is less than
   SCTP_SMALL_IOVEC_SIZE
 - re-add back inpcb_bind local address check bypass capability
+- Fix it so sctp_opt_info is independant of assoc_id postion.
 - asconf changes 
-
  o More comment changes/clarifications related to the old local address "not"
    list which is now an explicit restricted list.
 
