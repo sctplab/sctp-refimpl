@@ -5981,11 +5981,11 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	/* get length and mbuf chain */
 	if (uio) {
 		ca->sndlen = uio->uio_resid;
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
 		ca->m = sctp_copy_out_all(uio, ca->sndlen);
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 #endif
 		if (ca->m == NULL) {
@@ -10956,11 +10956,11 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->put_last_out = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 	*error = sctp_copy_one(sp, uio, resv_in_first);
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 	if (*error) {
@@ -11035,7 +11035,7 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 #ifdef __Panda__
@@ -11064,7 +11064,7 @@ sctp_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	return (error);
@@ -11128,7 +11128,7 @@ sctp_lower_sosend(struct socket *so,
 	stcb = NULL;
 	asoc = NULL;
 	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 	if (inp == NULL) {
@@ -11679,11 +11679,11 @@ sctp_lower_sosend(struct socket *so,
 			ph++;
 			SCTP_BUF_LEN(mm) = tot_out + sizeof(struct sctp_paramhdr);
 			if(top == NULL) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if (error) {
@@ -11890,11 +11890,11 @@ sctp_lower_sosend(struct socket *so,
 					SCTP_TCB_UNLOCK(stcb);
 					hold_tcblock = 0;
 				}
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
 #endif
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
 #endif
 				if ((mm == NULL) || error) {
@@ -12395,7 +12395,7 @@ sctp_lower_sosend(struct socket *so,
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 	}
 #ifdef INVARIANTS
-#if !defined(SCTP_PER_SOCKET_LOCKING)
+#if !defined(__APPLE__)
 	if (stcb) {
 		if (mtx_owned(&stcb->tcb_mtx)) {
 			panic("Leaving with tcb mtx owned?");

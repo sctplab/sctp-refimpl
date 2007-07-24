@@ -189,7 +189,9 @@ extern struct fileops socketops;
  * SCTP_UNLOCK_SHARED(lck): unlock shared
  * SCTP_TRYLOCK_SHARED(lck): trylock shared
  */
+/* 
 #define SCTP_PER_SOCKET_LOCKING
+*/
 #define SCTP_INP_SO(sctpinp)	(sctpinp)->ip_inp.inp.inp_socket
 #define SCTP_SOCKET_LOCK(so, refcnt)	socket_lock(so, refcnt)
 #define SCTP_SOCKET_UNLOCK(so, refcnt)	socket_unlock(so, refcnt)

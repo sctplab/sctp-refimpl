@@ -5427,12 +5427,12 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 			SCTP_SOCKET_UNLOCK(so, 0);
 #endif
 			if (cp_len > 0) 
 				error = uiomove(mtod(m, char *), cp_len, uio);
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 			SCTP_SOCKET_LOCK(so, 0);
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -5495,7 +5495,7 @@ sctp_sorecvmsg(struct socket *so,
 					/* been through it all, must hold sb lock ok to null tail */
 					if (control->data == NULL) {
 #ifdef INVARIANTS
-#if !defined(SCTP_PER_SOCKET_LOCKING)
+#if !defined(__APPLE__)
 						if ((control->end_added == 0) ||
 						    (TAILQ_NEXT(control, next) == NULL)) {
 							/* If the end is not added, OR the
@@ -6048,7 +6048,7 @@ sctp_soreceive(	struct socket *so,
 		fromlen = 0;
 	}
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp, 
@@ -6073,7 +6073,7 @@ sctp_soreceive(	struct socket *so,
 			*psa = NULL;
 		}
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	return (error);
@@ -6115,7 +6115,7 @@ int sctp_l_soreceive(struct socket *so,
 		fromlen = 0;
 	}
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, 
@@ -6145,7 +6145,7 @@ int sctp_l_soreceive(struct socket *so,
 			*name = NULL;
 		}
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	return (error);
