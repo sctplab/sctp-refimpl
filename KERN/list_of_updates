@@ -3,6 +3,7 @@
   SCTP_SMALL_IOVEC_SIZE
 - re-add back inpcb_bind local address check bypass capability
 - Fix it so sctp_opt_info is independant of assoc_id postion.
+- Fix cookie life set to use MSEC_TO_TICKS() macro.
 - asconf changes 
  o More comment changes/clarifications related to the old local address "not"
    list which is now an explicit restricted list.
