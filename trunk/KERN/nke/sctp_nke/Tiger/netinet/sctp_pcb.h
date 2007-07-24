@@ -212,8 +212,9 @@ struct sctp_epinfo {
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
 	lck_mtx_t *ipi_iterator_wq_mtx;
+	lck_mtx_t *ipi_addr_mtx;
 	lck_mtx_t *ipi_count_mtx;
-	lck_mtx_t *logging_mtx;
+	lck_mtx_t *ipi_pktlog_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -222,7 +223,6 @@ struct sctp_epinfo {
 	void *it_mtx;
 	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
-	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
@@ -447,6 +447,10 @@ struct sctp_inpcb {
 	pthread_mutex_t inp_create_mtx;
 	pthread_mutex_t inp_rdata_mtx;
 	int32_t refcount;
+#elif defined(__APPLE__)
+	lck_rw_t *inp_mtx;
+	lck_mtx_t *inp_create_mtx;
+	lck_mtx_t *inp_rdata_mtx;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int32_t refcount;
@@ -514,6 +518,9 @@ struct sctp_tcb {
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t tcb_mtx;
 	pthread_mutex_t tcb_send_mtx;
+#elif defined(__APPLE__)
+	lck_mtx_t* tcb_mtx;
+	lck_mtx_t* tcb_send_mtx;
 #endif
 };
 
