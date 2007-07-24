@@ -2193,11 +2193,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			oso = (*inp_p)->sctp_socket;
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
 			/*
-			 * We do this to keep the sockets side happy durin
+			 * We do this to keep the sockets side happy during
 			 * the sonewcon ONLY.
 			 */
 			NET_LOCK_GIANT();
 #endif
+			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
 			so = sonewconn(oso, 0
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
@@ -2210,9 +2211,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
 			NET_UNLOCK_GIANT();
 #endif
-			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
-			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
+			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
+
 			if (so == NULL) {
 				struct mbuf *op_err;
 
