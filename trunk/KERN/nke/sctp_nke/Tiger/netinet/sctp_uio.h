@@ -452,13 +452,11 @@ struct sctp_assocparams {
 struct sctp_setprim {
 	struct sockaddr_storage ssp_addr;
 	sctp_assoc_t ssp_assoc_id;
-	uint8_t ssp_padding[4];
 };
 
 struct sctp_setpeerprim {
 	struct sockaddr_storage sspp_addr;
 	sctp_assoc_t sspp_assoc_id;
-	uint8_t sspp_padding[4];
 };
 
 struct sctp_getaddresses {

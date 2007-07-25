@@ -342,7 +342,17 @@ sctp_notify(struct sctp_inpcb *inp,
 #endif
 			SOCK_LOCK(inp->sctp_socket);
 			inp->sctp_socket->so_error = error;
+#if defined (__APPLE__)
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 			sctp_sowwakeup(inp, inp->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
 			SOCK_UNLOCK(inp->sctp_socket);
 		}
 	}
@@ -4858,6 +4868,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__)
 				sowwakeup_locked(inp->sctp_socket);
 #else
+#if defined(__APPLE__)
+				/* socket is locked */
+#endif
 				sowwakeup(inp->sctp_socket);
 #endif
 			} else {
@@ -4874,6 +4887,9 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__)
 				sorwakeup_locked(inp->sctp_socket);
 #else
+#if defined(__APPLE__)
+				/* socket is locked */
+#endif
 				sorwakeup(inp->sctp_socket);
 #endif
 			} else {

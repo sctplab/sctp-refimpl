@@ -3001,8 +3001,22 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		else
 			stcb->sctp_socket->so_error = ECONNRESET;
 		/* Wake ANY sleepers */
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sorwakeup(stcb->sctp_socket);
 		sowwakeup(stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* assoc was freed while we were unlocked */
+			return;
+		}
+#endif
 		sctp_asoc_change_wake++;
 	}
 	
@@ -3047,7 +3061,17 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 			  &stcb->sctp_socket->so_rcv, 1);
 	if(event == SCTP_COMM_LOST) {
 		/* Wake up any sleeper */
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
 	}
 }
 
@@ -3369,7 +3393,17 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	}
 	if (stcb->sctp_ep && stcb->sctp_socket) {
 		/* This should always be the case */
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
 	}
 }
 
@@ -4404,8 +4438,19 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	if (inp && inp->sctp_socket) {
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
 			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
-		} else 
+		} else {
+#if defined (__APPLE__)
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
+		}
 	}
 }
 
@@ -4529,8 +4574,19 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	if (inp && inp->sctp_socket) {
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
 			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
-		} else 
+		} else {
+#if defined (__APPLE__)
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
+		}
 	}
 	return (0);
 }
@@ -4614,7 +4670,21 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
+#if defined (__APPLE__)
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 			sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				/* assoc was freed while we were unlocked */
+				return (ret_sz);
+			}
+#endif
 		}
 		if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
 			stcb->asoc.sent_queue_cnt_removeable--;

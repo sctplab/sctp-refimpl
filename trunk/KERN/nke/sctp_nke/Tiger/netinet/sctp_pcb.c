@@ -4625,8 +4625,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			so = NULL;
 		if (so) {
 			/* Wake any reader/writers */
+#if defined (__APPLE__)
+			SCTP_SOCKET_LOCK(so, 1);
+#endif
 			sctp_sorwakeup(inp, so);
 			sctp_sowwakeup(inp, so);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 		}
 
 #if defined(__NetBSD__)
@@ -4676,6 +4682,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 		}
+#endif
+#if defined(__APPLE__)
+		SCTP_SOCKET_LOCK(inp->sctp_socket, 1);
 #endif
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(inp);
@@ -5081,6 +5090,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* destroyed the asoc */
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 11);
+#endif
+#if defined(__APPLE__)
+	SCTP_SOCKET_UNLOCK(inp->sctp_socket, 1);
 #endif
 	I_AM_HERE;
 	return (1);
