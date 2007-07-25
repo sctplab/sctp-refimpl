@@ -712,7 +712,6 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 {
 	struct sctp_association *asoc;
 
-	I_AM_HERE;
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_shutdown_ack: handling SHUTDOWN ACK\n");
 	if (stcb == NULL)
@@ -724,7 +723,6 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 		/* unexpected SHUTDOWN-ACK... so ignore... */
 		SCTP_TCB_UNLOCK(stcb);
-		I_AM_HERE;
 		return;
 	}
 	if(asoc->control_pdapi) {
@@ -768,16 +766,13 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			/* Set the connected flag to disconnected */
-			I_AM_HERE;
 			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
 		}
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
-	I_AM_HERE;
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 			SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
-	I_AM_HERE;
 }
 
 /*
@@ -1609,7 +1604,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * INIT should start after the cookie-echo header struct (chunk
 	 * header, state cookie header struct)
 	 */
-	I_AM_HERE;
 	init_offset = offset + sizeof(struct sctp_cookie_echo_chunk);
 	init_cp = (struct sctp_init_chunk *)
 	    sctp_m_getptr(m, init_offset, sizeof(struct sctp_init_chunk),
@@ -1661,7 +1655,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * the socket is unbound and we must do an implicit bind. 
 	 * Since we are getting a cookie, we cannot be unbound.
 	 */
-	I_AM_HERE;
 	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
 			       ntohl(initack_cp->init.initiate_tag), vrf_id,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -1670,7 +1663,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			       (struct proc *)NULL
 #endif
 			       );
-	I_AM_HERE;
 	if (stcb == NULL) {
 		struct mbuf *op_err;
 
@@ -1683,7 +1675,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 				       sh, op_err, vrf_id);
 		return (NULL);
 	}
-	I_AM_HERE;
 	/* get the correct sctp_nets */
 	if(netp)
 		*netp = sctp_findnet(stcb, init_src);
@@ -1711,7 +1702,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
 				SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
-		I_AM_HERE;
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
@@ -1732,14 +1722,12 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		retval = sctp_process_init(init_cp, stcb, *netp);
 	else
 		retval = 0;
-	I_AM_HERE;
 	if (retval < 0) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
-	I_AM_HERE;
 	/* load all addresses */
 	if (sctp_load_addresses_from_init(stcb, m, iphlen,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
@@ -1753,7 +1741,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * verify any preceding AUTH chunk that was skipped
 	 */
 	/* pull the local authentication parameters from the cookie/init-ack */
-	I_AM_HERE;
 	sctp_auth_get_cookie_params(stcb, m,
 	    initack_offset + sizeof(struct sctp_init_ack_chunk),
 	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)));
@@ -1784,7 +1771,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	} else {
 		asoc->state = SCTP_STATE_OPEN;
 	}
-	I_AM_HERE;
 	sctp_stop_all_cookie_timers(stcb);
 	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
 	SCTP_STAT_INCR_GAUGE32(sctps_currestab);
@@ -1822,7 +1808,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
-	I_AM_HERE;
 	sctp_check_address_list(stcb, m,
 	    initack_offset + sizeof(struct sctp_init_ack_chunk),
 	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
@@ -1844,9 +1829,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 * a bit of protection is worth having..
 		 */
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
-		I_AM_HERE;
 		soisconnected(stcb->sctp_ep->sctp_socket);
-		I_AM_HERE;
 	} else if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
 		/*
@@ -1871,9 +1854,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered, sctp_align_unsafe_makecopy);
 	}
-	I_AM_HERE;
 	sctp_send_cookie_ack(stcb);
-	I_AM_HERE;
 	return (stcb);
 }
 
@@ -1914,7 +1895,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_cookie: handling COOKIE-ECHO\n");
-	I_AM_HERE;
 	if (inp_p == NULL) {
 		return (NULL);
 	}
@@ -1947,7 +1927,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	} else {
 		return (NULL);
 	}
-	I_AM_HERE;
 	cookie = &cp->cookie;
 	cookie_offset = offset + sizeof(struct sctp_chunkhdr);
 	cookie_len = ntohs(cp->ch.chunk_length);
@@ -1962,7 +1941,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		 * This maintains the match even though it may be in the
 		 * opposite byte order of the machine :->
 		 */
-		I_AM_HERE;
 		return (NULL);
 	}
 	if (cookie_len > size_of_pkt ||
@@ -1970,14 +1948,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	    sizeof(struct sctp_init_chunk) +
 	    sizeof(struct sctp_init_ack_chunk) + SCTP_SIGNATURE_SIZE) {
 		/* cookie too long!  or too small */
-		I_AM_HERE;
 		return (NULL);
 	}
 	/*
 	 * split off the signature into its own mbuf (since it should not be
 	 * calculated in the sctp_hmac_m() call).
 	 */
-	I_AM_HERE;
 	sig_offset = offset + cookie_len - SCTP_SIGNATURE_SIZE;
 	if (sig_offset > size_of_pkt) {
 		/* packet not correct size! */
@@ -2002,7 +1978,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (l_stcb) {
 		SCTP_TCB_LOCK(l_stcb);
 	}
-	I_AM_HERE;
 	/* which cookie is it? */
 	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
@@ -2062,7 +2037,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			(uint32_t) offset, cookie_offset, sig_offset);
 		return (NULL);
 	}
-	I_AM_HERE;
 	/*
 	 * check the cookie timestamps to be sure it's not stale
 	 */
@@ -2137,7 +2111,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* This should not happen */
 		return (NULL);
 	}
-	I_AM_HERE;
 	if ((*stcb == NULL) && to) {
 		/* Yep, lets check */
 		*stcb = sctp_findassociation_ep_addr(inp_p, to, netp, localep_sa, NULL);
@@ -2176,7 +2149,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 	if(to == NULL)
 		return (NULL);
-	I_AM_HERE;
 	cookie_len -= SCTP_SIGNATURE_SIZE;
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
@@ -2190,7 +2162,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		    cookie, cookie_len, *inp_p, *stcb, *netp, to,
 		    &notification, &sac_restart_id, vrf_id);
 	}
-	I_AM_HERE;
 	if (*stcb == NULL) {
 		/* still no TCB... must be bad cookie-echo */
 		return (NULL);
@@ -2223,7 +2194,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, *inp_p,
 		    *stcb, NULL);
 	}
-	I_AM_HERE;
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (!had_a_existing_tcb ||
 		    (((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -2234,14 +2204,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			 */
 			struct socket *so, *oso;
 			struct sctp_inpcb *inp;
-			I_AM_HERE;
 			if (notification == SCTP_NOTIFY_ASSOC_RESTART) {
 				/*
 				 * For a restart we will keep the same
 				 * socket, no need to do anything. I THINK!!
 				 */
 				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id);
-				I_AM_HERE;
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
@@ -2253,7 +2221,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			NET_LOCK_GIANT();
 #endif
 			SCTP_TCB_UNLOCK((*stcb));
-			I_AM_HERE;
 #if defined(__APPLE__)
 			SCTP_SOCKET_LOCK(oso, 1);
 #endif
@@ -2271,11 +2238,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(__APPLE__)
 			SCTP_SOCKET_UNLOCK(oso, 1);
 #endif
-			I_AM_HERE;
 			SCTP_INP_WLOCK((*stcb)->sctp_ep);
 			SCTP_TCB_LOCK((*stcb));
 			SCTP_INP_WUNLOCK((*stcb)->sctp_ep);
-			I_AM_HERE;
 			if (so == NULL) {
 				struct mbuf *op_err;
 
@@ -2323,20 +2288,16 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    sctp_copy_chunklist((*inp_p)->sctp_ep.local_auth_chunks);
 			(void)sctp_copy_skeylist(&(*inp_p)->sctp_ep.shared_keys,
 			    &inp->sctp_ep.shared_keys);
-			I_AM_HERE;
 			/*
 			 * Now we must move it from one hash table to
 			 * another and get the tcb in the right place.
 			 */
 			sctp_move_pcb_and_assoc(*inp_p, inp, *stcb);
-			I_AM_HERE;
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
-			I_AM_HERE;
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
 			SCTP_TCB_LOCK((*stcb));
 			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
-			I_AM_HERE;
 
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
@@ -2355,11 +2316,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(oso, 1);
 #endif
-			I_AM_HERE;
 			sctp_ulp_notify(notification, *stcb, 0, NULL);
-			I_AM_HERE;
 			/* Pull it from the incomplete queue and wake the guy */
-			I_AM_HERE;
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
 #if defined (__APPLE__)
@@ -2381,7 +2339,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (NULL);
 			}
 			SCTP_INP_DECR_REF(inp);
-			I_AM_HERE;
 			return (m);
 		}
 	}
