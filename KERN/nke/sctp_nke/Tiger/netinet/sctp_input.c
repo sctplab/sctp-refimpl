@@ -647,11 +647,11 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 #if defined (__APPLE__)
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
-		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 #if defined (__APPLE__)
-		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
@@ -737,11 +737,11 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 #if defined (__APPLE__)
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
-		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 #if defined (__APPLE__)
-		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {

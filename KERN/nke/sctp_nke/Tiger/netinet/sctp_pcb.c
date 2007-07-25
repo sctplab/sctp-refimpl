@@ -4664,7 +4664,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 #endif
 #if defined(__APPLE__)
-		SCTP_SOCKET_LOCK(inp->sctp_socket, 1);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(inp);
@@ -5053,7 +5053,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	sctp_log_closing(inp, NULL, 11);
 #endif
 #if defined(__APPLE__)
-	SCTP_SOCKET_UNLOCK(inp->sctp_socket, 1);
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 	return (1);
 }
