@@ -10957,11 +10957,11 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
 #if defined(__APPLE__)
-	SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
+	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 	*error = sctp_copy_one(sp, uio, resv_in_first);
 #if defined(__APPLE__)
-	SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
+	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
@@ -11680,11 +11680,11 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_BUF_LEN(mm) = tot_out + sizeof(struct sctp_paramhdr);
 			if(top == NULL) {
 #if defined(__APPLE__)
-				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
 #if defined(__APPLE__)
-				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
+				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 				if (error) {
 					/*-
@@ -11891,11 +11891,11 @@ sctp_lower_sosend(struct socket *so,
 					hold_tcblock = 0;
 				}
 #if defined(__APPLE__)
-				SCTP_SOCKET_UNLOCK(stcb->sctp_socket, 0);
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
 #if defined(__APPLE__)
-				SCTP_SOCKET_LOCK(stcb->sctp_socket, 0);
+				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
 				if ((mm == NULL) || error) {
 					if (mm) {
