@@ -5,4 +5,4 @@
 - extra receive info included the rcvinfo which killed the
   padding/alignment. We now redefine all the fields properly
   so they both align properly.
-
+- Get rid of the sole net giant lock now that 7 does not need it.
