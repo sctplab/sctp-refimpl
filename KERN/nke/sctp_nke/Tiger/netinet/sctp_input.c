@@ -644,7 +644,22 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		asoc->control_pdapi->pdapi_aborted = 1;
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* assoc was freed while we were unlocked */
+			return;
+		}
+#endif
+
 	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if (stcb->sctp_socket) {
@@ -721,7 +736,21 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		asoc->control_pdapi->pdapi_aborted = 1;
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* assoc was freed while we were unlocked */
+			return;
+		}
+#endif
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||

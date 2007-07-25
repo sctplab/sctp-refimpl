@@ -1535,7 +1535,21 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		if (stcb->sctp_socket->so_rcv.sb_cc) {
 			/* some to read, wake-up */
+#if defined (__APPLE__)
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			    /* assoc was freed while we were unlocked */
+			    return (0);
+			}
+#endif
 		}
 		/* now is it in the mapping array of what we have accepted? */
 		if (compare_with_wrap(tsn,
@@ -3636,8 +3650,22 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				sctp_m_freem(tp1->data);
 				tp1->data = NULL;
 				if(stcb->sctp_socket) {
+#if defined (__APPLE__)
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 					sctp_sowwakeup(stcb->sctp_ep,
 						       stcb->sctp_socket);
+#if defined (__APPLE__)
+					SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+						/* assoc was freed while we were unlocked */
+						return (NULL);
+					}
+#endif
 					if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 						sctp_wakeup_log(stcb, tp1->rec.data.TSN_seq, 1, SCTP_WAKESND_FROM_FWDTSN);
 					}
@@ -3939,7 +3967,21 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cumack, 1, SCTP_WAKESND_FROM_SACK);
 		}
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);			
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* assoc was freed while we were unlocked */
+			return;
+		}
+#endif
 	} else {
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cumack, 1, SCTP_NOWAKE_FROM_SACK);
@@ -4646,7 +4688,21 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 		}
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);			
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(stcb->sctp_ep->sctp_socket, 1);
+#endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(stcb->sctp_ep->sctp_socket, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			/* assoc was freed while we were unlocked */
+			return;
+		}
+#endif
 	} else {
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
