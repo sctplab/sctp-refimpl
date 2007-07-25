@@ -2,3 +2,7 @@
 - In cookie processing 1-2-1, we did not increment the stcb refcnt before
   releasing the tcb lock. We need to do this to keep the tcb from being
   freed by a abort or ?? unlikely but worth doing.
+- extra receive info included the rcvinfo which killed the
+  padding/alignment. We now redefine all the fields properly
+  so they both align properly.
+
