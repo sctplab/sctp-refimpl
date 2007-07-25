@@ -112,7 +112,15 @@ struct sctp_sndrcvinfo {
 };
 
 struct sctp_extrcvinfo {
-	struct sctp_sndrcvinfo sreinfo_sinfo;
+	uint16_t sinfo_stream;
+	uint16_t sinfo_ssn;
+	uint16_t sinfo_flags;
+	uint32_t sinfo_ppid;
+	uint32_t sinfo_context;
+	uint32_t sinfo_timetolive;
+	uint32_t sinfo_tsn;
+	uint32_t sinfo_cumtsn;
+	sctp_assoc_t sinfo_assoc_id;
 	uint16_t sreinfo_next_flags;
 	uint16_t sreinfo_next_stream; 
 	uint32_t sreinfo_next_aid;
