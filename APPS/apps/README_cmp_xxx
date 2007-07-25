@@ -1,0 +1,141 @@
+This short text trys to describe how
+m_cmp_client and cmp_server can be used
+to measure performance.
+
+First of all lets do a overview of what is happening. You end
+up with
+
+Server  (cmp_server)                           Client (m_cmp_client)
+                         a) time()
+              <-------send request for msgs
+             ----->
+             ----->
+             ...
+             -----> msgs
+
+                          last one arrives b) time()
+                         print out result to file.data
+
+
+Now basically we simulate what would happen if the client were
+a web browser and the server were a apache engine.. We take
+a time mark of the start time send the message (or do a
+connect if we are TCP then send the msg) and then read until
+we get all the data. Note that m_cmp_client is not very smart
+(its smarter than it was) but its possible for it not to move
+on... it was real dumb originally but it now does understand
+assoc events so its grown in wisdom :-D..
+
+The idea is to read in a list of requests... and then
+connect first to SCTP then to TCP measuring the transfer
+times.
+
+The server uses a one-2-one socket. The client a one-2-many. Of
+course in the TCP case the client also uses a one-2-one since
+thats the TCP model.
+
+For the servers you just start them like
+
+FreeBSD/cmp_server -p 2222 -s
+or
+FreeBSD/cmp_server -p 2222 -t
+
+Note that the -s does sctp the -t does tcp. You should
+start both servers on the target machine where the server
+is running. There is an option to m_cmp_client to NOT
+do TCP or NOT do SCTP.. and if you are using this you don't
+need that server... but in general starting both is a good
+idea.
+
+Now m_cmp_client needs several arguments.
+
+-e err-rate
+-f file
+-h host
+-p port
+
+and optionally -M passes
+
+The file is the input file of tests its going to run.. here
+is an example file:
+20000:1000:0:0
+20000:2000:0:0
+20000:3000:0:0
+20000:4000:0:0
+20000:5000:0:0
+20000:6000:0:0
+20000:7000:0:0
+20000:8000:0:0
+20000:9000:0:0
+20000:10000:0:0
+20000:11000:0:0
+20000:12000:0:0
+       
+
+The first column is the number of messages to send (20,000). Note
+that old versions of the program this was the total number of
+bytes.. this changed recently so some of the calculations you
+of throughput you might want to double check.
+
+The next column has the size of each "write" i.e. the number
+of byte in each record. The last two arguments are the send
+and recv buffer size. If they are 0, which is typical, we just
+use the O/S's default value.
+
+The program will in theory run in an infinte loop poping 
+through each set of transfers on TCP and SCTP. So in the
+above example it would make 24 transfers (12 to TCP and
+12 to SCTP) and then cycle back and start again. If you
+pass in a -M xxx option it will restrict itself to
+xxx passes. Note that a ctrl-c will also tell the m_cmp_client
+to end at the termination of the current pass.
+
+the -e option dictates a small string to place in the
+output file.. the "error rate". This is used for
+the data sorter in making graphs with gnuplot. You
+can put anything here.. If you are doing error rate
+plotting then you should put the error rate you are
+using in dummy net... 
+
+-h host
+
+is the 10.1.1.1 address of the server
+
+-p port
+
+is the port number of the server (the -p option number
+you gave in server start call).
+
+It will then trudge through doing all the measurements for
+you and dump out to the console and to a file the
+results. So here is an example of the data file output.
+
+bash-stewdell: cat xxtest.data
+11 3.647035 # rb:0 size:20000:sctp:16330:ni (716.417583 Megabits per sec)
+11 3.906614 # rb:0 size:20000:tcp:16330:ni (668.814477 Megabits per sec)
+bash-stewdell: cat xxtest
+20000:16330:0:0
+bash-stewdell: 
+
+So the transfer did 20,000 records of 16300 each. The first
+column is the -e xx argument so in this run I had put
+-e 11
+
+The next is the time to transfer the data.
+
+the read buffer (0 i.e. system default) is next
+then the number of records.. the protocol and the size
+of the records. The ni has a meaning I won't cover here
+and then there is a "human" calc of the bandwidth.
+
+Now the these can be fed to a data sorter that will
+run gnuplot and graph things.. But that is another long
+discussion.. Its designed to do multiple
+graphs with increasing error rates.. and various sizes.
+
+You can have all the same size record and it trys
+to do a "live" sat plot. In general you have to hack
+it to get graphs.. but its a nice start..
+
+R
+
