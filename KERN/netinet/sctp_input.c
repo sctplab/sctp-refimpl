@@ -2191,7 +2191,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000)
 			/*
 			 * We do this to keep the sockets side happy during
 			 * the sonewcon ONLY.
@@ -2208,7 +2208,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			     ,NULL , (*inp_p)->def_vrf_id
 #endif
 			    );
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000)
 			NET_UNLOCK_GIANT();
 #endif
 			SCTP_TCB_LOCK((*stcb));
