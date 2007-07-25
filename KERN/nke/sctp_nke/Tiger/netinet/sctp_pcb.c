@@ -4460,7 +4460,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-	I_AM_HERE;
 	/* first, lets purge the entry from the hash table. */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -4480,12 +4479,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		splx(s);
 #endif
 		/* there is no asoc, really TSNH :-0 */
-		I_AM_HERE;
 		return (1);
 	}
 
         /* TEMP CODE */
-	I_AM_HERE;
 	if (stcb->freed_from_where == 0) {
 		/* Only record the first place free happened from */
 		stcb->freed_from_where = from_location;
@@ -4511,12 +4508,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		 * is it the timer driving us? if so are the reader/writers
 		 * gone?
 		 */
-		I_AM_HERE;
 		if (stcb->asoc.refcnt) {
 			/* nope, reader or writer in the way */
-			I_AM_HERE;
 			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
-			I_AM_HERE;
 			/* no asoc destroyed */
 			SCTP_TCB_UNLOCK(stcb);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -4529,13 +4523,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 	/* now clean up any other timers */
-	I_AM_HERE;
 	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	asoc->hb_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	asoc->dack_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	I_AM_HERE;
 	/*-
 	 * For stream reset we don't blast this unless
 	 * it is a str-reset timer, it might be the
@@ -4560,16 +4552,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 		net->pmtu_timer.self = NULL;
 	}
-	I_AM_HERE;
 	/* Now the read queue needs to be cleaned up (only once) */
 	cnt = 0;
 	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) {
-		I_AM_HERE;
 		stcb->asoc.state |= SCTP_STATE_ABOUT_TO_BE_FREED;
 		SCTP_INP_READ_LOCK(inp);
-		I_AM_HERE;
 		TAILQ_FOREACH(sq, &inp->read_queue, next) {
-			I_AM_HERE;
 			if (sq->stcb == stcb) {
 				sq->do_not_ref_stcb = 1;
 				sq->sinfo_cumtsn = stcb->asoc.cumulative_tsn;
@@ -4589,10 +4577,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 						uint32_t strseq;
 						stcb->asoc.control_pdapi = sq;
 						strseq = (sq->sinfo_stream << 16) | sq->sinfo_ssn;
-						I_AM_HERE;
 						sctp_notify_partial_delivery_indication(stcb,
 											SCTP_PARTIAL_DELIVERY_ABORTED, 1, strseq);
-						I_AM_HERE;
 						stcb->asoc.control_pdapi = NULL;
 					}
 				}
@@ -4601,22 +4587,18 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				cnt++;
 			}
 		}
-		I_AM_HERE;
 		SCTP_INP_READ_UNLOCK(inp);
-		I_AM_HERE;
 		if (stcb->block_entry) {
 			cnt++;
 			stcb->block_entry->error = ECONNRESET;
 			stcb->block_entry = NULL;
 		}
 	}
-	I_AM_HERE;
 	if ((from_inpcbfree != SCTP_PCBFREE_FORCE) && (stcb->asoc.refcnt)) {
 		/* reader or writer in the way, we have
 		 * hopefully given him something to chew on
 		 * above.
 		 */
-		I_AM_HERE;
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		SCTP_TCB_UNLOCK(stcb);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
@@ -4642,7 +4624,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_log_closing(inp, stcb, 9);
 #endif
 		/* no asoc destroyed */
-		I_AM_HERE;
 		return (0);
 	}
 #ifdef SCTP_LOG_CLOSING
@@ -4667,7 +4648,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 
 		SCTP_TCB_UNLOCK(stcb);
-		I_AM_HERE;
 #if !defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_ITERATOR_LOCK();
 #endif
@@ -4690,7 +4670,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_WLOCK(inp);
 		SCTP_TCB_LOCK(stcb);
 	}
-	I_AM_HERE;
 	/* Double check the GONE flag */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
@@ -4721,7 +4700,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 	}
-	I_AM_HERE;
 	/* Make it invalid too, that way if its
 	 * about to run it will abort and return.
 	 */
@@ -4747,7 +4725,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag, SCTP_TIME_WAIT);
-	I_AM_HERE;
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
@@ -4760,7 +4737,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	(void)SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
-	I_AM_HERE;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
@@ -4796,7 +4772,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
-	I_AM_HERE;
     /*sa_ignore FREED_MEMORY*/
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
@@ -4819,7 +4794,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
         /*sa_ignore FREED_MEMORY*/
 		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
-	I_AM_HERE;
 	chk = TAILQ_FIRST(&asoc->free_chunks);
 	while (chk) {
 		TAILQ_REMOVE(&asoc->free_chunks, chk, sctp_next);
@@ -4835,7 +4809,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
         /*sa_ignore FREED_MEMORY*/
 		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
-	I_AM_HERE;
 	/* pending send queue SHOULD be empty */
 	if (!TAILQ_EMPTY(&asoc->send_queue)) {
 		chk = TAILQ_FIRST(&asoc->send_queue);
@@ -4860,7 +4833,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   }
 */
 	/* sent queue SHOULD be empty */
-	I_AM_HERE;
 	if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 		chk = TAILQ_FIRST(&asoc->sent_queue);
 		while (chk) {
@@ -4877,7 +4849,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
-	I_AM_HERE;
 /*
   if(ccnt) {
   printf("Freed %d from sent_queue\n", ccnt);
@@ -4901,7 +4872,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
-	I_AM_HERE;
 /*
   if(ccnt) {
   printf("Freed %d from ctrl_queue\n", ccnt);
@@ -4924,7 +4894,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
-	I_AM_HERE;
 /*
   if(ccnt) {
   printf("Freed %d from reasm_queue\n", ccnt);
@@ -4970,7 +4939,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_FREE(asoc->strmin, SCTP_M_STRMI);
 		asoc->strmin = NULL;
 	}
-	I_AM_HERE;
 	asoc->streamincnt = 0;
 	while (!TAILQ_EMPTY(&asoc->nets)) {
         /*sa_ignore FREED_MEMORY*/
@@ -4986,13 +4954,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		TAILQ_REMOVE(&asoc->nets, net, sctp_next);
 		sctp_free_remote_addr(net);
 	}
-	I_AM_HERE;
 	while (!SCTP_LIST_EMPTY(&asoc->sctp_restricted_addrs)) {
         /*sa_ignore FREED_MEMORY*/
 		laddr = LIST_FIRST(&asoc->sctp_restricted_addrs);
 		sctp_remove_laddr(laddr);
 	}
-	I_AM_HERE;
 	/* pending asconf (address) parameters */
 	while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
         /*sa_ignore FREED_MEMORY*/
@@ -5026,7 +4992,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	/* Insert new items here :> */
-	I_AM_HERE;
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
 	SCTP_TCB_SEND_LOCK_DESTROY(stcb);
@@ -5036,7 +5001,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_ITERATOR_UNLOCK();
 	}
 #endif
-	I_AM_HERE;
 	if(from_inpcbfree == SCTP_NORMAL_PROC) {
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
@@ -5050,10 +5014,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		LIST_INSERT_HEAD(&inp->sctp_asoc_free_list, stcb, sctp_tcblist);
 	}
 #else
-	I_AM_HERE;
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
-	I_AM_HERE;
 #endif
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
@@ -5082,7 +5044,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		SCTP_INP_RUNLOCK(inp);
 	}
-	I_AM_HERE;
  out_of:
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -5094,7 +5055,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(inp->sctp_socket, 1);
 #endif
-	I_AM_HERE;
 	return (1);
 }
 

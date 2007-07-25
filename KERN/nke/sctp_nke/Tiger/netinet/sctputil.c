@@ -4993,7 +4993,6 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock=0;
 #endif
-	I_AM_HERE;
 	if(uio == NULL) {
 		return (EINVAL);
 	}
@@ -5139,9 +5138,7 @@ sctp_sorecvmsg(struct socket *so,
 				goto out;
 			}
 		}
-		I_AM_HERE;
 		error = sbwait(&so->so_rcv);
-		I_AM_HERE;
 		if (error) {
 			goto out;
 		}
@@ -5751,9 +5748,7 @@ sctp_sorecvmsg(struct socket *so,
 		sbunlock(&so->so_rcv, 1);
 #endif
 		if(so->so_rcv.sb_cc <= control->held_length) {
-			I_AM_HERE;
 			error = sbwait(&so->so_rcv);
-			I_AM_HERE;
 			if (error){
 #if defined(__FreeBSD__) || defined(__NetBSD__)
 				goto release;
@@ -5952,7 +5947,6 @@ sctp_sorecvmsg(struct socket *so,
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
 	}
-	I_AM_HERE;
 	return (error);
 }
 

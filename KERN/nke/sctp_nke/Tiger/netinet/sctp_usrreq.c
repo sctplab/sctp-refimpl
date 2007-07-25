@@ -829,7 +829,6 @@ sctp_detach(struct socket *so)
 #endif
 	uint32_t flags;
 
-	I_AM_HERE;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -852,35 +851,28 @@ sctp_detach(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			I_AM_HERE;
 			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
-			I_AM_HERE;
 		} else {
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 13);
 #endif
-			I_AM_HERE;
 			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE, 
 					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
-			I_AM_HERE;
 		}
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
-		I_AM_HERE;
 		SCTP_SB_CLEAR(so->so_snd);
 		/* same for the rcv ones, they are only
 		 * here for the accounting/select.
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
-		I_AM_HERE;
 #if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		/* Now disconnect */
 		so->so_pcb = NULL;
 #endif
 	} else {
-		I_AM_HERE;
 		flags = inp->sctp_flags;
 		if ((flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
 			goto sctp_must_try_again;
@@ -892,7 +884,6 @@ sctp_detach(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 	return;
 #else
-	I_AM_HERE;
 	return(0);
 #endif
 }
@@ -1021,7 +1012,6 @@ sctp_disconnect(struct socket *so)
 	int s;
 	s = splsoftnet();
 #endif
-	I_AM_HERE;
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1033,7 +1023,6 @@ sctp_disconnect(struct socket *so)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (SCTP_LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/* No connection */
-			I_AM_HERE;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
@@ -1042,30 +1031,25 @@ sctp_disconnect(struct socket *so)
 		} else {
 			struct sctp_association *asoc;
 			struct sctp_tcb *stcb;
-			I_AM_HERE;
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
 #endif
-				I_AM_HERE;
 				SCTP_INP_RUNLOCK(inp);
 				return (EINVAL);
 			}
 			SCTP_TCB_LOCK(stcb);
 			asoc = &stcb->asoc;
-			I_AM_HERE;
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* We are about to be freed, out of here */
 				SCTP_TCB_UNLOCK(stcb);
 				SCTP_INP_RUNLOCK(inp);
-				I_AM_HERE;
 				return (0);
 			}
 			if (((so->so_options & SO_LINGER) &&
 			    (so->so_linger == 0)) ||
 			    (so->so_rcv.sb_cc > 0)) {
-				I_AM_HERE;
 				if (SCTP_GET_STATE(asoc) !=
 				    SCTP_STATE_COOKIE_WAIT) {
 					/* Left with Data unread */
@@ -1088,7 +1072,6 @@ sctp_disconnect(struct socket *so)
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
-				I_AM_HERE;
 				if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1098,22 +1081,18 @@ sctp_disconnect(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
 #endif
-				I_AM_HERE;
 				return (0);
 			}
 			if (TAILQ_EMPTY(&asoc->send_queue) &&
 			    TAILQ_EMPTY(&asoc->sent_queue) &&
 			    (asoc->stream_queue_cnt == 0)) {
 				/* there is nothing queued to send, so done */
-				I_AM_HERE;
 				if (asoc->locked_on_sending) {
 					goto abort_anyway;
 				}
-				I_AM_HERE;
 				if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN 1st time thru */
-					I_AM_HERE;
 					sctp_stop_timers_for_shutdown(stcb);
 					sctp_send_shutdown(stcb,
 					    stcb->asoc.primary_destination);
@@ -1129,7 +1108,6 @@ sctp_disconnect(struct socket *so)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					    stcb->sctp_ep, stcb,
 					    asoc->primary_destination);
-					I_AM_HERE;
 				}
 			} else {
 				/*
@@ -1143,7 +1121,6 @@ sctp_disconnect(struct socket *so)
 				 * and move to SHUTDOWN-PENDING
 				 */
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
-				I_AM_HERE;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
 				if (asoc->locked_on_sending) {
@@ -1162,7 +1139,6 @@ sctp_disconnect(struct socket *so)
 				    TAILQ_EMPTY(&asoc->sent_queue) &&
 				    (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT)){
 					struct mbuf *op_err;
-					I_AM_HERE;
 				abort_anyway:
 					op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
 								       0, M_DONTWAIT, 1, MT_DATA);
@@ -1201,7 +1177,6 @@ sctp_disconnect(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
-			I_AM_HERE;
 			return (0);
 		}
 		/* not reached */
@@ -1211,7 +1186,6 @@ sctp_disconnect(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-		I_AM_HERE;
 		return EOPNOTSUPP;
 	}
 }
