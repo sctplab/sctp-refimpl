@@ -4464,7 +4464,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 
@@ -4607,14 +4607,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			so = NULL;
 		if (so) {
 			/* Wake any reader/writers */
-#if defined (__APPLE__)
-			SCTP_SOCKET_LOCK(so, 1);
-#endif
 			sctp_sorwakeup(inp, so);
 			sctp_sowwakeup(inp, so);
-#if defined (__APPLE__)
-			SCTP_SOCKET_UNLOCK(so, 1);
-#endif
 		}
 
 #if defined(__NetBSD__)

@@ -597,7 +597,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_1;
 		sctp_abort_an_association(stcb->sctp_ep, stcb,
-		    SCTP_PEER_FAULTY, oper);
+		    SCTP_PEER_FAULTY, oper, 0);
 
 		*abort_flag = 1;
 		return;
@@ -870,7 +870,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_2;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
-				    SCTP_PEER_FAULTY, oper);
+				    SCTP_PEER_FAULTY, oper, 0);
 				*abort_flag = 1;
 			} else if (asoc->fragmented_delivery_inprogress &&
 			    (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
@@ -902,7 +902,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_3;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
-				    SCTP_PEER_FAULTY, oper);
+				    SCTP_PEER_FAULTY, oper, 0);
 				*abort_flag = 1;
 			} else if (asoc->fragmented_delivery_inprogress) {
 				/*
@@ -939,7 +939,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_4;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 					*abort_flag = 1;
 				} else if ((asoc->fragment_flags & SCTP_DATA_UNORDERED) !=
 					    SCTP_DATA_UNORDERED &&
@@ -974,7 +974,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_5;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 					*abort_flag = 1;
 				}
 			}
@@ -1072,7 +1072,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_6;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 					*abort_flag = 1;
 					return;
 				}
@@ -1109,7 +1109,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_7;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1148,7 +1148,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_8;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1184,7 +1184,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_9;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1229,7 +1229,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_10;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1271,7 +1271,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_11;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1310,7 +1310,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_12;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1349,7 +1349,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_13;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return;
@@ -1514,7 +1514,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		struct mbuf *op_err;
 
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
-		sctp_abort_an_association(stcb->sctp_ep, stcb, 0, op_err);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, 0, op_err, 0);
 		*abort_flag = 1;
 		return (0);
 	}
@@ -1669,7 +1669,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_14;
 		sctp_abort_an_association(stcb->sctp_ep, stcb, 
-					  SCTP_PEER_FAULTY, oper);
+					  SCTP_PEER_FAULTY, oper, 0);
 		*abort_flag = 1;
 		return (0);
 	}
@@ -1911,7 +1911,7 @@ failed_express_del:
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_15;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
-				    SCTP_PEER_FAULTY, oper);
+				    SCTP_PEER_FAULTY, oper, 0);
 
 				*abort_flag = 1;
 				return (0);
@@ -1949,7 +1949,7 @@ failed_express_del:
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_16;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return (0);
@@ -1996,7 +1996,7 @@ failed_express_del:
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_17;
 					sctp_abort_an_association(stcb->sctp_ep,
-					    stcb, SCTP_PEER_FAULTY, oper);
+					    stcb, SCTP_PEER_FAULTY, oper, 0);
 
 					*abort_flag = 1;
 					return (0);
@@ -3848,7 +3848,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_25);
 			}
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper, 0);
 			return;
 #endif
 		}
@@ -4183,7 +4183,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_24);
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_24;
-				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
+				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper, 0);
 			} else {
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -4375,7 +4375,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 				*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_25);
 			}
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
-			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper, 0);
 			return;
 #endif
 		}
@@ -4847,7 +4847,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 					*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_31);
 				}
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_31;
-				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper);
+				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper, 0);
 				return;
 			} else {
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
@@ -5291,7 +5291,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			}
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_33;
 			sctp_abort_an_association(stcb->sctp_ep, stcb,
-						  SCTP_PEER_FAULTY, oper);
+						  SCTP_PEER_FAULTY, oper, 0);
 			return;
 		}
 		if (asoc->highest_tsn_inside_map >

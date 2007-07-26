@@ -159,7 +159,7 @@ sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
 /* We choose to abort via user input */
 void
 sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
-    struct mbuf *);
+    struct mbuf *, int);
 
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
     struct sctp_inpcb *, struct mbuf *, uint32_t);
