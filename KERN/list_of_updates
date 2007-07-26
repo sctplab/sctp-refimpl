@@ -6,3 +6,6 @@
   padding/alignment. We now redefine all the fields properly
   so they both align properly.
 - Get rid of the sole net giant lock now that 7 does not need it.
+- A peeled off socket would not close without an error due to
+  its misguided idea that sctp_disconnect() was not supported
+  on it. This fixes it so it goes through the proper path.
