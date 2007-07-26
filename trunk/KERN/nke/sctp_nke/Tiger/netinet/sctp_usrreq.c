@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.39 2007/07/21 21:41:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.40 2007/07/24 20:06:02 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -325,7 +325,21 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * TCB
 			 */
 			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
+#if defined(__APPLE__)
+			if (stcb) {
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+			}
+			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+#endif
 			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+			if (stcb) {
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			}
+#endif
 			/* no need to unlock here, since the TCB is gone */
 		}
 	} else {
@@ -343,15 +357,11 @@ sctp_notify(struct sctp_inpcb *inp,
 			SOCK_LOCK(inp->sctp_socket);
 			inp->sctp_socket->so_error = error;
 #if defined (__APPLE__)
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			SCTP_TCB_UNLOCK(stcb);
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 			sctp_sowwakeup(inp, inp->sctp_socket);
 #if defined (__APPLE__)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
-			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 			SOCK_UNLOCK(inp->sctp_socket);
 		}
@@ -1012,6 +1022,7 @@ sctp_disconnect(struct socket *so)
 	int s;
 	s = splsoftnet();
 #endif
+
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1020,7 +1031,8 @@ sctp_disconnect(struct socket *so)
 		return (ENOTCONN);
 	}
 	SCTP_INP_RLOCK(inp);
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)){
 		if (SCTP_LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/* No connection */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1031,6 +1043,7 @@ sctp_disconnect(struct socket *so)
 		} else {
 			struct sctp_association *asoc;
 			struct sctp_tcb *stcb;
+
 			stcb = LIST_FIRST(&inp->sctp_asoc_list);
 			if (stcb == NULL) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1319,7 +1332,7 @@ sctp_shutdown(struct socket *so)
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_USRREQ+SCTP_LOC_6;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 							  SCTP_RESPONSE_TO_USER_REQ,
-							  op_err);
+							  op_err, 1);
 				goto skip_unlock;
 			}
 		}

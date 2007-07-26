@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.52 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.53 2007/07/24 20:06:02 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1829,7 +1829,7 @@ sctp_timeout_handler(void *t)
 		}
 		SCTP_STAT_INCR(sctps_timoshutdownguard);
 		sctp_abort_an_association(inp, stcb,
-		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL);
+		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL, 0);
 		/* no need to unlock on tcb its gone */
 		goto out_decr;
 
@@ -1883,7 +1883,7 @@ sctp_timeout_handler(void *t)
 		SCTP_STAT_INCR(sctps_timoassockill);
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
-		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1 );
+		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1);
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
@@ -3844,6 +3844,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		sctp_abort_notification(stcb, 0);
 		/* get the assoc vrf id and table id */
 		vrf_id = stcb->asoc.vrf_id;
+		stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
 	}
 	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id);
 	if (stcb != NULL) {
@@ -3922,7 +3923,7 @@ sctp_print_out_track_log(struct sctp_tcb *stcb)
 
 void
 sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-			  int error, struct mbuf *op_err)
+			  int error, struct mbuf *op_err, int locked)
 {
 	uint32_t vtag;
 
@@ -3935,6 +3936,8 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 		}
 		return;
+	} else {
+		stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
 	}
 	vtag = stcb->asoc.peer_vtag;
 	/* notify the ulp */
@@ -3951,7 +3954,21 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	sctp_print_out_track_log(stcb);
 #endif
+#if defined(__APPLE__)
+	if (!locked) {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+	}
+#endif
 	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5);
+#if defined (__APPLE__)
+	if (!locked) {
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+	}
+#endif
 }
 
 void

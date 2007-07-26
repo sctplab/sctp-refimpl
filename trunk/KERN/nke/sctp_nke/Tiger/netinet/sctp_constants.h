@@ -480,6 +480,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.24 2007/07/17 20:58:25 
 #define SCTP_STATE_CLOSED_SOCKET	0x0100
 #define SCTP_STATE_ABOUT_TO_BE_FREED    0x0200
 #define SCTP_STATE_PARTIAL_MSG_LEFT     0x0400
+#define SCTP_STATE_WAS_ABORTED          0x0800
 #define SCTP_STATE_MASK			0x007f
 
 #define SCTP_GET_STATE(asoc)	((asoc)->state & SCTP_STATE_MASK)
