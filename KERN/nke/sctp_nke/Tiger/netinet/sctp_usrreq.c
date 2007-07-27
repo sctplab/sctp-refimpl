@@ -329,16 +329,14 @@ sctp_notify(struct sctp_inpcb *inp,
 			if (stcb) {
 				atomic_add_int(&stcb->asoc.refcnt, 1);
 				SCTP_TCB_UNLOCK(stcb);
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			}
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-			if (stcb) {
-				SCTP_TCB_LOCK(stcb);
-				atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			}
 #endif
 			/* no need to unlock here, since the TCB is gone */
 		}
