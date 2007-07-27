@@ -1884,7 +1884,14 @@ sctp_timeout_handler(void *t)
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1);
+#if defined(__APPLE__)
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+#endif
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
+#if defined(__APPLE__)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+#endif
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
 		 * duplicate unlock or unlock of a free mtx :-0
@@ -1902,8 +1909,14 @@ sctp_timeout_handler(void *t)
 		 */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_3);
+#if defined(__APPLE__)
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+#endif
 		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 				SCTP_CALLED_DIRECTLY_NOCMPSET);
+#if defined(__APPLE__)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 		goto out_no_decr;
 	default:
 		SCTPDBG(SCTP_DEBUG_TIMER1, "sctp_timeout_handler:unknown timer %d\n",
@@ -3849,12 +3862,28 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
+#if defined(__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+#endif
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+#endif
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+#if defined(__APPLE__)
+				SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+#endif
 				sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 						SCTP_CALLED_DIRECTLY_NOCMPSET);
+#if defined(__APPLE__)
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 			}
 		}
 	}
@@ -3931,8 +3960,18 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Got to have a TCB */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+#if defined(__APPLE__)
+				if (!locked) {
+					SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+				}
+#endif
 				sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT,
 						SCTP_CALLED_DIRECTLY_NOCMPSET);
+#if defined(__APPLE__)
+				if (!locked) {
+					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+				}
+#endif
 			}
 		}
 		return;
@@ -3982,8 +4021,14 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	/* Generate a TO address for future reference */
 	if (inp && (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+#if defined(__APPLE__)
+			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+#endif
 			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 					SCTP_CALLED_DIRECTLY_NOCMPSET);
+#if defined(__APPLE__)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
 		}
 	}
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,

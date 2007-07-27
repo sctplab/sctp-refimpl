@@ -3149,7 +3149,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	s = splsoftnet();
 #endif
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 #ifdef SCTP_LOG_CLOSING
