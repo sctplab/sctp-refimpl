@@ -14,3 +14,5 @@
   state especially happens in mac. We now add a state in the asoc
   so these can be handle OOTB properly.
 ***********above here is patch 13 new items below *******
+- The single Net Giant for the soneconn() is now removed for
+  7.0.
