@@ -4657,9 +4657,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 		}
 #endif
-#if defined(__APPLE__)
-		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
-#endif
 		SCTP_INP_INFO_WLOCK();
 		SCTP_INP_WLOCK(inp);
 		SCTP_TCB_LOCK(stcb);
@@ -5045,9 +5042,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* destroyed the asoc */
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 11);
-#endif
-#if defined(__APPLE__)
-	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 	return (1);
 }
