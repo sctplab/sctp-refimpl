@@ -1364,7 +1364,7 @@ sctp_iterator_worker(void)
 		sctp_iterator_work(it);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
         /*sa_ignore FREED_MEMORY*/
-		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);		
+		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);
 	}
 	if (TAILQ_FIRST(&sctppcbinfo.iteratorhead)) {
 		goto again;
@@ -3020,7 +3020,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
 			return;
@@ -3080,7 +3080,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
 #if defined (__APPLE__)
@@ -3347,7 +3347,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
 	struct sctp_queued_to_read *control;
-	struct sockbuf *sb;	
+	struct sockbuf *sb;
 
 	if ((stcb == NULL) || sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
@@ -3412,7 +3412,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
 #if defined (__APPLE__)
@@ -3438,7 +3438,17 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 		/* mark socket closed for read/write and wakeup! */
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 		socantsendmore(stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+#endif
 	}
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT))
 		/* event not enabled */
@@ -3868,7 +3878,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
 #if defined (__APPLE__)
@@ -4224,7 +4234,7 @@ sctp_print_address(struct sockaddr *sa)
 	char ip6buf[INET6_ADDRSTRLEN];
 	ip6buf[0] = 0;
 	if (sa->sa_family == AF_INET6) {
-		struct sockaddr_in6 *sin6;	
+		struct sockaddr_in6 *sin6;
 
 		sin6 = (struct sockaddr_in6 *)sa;
 #if defined(__Panda__)
@@ -4507,7 +4517,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
 #if defined (__APPLE__)
@@ -4643,7 +4653,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
 #if defined (__APPLE__)
@@ -4738,7 +4748,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* assoc was freed while we were unlocked */
 				return (ret_sz);

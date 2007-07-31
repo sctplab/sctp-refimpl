@@ -6314,7 +6314,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				sctp_free_a_strmoq(stcb, sp);
 
 				/* we can't be locked to it */
-				*locked = 0;		
+				*locked = 0;
 				stcb->asoc.locked_on_sending = NULL;
 				if(send_lock_up) {
 					SCTP_TCB_SEND_UNLOCK(stcb);
@@ -6398,7 +6398,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			if (sp->some_taken) {
 				*locked = 1;
 			}
-			*giveup = 1;			
+			*giveup = 1;
 			return (0);
 		}
 	}
@@ -6658,7 +6658,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		sctp_free_a_strmoq(stcb, sp);
 
 		/* we can't be locked to it */
-		*locked = 0;		
+		*locked = 0;
 		stcb->asoc.locked_on_sending = NULL;
 	} else {
 		/* more to go, we are locked */
@@ -7585,7 +7585,7 @@ again_one_more_time:
 					 */
 					sctp_move_to_an_alt(stcb, asoc, net);
 				}
-				*reason_code = 6;	
+				*reason_code = 6;
 				/*-
 				 * I add this line to be paranoid. As far as
 				 * I can tell the continue, takes us back to
@@ -8161,7 +8161,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		SCTPDBG(SCTP_DEBUG_OUTPUT1,"SCTP hits empty queue with cnt set to %d?\n",
 			asoc->sent_queue_retran_cnt);
 		asoc->sent_queue_cnt = 0;
-		asoc->sent_queue_cnt_removeable = 0;	
+		asoc->sent_queue_cnt_removeable = 0;
 		/* send back 0/0 so we enter normal transmission */
 		*cnt_out = 0;
 		return(0);
@@ -11039,7 +11039,7 @@ sctp_sosend(struct socket *so,
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 #ifdef __Panda__
-	control = SCTP_HEADER_TO_CHAIN(icontrol);	
+	control = SCTP_HEADER_TO_CHAIN(icontrol);
 #endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
@@ -12490,7 +12490,7 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 		*offset = 0;
 		cn = m;
 		while(cn) {
-			*offset += SCTP_BUF_LEN(cn);			
+			*offset += SCTP_BUF_LEN(cn);
 			cn = SCTP_BUF_NEXT(cn);
 		}
 	}else

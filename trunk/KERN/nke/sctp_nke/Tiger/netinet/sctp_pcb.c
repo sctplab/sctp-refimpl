@@ -578,7 +578,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 #endif
 
  out_now:
-	SCTP_IPI_ADDR_UNLOCK();	
+	SCTP_IPI_ADDR_UNLOCK();
 	if (sctp_ifap) {
 		struct sctp_laddr *wi;
 
