@@ -16,3 +16,6 @@
 ***********above here is patch 13 new items below *******
 - The single Net Giant for the soneconn() is now removed for
   7.0.
+- Fix panic that may occur when freeing an assoc that has partial delivery
+  in progress (may dereference null socket pointer when queuing partial
+  delivery aborted notification)
