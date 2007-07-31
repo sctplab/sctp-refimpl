@@ -3303,15 +3303,16 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 
 /* This always must be called with the read-queue LOCKED in the INP */
 void
-sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
-					uint32_t error, int nolock, uint32_t val)
+sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
+					int nolock, uint32_t val)
 {
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
 	struct sctp_queued_to_read *control;
 	struct sockbuf *sb;	
 
-	if ((stcb == NULL) || sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
+	if ((stcb == NULL) || (stcb->sctp_socket == NULL) ||
+	    sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
 		return;
 
