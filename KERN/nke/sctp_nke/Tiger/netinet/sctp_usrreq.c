@@ -531,7 +531,7 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	 * in theory could create a hole. Better
 	 * to use higher wlock.
 	 */
-	SCTP_INP_WLOCK(inp);	
+	SCTP_INP_WLOCK(inp);
  cred_can_cont:
 	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
 	if(error) {
@@ -2055,7 +2055,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				av->assoc_value = stcb->asoc.context;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				av->assoc_value = inp->sctp_context;
 				SCTP_INP_RUNLOCK(inp);
 			}
@@ -2074,7 +2074,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_value *id;
 		SCTP_CHECK_AND_CAST(id, optval, struct sctp_assoc_value, *optsize);
-		SCTP_FIND_STCB(inp, stcb, id->assoc_id);		
+		SCTP_FIND_STCB(inp, stcb, id->assoc_id);
 		if(stcb == NULL) {
 			error = EINVAL;
 			break;
@@ -2129,10 +2129,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sack->sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				sack->sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 				sack->sack_freq = inp->sctp_ep.sctp_sack_freq;
-				SCTP_INP_RUNLOCK(inp);				
+				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sack);
 		}
@@ -2179,7 +2179,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				av->assoc_value = sctp_get_frag_point(stcb, &stcb->asoc);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 					ovh = SCTP_MED_OVERHEAD;
 				} else {
@@ -2189,7 +2189,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					av->assoc_value = 0;
 				else
 					av->assoc_value = inp->sctp_frag_point - ovh;
-				SCTP_INP_RUNLOCK(inp);				
+				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(struct sctp_assoc_value);
 		}

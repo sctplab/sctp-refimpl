@@ -209,7 +209,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	read_queue_e->data = dm;
 	read_queue_e->spec_flags = 0;
 	read_queue_e->tail_mbuf = NULL;
-	read_queue_e->aux_data = NULL;	
+	read_queue_e->aux_data = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
 	read_queue_e->do_not_ref_stcb = 0;
@@ -244,7 +244,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_cumtsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = chk->whoTo;
-	read_queue_e->aux_data = NULL;	
+	read_queue_e->aux_data = NULL;
 	read_queue_e->length = 0;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	read_queue_e->data = chk->data;
@@ -1540,7 +1540,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			    /* assoc was freed while we were unlocked */
 			    return (0);
@@ -1578,7 +1578,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		struct mbuf *mb;
 
 		mb = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) * 2),
-					   0, M_DONTWAIT, 1, MT_DATA);	
+					   0, M_DONTWAIT, 1, MT_DATA);
 		if (mb != NULL) {
 			/* add some space up front so prepend will work well */
 			SCTP_BUF_RESV_UF(mb, sizeof(struct sctp_chunkhdr));
@@ -3655,7 +3655,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 					SCTP_TCB_UNLOCK(stcb);
 					SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 						/* assoc was freed while we were unlocked */
 						return (NULL);
@@ -3968,11 +3968,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			sctp_wakeup_log(stcb, cumack, 1, SCTP_WAKESND_FROM_SACK);
 		}
 #if defined (__APPLE__)
-		atomic_add_int(&stcb->asoc.refcnt, 1);			
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
 			return;
@@ -4689,11 +4689,11 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 		}
 #if defined (__APPLE__)
-		atomic_add_int(&stcb->asoc.refcnt, 1);			
+		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);			
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
 			return;
