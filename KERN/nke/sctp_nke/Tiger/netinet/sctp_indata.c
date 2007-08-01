@@ -3978,7 +3978,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			return;
 		}
 #endif
-		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
+		if (stcb->sctp_socket) { /* FIXME MT: Why? */
+			sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
