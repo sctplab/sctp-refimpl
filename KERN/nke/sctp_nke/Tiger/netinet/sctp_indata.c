@@ -1542,8 +1542,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-			    /* assoc was freed while we were unlocked */
-			    return (0);
+				/* assoc was freed while we were unlocked */
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+				return (0);
 			}
 #endif
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
@@ -3658,6 +3659,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 						/* assoc was freed while we were unlocked */
+						SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 						return (NULL);
 					}
 #endif
@@ -3975,6 +3977,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			return;
 		}
 #endif
@@ -4698,6 +4701,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			return;
 		}
 #endif

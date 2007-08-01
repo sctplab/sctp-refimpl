@@ -3023,6 +3023,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			return;
 		}
 #endif
@@ -4751,6 +4752,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* assoc was freed while we were unlocked */
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 				return (ret_sz);
 			}
 #endif

@@ -662,6 +662,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			return;
 		}
 #endif
@@ -751,6 +752,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 			return;
 		}
 #endif
@@ -1286,7 +1288,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					SCTP_TCB_LOCK(stcb);
 					atomic_add_int(&stcb->asoc.refcnt, -1);
 					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-						return (NULL);
+						SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+ 						return (NULL);
 					}
 #endif
 					soisconnected(stcb->sctp_ep->sctp_socket);
@@ -1446,6 +1449,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				SCTP_TCB_LOCK(stcb);
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 					return (NULL);
 				}
 #endif
@@ -2516,6 +2520,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 				return;
 			}
 #endif
