@@ -614,11 +614,11 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 	SCTP_TCB_LOCK(stcb);
-	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: finished\n");
 }
@@ -787,12 +787,12 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 	SCTP_TCB_LOCK(stcb);
-	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 			SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 }
 
@@ -924,11 +924,11 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 					SCTP_TCB_UNLOCK(stcb);
 					SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					return (-1);
 				}
@@ -1768,7 +1768,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
@@ -1800,7 +1800,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/* load all addresses */
@@ -1817,7 +1817,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/*
@@ -1846,7 +1846,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
-			atomic_add_int(&stcb->asoc.refcnt, -1);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			return (NULL);
 		} else {
 			/* remaining chunks checked... good to go */
@@ -1904,7 +1904,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 #endif
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 
@@ -2374,11 +2374,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				SCTP_TCB_UNLOCK((*stcb));
 				SCTP_SOCKET_LOCK(SCTP_INP_SO((*stcb)->sctp_ep), 1);
 				SCTP_TCB_LOCK((*stcb));
-				atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 #endif
 				sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
 #if defined (__APPLE__)
 				SCTP_SOCKET_UNLOCK(SCTP_INP_SO((*stcb)->sctp_ep), 1);
+				atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 #endif
 				return (NULL);
 			}
@@ -2705,11 +2705,11 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	SCTP_TCB_UNLOCK(stcb);
 	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 	SCTP_TCB_LOCK(stcb);
-	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	return;
 }
@@ -4035,11 +4035,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						SCTP_TCB_UNLOCK(stcb);
 						SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 						SCTP_TCB_LOCK(stcb);
-						atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 						sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 #if defined (__APPLE__)
 						SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+						atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					}
 					return (NULL);
@@ -4345,11 +4345,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_UNLOCK(stcb);
 					SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					*offset = length;
 					return (NULL);
@@ -4462,11 +4462,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_UNLOCK(stcb);
 					SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 					*offset = length;
 					return (NULL);
@@ -4500,11 +4500,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_TCB_UNLOCK(stcb);
 				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
 				SCTP_TCB_LOCK(stcb);
-				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30);
 #if defined (__APPLE__)
 				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 				*offset = length;
 				return (NULL);

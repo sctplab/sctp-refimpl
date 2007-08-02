@@ -335,7 +335,7 @@ sctp_notify(struct sctp_inpcb *inp,
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			SCTP_TCB_UNLOCK(stcb);
+			/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
 #endif
 			/* no need to unlock here, since the TCB is gone */
 		}
