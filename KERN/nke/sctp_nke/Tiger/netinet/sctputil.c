@@ -475,7 +475,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t cumtsn, uint32_t wake_cnt, int f
         /* what about the sb */
 	if(stcb->sctp_socket) {
 		struct socket *so = stcb->sctp_socket;
-		
+
 		sctp_clog.x.wake.sbflags = (uint8_t)((so->so_snd.sb_flags & 0x00ff));
 	} else {
 		sctp_clog.x.wake.sbflags = 0xff;
@@ -1016,7 +1016,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->stream_locked = 0;
 
 	asoc->send_sack = 1;
-	
+
 	LIST_INIT(&asoc->sctp_restricted_addrs);
 
 	TAILQ_INIT(&asoc->nets);
@@ -1168,7 +1168,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	uint8_t *new_array;
 	uint32_t new_size;
 
-	
 	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
 	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
@@ -1305,7 +1304,7 @@ select_a_new_ep:
 		 */
 		if (it->no_chunk_output == 0)
 			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
-		
+
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
@@ -2640,7 +2639,7 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
 	int32_t tlen = 0;
-	
+
 #ifdef SCTP_USE_ADLER32
 	uint32_t base = 1L;
 #else
@@ -3043,7 +3042,6 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 #endif
 		sctp_asoc_change_wake++;
 	}
-	
 
 	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
@@ -3354,15 +3352,16 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 
 /* This always must be called with the read-queue LOCKED in the INP */
 void
-sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
-					uint32_t error, int nolock, uint32_t val)
+sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
+					int nolock, uint32_t val)
 {
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
 	struct sctp_queued_to_read *control;
 	struct sockbuf *sb;
 
-	if ((stcb == NULL) || sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
+	if ((stcb == NULL) || (stcb->sctp_socket == NULL) ||
+	    sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT))
 		/* event not enabled */
 		return;
 
@@ -3664,7 +3663,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	{
 		uint32_t val;
 		val = *((uint32_t *)data);
-		
+
 		sctp_notify_partial_delivery_indication(stcb, error, 0, val);
 	}
 		break;
@@ -4900,7 +4899,6 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 uint32_t
 sctp_get_ifa_hash_val(struct sockaddr *addr)
 {
-	
 	if (addr->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		sin = (struct sockaddr_in *)addr;
@@ -4990,7 +4988,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, uint32_t *freed_so_far, int hold_rlock,
 	int r_unlocked = 0;
 	uint32_t dif, rwnd;
 	struct socket *so=NULL;
-	
+
 	if (stcb == NULL) 
 		return;
 
@@ -5160,7 +5158,7 @@ sctp_sorecvmsg(struct socket *so,
 		sctp_misc_ints(SCTP_SORECV_ENTERPL,
 			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
 	}
-	
+
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
@@ -6175,7 +6173,7 @@ sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
 		struct sctp_inpcb *inp;
 
 		inp = (struct sctp_inpcb *)so->so_pcb;
-		
+
 		if(filling_sinfo)
 			*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
 		else

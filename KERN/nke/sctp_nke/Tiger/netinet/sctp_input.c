@@ -183,7 +183,7 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 	struct sctp_stream_queue_pending *sp;
 	struct sctp_stream_out *strq;
 	struct sctp_association *asoc;
-	
+
 	/* This function returns the number of streams that have
 	 * true unsent data on them. Note that as it looks through
 	 * it will clean up any places that have old data that
@@ -314,7 +314,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->last_echo_tsn = asoc->asconf_seq_in;
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 	/* open the requested streams */
-	
+
 	if (asoc->strmin != NULL) {
 		/* Free the old ones */
 		struct sctp_queued_to_read *ctl;
@@ -414,7 +414,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		return (-1);
 	}
 	/* if the peer doesn't support asconf, flush the asconf queue */
-	if (asoc->peer_supports_asconf == 0) {	
+	if (asoc->peer_supports_asconf == 0) {
 		struct sctp_asconf_addr *aparam;
 		while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
 			/* sa_ignore FREED_MEMORY */
@@ -1758,7 +1758,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"process_cookie_new: no room for another TCB!\n");
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
-		
+
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
 		return (NULL);
@@ -2281,7 +2281,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * cases where we throw away the incoming packets.
 				 */
 				*locked_tcb = *stcb;
-				
+
 				/* We must also increment the inp ref count
 				 * since the ref_count flags was set when we 
 				 * did not find the TCB, now we found it which
@@ -2365,7 +2365,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000)
 			/*
 			 * We do this to keep the sockets side happy during
 			 * the sonewcon ONLY.
@@ -2385,7 +2385,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			     ,NULL , (*inp_p)->def_vrf_id
 #endif
 			    );
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000)
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000)
 			NET_UNLOCK_GIANT();
 #endif
 #if defined(__APPLE__)
@@ -3575,7 +3575,7 @@ sctp_handle_packet_dropped(struct sctp_pktdrop_chunk *cp,
 	if(trunc_len > limit) {
 		trunc_len = limit;
 	}
-	
+
 	/* now the chunks themselves */
 	while ((ch != NULL) && (chlen >= sizeof(struct sctp_chunkhdr))) {
 		desc.chunk_type = ch->chunk_type;
@@ -4191,7 +4191,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_HEARTBEAT_ACK:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_HEARTBEAT-ACK\n");
-			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_heartbeat_chunk))) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_heartbeat_chunk))) {
 				/* Its not ours */
 				*offset = length;
 				if (locked_tcb) {
@@ -4218,13 +4218,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		case SCTP_SHUTDOWN:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN, stcb %p\n",
 				stcb);
-			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_shutdown_chunk))) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_shutdown_chunk))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
 				}
 				return (NULL);
-				
 			}
 			if(netp && *netp){
 				int abort_flag = 0;
@@ -4414,7 +4413,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		case SCTP_ECN_ECHO:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ECN-ECHO\n");
 			/* He's alive so give him credit */
-			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_ecne_chunk))) {			
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_ecne_chunk))) {
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4431,7 +4430,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		case SCTP_ECN_CWR:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ECN-CWR\n");
 			/* He's alive so give him credit */
-			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_cwr_chunk))) {	
+			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_cwr_chunk))) {
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4880,7 +4879,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			goto out_now;
 		}
 	}
-	
+
 	if (stcb == NULL) {
 		/*
 		 * no valid TCB for this packet, or we found it's a bad
@@ -5064,7 +5063,7 @@ static struct mbuf *
 sctp_trim_mbuf(struct mbuf *m)
 {
 	struct mbuf *n, *m0;
-	
+
 	while (m && SCTP_BUF_LEN(m) == 0) {
 		n = SCTP_BUF_NEXT(m);
 		SCTP_BUF_NEXT(m) = NULL;
@@ -5072,7 +5071,7 @@ sctp_trim_mbuf(struct mbuf *m)
 		m = n;
 	}
 	m0 = m;
-	
+
 	for(; m; m = SCTP_BUF_NEXT(m)) {
 		n = SCTP_BUF_NEXT(m);
 		while (n && SCTP_BUF_LEN(n) == 0) {

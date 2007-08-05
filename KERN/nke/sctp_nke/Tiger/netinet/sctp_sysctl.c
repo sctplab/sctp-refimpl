@@ -169,7 +169,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 	struct xsctp_laddr xladdr;
 	struct sctp_laddr *laddr;
 	int error;
-	
+
 	/* Turn on all the appropriate scope */
 	if (stcb) {
 		/* use association specific values */
@@ -199,7 +199,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 	}
 
 	error = 0;
-	
+
 	/* neither Mac OS X nor FreeBSD support mulitple routing functions */
 	if ((vrf = sctp_find_vrf(inp->def_vrf_id)) == NULL) {
 		SCTP_INP_RUNLOCK(inp);
@@ -328,12 +328,12 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	struct xsctp_inpcb xinpcb;
 	struct xsctp_tcb xstcb;
 	struct xsctp_raddr xraddr;
-	
+
 	number_of_endpoints = 0;
 	number_of_local_addresses = 0;
 	number_of_associations = 0;
 	number_of_remote_addresses = 0;
-	
+
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
@@ -417,7 +417,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 			return error;
-		}			
+		}
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			SCTP_TCB_LOCK(stcb);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -472,7 +472,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				SCTP_INP_DECR_REF(inp);
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
-			}			
+			}
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				xraddr.last = 0;
 				xraddr.address = net->ro._l_addr;
@@ -501,7 +501,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				}
 				SCTP_INP_INFO_RLOCK();
 				SCTP_INP_RLOCK(inp);
-			}		
+			}
 			atomic_add_int(&stcb->asoc.refcnt, -1);
 			memset((void *)&xraddr, 0, sizeof(struct xsctp_raddr));
 			xraddr.last = 1;
@@ -515,7 +515,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #endif
 				SCTP_INP_DECR_REF(inp);
 				return error;
-			}						
+			}
 			SCTP_INP_INFO_RLOCK();
 			SCTP_INP_RLOCK(inp);
 		}
@@ -540,7 +540,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 	SCTP_INP_INFO_RUNLOCK();
-	
+
 	memset((void *)&xinpcb, 0, sizeof(struct xsctp_inpcb));
 	xinpcb.last = 1;
 	error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));

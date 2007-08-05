@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.26 2007/07/21 21:41:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.27 2007/07/24 20:06:01 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -215,6 +215,7 @@ struct sctp_epinfo {
 	lck_mtx_t *ipi_addr_mtx;
 	lck_mtx_t *ipi_count_mtx;
 	lck_mtx_t *ipi_pktlog_mtx;
+	lck_mtx_t *logging_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
@@ -223,6 +224,7 @@ struct sctp_epinfo {
 	void *it_mtx;
 	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
+	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #endif
 	uint32_t ipi_count_ep;
@@ -422,7 +424,7 @@ struct sctp_inpcb {
 #ifdef __Panda__
 	pakhandle_type pak_to_read;
 	pakhandle_type pak_to_read_sendq;
-#endif	
+#endif
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

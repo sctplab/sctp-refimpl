@@ -148,7 +148,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc, 
 		 int accum_moved ,int reneged_all, int will_exit )
 {
-	struct sctp_nets *net;	
+	struct sctp_nets *net;
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/
@@ -634,7 +634,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc, 
 		 int accum_moved ,int reneged_all, int will_exit )
 {
-	struct sctp_nets *net;	
+	struct sctp_nets *net;
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/
@@ -1319,7 +1319,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc, 
 		 int accum_moved ,int reneged_all, int will_exit )
 {
-	struct sctp_nets *net;	
+	struct sctp_nets *net;
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/

@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.35 2007/07/21 21:41:32 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.36 2007/07/24 20:06:02 rrs Exp $");
 #endif
 
 
@@ -632,7 +632,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	 * in theory could create a hole. Better
 	 * to use higher wlock.
 	 */
-	SCTP_INP_WLOCK(inp);	
+	SCTP_INP_WLOCK(inp);
  cred_can_cont:
 	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
 	if (error) {
@@ -940,7 +940,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 
-static void	
+static void
 sctp6_close(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -1038,7 +1038,7 @@ sctp6_detach(struct socket *so)
 			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE,
 					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		}
-		
+
 		/* The socket is now detached, no matter what
 		 * the state of the SCTP association.
 		 */
@@ -2012,7 +2012,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 		vrf = panda_get_vrf_from_call(); /* from socket option call? */
 #endif
 		sctp_ifn = sctp_find_ifn(vrf, (void *)ifn, ifn->if_index);
-		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if (sctp_ifa->address.sa.sa_family == family) {
 				sctp_delete_ip_address(sctp_ifa);
 			}

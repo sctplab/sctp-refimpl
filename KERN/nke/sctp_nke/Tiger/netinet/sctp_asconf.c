@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.22 2007/07/21 21:41:30 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.23 2007/07/24 20:06:01 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -1136,7 +1136,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 
 	if (stcb == NULL) {
 		return (-1);
-	}	
+	}
 	/* see if peer supports ASCONF */
 	if (stcb->asoc.peer_supports_asconf == 0) {
 		return (-1);
@@ -1421,7 +1421,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 	}
 	if (stcb->asoc.asconf_sent == 0) {
 		/* got a unexpected ASCONF-ACK for serial not in flight */
-		SCTPDBG(SCTP_DEBUG_ASCONF1, "handle_asconf_ack: got serial number = %xh but not in flight\n",	
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "handle_asconf_ack: got serial number = %xh but not in flight\n",
 			serial_num);
 		/* nothing to do... duplicate ACK received */
 		return;
@@ -1812,7 +1812,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (ifa->vrf_id != stcb->asoc.vrf_id) {
 			continue;
 		}
-		
+
 		/* Same checks again for assoc */
 		if (ifa->address.sa.sa_family == AF_INET6) {
 			/* invalid if we're not a v6 endpoint */
