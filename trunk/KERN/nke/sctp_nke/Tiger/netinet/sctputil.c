@@ -1440,6 +1440,9 @@ sctp_timeout_handler(void *t)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
+#if defined (__APPLE__)
+	struct socket *so;
+#endif
 	int did_output;
 	struct sctp_iterator *it = NULL;
 
@@ -1884,14 +1887,15 @@ sctp_timeout_handler(void *t)
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1);
-#if defined(__APPLE__)
+#if defined(__APPLE__)		
+		so = SCTP_INP_SO(inp);
 		SCTP_TCB_UNLOCK(stcb);
-		SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
 		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
 #if defined(__APPLE__)
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 1);
+		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
