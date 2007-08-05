@@ -166,7 +166,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		return (NULL);
 
 	}
-#ifdef SCTP_PER_SOCKET_LOCKING
+#if defined(__APPLE__)
          else {
 		SCTP_SOCKET_LOCK(newso, 1);
 	}
