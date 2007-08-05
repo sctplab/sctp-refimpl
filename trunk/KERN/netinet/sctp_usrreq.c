@@ -513,7 +513,7 @@ sctp_getcred(SYSCTL_HANDLER_ARGS)
 	 * in theory could create a hole. Better
 	 * to use higher wlock.
 	 */
-	SCTP_INP_WLOCK(inp);	
+	SCTP_INP_WLOCK(inp);
  cred_can_cont:
 	error = cr_canseesocket(req->td->td_ucred, inp->sctp_socket);
 	if(error) {
@@ -622,7 +622,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 #if !defined(__Panda__)
 	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
 #endif
-#ifdef IPSEC	
+#ifdef IPSEC
 	uint32_t flags;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -1439,7 +1439,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 						in6_sin_2_v4mapsin6(sin, (struct sockaddr_in6 *)sas);
 						((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 						sas = (struct sockaddr_storage *)((caddr_t)sas + sizeof(struct sockaddr_in6));
-						actual += sizeof(sizeof(struct sockaddr_in6));
+						actual += sizeof(struct sockaddr_in6);
 					} else {
 						memcpy(sas, sin, sizeof(*sin));
 						((struct sockaddr_in *)sas)->sin_port = inp->sctp_lport;
@@ -1752,7 +1752,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in));
 	else
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in6));
-	
+
 	error = 0;
 	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
 	/* Fill in the return id */
@@ -1866,7 +1866,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		case SCTP_NODELAY:
 			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY);
 			break;
-		case SCTP_USE_EXT_RCVINFO:			
+		case SCTP_USE_EXT_RCVINFO:
 			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO);
 			break;
 		case SCTP_AUTOCLOSE:
@@ -1910,7 +1910,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_PARTIAL_DELIVERY_POINT:
 		{
 			uint32_t *value;
-		
+
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 			*value = inp->partial_delivery_point;
 			*optsize = sizeof(uint32_t);
@@ -1992,7 +1992,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_ASSOC_NUMBER:
 		{
 			uint32_t *value, cnt;
-		
+
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 			cnt = 0;
 			SCTP_INP_RLOCK(inp);
@@ -2037,7 +2037,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				av->assoc_value = stcb->asoc.context;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				av->assoc_value = inp->sctp_context;
 				SCTP_INP_RUNLOCK(inp);
 			}
@@ -2056,7 +2056,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_value *id;
 		SCTP_CHECK_AND_CAST(id, optval, struct sctp_assoc_value, *optsize);
-		SCTP_FIND_STCB(inp, stcb, id->assoc_id);		
+		SCTP_FIND_STCB(inp, stcb, id->assoc_id);
 		if(stcb == NULL) {
 			error = EINVAL;
 			break;
@@ -2111,10 +2111,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				sack->sack_freq = stcb->asoc.sack_freq;
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				sack->sack_delay = TICKS_TO_MSEC(inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_RECV]);
 				sack->sack_freq = inp->sctp_ep.sctp_sack_freq;
-				SCTP_INP_RUNLOCK(inp);				
+				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(*sack);
 		}
@@ -2123,10 +2123,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_SNDBUF_USE:
 		{
 			struct sctp_sockstat *ss;
-			
+
 			SCTP_CHECK_AND_CAST(ss, optval, struct sctp_sockstat, *optsize);
 			SCTP_FIND_STCB(inp, stcb, ss->ss_assoc_id);
-			
+
 			if (stcb) {
 				ss->ss_total_sndbuf = stcb->asoc.total_output_queue_size;
 				ss->ss_total_recv_buf = (stcb->asoc.size_on_reasm_queue +
@@ -2141,7 +2141,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_MAX_BURST:
 		{
 			uint8_t *value;
-			
+
 			SCTP_CHECK_AND_CAST(value, optval, uint8_t, *optsize);
 
 			SCTP_INP_RLOCK(inp);
@@ -2161,7 +2161,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				av->assoc_value = sctp_get_frag_point(stcb, &stcb->asoc);
 				SCTP_TCB_UNLOCK(stcb);
 			} else {
-				SCTP_INP_RLOCK(inp);				
+				SCTP_INP_RLOCK(inp);
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 					ovh = SCTP_MED_OVERHEAD;
 				} else {
@@ -2171,7 +2171,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					av->assoc_value = 0;
 				else
 					av->assoc_value = inp->sctp_frag_point - ovh;
-				SCTP_INP_RUNLOCK(inp);				
+				SCTP_INP_RUNLOCK(inp);
 			}
 			*optsize = sizeof(struct sctp_assoc_value);
 		}
@@ -2223,7 +2223,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_ADAPTATION_LAYER:
 		{
 			uint32_t *value;
-			
+
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 
 			SCTP_INP_RLOCK(inp);
@@ -2235,7 +2235,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_SET_INITIAL_DBG_SEQ:
 		{
 			uint32_t *value;
-			
+
 			SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 			SCTP_INP_RLOCK(inp);
 			*value = inp->sctp_ep.initial_sequence_debug;
@@ -2296,7 +2296,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			struct sockaddr_storage *sas;
 			struct sctp_nets *net;
 			struct sctp_getaddresses *saddr;
-			
+
 			SCTP_CHECK_AND_CAST(saddr, optval, struct sctp_getaddresses, *optsize);
 			SCTP_FIND_STCB(inp, stcb, saddr->sget_assoc_id);
 
@@ -2364,7 +2364,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			SCTP_CHECK_AND_CAST(paddrp, optval, struct sctp_paddrparams, *optsize);
 			SCTP_FIND_STCB(inp, stcb, paddrp->spp_assoc_id);
-			
+
 			net = NULL;
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&paddrp->spp_address);
@@ -2379,7 +2379,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					SCTP_INP_DECR_REF(inp);
 				}
 			}
-				
+
 			if (stcb) {
 				/* Applys to the specific association */
 				paddrp->spp_flags = 0;
@@ -2497,7 +2497,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			SCTP_CHECK_AND_CAST(paddri, optval, struct sctp_paddrinfo, *optsize);
 			SCTP_FIND_STCB(inp, stcb, paddri->spinfo_assoc_id);
-			
+
 			net = NULL;
 			if (stcb) {
 				net = sctp_findnet(stcb, (struct sockaddr *)&paddri->spinfo_address);
@@ -2602,10 +2602,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_RTOINFO:
 		{
 			struct sctp_rtoinfo *srto;
-			
+
 			SCTP_CHECK_AND_CAST(srto, optval, struct sctp_rtoinfo, *optsize);
 			SCTP_FIND_STCB(inp, stcb, srto->srto_assoc_id);
-			
+
 			if (stcb) {
 				srto->srto_initial = stcb->asoc.initial_rto;
 				srto->srto_max = stcb->asoc.maxrto;
@@ -2654,7 +2654,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			SCTP_CHECK_AND_CAST(s_info, optval, struct sctp_sndrcvinfo, *optsize);
 			SCTP_FIND_STCB(inp, stcb, s_info->sinfo_assoc_id);
-			
+
 			if (stcb) {
 				memcpy(s_info, &stcb->asoc.def_send, sizeof(stcb->asoc.def_send));
 				SCTP_TCB_UNLOCK(stcb);
@@ -2687,7 +2687,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 			SCTP_CHECK_AND_CAST(ssp, optval, struct sctp_setprim, *optsize);
 			SCTP_FIND_STCB(inp, stcb, ssp->ssp_assoc_id);
-			
+
 			if (stcb) {
 				/* simply copy out the sockaddr_storage... */
 				int len;
@@ -2897,7 +2897,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		case SCTP_EXPLICIT_EOR:
 			set_opt = SCTP_PCB_FLAGS_EXPLICIT_EOR;
 			break;
-		case SCTP_USE_EXT_RCVINFO:			
+		case SCTP_USE_EXT_RCVINFO:
 			set_opt = SCTP_PCB_FLAGS_EXT_RCVINFO;
 			break;
 		case SCTP_I_WANT_MAPPED_V4_ADDR:
@@ -3046,7 +3046,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		} else {
 			switch(av->assoc_value) {
-			case SCTP_CC_RFC2581:				
+			case SCTP_CC_RFC2581:
 			case SCTP_CC_HSTCP:
 			case SCTP_CC_HTCP:
 				inp->sctp_ep.sctp_default_cc_module = av->assoc_value;
@@ -3675,7 +3675,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_ADAPTATION_LAYER:
 	{
 		struct sctp_setadaptation *adap_bits;
-			
+
 		SCTP_CHECK_AND_CAST(adap_bits, optval, struct sctp_setadaptation, optsize);
 		SCTP_INP_WLOCK(inp);
 		inp->sctp_ep.adaptation_layer_indicator = adap_bits->ssb_adaptation_ind;
@@ -3933,7 +3933,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_rtoinfo *srto;
 		uint32_t new_init, new_min, new_max;
-		
+
 		SCTP_CHECK_AND_CAST(srto, optval, struct sctp_rtoinfo, optsize);
 		SCTP_FIND_STCB(inp, stcb, srto->srto_assoc_id);
 
@@ -4005,7 +4005,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sasoc->sasoc_local_rwnd = 0;
 			if (sasoc->sasoc_cookie_life) {
 				stcb->asoc.cookie_life = MSEC_TO_TICKS(sasoc->sasoc_cookie_life);
-				
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
@@ -4049,7 +4048,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(spa, optval, struct sctp_setprim, optsize);
 		SCTP_FIND_STCB(inp, stcb, spa->ssp_assoc_id);
-	
+
 		net = NULL;
 		if (stcb) {
 			net = sctp_findnet(stcb, (struct sockaddr *)&spa->ssp_addr);
@@ -4066,7 +4065,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				SCTP_INP_DECR_REF(inp);
 			}
 		}
-			
+
 		if ((stcb) && (net)) {
 			if ((net != stcb->asoc.primary_destination) &&
 			    (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
@@ -5219,10 +5218,9 @@ sctp_usrreq(so, req, m, nam, control)
 			splx(s);
 #endif
 			return (EINVAL);
-			
 		}
 		sctp_ifn = sctp_find_ifn(vrf_id, ifn, ifn->if_index);
-		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {		
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if (sctp_ifa->address.sa.sa_family == family) {
 				sctp_delete_ip_address(sctp_ifa);
 			}
