@@ -260,6 +260,10 @@ sctp_notify(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
+#if defined(__APPLE__)
+	struct socket *so;
+
+#endif
 	/* protection */
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (sh == NULL) || (to == NULL)) {
@@ -326,15 +330,16 @@ sctp_notify(struct sctp_inpcb *inp,
 			 */
 			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
 #if defined(__APPLE__)
+			so = SCTP_INP_SO(inp);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
+			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
 #if defined (__APPLE__)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			SCTP_SOCKET_UNLOCK(so, 1);
 			/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
 #endif
 			/* no need to unlock here, since the TCB is gone */
