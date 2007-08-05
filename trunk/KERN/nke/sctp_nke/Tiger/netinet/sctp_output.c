@@ -11127,10 +11127,11 @@ sctp_lower_sosend(struct socket *so,
 	net = NULL;
 	stcb = NULL;
 	asoc = NULL;
-	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
+
 #if defined(__APPLE__)
-	sctp_lock_assert(SCTP_INP_SO(inp));
+	sctp_lock_assert(so);
 #endif
+	t_inp = inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 		error = EFAULT;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -11680,11 +11681,11 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_BUF_LEN(mm) = tot_out + sizeof(struct sctp_paramhdr);
 			if(top == NULL) {
 #if defined(__APPLE__)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
+				SCTP_SOCKET_UNLOCK(so, 0);
 #endif
 				error = uiomove((caddr_t)ph, (int)tot_out, uio);
 #if defined(__APPLE__)
-				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
+				SCTP_SOCKET_LOCK(so, 0);
 #endif
 				if (error) {
 					/*-
@@ -11891,11 +11892,11 @@ sctp_lower_sosend(struct socket *so,
 					hold_tcblock = 0;
 				}
 #if defined(__APPLE__)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
+				SCTP_SOCKET_UNLOCK(so, 0);
 #endif
 				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
 #if defined(__APPLE__)
-				SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
+				SCTP_SOCKET_LOCK(so, 0);
 #endif
 				if ((mm == NULL) || error) {
 					if (mm) {
