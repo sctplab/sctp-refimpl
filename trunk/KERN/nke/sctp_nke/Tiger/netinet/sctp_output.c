@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.47 2007/07/21 21:41:31 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.48 2007/07/24 20:06:01 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2934,7 +2934,6 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			      struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id)
 {
-	
 	struct sockaddr_in *to = (struct sockaddr_in *)&ro->ro_dst;
 	struct sockaddr_in6 *to6 = (struct sockaddr_in6 *)&ro->ro_dst;
 	struct sctp_ifa *answer;
@@ -2957,7 +2956,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
          *------------------------------------------
 	 *      source     *      dest  *  result
 	 * -----------------------------------------
-	 * <a>  Private    *    Global  *	NAT  
+	 * <a>  Private    *    Global  *  NAT  
 	 * ----------------------------------------- 
 	 * <b>  Private    *    Private *  No problem
 	 * ----------------------------------------- 
@@ -2970,7 +2969,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
          *------------------------------------------
 	 *      source     *      dest  *  result
 	 * -----------------------------------------
-	 * <a>  Linklocal  *    Global  *	
+	 * <a>  Linklocal  *    Global  *
 	 * ----------------------------------------- 
 	 * <b>  Linklocal  * Linklocal  *  No problem
 	 * ----------------------------------------- 
@@ -3332,7 +3331,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		csum = sctp_calculate_sum(m, &packet_length, 0);
 		sctphdr->checksum = csum;
 	}
-	
+
 	if (to->sa_family == AF_INET) {
 		struct ip *ip = NULL;
 		sctp_route_t iproute;
@@ -3554,7 +3553,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if (ret)
 			SCTP_STAT_INCR(sctps_senderrors);
-			
+
 		SCTPDBG(SCTP_DEBUG_OUTPUT3, "IP output returns %d\n", ret);
 		if (net == NULL) {
 			/* free tempy routes */
@@ -5168,7 +5167,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	/* Now append the cookie to the end and update the space/size */
 	SCTP_BUF_NEXT(m_tmp) = m_cookie;
-	
+
 	for (m_tmp = m_cookie; m_tmp; m_tmp = SCTP_BUF_NEXT(m_tmp)) {
 		p_len += SCTP_BUF_LEN(m_tmp);
 		if (SCTP_BUF_NEXT(m_tmp) == NULL) {
@@ -5754,7 +5753,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		/* Abort this assoc with m as the user defined reason */
 		if (m) {
 			struct sctp_paramhdr *ph;
-			
+
 			SCTP_BUF_PREPEND(m, sizeof(struct sctp_paramhdr), M_DONTWAIT);
 			if(m) {
 				ph = mtod(m, struct sctp_paramhdr *);
@@ -8822,7 +8821,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			break;
 		}
 		SCTPDBG(SCTP_DEBUG_OUTPUT3, "m-c-o put out %d\n", num_out);
-		
+
 		tot_out += num_out;
 		burst_cnt++;
 		if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE){
@@ -9110,7 +9109,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		panic("sctp_send_sack");
 	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
 #endif
-	
+
 	a_chk = NULL;
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -10312,7 +10311,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	chk->book_size = sizeof(struct sctp_chunkhdr);
 	chk->send_size = SCTP_SIZE32(chk->book_size);
 	chk->book_size_scale = 0;
-	
+
 	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (chk->data == NULL) {
 		sctp_free_a_chunk(stcb, chk);
@@ -10504,7 +10503,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		/* out it goes */
 #ifdef  SCTP_PACKET_LOGGING
-		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)	
+		if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
@@ -11175,7 +11174,7 @@ sctp_lower_sosend(struct socket *so,
 	if (i_control) {
 		control = SCTP_HEADER_TO_CHAIN(i_control);
 	}
-#endif	
+#endif
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -11413,7 +11412,7 @@ sctp_lower_sosend(struct socket *so,
 			asoc = &stcb->asoc;
 			asoc->state = SCTP_STATE_COOKIE_WAIT;
 			(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
-			
+
 			/* initialize authentication params for the assoc */
 			sctp_initialize_auth_params(inp, stcb);
 
@@ -11421,7 +11420,7 @@ sctp_lower_sosend(struct socket *so,
 				/* see if a init structure exists in cmsg headers */
 				struct sctp_initmsg initm;
 				int i;
-				
+
 				if (sctp_find_cmsg(SCTP_INIT, (void *)&initm, control,
 						   sizeof(initm))) {
 					/* we have an INIT override of the default */
@@ -11971,7 +11970,6 @@ sctp_lower_sosend(struct socket *so,
 			if ((net->flight_size > net->cwnd) && 
 			    (sctp_cmt_on_off == 0)) {
 				queue_only = 1;
-				
 			} else if (asoc->ifp_had_enobuf) {
 				SCTP_STAT_INCR(sctps_ifnomemqueued);
 				if (net->flight_size > (net->mtu *2)) {
@@ -12060,7 +12058,6 @@ sctp_lower_sosend(struct socket *so,
 						sctp_chunk_output(inp, 
 								  stcb, 
 								  SCTP_OUTPUT_FROM_USR_SEND);
-						
 					}
 				} else {
 					sctp_chunk_output(inp, 
@@ -12209,7 +12206,7 @@ sctp_lower_sosend(struct socket *so,
 			 */
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
-			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {	
+			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				if (hold_tcblock == 0) {
 					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
@@ -12244,7 +12241,7 @@ sctp_lower_sosend(struct socket *so,
 						 asoc->primary_destination);
 			}
 		}
-	}	
+	}
  skip_out_eof:
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
 		some_on_control = 1;
@@ -12281,7 +12278,6 @@ sctp_lower_sosend(struct socket *so,
 	    (stcb->asoc.total_flight > 0) &&
 	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) 
 		) {
-		
 		/*-
 		 * Ok, Nagle is set on and we have data outstanding.
 		 * Don't send anything and let SACKs drive out the

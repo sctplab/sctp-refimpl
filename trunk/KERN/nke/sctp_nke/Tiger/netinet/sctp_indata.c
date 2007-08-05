@@ -274,7 +274,7 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 		/* user does not want the sndrcv ctl */
 		return (NULL);
 	}
-	
+
 	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 		use_extended = 1;
 		len = CMSG_LEN(sizeof(struct sctp_extrcvinfo));
@@ -322,7 +322,7 @@ sctp_build_ctl_cchunk(struct sctp_inpcb *inp,
 		/* user does not want the sndrcv ctl */
 		return (NULL);
 	}
-	
+
 	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 		use_extended = 1;
 		len = CMSG_LEN(sizeof(struct sctp_extrcvinfo));
@@ -1353,7 +1353,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 					*abort_flag = 1;
 					return;
-
 				}
 			}
 		}
@@ -1698,7 +1697,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				mat = SCTP_BUF_NEXT(mat);
 			}
 		}
-#endif		
+#endif
 	} else {
 		/* We can steal the last chunk */
 		int l_len;
@@ -2800,7 +2799,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 		primary_flag_set = 0;
 	}
 	sack = &ch->sack;
-		
+
 	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 			     sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
 	*offset += sizeof(block);
@@ -3368,7 +3367,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							}
 							if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 								tp1->sent++;
-								
 							}
 						}
 					}
@@ -3752,7 +3750,7 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	/* Now all guys marked for RESEND on the sent_queue
 	 * must be moved back too.
 	 */
-	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {	
+	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
 			/* Another chunk to move */
 			chk->sent = SCTP_DATAGRAM_UNSENT;
@@ -3778,7 +3776,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	int win_probe_recovered = 0;
 	int j, done_once=0;
 
-	
 	if(sctp_logging_level & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
 			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
@@ -3808,7 +3805,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			goto again;
 		}
 		return;
-		
 	}
 
 	/* First setup for CC stuff */
@@ -4131,7 +4127,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	    (done_once == 0)) {
 		/* huh, this should not happen */
 		sctp_fs_audit(asoc);
-		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			net->flight_size = 0;
 		}
 		asoc->total_flight = 0;
@@ -4188,7 +4184,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				if (oper) {
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
-					
+
 					SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr) +
 						sizeof(uint32_t);
 					ph = mtod(oper, struct sctp_paramhdr *);
@@ -4339,8 +4335,6 @@ sctp_handle_sack(struct mbuf *m, int offset,
 					if(dupdata == NULL)
 						break;
 					off_to_dup += sizeof(uint32_t);
-				
-
 				}
 			}
 		} else {
@@ -4857,7 +4851,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 				if (oper) {
 					struct sctp_paramhdr *ph;
 					uint32_t *ippp;
-					
+
 					SCTP_BUF_LEN(oper) = sizeof(struct sctp_paramhdr) +
 						sizeof(uint32_t);
 					ph = mtod(oper, struct sctp_paramhdr *);
@@ -4928,7 +4922,6 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		asoc->advanced_peer_ack_point = cum_ack;
 	}
 	/* C2. try to further move advancedPeerAckPoint ahead */
-	
 	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
 		struct sctp_tmit_chunk *lchk;
 
@@ -5100,7 +5093,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	    (done_once == 0) ){
 		/* huh, this should not happen */
 		sctp_fs_audit(asoc);
-		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {		
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			net->flight_size = 0;
 		}
 		asoc->total_flight = 0;

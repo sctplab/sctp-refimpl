@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.24 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.25 2007/07/24 20:06:02 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -459,7 +459,6 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			if (alt->ro._s_addr) {
 				sctp_free_ifa(alt->ro._s_addr);
 				alt->ro._s_addr = NULL;
-				
 			}
 			alt->src_addr_selected = 0;
 		}
@@ -964,7 +963,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 */
 		net->find_pseudo_cumack = 1;
 		net->find_rtx_pseudo_cumack = 1;
-		
 	} else {/* CMT is OFF */
 		alt = sctp_find_alternate_net(stcb, net, 0);
 	}
@@ -1653,7 +1651,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		/* nothing to do */
 		return;
 	}
-	{	
+	{
 		uint32_t mtu;
 		if ((net->src_addr_selected == 0) ||
 		    (net->ro._s_addr == NULL) ||
@@ -1895,7 +1893,7 @@ select_a_new_ep:
 		 */
 		if (it->no_chunk_output == 0)
 			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3);
-		
+
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
 		it->stcb = LIST_NEXT(it->stcb, sctp_tcblist);
