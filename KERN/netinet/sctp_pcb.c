@@ -97,7 +97,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	spcb->readq_count = sctppcbinfo.ipi_count_readq;
 	spcb->stream_oque = sctppcbinfo.ipi_count_strmoq;
 	spcb->free_chunks = sctppcbinfo.ipi_free_chunks;
-	
+
 	SCTP_INP_INFO_RUNLOCK();
 }
 
@@ -204,7 +204,7 @@ sctp_find_ifn(void *ifn, uint32_t ifn_index)
 	/* We assume the lock is held for the addresses 
 	 * if thats wrong problems could occur :-)
 	 */
-	hash_ifn_head = &sctppcbinfo.vrf_ifn_hash[(ifn_index & sctppcbinfo.vrf_ifn_hashmark)];	
+	hash_ifn_head = &sctppcbinfo.vrf_ifn_hash[(ifn_index & sctppcbinfo.vrf_ifn_hashmark)];
 	LIST_FOREACH(sctp_ifnp, hash_ifn_head, next_bucket) {
 		if (sctp_ifnp->ifn_index == ifn_index) {
 			return(sctp_ifnp);
@@ -513,7 +513,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 (struct sctp_tcb *)NULL,
 				 (struct sctp_nets *)NULL);
 	} else {
-		/* it's ready for use */	
+		/* it's ready for use */
 		sctp_ifap->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 	}
 	return (sctp_ifap);
@@ -578,7 +578,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 #endif
 
  out_now:
-	SCTP_IPI_ADDR_UNLOCK();	
+	SCTP_IPI_ADDR_UNLOCK();
 	if (sctp_ifap) {
 		struct sctp_laddr *wi;
 
@@ -1494,7 +1494,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 		SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RLOCK();
-	
 	}
 	head = &sctppcbinfo.sctp_ephash[SCTP_PCBHASH_ALLADDR(lport,
 	    sctppcbinfo.hashmark)];
@@ -1536,7 +1535,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
-	
+
 	return (inp);
 }
 
@@ -1622,7 +1621,7 @@ sctp_findassociation_addr_sa(struct sockaddr *to, struct sockaddr *from,
 	if ((retval == NULL) && (inp_p == NULL)) {
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 	}
-#endif	
+#endif
 	return retval;
 }
 
@@ -2827,7 +2826,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_INP_INFO_WUNLOCK();
 				return (EADDRINUSE);
 			}
-			
 		}
 		SCTP_INP_WLOCK(inp);
 		if (bindall) {
@@ -2848,7 +2846,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
                 uint16_t count;
 		int done;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)		
+#if defined(__FreeBSD__) || defined(__APPLE__)
                 if (ip_inp->inp_flags & INP_HIGHPORT) {
                         first = ipport_hifirstauto;
                         last  = ipport_hilastauto;
@@ -2887,14 +2885,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #endif
 		if (first > last) {
 			uint16_t temp;
-			
+
 			temp = first;
 			first = last;
 			last = temp;
 		}
 		count = last - first + 1; /* number of candidates */
 		candidate = first + sctp_select_initial_TSN(&inp->sctp_ep) % (count);
-		
+
 		done = 0;
 		while (!done) {
 #ifdef SCTP_MVRF
@@ -4012,7 +4010,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #ifndef __Panda__
 			else if (netlook->ro.ro_rt->rt_ifp != net->ro.ro_rt->rt_ifp)
 #else
-			else	
+			else
 #endif
 			{
 				TAILQ_INSERT_AFTER(&stcb->asoc.nets, netlook,
@@ -4204,7 +4202,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
 	}
-#endif	
+#endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
@@ -4722,7 +4720,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	LIST_REMOVE(stcb, sctp_asocs);
 	sctp_add_vtag_to_timewait(inp, asoc->my_vtag, SCTP_TIME_WAIT);
 
-
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
 	 */
@@ -4734,7 +4731,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	(void)SCTP_OS_TIMER_STOP(&asoc->shut_guard_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
-
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
@@ -6680,7 +6676,7 @@ sctp_initiate_iterator(inp_func inpf,
 #endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&sctppcbinfo.listhead);
-		
+
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif

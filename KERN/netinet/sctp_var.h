@@ -360,7 +360,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		stcb->asoc.total_flight_count = 0; \
 	} \
 } while (0)
-	
+
 #define sctp_total_flight_increase(stcb, tp1) do { \
         if(stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
 		stcb->asoc.fs_index = 0;\
@@ -387,7 +387,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		stcb->asoc.total_flight_count = 0; \
 	} \
 } while (0)
-	
+
 #define sctp_total_flight_increase(stcb, tp1) do { \
        (stcb)->asoc.total_flight_count++; \
        (stcb)->asoc.total_flight += (tp1)->book_size; \

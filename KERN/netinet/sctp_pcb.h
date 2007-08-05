@@ -422,7 +422,7 @@ struct sctp_inpcb {
 #ifdef __Panda__
 	pakhandle_type pak_to_read;
 	pakhandle_type pak_to_read_sendq;
-#endif	
+#endif
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
 #if !(defined(__FreeBSD__) || defined(__APPLE__))

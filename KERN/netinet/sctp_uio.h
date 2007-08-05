@@ -890,7 +890,7 @@ struct sctpstat {
 	uint32_t  sctps_send_burst_avoid; /* Send burst avoidance, already max burst inflight to net */
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
-	
+
 	struct timeval sctps_discontinuitytime; /* sctpStats 18 (TimeStamp) */
 };
 
