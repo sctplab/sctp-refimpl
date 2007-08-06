@@ -1,21 +1,6 @@
-- change number assignments for SHA225-512
-- In cookie processing 1-2-1, we did not increment the stcb refcnt before
-  releasing the tcb lock. We need to do this to keep the tcb from being
-  freed by a abort or ?? unlikely but worth doing.
-- extra receive info included the rcvinfo which killed the
-  padding/alignment. We now redefine all the fields properly
-  so they both align properly.
-- A peeled off socket would not close without an error due to
-  its misguided idea that sctp_disconnect() was not supported
-  on it. This fixes it so it goes through the proper path.
-- When an assoc was being deleted after abort (via a timer) a
-  small race condition exists where we might take a packet for
-  the old assoc (since we are waiting for a cleanup timer). This
-  state especially happens in mac. We now add a state in the asoc
-  so these can be handle OOTB properly.
-***********above here is patch 13 new items below *******
-- The single Net Giant for the soneconn() is now removed for
-  7.0.
+- Remove extra comment for 7.0 (no GIANT here).
+- Remove unneeded WLOCK/UNLOCK of inp for getting TCB lock.
 - Fix panic that may occur when freeing an assoc that has partial delivery
   in progress (may dereference null socket pointer when queuing partial
   delivery aborted notification)
+- Some spacing and comment fixes.
