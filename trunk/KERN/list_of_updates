@@ -4,3 +4,5 @@
   in progress (may dereference null socket pointer when queuing partial
   delivery aborted notification)
 - Some spacing and comment fixes.
+- Fix address add handling to clear cached routes and source addresses
+  when peer acks the add in case the routing table changes.
