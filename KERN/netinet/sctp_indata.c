@@ -1353,6 +1353,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 					*abort_flag = 1;
 					return;
+
 				}
 			}
 		}
@@ -3349,6 +3350,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							}
 							if(tp1->sent < SCTP_DATAGRAM_RESEND) {
 								tp1->sent++;
+
 							}
 						}
 					}
@@ -3741,6 +3743,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	int win_probe_recovered = 0;
 	int j, done_once=0;
 
+
 	if(sctp_logging_level & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
 			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
@@ -3770,6 +3773,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			goto again;
 		}
 		return;
+
 	}
 
 	/* First setup for CC stuff */
@@ -4278,6 +4282,8 @@ sctp_handle_sack(struct mbuf *m, int offset,
 					if(dupdata == NULL)
 						break;
 					off_to_dup += sizeof(uint32_t);
+
+
 				}
 			}
 		} else {
@@ -4846,6 +4852,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		asoc->advanced_peer_ack_point = cum_ack;
 	}
 	/* C2. try to further move advancedPeerAckPoint ahead */
+
 	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
 		struct sctp_tmit_chunk *lchk;
 

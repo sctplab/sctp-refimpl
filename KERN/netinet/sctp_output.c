@@ -2727,7 +2727,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	struct sctp_ifa *sctp_ifa, *sifa;
 	uint32_t ifn_index;
 	struct sctp_vrf *vrf;
-	/*
+	/*-
 	 * For boundall we can use any address in the association.
 	 * If non_asoc_addr_ok is set we can use any address (at least in
 	 * theory). So we look for preferred addresses first. If we find one,
@@ -2940,7 +2940,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	uint8_t dest_is_priv, dest_is_loop;
 	sa_family_t fam;
 
-	/*
+	/*-
 	 * Rules: - Find the route if needed, cache if I can. - Look at
 	 * interface address in route, Is it in the bound list. If so we
 	 * have the best source. - If not we must rotate amongst the
