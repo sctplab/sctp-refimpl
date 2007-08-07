@@ -5627,21 +5627,65 @@ sctp_pcb_init()
 void
 sctp_pcb_finish(void)
 {
+	struct sctp_vrflist *vrf_bucket;
+	struct sctp_vrf *vrf;
+	struct sctp_ifn *ifn;
+	struct sctp_ifa *ifa;
+
 	/* FIXME MT */
 	sctp_address_monitor_destroy();
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	/* free the iterator worker thread */
 	if (sctppcbinfo.thread_proc != THREAD_NULL) {
 		thread_terminate(sctppcbinfo.thread_proc);
 		sctppcbinfo.thread_proc = THREAD_NULL;
 	}
 #endif
+	/*
+	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
+	 * is destroyed first).
+	 */
+	vrf_bucket = &sctppcbinfo.sctp_vrfhash[(SCTP_DEFAULT_VRFID & sctppcbinfo.hashvrfmark)];
+	vrf = LIST_FIRST(vrf_bucket);
+	while (vrf) {
+		ifn = LIST_FIRST(&vrf->ifnlist);
+		while (ifn) {
+			ifa = LIST_FIRST(&ifn->ifalist);
+			while (ifa) {
+				/* free the ifa */
+				LIST_REMOVE(ifa, next_bucket);
+				LIST_REMOVE(ifa, next_ifa);
+				SCTP_FREE(ifa, SCTP_M_IFA);
+				ifa = LIST_FIRST(&ifn->ifalist);
+			}
+			/* free the ifn */
+			LIST_REMOVE(ifn, next_bucket);
+			LIST_REMOVE(ifn, next_ifn);
+			SCTP_FREE(ifn, SCTP_M_IFN);
+			ifn = LIST_FIRST(&vrf->ifnlist);
+		}
+		SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
+		/* free the vrf */
+		LIST_REMOVE(vrf, next_vrf);
+		SCTP_FREE(vrf, SCTP_M_VRF);
+		vrf = LIST_FIRST(vrf_bucket);
+	}
+	/* free the vrf hashes */
+	SCTP_HASH_FREE(sctppcbinfo.sctp_vrfhash, sctppcbinfo.hashvrfmark);
+	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.hash_ifn_hashmark);
+
+	/* free the locks and mutexes */
 	SCTP_TIMERQ_LOCK_DESTROY();
-	SCTP_INP_INFO_LOCK_DESTROY();
-	SCTP_ITERATOR_LOCK_DESTROY();
+#ifdef SCTP_PACKET_LOGGING
+	SCTP_IP_PKTLOG_DESTROY();
+ 
+#endif
 	SCTP_IPI_ITERATOR_WQ_DESTROY();
-	SCTP_IPI_COUNT_DESTROY();
 	SCTP_IPI_ADDR_DESTROY();
+	SCTP_IPI_COUNT_DESTROY();
+	SCTP_ITERATOR_LOCK_DESTROY();
 /*	SCTP_STATLOG_DESTROY();*/
+	SCTP_INP_INFO_LOCK_DESTROY();
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
 	lck_grp_free(sctppcbinfo.mtx_grp);
 	lck_attr_free(sctppcbinfo.mtx_attr);
