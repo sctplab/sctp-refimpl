@@ -864,3 +864,80 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 		return "sctp_sendmsg was successful";
 	}
 }
+
+
+/*
+ * TEST-TITLE sctp_sendmsg/large_addrlen
+ * TEST-DESCR: On a 1-M socket, create an association.
+ * TEST-DESCR: Send to an address with a large address length argument.
+ * TEST-DESCR: Validate it fails.
+ */
+DEFINE_APITEST(sctp_sendmsg, large_addrlen)
+{
+	int fds[2], result, n;
+	sctp_assoc_t ids[2];
+	struct sockaddr_storage addrstore;
+	struct sockaddr_in *addr;
+	socklen_t size;
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0)
+		return strerror(errno);
+
+	size = (socklen_t)sizeof(addrstore);
+	addr = (struct sockaddr_in *)&addrstore;
+	memset((void *)addr, 0, size);
+	(void)getsockname(fds[0], (struct sockaddr *)addr, &size);
+
+	addr->sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	/* reset size */
+	size = (socklen_t)sizeof(addrstore);
+	n = sctp_sendmsg(fds[0], "Hello", 5, (struct sockaddr *)addr,
+			 size, 0, 0, 0, 0, 0);
+	close(fds[0]);
+	close(fds[1]);
+	
+	if (n < 0) {
+		return NULL;
+	} else {
+		return "sctp_sendmsg was successful";
+	}
+}
+
+/*
+ * TEST-TITLE sctp_sendmsg/short_addrlen
+ * TEST-DESCR: On a 1-M socket, create an association.
+ * TEST-DESCR: Send to an address with a short addr length argument.
+ * TEST-DESCR: Validate it fails.
+ */
+DEFINE_APITEST(sctp_sendmsg, short_addrlen)
+{
+	int fds[2], result, n;
+	sctp_assoc_t ids[2];
+	struct sockaddr_in addr;
+	socklen_t size;
+
+	fds[0] = fds[1] = -1;
+	result = sctp_socketpair_1tom(fds, ids, 1);
+	if (result < 0)
+		return strerror(errno);
+	
+	size = (socklen_t)sizeof(addr);
+	memset((void *)&addr, 0, size);
+	(void)getsockname(fds[0], (struct sockaddr *)&addr, &size);
+
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	n = sctp_sendmsg(fds[0], "Hello", 5, (struct sockaddr *)&addr,
+			 size - 1, 0, 0, 0, 0, 0);
+	close(fds[0]);
+	close(fds[1]);
+	
+	if (n < 0) {
+		return NULL;
+	} else {
+		return "sctp_sendmsg was successful";
+	}
+}
