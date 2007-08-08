@@ -6,3 +6,5 @@
 - Some spacing and comment fixes.
 - Fix address add handling to clear cached routes and source addresses
   when peer acks the add in case the routing table changes.
+- user library: allow "to_len" to be greater than the required storage size
+  of "to" for sctp_sendmsg to match sctp_generic_sendmsg
