@@ -587,7 +587,7 @@ sctp_sendmsg(int s,
 		
 	if (to && (tolen > 0)) {
 		if (to->sa_family == AF_INET) {
-			if (tolen < sizeof(struct sockaddr_in)) {
+			if (tolen != sizeof(struct sockaddr_in)) {
 				errno = EINVAL;
 				return -1;
 			}
@@ -599,7 +599,7 @@ sctp_sendmsg(int s,
 			memcpy(&addr, to, sizeof(struct sockaddr_in));
 			addr.in.sin_len = sizeof(struct sockaddr_in);
 		} else if (to->sa_family == AF_INET6) {
-			if (tolen < sizeof(struct sockaddr_in6)) {
+			if (tolen != sizeof(struct sockaddr_in6)) {
 				errno = EINVAL;
 				return -1;
 			}
