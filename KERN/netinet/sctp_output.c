@@ -11142,17 +11142,26 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 	atomic_add_int(&inp->total_sends, 1);
-	if (uio)
+	if (uio) {
 		sndlen = uio->uio_resid;
-	else {
-		sndlen = SCTP_HEADER_LEN(i_pak);
+	} else {
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
+         /* app len indicates the datalen, dgsize for cases
+          * of SCTP_EOF/ABORT will not have the right len
+          */
+        sndlen = SCTP_APP_DATA_LEN(i_pak);
 		/* We delink the chain from header, but keep
 		 * the header around as we will need it in
 		 * EAGAIN case
 		 */
 		SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+        /* Set the particle len also to zero to match
+         * up with app len
+         */
+        SCTP_BUF_LEN(top)  = 0;
+#else
+		sndlen = SCTP_HEADER_LEN(i_pak);
 #endif
 	}
 	/* Pre-screen address, if one is given the sin-len
@@ -11789,20 +11798,24 @@ sctp_lower_sosend(struct socket *so,
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 	atomic_add_int(&stcb->total_sends, 1);
+    /* sndlen covers for mbuf case
+     * uio_resid covers for the non-mbuf case
+     * NOTE: uio will be null when top/mbuf is passed
+     */
+    if(sndlen == 0 || uio->uio_resid == 0) {
+        if(srcv->sinfo_flags & SCTP_EOF) {
+            got_all_of_the_send = 1;
+            goto dataless_eof;
+        } else {
+            error = EINVAL;
+            goto out;
+        }
+    }
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
 		int user_marks_eor;
-		if(uio->uio_resid == 0) {
-			if(srcv->sinfo_flags & SCTP_EOF) {
-				got_all_of_the_send = 1;
-				goto dataless_eof;
-			} else {
-				error = EINVAL;
-				goto out;
-			}
-		}
 		initial_out = uio->uio_resid;
 
 		SCTP_TCB_SEND_LOCK(stcb);
@@ -12365,10 +12378,10 @@ sctp_lower_sosend(struct socket *so,
 		splx(s);
 #endif
 	}
-	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d \n",
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d :%s",
 		queue_only, stcb->asoc.peers_rwnd, un_sent,
 		stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
-		stcb->asoc.total_output_queue_size);
+		stcb->asoc.total_output_queue_size, strerror(error));
 
  out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
