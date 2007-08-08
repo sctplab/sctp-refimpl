@@ -554,7 +554,6 @@ sctp_sendmsg(int s,
 	return (syscall(SYS_sctp_generic_sendmsg, s,
 	    data, len, to, tolen, &sinfo, 0));
 #else
-
 	ssize_t sz;
 	struct msghdr msg;
 	struct sctp_sndrcvinfo *s_info;
@@ -580,34 +579,37 @@ sctp_sendmsg(int s,
   (u_int)context);
   fflush(io);
 */
-	if ((tolen > 0) && ((to == NULL) || (tolen < sizeof(struct sockaddr)))){
+	if ((tolen > 0) &&
+	    ((to == NULL) || (tolen < sizeof(struct sockaddr)))) {
 		errno = EINVAL;
 		return -1;
 	}
 		
 	if (to && (tolen > 0)) {
 		if (to->sa_family == AF_INET) {
-			if (tolen != sizeof(struct sockaddr_in)) {
+			if (tolen < sizeof(struct sockaddr_in)) {
 				errno = EINVAL;
 				return -1;
 			}
-			if ((to->sa_len > 0) && (to->sa_len != sizeof(struct sockaddr_in))) {
+			if ((to->sa_len > 0) &&
+			    (to->sa_len != sizeof(struct sockaddr_in))) {
 				errno = EINVAL;
 				return -1;
 			}
 			memcpy(&addr, to, sizeof(struct sockaddr_in));
-			addr.in.sin_len = sizeof(struct sockaddr_in);			
+			addr.in.sin_len = sizeof(struct sockaddr_in);
 		} else if (to->sa_family == AF_INET6) {
-			if (tolen != sizeof(struct sockaddr_in6)) {
+			if (tolen < sizeof(struct sockaddr_in6)) {
 				errno = EINVAL;
 				return -1;
 			}
-			if ((to->sa_len > 0) && (to->sa_len != sizeof(struct sockaddr_in6))) {
+			if ((to->sa_len > 0) &&
+			    (to->sa_len != sizeof(struct sockaddr_in6))) {
 				errno = EINVAL;
 				return -1;
 			}
 			memcpy(&addr, to, sizeof(struct sockaddr_in6));
-			addr.in6.sin6_len = sizeof(struct sockaddr_in6);			
+			addr.in6.sin6_len = sizeof(struct sockaddr_in6);
 		} else {
 			errno = EAFNOSUPPORT;
 			return -1;
