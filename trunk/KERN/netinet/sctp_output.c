@@ -12382,10 +12382,10 @@ sctp_lower_sosend(struct socket *so,
 		splx(s);
 #endif
 	}
-	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d",
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d",
 		queue_only, stcb->asoc.peers_rwnd, un_sent,
 		stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
-		stcb->asoc.total_output_queue_size);
+		stcb->asoc.total_output_queue_size, error);
 
  out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
