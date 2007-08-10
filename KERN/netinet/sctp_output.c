@@ -11714,9 +11714,9 @@ sctp_lower_sosend(struct socket *so,
 					mm = NULL;
 				}
 			} else {
-                                if (sndlen != 0) {
+                if (sndlen != 0) {
 				    SCTP_BUF_NEXT(mm) = top;
-                                }
+                }
 			}
 		}
 		if(hold_tcblock == 0) {
@@ -11732,6 +11732,14 @@ sctp_lower_sosend(struct socket *so,
 		/* now relock the stcb so everything is sane */
 		hold_tcblock = 0;
 		stcb = NULL;
+        /* In this case top is already chained to mm
+         * avoid double free, since we free it below if
+         * top != NULL and driver would free it after sending
+         * the packet out
+         */
+        if (sndlen != 0) {
+            top = NULL;
+        }
 		goto out_unlocked;
 	}
 	/* Calculate the maximum we can send */
