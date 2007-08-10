@@ -9419,6 +9419,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr)
 	abort->ch.chunk_flags = 0;
 	abort->ch.chunk_length = htons(sizeof(*abort) + sz);
 
+
 	/* prepend and fill in the SCTP header */
 	SCTP_BUF_PREPEND(m_out, sizeof(struct sctphdr), M_DONTWAIT);
 	if (m_out == NULL) {
@@ -11661,14 +11662,15 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 0;
 		}
 		if(top) {
-			struct mbuf *cntm;
+			struct mbuf *cntm = NULL;
 			mm = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
-
+                        if (sndlen != 0) {
 			cntm = top;
 			while(cntm) {
 				tot_out += SCTP_BUF_LEN(cntm);
 				cntm = SCTP_BUF_NEXT(cntm);
 			}
+                        }
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 		} else {
 			/* Must fit in a MTU */
@@ -11712,7 +11714,9 @@ sctp_lower_sosend(struct socket *so,
 					mm = NULL;
 				}
 			} else {
-				SCTP_BUF_NEXT(mm) = top;
+                                if (sndlen != 0) {
+				    SCTP_BUF_NEXT(mm) = top;
+                                }
 			}
 		}
 		if(hold_tcblock == 0) {

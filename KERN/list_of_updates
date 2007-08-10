@@ -7,3 +7,4 @@
 - Fix address add handling to clear cached routes and source addresses
   when peer acks the add in case the routing table changes.
 - Fix sctp_lower_sosend to send shutdown chunk for mbuf case when sndlen = 0 and sinfoflag = SCTP_EOF
+- Fix sctp_lower_sosend for SCTP_ABORT /mbuf case with null data. So that it doesnot send the null data mbuf out and cause it to get freed twice.
