@@ -11148,22 +11148,26 @@ sctp_lower_sosend(struct socket *so,
 		}
 		sndlen = uio->uio_resid;
 	} else {
-		sndlen = SCTP_HEADER_LEN(i_pak);
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
 		/* app len indicates the datalen, dgsize for cases
 		 * of SCTP_EOF/ABORT will not have the right len
 		 */
-		sndlen = SCTP_APP_DATA_LEN(i_pak);
+        sndlen = SCTP_APP_DATA_LEN(i_pak);
+        /*
+         * Set the particle len also to zero to match
+         * up with app len. We only have one particle
+         * if app len is zero for Panda. This is ensured
+         * in the socket lib
+         */
+        if (sndlen == 0) {
+    		SCTP_BUF_LEN(top)  = 0;
+        }
 		/* We delink the chain from header, but keep
 		 * the header around as we will need it in
 		 * EAGAIN case
 		 */
 		SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
-		/* Set the particle len also to zero to match
-		 * up with app len
-		 */
-		SCTP_BUF_LEN(top)  = 0;
 #else
 		sndlen = SCTP_HEADER_LEN(i_pak);
 #endif
@@ -11806,7 +11810,7 @@ sctp_lower_sosend(struct socket *so,
 	 * uio_resid covers for the non-mbuf case
 	 * NOTE: uio will be null when top/mbuf is passed
 	 */
-	if (sndlen == 0 || uio->uio_resid == 0) {
+	if ( (sndlen == 0) || ((uio) && (uio->uio_resid == 0)) ) {
 		if (srcv->sinfo_flags & SCTP_EOF) {
 			got_all_of_the_send = 1;
 			goto dataless_eof;
