@@ -1398,7 +1398,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 		return (0);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {	
 			if ((loopback_scope == 0) &&
 			    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 				/* Skip loopback if loopback_scope not set */
@@ -1858,7 +1858,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NEEDS_MAPPED_V4);
 			break;
 		case SCTP_AUTO_ASCONF:
-			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
+				/* only valid for bound all sockets */
+				val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
+			} else {
+				error = EINVAL;
+				goto flags_out;
+			}
 			break;
 		case SCTP_EXPLICIT_EOR:
 			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
@@ -1886,6 +1892,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		if (*optsize < sizeof(val)) {
 			error = EINVAL;
 		}
+	flags_out:
 		SCTP_INP_RUNLOCK(inp);
 		if (error == 0) {
 			/* return the option value */
@@ -2892,7 +2899,15 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			set_opt = SCTP_PCB_FLAGS_NO_FRAGMENT;
 			break;
 		case SCTP_AUTO_ASCONF:
-			set_opt = SCTP_PCB_FLAGS_AUTO_ASCONF;
+			/*
+			 * NOTE: we don't really support this flag
+			 */
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
+				/* only valid for bound all sockets */
+				set_opt = SCTP_PCB_FLAGS_AUTO_ASCONF;
+			} else {
+				return (EINVAL);
+			}
 			break;
 		case SCTP_EXPLICIT_EOR:
 			set_opt = SCTP_PCB_FLAGS_EXPLICIT_EOR;
