@@ -2945,11 +2945,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	if (bindall) {
 		/* binding to all addresses, so just set in the proper flags */
 		inp->sctp_flags |= SCTP_PCB_FLAGS_BOUNDALL;
-		sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 		/* set the automatic addr changes from kernel flag */
 		if (sctp_auto_asconf == 0) {
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
 	} else {
