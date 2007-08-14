@@ -6421,7 +6421,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		rcv_flags |= SCTP_DATA_UNORDERED;
 	}
 	/* clear out the chunk before setting up */
-	memset(chk, sizeof(*chk), 0);
+	memset(chk, 0, sizeof(*chk));
 	chk->rec.data.rcv_flags = rcv_flags;
 	if (SCTP_BUF_IS_EXTENDED(sp->data)) {
 		chk->copy_by_ref = 1;
