@@ -217,15 +217,9 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	sa = (struct sockaddr *)&sa_store;
 	switch (param_type) {
 	case SCTP_IPV4_ADDRESS:
-		struct in6pcb *inp6;
 		if (param_length != sizeof(struct sctp_ipv4addr_param)) {
 			/* invalid param size */
 			return NULL;
-		}
-		inp6 = (struct in6pcb *)&inp->ip_inp.inp;
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-		    SCTP_IPV6_V6ONLY(inp6)) {
-			/* not valid if we are a v6 only endpoint */
 		}
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
@@ -243,9 +237,6 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		if (param_length != sizeof(struct sctp_ipv6addr_param)) {
 			/* invalid param size */
 			return NULL;
-		}
-		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
-		    /* not valid if we're not a v6 endpoint */
 		}
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
