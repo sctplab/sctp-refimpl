@@ -18,3 +18,7 @@
   you thought you were going to get/set. Now validate if the
   stcb is non-null and the net is NULL that the sa_family is
   set and the address is unspecified otherwise return an error.
+- The thread based iterator could crash if associations were freed
+  at the exact time it was running. rework the worker thread to
+  use the increment/decrement to prevent this and no longer use
+  the markers that the timer based iterator uses.
