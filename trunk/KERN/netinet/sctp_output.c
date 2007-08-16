@@ -11151,20 +11151,22 @@ sctp_lower_sosend(struct socket *so,
 	} else {
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
-		/* app len indicates the datalen, dgsize for cases
+		/*-
+		 * app len indicates the datalen, dgsize for cases
 		 * of SCTP_EOF/ABORT will not have the right len
 		 */
-        sndlen = SCTP_APP_DATA_LEN(i_pak);
-        /*
-         * Set the particle len also to zero to match
-         * up with app len. We only have one particle
-         * if app len is zero for Panda. This is ensured
-         * in the socket lib
-         */
-        if (sndlen == 0) {
-    		SCTP_BUF_LEN(top)  = 0;
-        }
-		/* We delink the chain from header, but keep
+		sndlen = SCTP_APP_DATA_LEN(i_pak);
+		/*-
+		 * Set the particle len also to zero to match
+		 * up with app len. We only have one particle
+		 * if app len is zero for Panda. This is ensured
+		 * in the socket lib
+		 */
+		if (sndlen == 0) {
+			SCTP_BUF_LEN(top)  = 0;
+		}
+		/*-
+		 * We delink the chain from header, but keep
 		 * the header around as we will need it in
 		 * EAGAIN case
 		 */
@@ -11173,7 +11175,11 @@ sctp_lower_sosend(struct socket *so,
 		sndlen = SCTP_HEADER_LEN(i_pak);
 #endif
 	}
-	/* Pre-screen address, if one is given the sin-len
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Send called addr:%p send length %d\n",
+		addr,
+		sndlen);
+	/*-
+	 * Pre-screen address, if one is given the sin-len
 	 * must be set correctly!
 	 */
 	if (addr) {
@@ -11410,7 +11416,7 @@ sctp_lower_sosend(struct socket *so,
 #else
 					       (struct proc *)NULL
 #endif
-);
+				);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -11665,11 +11671,11 @@ sctp_lower_sosend(struct socket *so,
 			struct mbuf *cntm = NULL;
 			mm = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
                         if (sndlen != 0) {
-			cntm = top;
-			while(cntm) {
-				tot_out += SCTP_BUF_LEN(cntm);
-				cntm = SCTP_BUF_NEXT(cntm);
-			}
+				cntm = top;
+				while(cntm) {
+					tot_out += SCTP_BUF_LEN(cntm);
+					cntm = SCTP_BUF_NEXT(cntm);
+				}
                         }
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 		} else {
@@ -11714,9 +11720,9 @@ sctp_lower_sosend(struct socket *so,
 					mm = NULL;
 				}
 			} else {
-                if (sndlen != 0) {
-				    SCTP_BUF_NEXT(mm) = top;
-                }
+				if (sndlen != 0) {
+					SCTP_BUF_NEXT(mm) = top;
+				}
 			}
 		}
 		if(hold_tcblock == 0) {
@@ -11732,14 +11738,14 @@ sctp_lower_sosend(struct socket *so,
 		/* now relock the stcb so everything is sane */
 		hold_tcblock = 0;
 		stcb = NULL;
-        /* In this case top is already chained to mm
-         * avoid double free, since we free it below if
-         * top != NULL and driver would free it after sending
-         * the packet out
-         */
-        if (sndlen != 0) {
-            top = NULL;
-        }
+		/* In this case top is already chained to mm
+		 * avoid double free, since we free it below if
+		 * top != NULL and driver would free it after sending
+		 * the packet out
+		 */
+		if (sndlen != 0) {
+			top = NULL;
+		}
 		goto out_unlocked;
 	}
 	/* Calculate the maximum we can send */
