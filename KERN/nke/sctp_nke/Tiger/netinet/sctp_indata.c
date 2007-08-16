@@ -776,7 +776,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * but should we?
 			 */
 			if ((sctp_is_all_msg_on_reasm(asoc, &tsize) ||
-			    (tsize > stcb->sctp_ep->partial_delivery_point))) {
+			    (tsize >= stcb->sctp_ep->partial_delivery_point))) {
 
 				/*
 				 * Yes, we setup to start reception, by
@@ -2475,7 +2475,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		 * delivery queue and something can be delivered.
 		 */
 		if ((sctp_is_all_msg_on_reasm(asoc, &tsize) ||
-		    (tsize > stcb->sctp_ep->partial_delivery_point ))) {
+		    (tsize >= stcb->sctp_ep->partial_delivery_point ))) {
 			asoc->fragmented_delivery_inprogress = 1;
 			asoc->tsn_last_delivered = chk->rec.data.TSN_seq - 1;
 			asoc->str_of_pdapi = chk->rec.data.stream_number;
