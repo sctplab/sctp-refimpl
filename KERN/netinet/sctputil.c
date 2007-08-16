@@ -1237,8 +1237,6 @@ select_a_new_ep:
 		SCTP_INP_WLOCK(it->inp);
 	}
 
-	/* mark the current iterator on the endpoint */
-	it->inp->inp_starting_point_for_iterator = it;
 	SCTP_INP_WUNLOCK(it->inp);
 	SCTP_INP_RLOCK(it->inp);
 
@@ -1262,10 +1260,6 @@ select_a_new_ep:
 		SCTP_INP_RUNLOCK(it->inp);
 		goto no_stcb;
 	}
-	if ((it->stcb) &&
-	    (it->stcb->asoc.stcb_starting_point_for_iterator == it)) {
-		it->stcb->asoc.stcb_starting_point_for_iterator = NULL;
-	}
 	while (it->stcb) {
 		SCTP_TCB_LOCK(it->stcb);
 		if (it->asoc_state && ((it->stcb->asoc.state & it->asoc_state) != it->asoc_state)) {
@@ -1273,8 +1267,6 @@ select_a_new_ep:
 			SCTP_TCB_UNLOCK(it->stcb);
 			goto next_assoc;
 		}
-		/* mark the current iterator on the assoc */
-		it->stcb->asoc.stcb_starting_point_for_iterator = it;
 		/* see if we have limited out the iterator loop */
 		iteration_count++;
 		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
@@ -1284,10 +1276,14 @@ select_a_new_ep:
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 0);
 #endif
 			SCTP_TCB_UNLOCK(it->stcb);
+
+			SCTP_INP_INCR_REF(it->inp);
 			SCTP_INP_RUNLOCK(it->inp);
 			SCTP_ITERATOR_UNLOCK();
 			SCTP_ITERATOR_LOCK();
 			SCTP_INP_RLOCK(it->inp);
+
+			SCTP_INP_DECR_REF(it->inp);
 			SCTP_TCB_LOCK(it->stcb);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 0);
@@ -1295,6 +1291,7 @@ select_a_new_ep:
 			atomic_add_int(&it->stcb->asoc.refcnt, -1);
 			iteration_count = 0;
 		}
+
 		/* run function on this one */
 		(*it->function_assoc)(it->inp, it->stcb, it->pointer, it->val);
 
@@ -1322,7 +1319,6 @@ select_a_new_ep:
 	/* done with all assocs on this endpoint, move on to next endpoint */
 	it->done_current_ep = 0;
 	SCTP_INP_WLOCK(it->inp);
-	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
