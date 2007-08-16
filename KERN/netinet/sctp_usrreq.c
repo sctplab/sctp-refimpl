@@ -102,7 +102,7 @@ sctp_init(void)
 #endif
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
 void
 sctp_finish(void)
 {
@@ -176,7 +176,7 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	}
 }
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 void
 #else
 static void
@@ -218,7 +218,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	}
 	totsz = ip->ip_len;
 
-	nxtsz = ntohs(icmph->icmp_seq);
+	nxtsz = ntohs(icmph->icmp_nextmtu);
 	if (nxtsz == 0) {
 		/*
 		 * old type router that does not tell us what the next size
@@ -349,7 +349,7 @@ sctp_notify(struct sctp_inpcb *inp,
 }
 
 #if !defined(__Panda__)
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 #else
 void *
@@ -369,7 +369,7 @@ sctp_ctlinput(cmd, sa, vip)
 	vrf_id = SCTP_DEFAULT_VRFID;
 	if (sa->sa_family != AF_INET ||
 	    ((struct sockaddr_in *)sa)->sin_addr.s_addr == INADDR_ANY) {
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		return;
 #else
 		return (NULL);
@@ -378,7 +378,7 @@ sctp_ctlinput(cmd, sa, vip)
 	if (PRC_IS_REDIRECT(cmd)) {
 		ip = 0;
 	} else if ((unsigned)cmd >= PRC_NCMDS || inetctlerrmap[cmd] == 0) {
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		return;
 #else
 		return (NULL);
@@ -454,7 +454,7 @@ sctp_ctlinput(cmd, sa, vip)
 		splx(s);
 #endif
 	}
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	return;
 #else
 	return (NULL);
@@ -532,7 +532,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif				/* #if defined(__FreeBSD__) */
 
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #elif defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
@@ -600,7 +600,7 @@ sctp_abort(struct socket *so)
 #endif
 }
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #else
 static int
@@ -703,7 +703,7 @@ sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
-#elif defined(__Panda__)
+#elif defined(__Panda__) || defined(__Windows__)
 int
 sctp_bind(struct socket *so, struct sockaddr *addr) {
 	void *p = NULL;
@@ -804,7 +804,7 @@ sctp_close(struct socket *so)
 
 #else
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #elif defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
@@ -880,7 +880,7 @@ sctp_detach(struct socket *so)
 
 #endif
 
-#if !defined(__Panda__)
+#if !(defined(__Panda__) || defined(__Windows__))
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
@@ -990,7 +990,7 @@ connected_type:
 }
 #endif
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #else
 static int
@@ -1203,7 +1203,7 @@ sctp_shutdown(struct socket *so)
 	/* For UDP model this is a invalid call */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* Restore the flags that the soshutdown took away. */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 502115
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 502115) || defined(__Windows__)
 		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
 #else
 		so->so_state &= ~SS_CANTRCVMORE;
@@ -1821,7 +1821,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	} \
       } 
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #else
 static int
@@ -2488,7 +2488,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			paddrp->spp_assoc_id = (sctp_assoc_t) 0;
 			/* get inp's default */
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 			paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip_tos;
 #elif defined(__NetBSD__)
 			paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip.ip_tos;
@@ -2874,7 +2874,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	return (error);
 }
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Windows__)
 int
 #else
 static int
@@ -4151,6 +4151,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #ifdef SCTP_MVRF
 		int i, fnd=0;
 #endif
+#if !defined(__Windows__)
 #if defined(__NetBSD__) || defined(__APPLE__)
 		struct proc *proc;
 #endif
@@ -4172,6 +4173,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 #else
 		error = suser(p, 0);
+#endif
 #endif
 		if(error) 
 			break;
@@ -4504,7 +4506,7 @@ sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
-#elif defined(__Panda__)
+#elif defined(__Panda__) || defined(__Windows__)
 int
 sctp_connect(struct socket *so, struct sockaddr *addr)
 {
@@ -4771,7 +4773,7 @@ sctp_listen(struct socket *so, struct proc *p)
 static int sctp_defered_wakeup_cnt = 0;
 
 int
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_accept(struct socket *so, struct sockaddr **addr)
 {
 #elif defined(__Panda__)
@@ -4829,7 +4831,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	if (store.sa.sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
 		sin = (struct sockaddr_in *)addr;
@@ -4839,7 +4841,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		sin->sin_len = sizeof(*sin);
 		sin->sin_port = ((struct sockaddr_in *)&store)->sin_port;
 		sin->sin_addr = ((struct sockaddr_in *)&store)->sin_addr;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		*addr = (struct sockaddr *)sin;
 #elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin);
@@ -4847,7 +4849,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	} else {
 		struct sockaddr_in6 *sin6;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
@@ -4875,7 +4877,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			sin6->sin6_scope_id = 0;	/* XXX */
 #endif /* SCTP_KAME */
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined(__FreeBSD__) || defined (__APPLE__) || defined(__Windows__)
 		*addr = (struct sockaddr *)sin6;
 #elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin6);
@@ -4925,7 +4927,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 }
 
 int
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_ingetaddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in *sin;
@@ -4948,7 +4950,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	/*
 	 * Do the malloc first in case it blocks.
 	 */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #elif defined(__Panda__)
 	bzero(sin, sizeof(*sin));
@@ -4966,7 +4968,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
@@ -5039,7 +5041,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 			SCTP_FREE_SONAME(sin);
 #endif
 			SCTP_INP_RUNLOCK(inp);
@@ -5050,14 +5052,14 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
 	return (0);
 }
 
 int
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_peeraddr(struct socket *so, struct sockaddr **addr)
 {
 	struct sockaddr_in *sin = (struct sockaddr_in *)*addr;
@@ -5091,7 +5093,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	s = splsoftnet();
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #elif defined(__Panda__)
 	memset(sin, 0, sizeof(*sin));
@@ -5108,7 +5110,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
@@ -5123,7 +5125,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		return ECONNRESET;
@@ -5144,7 +5146,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		return ENOENT;
@@ -5152,7 +5154,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
 	return (0);
@@ -5206,7 +5208,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	sopoll
 #endif
 };
-#elif !defined(__Panda__)
+#elif !(defined(__Panda__) || defined(__Windows__))
 #if defined(__NetBSD__)
 int
 sctp_usrreq(so, req, m, nam, control, p)

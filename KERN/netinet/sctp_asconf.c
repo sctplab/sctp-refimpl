@@ -2022,7 +2022,7 @@ sctp_asconf_iterator_end(void *ptr, uint32_t val)
  * sa is the sockaddr to ask the peer to set primary to.
  * returns: 0 = completed, -1 = error
  */
-int
+int32_t
 sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 {
 	/* NOTE: we currently don't check the validity of the address! */

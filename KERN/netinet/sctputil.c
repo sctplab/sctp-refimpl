@@ -2313,7 +2313,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	tmr->net = (void *)net;
 	tmr->self = (void *)tmr;
 #ifndef __Panda__
-	tmr->ticks = ticks;
+	tmr->ticks = sctp_get_tick_count();
 #endif
 	(void)SCTP_OS_TIMER_START(&tmr->timer, to_ticks, sctp_timeout_handler, tmr);
 	return;
@@ -4722,10 +4722,20 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 		struct sockaddr_in6 *sin6;
 		uint32_t hash_of_addr;
 		sin6 = (struct sockaddr_in6 *)addr;
+#if !defined(__Windows__)
 		hash_of_addr = (sin6->sin6_addr.s6_addr32[0] +
 				sin6->sin6_addr.s6_addr32[1] +
 				sin6->sin6_addr.s6_addr32[2] +
 				sin6->sin6_addr.s6_addr32[3]);
+#else
+		{
+			int i;
+			hash_of_addr = 0;
+			for (i = 0; i < 16; i++) {
+				hash_of_addr += sin6->sin6_addr.s6_addr[i];
+			}
+		}
+#endif
 		hash_of_addr = (hash_of_addr ^ (hash_of_addr >> 16));
 		return (hash_of_addr);
 	}
@@ -5017,7 +5027,7 @@ sctp_sorecvmsg(struct socket *so,
 	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 	if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
 		if (so->so_state & SS_CANTRCVMORE)
@@ -5650,7 +5660,7 @@ sctp_sorecvmsg(struct socket *so,
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 		}
 	wait_some_more:
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 		if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
 			goto release;
 		}
@@ -6061,7 +6071,7 @@ sctp_soreceive(	struct socket *so,
 	if (psa) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 			*psa = sodupsockaddr(from, M_NOWAIT);
 #else
 			*psa = dup_sockaddr(from, mp0 == 0);
@@ -6133,7 +6143,7 @@ int sctp_l_soreceive(struct socket *so,
 	if (name) {
 		/* copy back the address info */
 		if (from && from->sa_len) {
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 			*name = sodupsockaddr(from, M_WAIT);
 #else
 			*name = dup_sockaddr(from, M_WAIT);
@@ -6174,7 +6184,7 @@ sctp_pool_put(struct pool *pp, void *ptr)
 }
 
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version < 603000
+#if (defined(__FreeBSD__) && __FreeBSD_version < 603000) || defined(__Windows__)
 /*
  * General routine to allocate a hash table with control of memory flags.
  * is in 7.0 and beyond for sure :-)

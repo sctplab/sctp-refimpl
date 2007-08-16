@@ -164,6 +164,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
         /* check the interface type to see if it's one we care about */
         switch (ifa->ifa_ifp->if_type) {
         case IFT_ETHER:
+#if !defined(__Windows__)
         case IFT_ISO88023:
 	case IFT_ISO88024:
         case IFT_ISO88025:
@@ -172,15 +173,20 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
         case IFT_P10:
         case IFT_P80:
         case IFT_HY:
+#endif
         case IFT_FDDI:
+#if !defined(__Windows__)
         case IFT_XETHER:
 	case IFT_ISDNBASIC:
 	case IFT_ISDNPRIMARY:
 	case IFT_PTPSERIAL:
+#else
+	case IFT_OTHER:
+#endif
 	case IFT_PPP:
 	case IFT_LOOP:
 	case IFT_SLIP:
-#if !defined(__APPLE__)
+#if !(defined(__APPLE__) || defined(__Windows__))
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
 	case IFT_IPOVERCLAW:
