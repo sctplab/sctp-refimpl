@@ -1,17 +1,13 @@
-- Remove extra comment for 7.0 (no GIANT here).
-- Remove unneeded WLOCK/UNLOCK of inp for getting TCB lock.
-- Fix panic that may occur when freeing an assoc that has partial delivery
-  in progress (may dereference null socket pointer when queuing partial
-  delivery aborted notification)
-- Some spacing and comment fixes.
-**********************************************************
 - Fix address add handling to clear cached routes and source addresses
   when peer acks the add in case the routing table changes.
-- Fix sctp_lower_sosend to send shutdown chunk for mbuf 
+- Fix sctp_lower_sosend to send shutdown chunk for mbuf send 
   case when sndlen = 0 and sinfoflag = SCTP_EOF
-- Fix sctp_lower_sosend for SCTP_ABORT /mbuf case with null data. 
-  So that it doesnot send the null data mbuf out and cause 
+- Fix sctp_lower_sosend for SCTP_ABORT mbuf send case with null data, 
+  So that it does not send the "null" data mbuf out and cause 
   it to get freed twice.
-- Fix so auto-asconf sysctl actually effect the socket's asconf state
-- Do not allow SCTP_AUTO_ASCONF option to be used on subset bound sockets
-- Memset bug in sctp_output.c submitted by Dave Jones (davej@codemonkey.org.uk)
+- Fix so auto-asconf sysctl actually effect the socket's asconf state.
+- Do not allow SCTP_AUTO_ASCONF option to be used on subset bound sockets.
+- Memset bug in sctp_output.c (arguments were reversed) submitted 
+  found and reported by Dave Jones (davej@codemonkey.org.uk).
+- PD-API point needs to be invoked >= not just > to conform to socket api
+  draft this fixes sctp_indata.c in the two places need to be >=.
