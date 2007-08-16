@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.23 2007/07/24 20:06:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.24 2007/08/16 01:51:22 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -217,9 +217,15 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	sa = (struct sockaddr *)&sa_store;
 	switch (param_type) {
 	case SCTP_IPV4_ADDRESS:
+		struct in6pcb *inp6;
 		if (param_length != sizeof(struct sctp_ipv4addr_param)) {
 			/* invalid param size */
 			return NULL;
+		}
+		inp6 = (struct in6pcb *)&inp->ip_inp.inp;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
+		    SCTP_IPV6_V6ONLY(inp6)) {
+			/* not valid if we are a v6 only endpoint */
 		}
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
@@ -237,6 +243,9 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		if (param_length != sizeof(struct sctp_ipv6addr_param)) {
 			/* invalid param size */
 			return NULL;
+		}
+		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+		    /* not valid if we're not a v6 endpoint */
 		}
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
@@ -889,6 +898,47 @@ sctp_asconf_cleanup(struct sctp_tcb *stcb, struct sctp_nets *net)
 }
 
 /*
+ * cleanup any cached source addresses that may be topologically
+ * incorrect after a new address has been added to this interface.
+ */
+static void
+sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
+{
+	struct sctp_nets *net;
+
+	/*
+	 * Ideally, we want to only clear cached routes and source addresses
+	 * that are topologically incorrect.  But since there is no easy way
+	 * to know whether the newly added address on the ifn would cause a
+	 * routing change (i.e. a new egress interface would be chosen)
+	 * without doing a new routing lookup and source address selection,
+	 * we will (for now) just flush any cached route using a different
+	 * ifn (and cached source addrs) and let output re-choose them during
+	 * the next send on that net.
+	 */
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		/*
+		 * clear any cached route (and cached source address) if the
+		 * route's interface is NOT the same as the address change.
+		 * If it's the same interface, just clear the cached source
+		 * address.
+		 */
+		if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro) &&
+		    SCTP_GET_IF_INDEX_FROM_ROUTE(&net->ro) != ifn->ifn_index) {
+			/* clear any cached route */
+			RTFREE(net->ro.ro_rt);
+			net->ro.ro_rt = NULL;
+		}
+		/* clear any cached source address */
+		if (net->src_addr_selected) {
+			sctp_free_ifa(net->ro._s_addr);
+			net->ro._s_addr = NULL;
+			net->src_addr_selected = 0;
+		}
+	}
+}
+
+/*
  * process an ADD/DELETE IP ack from peer.
  * addr: corresponding sctp_ifa to the address being added/deleted.
  * type: SCTP_ADD_IP_ADDRESS or SCTP_DEL_IP_ADDRESS.
@@ -900,8 +950,8 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 {
 	/*
 	 * do the necessary asoc list work- if we get a failure indication,
-	 * leave the address on the "do not use" asoc list if we get a
-	 * success indication, remove the address from the list
+	 * leave the address on the assoc's restricted list.  If we get a
+	 * success indication, remove the address from the restricted list.
 	 */
 	/*
 	 * Note: this will only occur for ADD_IP_ADDRESS, since
@@ -910,6 +960,9 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 	if (flag) {
 		/* success case, so remove from the restricted list */
 		sctp_del_local_addr_restricted(stcb, addr);
+
+		/* clear any cached, topologically incorrect source addresses */
+		sctp_asconf_nets_cleanup(stcb, addr->ifn_p);
 	}
 	/* else, leave it on the list */
 }

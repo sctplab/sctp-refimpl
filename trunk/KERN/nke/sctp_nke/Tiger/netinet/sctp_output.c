@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.48 2007/07/24 20:06:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.49 2007/08/16 01:51:22 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2727,7 +2727,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	struct sctp_ifa *sctp_ifa, *sifa;
 	uint32_t ifn_index;
 	struct sctp_vrf *vrf;
-	/*
+	/*-
 	 * For boundall we can use any address in the association.
 	 * If non_asoc_addr_ok is set we can use any address (at least in
 	 * theory). So we look for preferred addresses first. If we find one,
@@ -2940,7 +2940,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	uint8_t dest_is_priv, dest_is_loop;
 	sa_family_t fam;
 
-	/*
+	/*-
 	 * Rules: - Find the route if needed, cache if I can. - Look at
 	 * interface address in route, Is it in the bound list. If so we
 	 * have the best source. - If not we must rotate amongst the
@@ -11143,17 +11143,34 @@ sctp_lower_sosend(struct socket *so,
 	}
 
 	atomic_add_int(&inp->total_sends, 1);
-	if (uio)
+	if (uio) {
+		if (uio->uio_resid < 0) {
+			return (EINVAL);
+		}
 		sndlen = uio->uio_resid;
-	else {
-		sndlen = SCTP_HEADER_LEN(i_pak);
+	} else {
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
+		/* app len indicates the datalen, dgsize for cases
+		 * of SCTP_EOF/ABORT will not have the right len
+		 */
+		sndlen = SCTP_APP_DATA_LEN(i_pak);
+	        /*
+		 * Set the particle len also to zero to match
+		 * up with app len. We only have one particle
+		 * if app len is zero for Panda. This is ensured
+		 * in the socket lib
+		 */
+		if (sndlen == 0) {
+			SCTP_BUF_LEN(top)  = 0;
+		}
 		/* We delink the chain from header, but keep
 		 * the header around as we will need it in
 		 * EAGAIN case
 		 */
 		SCTP_DETACH_HEADER_FROM_CHAIN(i_pak);
+#else
+		sndlen = SCTP_HEADER_LEN(i_pak);
 #endif
 	}
 	/* Pre-screen address, if one is given the sin-len
@@ -11645,14 +11662,15 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 0;
 		}
 		if(top) {
-			struct mbuf *cntm;
+			struct mbuf *cntm = NULL;
 			mm = sctp_get_mbuf_for_msg(1, 0, M_WAIT, 1, MT_DATA);
-
+                        if (sndlen != 0) {
 			cntm = top;
 			while(cntm) {
 				tot_out += SCTP_BUF_LEN(cntm);
 				cntm = SCTP_BUF_NEXT(cntm);
 			}
+                        }
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 		} else {
 			/* Must fit in a MTU */
@@ -11696,7 +11714,9 @@ sctp_lower_sosend(struct socket *so,
 					mm = NULL;
 				}
 			} else {
-				SCTP_BUF_NEXT(mm) = top;
+				if (sndlen != 0) {
+					SCTP_BUF_NEXT(mm) = top;
+				}
 			}
 		}
 		if(hold_tcblock == 0) {
@@ -11712,6 +11732,14 @@ sctp_lower_sosend(struct socket *so,
 		/* now relock the stcb so everything is sane */
 		hold_tcblock = 0;
 		stcb = NULL;
+		/* In this case top is already chained to mm
+		 * avoid double free, since we free it below if
+		 * top != NULL and driver would free it after sending
+		 * the packet out
+		 */
+		if (sndlen != 0) {
+			top = NULL;
+		}
 		goto out_unlocked;
 	}
 	/* Calculate the maximum we can send */
@@ -11790,20 +11818,24 @@ sctp_lower_sosend(struct socket *so,
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 	atomic_add_int(&stcb->total_sends, 1);
+	/* sndlen covers for mbuf case
+	 * uio_resid covers for the non-mbuf case
+	 * NOTE: uio will be null when top/mbuf is passed
+	 */
+	if ( (sndlen == 0) || ((uio) && (uio->uio_resid == 0)) ) {
+		if (srcv->sinfo_flags & SCTP_EOF) {
+			got_all_of_the_send = 1;
+			goto dataless_eof;
+		} else {
+			error = EINVAL;
+			goto out;
+		}
+	}
 	if (top == NULL) {
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
 		int user_marks_eor;
-		if(uio->uio_resid == 0) {
-			if(srcv->sinfo_flags & SCTP_EOF) {
-				got_all_of_the_send = 1;
-				goto dataless_eof;
-			} else {
-				error = EINVAL;
-				goto out;
-			}
-		}
 		initial_out = uio->uio_resid;
 
 		SCTP_TCB_SEND_LOCK(stcb);
@@ -12366,10 +12398,10 @@ sctp_lower_sosend(struct socket *so,
 		splx(s);
 #endif
 	}
-	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d \n",
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d",
 		queue_only, stcb->asoc.peers_rwnd, un_sent,
 		stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
-		stcb->asoc.total_output_queue_size);
+		stcb->asoc.total_output_queue_size, error);
 
  out:
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
