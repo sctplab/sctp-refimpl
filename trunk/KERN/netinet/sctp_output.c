@@ -3847,6 +3847,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			else if (ifp) {
 #if (defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || defined(__APPLE__)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
+#elif defined(__Windows__)
+#define ND_IFINFO(ifp)	(ifp)
+#define linkmtu		if_mtu
 #endif				/* SCTP_BASE_FREEBSD */
 				if (ND_IFINFO(ifp)->linkmtu &&
 				    (stcb->asoc.smallest_mtu > ND_IFINFO(ifp)->linkmtu)) {
@@ -7070,7 +7073,7 @@ again_one_more_time:
 		} else {
 			skip_data_for_this_net = 0;
 		}
-#if !defined(__Panda__)
+#if !(defined(__Panda__) || defined(__Windows__))
 		if ((net->ro.ro_rt) && (net->ro.ro_rt->rt_ifp)) {
 			/*
 			 * if we have a route and an ifp check to see if we
@@ -11000,9 +11003,10 @@ sctp_sosend(struct socket *so,
     struct mbuf *top,
     struct mbuf *control,
 #endif
+#if defined(__NetBSD__) || defined(__APPLE__) || defined(__Panda__)
     int flags
-#ifdef __FreeBSD__
-    ,
+#else
+    int flags,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
 #else
@@ -11609,7 +11613,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* Ok, we will attempt a msgsnd :> */
-#ifndef __Panda__
+#if !(defined(__Panda__) || defined(__Windows__))
 	if (p) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 603000
 		p->td_ru.ru_msgsnd++;

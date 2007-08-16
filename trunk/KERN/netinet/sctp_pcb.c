@@ -2333,7 +2333,11 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	m->sctp_sws_sender = SCTP_SWS_SENDER_DEF;
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
 	m->max_burst = sctp_max_burst_default;
+#if !defined(__Windows__) /* XXX */
 	if ((sctp_default_cc_module >= SCTP_CC_RFC2581) && 
+#else
+	if (1 &&
+#endif
 	    (sctp_default_cc_module <= SCTP_CC_HTCP)) {
 		m->sctp_default_cc_module = sctp_default_cc_module;
 	} else {
@@ -2730,6 +2734,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 * already has this one bound.
 		 */
 		/* got to be root to get at low ports */
+#if !defined(__Windows__)
 		if (ntohs(lport) < IPPORT_RESERVED) {
 			if (p && (error =
 #ifdef __FreeBSD__
@@ -2777,6 +2782,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			return (error);
 		}
 #endif
+#endif /* __Windows__ */
 		SCTP_INP_WUNLOCK(inp);
 		if (bindall) {
 #ifdef SCTP_MVRF
@@ -2846,6 +2852,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
                 uint16_t count;
 		int done;
 
+#if defined(__Windows__)
+		first = 0;
+		last = 0xffff;
+#else
 #if defined(__FreeBSD__) || defined(__APPLE__)
                 if (ip_inp->inp_flags & INP_HIGHPORT) {
                         first = ipport_hifirstauto;
@@ -2883,6 +2893,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #if defined(__FreeBSD__) || defined(__APPLE__)
                 }
 #endif
+#endif /* __Windows__ */
 		if (first > last) {
 			uint16_t temp;
 
@@ -5623,7 +5634,7 @@ sctp_pcb_init()
 #endif
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
@@ -5636,6 +5647,7 @@ sctp_pcb_finish(void)
 	struct sctp_ifa *ifa;
 
 	/* FIXME MT */
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	sctp_address_monitor_destroy();
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	/* free the iterator worker thread */
@@ -5643,6 +5655,7 @@ sctp_pcb_finish(void)
 		thread_terminate(sctppcbinfo.thread_proc);
 		sctppcbinfo.thread_proc = THREAD_NULL;
 	}
+#endif
 #endif
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
@@ -5677,21 +5690,37 @@ sctp_pcb_finish(void)
 	SCTP_HASH_FREE(sctppcbinfo.sctp_vrfhash, sctppcbinfo.hashvrfmark);
 	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.hash_ifn_hashmark);
 
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* free the locks and mutexes */
 	SCTP_TIMERQ_LOCK_DESTROY();
+#endif
 #ifdef SCTP_PACKET_LOGGING
 	SCTP_IP_PKTLOG_DESTROY();
  
 #endif
 	SCTP_IPI_ITERATOR_WQ_DESTROY();
 	SCTP_IPI_ADDR_DESTROY();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	SCTP_IPI_COUNT_DESTROY();
+#endif
 	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_STATLOG_DESTROY();
 	SCTP_INP_INFO_LOCK_DESTROY();
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
 	lck_grp_free(sctppcbinfo.mtx_grp);
 	lck_attr_free(sctppcbinfo.mtx_attr);
+#endif
+
+#if defined(__Windows__)
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_ep);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asoc);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_laddr);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_net);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_chunk);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_readq);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
+#endif
 
 	/*
 	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep", sizeof(struct

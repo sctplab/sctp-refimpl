@@ -4803,7 +4803,7 @@ sctp_trim_mbuf(struct mbuf *m)
 #endif
 
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 sctp_input(i_pak, off)
 	struct mbuf *i_pak;
@@ -4864,7 +4864,7 @@ sctp_input(i_pak, va_alist)
 	}
 
 	mlen = SCTP_HEADER_LEN(i_pak);
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__))
 	int off;
 	va_list ap;
 
@@ -4918,7 +4918,7 @@ sctp_input(i_pak, va_alist)
 		}
 		ip = mtod(m, struct ip *);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__Windows__)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif

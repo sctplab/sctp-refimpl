@@ -400,7 +400,7 @@ struct sctp_inpcb;
 struct sctp_tcb;
 struct sctphdr;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
 void sctp_input __P((struct mbuf *, int));
@@ -417,7 +417,7 @@ int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
 void sctp_finish(void);
 #endif
 
@@ -435,7 +435,7 @@ int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
 int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
 
 int sctp_ingetaddr(struct socket *,
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	struct sockaddr **
 #elif defined(__Panda__)
 	struct sockaddr *
@@ -445,7 +445,7 @@ int sctp_ingetaddr(struct socket *,
 );
 
 int sctp_peeraddr(struct socket *,
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	struct sockaddr **
 #elif defined(__Panda__)
 	struct sockaddr *
@@ -464,7 +464,7 @@ int sctp_listen(struct socket *, struct thread *);
 int sctp_listen(struct socket *, struct proc *);
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 int sctp_accept(struct socket *, struct sockaddr **);
 #elif defined(__Panda__)
 int sctp_accept(struct socket *, struct sockaddr *, int *, void *, int *);

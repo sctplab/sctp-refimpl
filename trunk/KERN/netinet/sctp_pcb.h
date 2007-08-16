@@ -224,6 +224,12 @@ struct sctp_epinfo {
 	void *ipi_count_mtx;
 	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
+#elif defined(__Windows__)
+	KSPIN_LOCK ipi_ep_lock;
+	KSPIN_LOCK it_lock;
+	KSPIN_LOCK ipi_iterator_wq_lock;
+	KSPIN_LOCK ipi_addr_lock;
+	KSPIN_LOCK ipi_pktlog_mtx;
 #endif
 	uint32_t ipi_count_ep;
 
@@ -447,6 +453,11 @@ struct sctp_inpcb {
 	pthread_mutex_t inp_create_mtx;
 	pthread_mutex_t inp_rdata_mtx;
 	int32_t refcount;
+#elif defined(__Windows__)
+	KSPIN_LOCK inp_lock;
+	KSPIN_LOCK inp_create_lock;
+	KSPIN_LOCK inp_rdata_lock;
+	int32_t refcount;
 #endif
 #if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	int32_t refcount;
@@ -514,6 +525,9 @@ struct sctp_tcb {
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t tcb_mtx;
 	pthread_mutex_t tcb_send_mtx;
+#elif defined(__Windows__)
+	KSPIN_LOCK tcb_lock;
+	KSPIN_LOCK tcb_send_lock;
 #endif
 };
 
@@ -532,6 +546,10 @@ struct sctp_tcb {
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 
 #include <netinet/sctp_process_lock.h>
+
+#elif defined(__Windows__)
+
+#include <netinet/sctp_lock_windows.h>
 
 #else
 /*
@@ -653,6 +671,10 @@ void sctp_remove_net(struct sctp_tcb *, struct sctp_nets *);
 int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
+
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+void sctp_pcb_finish(void);
+#endif
 
 void sctp_add_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 void sctp_del_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);

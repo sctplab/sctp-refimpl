@@ -1108,7 +1108,11 @@ measure_achieved_throughput(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 	net->htcp_ca.bytecount += net->net_ack;
 
+#if !defined(__Windows__)
 	if (net->htcp_ca.bytecount >= net->cwnd - ((net->htcp_ca.alpha>>7? : 1)*net->mtu)
+#else
+	if (net->htcp_ca.bytecount >= net->cwnd - (((net->htcp_ca.alpha >> 7) ? net->htcp_ca.alpha : 1) * net->mtu)
+#endif
 			&& now - net->htcp_ca.lasttime >= net->htcp_ca.minRTT
 			&& net->htcp_ca.minRTT > 0) {
 		uint32_t cur_Bi = net->htcp_ca.bytecount/net->mtu*hz/(now - net->htcp_ca.lasttime);
