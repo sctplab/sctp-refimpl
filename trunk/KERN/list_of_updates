@@ -11,3 +11,10 @@
   found and reported by Dave Jones (davej@codemonkey.org.uk).
 - PD-API point needs to be invoked >= not just > to conform to socket api
   draft this fixes sctp_indata.c in the two places need to be >=.
+- move M_NOTIFICATION to use M_PROTO5.
+- PEER_ADDR_PARAMS did not fail properly if you specify an address
+  that is not in the association with a valid assoc_id. This meant
+  you got or set the stcb level values instead of the destination
+  you thought you were going to get/set. Now validate if the
+  stcb is non-null and the net is NULL that the sa_family is
+  set and the address is unspecified otherwise return an error.
