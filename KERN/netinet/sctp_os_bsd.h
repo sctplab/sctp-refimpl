@@ -184,10 +184,10 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #endif
 
 #ifdef SCTP_DEBUG
-#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) printf("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d", \
+#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) printf("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 								     m, inp, stcb, net, file, __LINE__, err);
-#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) printf("inp:%p stcb:%p net:%p file:%x line:%d error:%d", \
-								     m, inp, stcb, net, file, __LINE__, err);
+#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) printf("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
+								     inp, stcb, net, file, __LINE__, err);
 #else
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)

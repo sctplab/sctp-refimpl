@@ -839,6 +839,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
 #define SCTP_FROM_SCTP_OUTPUT  0x90000000
 #define SCTP_FROM_SCTP_PEELOFF 0xa0000000
 #define SCTP_FROM_SCTP_PANDA   0xb0000000
+#define SCTP_FROM_SCTP_SYSCTL  0xc0000000
 
 /* Location ID's */
 #define SCTP_LOC_1  0x00000001
