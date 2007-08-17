@@ -5818,7 +5818,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 					if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 							 asoc->primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -11495,7 +11495,7 @@ sctp_lower_sosend(struct socket *so,
 			/* Turn on queue only flag to prevent data from being sent */
 			queue_only = 1;
 			asoc = &stcb->asoc;
-			asoc->state = SCTP_STATE_COOKIE_WAIT;
+			SCTP_SET_STATE(asoc, SCTP_STATE_COOKIE_WAIT);
 			(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 
 			/* initialize authentication params for the assoc */
@@ -12152,7 +12152,7 @@ sctp_lower_sosend(struct socket *so,
 					queue_only = 0;
 				} else {
 					sctp_send_initiate(inp, stcb);
-					stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+					SCTP_SET_STATE(asoc, SCTP_STATE_COOKIE_WAIT);
 					queue_only_for_init = 0;
 					queue_only = 1;
 				}
@@ -12303,7 +12303,7 @@ sctp_lower_sosend(struct socket *so,
 				if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -12423,11 +12423,7 @@ sctp_lower_sosend(struct socket *so,
 			queue_only = 0;
 		} else {
 			sctp_send_initiate(inp, stcb);
-			if (stcb->asoc.state & SCTP_STATE_SHUTDOWN_PENDING)
-				stcb->asoc.state = SCTP_STATE_COOKIE_WAIT |
-					SCTP_STATE_SHUTDOWN_PENDING;
-			else
-				stcb->asoc.state = SCTP_STATE_COOKIE_WAIT;
+			SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_WAIT);
 			queue_only_for_init = 0;
 			queue_only = 1;
 		}
