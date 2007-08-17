@@ -395,6 +395,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #endif
 
+
 struct sctp_nets;
 struct sctp_inpcb;
 struct sctp_tcb;
