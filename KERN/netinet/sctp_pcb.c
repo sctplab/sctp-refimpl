@@ -379,7 +379,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if (new_ifn_af) {
 				/* Remove the created one that we don't want */
-				sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+                sctp_delete_ifn(sctp_ifnp, 1);
 			}
 			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
@@ -399,7 +399,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-					sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+                    sctp_delete_ifn(sctp_ifnp, 1);
 				}
  				goto exit_stage_left;
 			}
