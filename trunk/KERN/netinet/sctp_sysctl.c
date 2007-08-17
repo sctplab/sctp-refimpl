@@ -377,6 +377,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_RUNLOCK();
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_SYSCTL, EPERM);
 		return EPERM;
 	}
 
