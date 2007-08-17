@@ -22,3 +22,6 @@
   at the exact time it was running. rework the worker thread to
   use the increment/decrement to prevent this and no longer use
   the markers that the timer based iterator uses.
+- Fix the memleak in sctp_add_addr_to_vrf() for the case when it is 
+  detected that ifa is already pointing to a ifn.
+
