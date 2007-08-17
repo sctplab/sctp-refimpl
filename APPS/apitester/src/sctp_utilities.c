@@ -901,6 +901,10 @@ int sctp_get_paddr_param(int fd, sctp_assoc_t id,
 			errno = EINVAL;
 			return -1;
 		}
+	} else {
+		struct sockaddr *sa;
+		sa = (struct sockaddr *)&param.spp_address;
+		sa->sa_family = AF_INET;
 	}
 	len = sizeof(param);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_PEER_ADDR_PARAMS,
@@ -954,6 +958,10 @@ int sctp_set_paddr_param(int fd, sctp_assoc_t id,
 			errno = EINVAL;
 			return -1;
 		}
+	} else {
+		struct sockaddr *sa;
+		sa = (struct sockaddr *)&param.spp_address;
+		sa->sa_family = AF_INET;
 	}
 	param.spp_hbinterval = hbinterval;
 	param.spp_pathmaxrxt = maxrxt;
