@@ -21,7 +21,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * $Id: sctp_os_windows.h,v 1.1 2007-08-16 16:07:50 ma-kun Exp $
+ * $Id: sctp_os_windows.h,v 1.2 2007-08-17 03:25:09 randall Exp $
  */
 #ifndef __sctp_os_windows_h__
 #define __sctp_os_windows_h__
@@ -157,6 +157,10 @@ SCTP_PRINTF(char *format, ...)
 #define CTR6(m, d, p1, p2, p3, p4, p5, p6)
 #define SCTP_LTRACE_CHK(a, b, c, d)
 #define SCTP_LTRACE_ERR(a, b, c, d)
+#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
+#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
+
+
 
 /*
  * Local address and interface list handling
