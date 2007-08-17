@@ -616,10 +616,14 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 	if (error)
 		return (error);
 
-	if (req->newlen != sizeof(addrs))
+	if (req->newlen != sizeof(addrs)) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
-	if (req->oldlen != sizeof(struct ucred))
+	}
+	if (req->oldlen != sizeof(struct ucred)) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
+	}
 	error = SYSCTL_IN(req, addrs, sizeof(addrs));
 	if (error)
 		return (error);
@@ -634,6 +638,7 @@ sctp6_getcred(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_DECR_REF(inp);
 			goto cred_can_cont;
 		}
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOENT);
 		error = ENOENT;
 		goto out;
 	}
@@ -686,6 +691,7 @@ sctp6_abort(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 		return;
 #else
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
 #endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -754,8 +760,10 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp != NULL)
+	if (inp != NULL) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
+	}
 
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
 		error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
@@ -842,16 +850,20 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	int error;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0)
+	if (inp == 0) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
+	}
 
 	if(addr) {
 		if((addr->sa_family == AF_INET6) && 
 		   (addr->sa_len != sizeof(struct sockaddr_in6))) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 		if((addr->sa_family == AF_INET) && 
 		   (addr->sa_len != sizeof(struct sockaddr_in))) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 	}
@@ -929,6 +941,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* IPV6_V6ONLY socket */
 		if (addr->sa_family == AF_INET) {
 			/* can't bind v4 addr to v6 only socket! */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		} else {
 			struct sockaddr_in6 *sin6_p;
@@ -938,6 +951,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 			if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr))
 				/* can't bind v4-mapped addrs either! */
 				/* NOTE: we don't support SIIT */
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 				return EINVAL;
 		}
 	}
@@ -1024,8 +1038,10 @@ sctp6_detach(struct socket *so)
 	int s;
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0)
+	if (inp == 0) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
+	}
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -1098,6 +1114,7 @@ sctp6_disconnect(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOTCONN);
 		return (ENOTCONN);
 	}
 	SCTP_INP_RLOCK(inp);
@@ -1108,6 +1125,7 @@ sctp6_disconnect(struct socket *so)
 			splx(s);
 #endif
 			SCTP_INP_RUNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOTCONN);
 			return (ENOTCONN);
 		} else {
 			int some_on_streamwheel = 0;
@@ -1120,6 +1138,7 @@ sctp6_disconnect(struct socket *so)
 				splx(s);
 #endif
 				SCTP_INP_RUNLOCK(inp);
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 				return (EINVAL);
 			}
 			SCTP_TCB_LOCK(stcb);
@@ -1210,6 +1229,7 @@ sctp6_disconnect(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EOPNOTSUPP);
 		return EOPNOTSUPP;
 	}
 }
@@ -1260,6 +1280,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			control = NULL;
 		}
 		SCTP_RELEASE_PKT(m);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
 	}
 	in_inp = (struct inpcb *)inp;
@@ -1278,6 +1299,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			SCTP_RELEASE_PKT(control);
 			control = NULL;
 		}
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EDESTADDRREQ);
 		return (EDESTADDRREQ);
 	}
 #ifdef INET
@@ -1288,9 +1310,11 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 		 * v4 addr or v4-mapped addr
 		 */
 		if (addr->sa_family == AF_INET) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 		if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 	}
@@ -1304,6 +1328,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 			    control, p);
 		} else {
 			/* mapped addresses aren't enabled */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 	}
@@ -1395,6 +1420,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ECONNRESET);
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
 	}
@@ -1402,18 +1428,21 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
 	}
 	if ((addr->sa_family == AF_INET6) && (addr->sa_len != sizeof(struct sockaddr_in6))) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
 	}
 	if ((addr->sa_family == AF_INET) && (addr->sa_len != sizeof(struct sockaddr_in))) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
 	}
 
@@ -1443,6 +1472,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_ASOC_CREATE_UNLOCK(inp);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EADDRINUSE);
 		return (EADDRINUSE);
 	}
 #ifdef INET
@@ -1458,6 +1488,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 		if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
@@ -1466,6 +1497,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 	}
@@ -1481,6 +1513,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
 	} else
@@ -1514,6 +1547,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EALREADY);
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
@@ -1586,6 +1620,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin6);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ECONNRESET);
 		return ECONNRESET;
 	}
 	SCTP_INP_RLOCK(inp);
@@ -1648,6 +1683,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 			SCTP_FREE_SONAME(sin6);
 #endif
 			SCTP_INP_RUNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOENT);
 			return ENOENT;
 		}
 	}
@@ -1703,6 +1739,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
 		/* UDP type and listeners will drop out here */
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOTCONN);
 		return (ENOTCONN);
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
@@ -1722,6 +1759,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin6);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ECONNRESET);
 		return ECONNRESET;
 	}
 	SCTP_INP_RLOCK(inp);
@@ -1734,6 +1772,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin6);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ECONNRESET);
 		return ECONNRESET;
 	}
 	fnd = 0;
@@ -1752,6 +1791,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin6);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOENT);
 		return ENOENT;
 	}
 #ifdef SCTP_EMBEDDED_V6_SCOPE
@@ -1790,8 +1830,10 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 #endif
 	int error;
 
-	if (inp6 == NULL)
+	if (inp6 == NULL) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
+	}
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -1870,8 +1912,10 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 	int s;
 #endif
 
-	if (inp6 == NULL)
+	if (inp6 == NULL) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return EINVAL;
+	}
 
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
@@ -2005,6 +2049,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 			    (struct ifnet *)control, p);
 #endif
 		default:
+			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EAFNOSUPPORT);
 			error = EAFNOSUPPORT;
 		}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -2043,6 +2088,7 @@ sctp6_usrreq(so, req, m, nam, control, p)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
+			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EAFNOSUPPORT);
 			return (EAFNOSUPPORT);
 		}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -2059,24 +2105,30 @@ sctp6_usrreq(so, req, m, nam, control, p)
 		error = sctp6_detach(so);
 		break;
 	case PRU_BIND:
-		if (nam == NULL)
+		if (nam == NULL) {
+			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return (EINVAL);
+		}
 		error = sctp6_bind(so, nam, p);
 		break;
 	case PRU_LISTEN:
 		error = sctp_listen(so, p);
 		break;
 	case PRU_CONNECT:
-		if (nam == NULL)
+		if (nam == NULL) {
+			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return (EINVAL);
+		}
 		error = sctp6_connect(so, nam, p);
 		break;
 	case PRU_DISCONNECT:
 		error = sctp6_disconnect(so);
 		break;
 	case PRU_ACCEPT:
-		if (nam == NULL)
+		if (nam == NULL) {
+			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return (EINVAL);
+		}
 		error = sctp_accept(so, nam);
 		break;
 	case PRU_SHUTDOWN:
@@ -2104,9 +2156,11 @@ sctp6_usrreq(so, req, m, nam, control, p)
 		error = 0;
 		break;
 	case PRU_RCVOOB:
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EAFNOSUPPORT);
 		error = EAFNOSUPPORT;
 		break;
 	case PRU_SENDOOB:
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EAFNOSUPPORT);
 		error = EAFNOSUPPORT;
 		break;
 	case PRU_PEERADDR:
