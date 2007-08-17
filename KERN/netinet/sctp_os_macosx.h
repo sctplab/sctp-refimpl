@@ -112,6 +112,9 @@ extern struct fileops socketops;
 #define	CTR6(m, d, p1, p2, p3, p4, p5, p6)
 #define SCTP_LTRACE_CHK(a, b, c, d)
 #define SCTP_LTRACE_ERR(a, b, c, d) 
+#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
+#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
+
 
 /*
  * debug macro
