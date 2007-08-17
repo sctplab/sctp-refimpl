@@ -108,6 +108,8 @@ useage(char *who)
 	printf("-I strms        - Number of allowed in-streams (default 13)\n");
 	printf("-O strms        - Number of requesed out-streams (default 13)\n");
 	printf("-H or -?        - help\n");
+	printf("-f level        - set fragment interleave level (0, 1 or 2) (default 0)\n");
+	printf("-P pdapi_point  - set partial delivery point (0 = system default)\n");
 }
 
 int no_hb_delay = 0;
@@ -115,6 +117,7 @@ int quiet_mode = 0;
 union sctp_sockstore addr;
 union sctp_sockstore from;
 union sctp_sockstore bindto;
+int pdapi_point = 0;
 int verbose = 0;
 int listen_only = 1;
 uint16_t remote_port, local_port;
@@ -131,6 +134,7 @@ uint32_t msg_in_cnt_weor=0;
 uint32_t notify_in_cnt=0;
 uint32_t sends_out = 0;
 uint32_t sends_ping_resp = 0;
+int fragment_interleave = 0;
 
 unsigned int mydelay;
 struct sctp_sndrcvinfo sinfo_in, sinfo_out;
@@ -439,9 +443,20 @@ setup_a_socket()
 			exit (-1);
 		}
 	}
-
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_RTOINFO, &rto, siz) != 0) {
 		printf("Can't set RTO information error:%d - exiting\n", errno);
+		exit (-1);
+	}
+	if (pdapi_point) {
+		siz = sizeof(pdapi_point);
+		if(setsockopt(sd, IPPROTO_SCTP, SCTP_PARTIAL_DELIVERY_POINT, &pdapi_point, siz) != 0) {
+			printf("Can't set PDAPI-Point error:%d - exiting\n", errno);
+			exit (-1);
+		}
+	}
+	siz = sizeof(fragment_interleave);
+	if(setsockopt(sd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &fragment_interleave, siz) != 0) {
+		printf("Can't set fragment interleave error:%d - exiting\n", errno);
 		exit (-1);
 	}
 	on_off = 1;
@@ -500,16 +515,114 @@ setup_a_socket()
 
 int do_not_respond = 0;
 
+struct msg_of {
+	struct msg_of *next;
+	sctp_assoc_t id;
+	uint16_t notification;
+	uint16_t done;
+	int stream;
+	int length;
+	char *buffer;
+};
+
+struct msg_of *base=NULL;
+
+struct msg_of *
+find_the_msg(struct sctp_sndrcvinfo *sinfo, int flags)
+{
+	struct msg_of *at;
+	at = base;
+	while(at) {
+		if (flags & MSG_NOTIFICATION) {
+			if ((at->id == sinfo->sinfo_assoc_id) &&
+			    (at->notification)) {
+				return (at);
+			}
+		} else {
+			if ((at->id == sinfo->sinfo_assoc_id) &&
+			    (at->stream == sinfo->sinfo_stream) &&
+				(at->notification == 0)) {
+				return (at);
+			}
+		}
+		at = at->next;
+	}	
+	return(NULL);
+}
+
+
+char *
+sctp_msg_recv(char *rbuf, int len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
+{
+	/* Need to assemble the incoming messages into
+	 * complete messages. assoc_id and stream number are
+	 * the keys to uniqueness. For NOTIFICATIONS,
+	 * in theory we should only get
+	 * one of these at a time, but we write the code to
+	 * handle more than one at a time. For these cases (notifications)
+	 * we load them all as stream 0, so we can use the same logic
+	 * for getting them.
+	 */
+	struct msg_of *it;
+
+	it = find_the_msg(sinfo_in, flags);
+	if(it == NULL) {
+		it = (struct msg_of *)malloc(sizeof(struct msg_of));
+		memset(it, 0, sizeof(*it));
+		if (flags & MSG_NOTIFICATION) {
+			it->notification = 1;
+		} else {
+			it->notification = 0;
+		}
+		it->id = sinfo_in->sinfo_assoc_id;
+		it->stream = sinfo_in->sinfo_stream;
+		it->length = len;
+		it->buffer = malloc(len);
+		memcpy(it->buffer, rbuf, len);
+		it->next = base;
+		base = it;
+	} else {
+		char *temp;
+		temp = malloc(len + it->length);
+		memcpy(temp, it->buffer, it->length);
+		memcpy(&temp[it->length], rbuf, len);
+		free(it->buffer);
+		it->buffer = temp;
+		it->length += len;
+	}
+	if(flags & MSG_EOR) {
+		it->done = 1;
+	}
+	if (it->done) {
+		return(it->buffer);
+	} else {
+		return (NULL);
+	}
+}
+
+
+void
+sctp_msg_cleanup()
+{
+	struct msg_of *it;
+	if(base->done) {
+		it = base;
+		base = it->next;
+		free(it->buffer);
+		free(it);
+	}
+}
+
+
 void
 handle_read_event(int *notDone, int sd)
 {
 	testDgram_t *rcv;
-	char receive_buffer[RECV_BUF_SIZE];
+	char receive_buffer[RECV_BUF_SIZE], *buf;
 	int ret, respmsg;
 	socklen_t flen;
 	int msg_flags=0;
 
-	rcv = (testDgram_t *)receive_buffer;
 	flen = sizeof(from);
 	ret = sctp_recvmsg(sd, receive_buffer, sizeof(receive_buffer),
 			   &from.sa, &flen, &sinfo_in, &msg_flags);
@@ -524,6 +637,12 @@ handle_read_event(int *notDone, int sd)
 	if (msg_flags & MSG_EOR)
 		msg_in_cnt_weor++;
 
+	buf = sctp_msg_recv(receive_buffer, ret, &sinfo_in,  msg_flags);
+	if(buf) {
+		rcv = (testDgram_t *)buf;
+	} else {
+		return;
+	}
 	if(msg_flags & MSG_NOTIFICATION) {
 		notify_in_cnt++;
 		handle_notification(receive_buffer, notDone);
@@ -551,6 +670,7 @@ handle_read_event(int *notDone, int sd)
 			}
 		} 
 	}
+	sctp_msg_cleanup();
 }
 
 int
@@ -571,13 +691,16 @@ main (int argc, char **argv)
 	addr.sa.sa_family = AF_INET;
 	addr.sa.sa_len = sizeof(struct sockaddr_in);
 	use_v6 = 0;
-	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D:?HZq")) != EOF) {
+	while((i= getopt(argc, argv,"lSLs:c:46m:p:vB:h:D:?HZqf:P:")) != EOF) {
 		switch(i) {
 		case 'D':
 			mydelay = strtoul(optarg, NULL, 0);
 			if (mydelay == 0) {
 				printf("Warning, test app may not function/fail without some delay\n");
 			}
+			break;
+		case 'P':
+			pdapi_point = strtol(optarg, NULL, 0);
 			break;
 		case 'Z':
 			no_hb_delay = 1;
@@ -620,6 +743,13 @@ main (int argc, char **argv)
 			addr.sa.sa_family = AF_INET6;
 			addr.sa.sa_len = sizeof(struct sockaddr_in6);
 			use_v6 = 1;
+			break;
+		case 'f':
+			fragment_interleave = strtol(optarg, NULL, 0);
+			if ((fragment_interleave < 0) || (fragment_interleave > 2)) {
+				printf("Fragment intern-leave defaults to 0, must be 0, 1 or 2\n");
+				fragment_interleave = 0;
+			}
 			break;
 		case 'q':
 			verbose = 0;
