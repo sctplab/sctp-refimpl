@@ -6234,6 +6234,15 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 			return (goal_mtu);
 		}
 	} 
+	/*-
+	 * For those strange folk that make the send buffer
+	 * smaller than our fragmentation point, we can't
+	 * get a full msg in so we have to allow splitting.
+	 */
+	if (SCTP_SB_LIMIT_SND(stcb->sctp_socket) < frag_point) {
+		return(sp->length);
+	}
+
 	if ((sp->length <= goal_mtu) ||
 	    ((sp->length - goal_mtu) < sctp_min_residual)) {
 		/* Sub-optimial residual don't split in non-eeor mode. */
@@ -11835,7 +11844,7 @@ sctp_lower_sosend(struct socket *so,
 		goto out_unlocked;
 	}
 	len = 0;
-	if (max_len < sctp_add_more_threshold) {
+	if ((max_len < sctp_add_more_threshold) && (SCTP_SB_LIMIT_SND(so) > sctp_add_more_threshold)) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
 		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
@@ -11984,8 +11993,9 @@ sctp_lower_sosend(struct socket *so,
 				max_len = 0;
 
 			if ((max_len > sctp_add_more_threshold) ||
+			    (max_len && (SCTP_SB_LIMIT_SND(so) < sctp_add_more_threshold)) ||
 			    (uio->uio_resid &&
-			     (uio->uio_resid < (int)max_len))) {
+			     (uio->uio_resid <= (int)max_len))) {
 				sndout = 0;
 				new_tail = NULL;
 				if (hold_tcblock) {
@@ -12188,7 +12198,9 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size + 
+						    min(sctp_add_more_threshold,SCTP_SB_LIMIT_SND(so)))
+				) {
 				if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
 					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 						       so, asoc, uio->uio_resid);
