@@ -429,7 +429,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			else
 				end = 0;
 			sctp_add_to_readq(stcb->sctp_ep,
-			    stcb, control, &stcb->sctp_socket->so_rcv, end);
+			    stcb, control, &stcb->sctp_socket->so_rcv, end, 0);
 			cntDel++;
 		} else {
 			if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG)
@@ -505,7 +505,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 						strm->last_sequence_delivered++;
 						sctp_add_to_readq(stcb->sctp_ep, stcb,
 						    ctl,
-						    &stcb->sctp_socket->so_rcv, 1);
+						    &stcb->sctp_socket->so_rcv, 1, 0);
 						ctl = ctlat;
 					} else {
 						break;
@@ -614,7 +614,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		strm->last_sequence_delivered++;
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		    control,
-		    &stcb->sctp_socket->so_rcv, 1);
+		    &stcb->sctp_socket->so_rcv, 1, 0);
 		control = TAILQ_FIRST(&strm->inqueue);
 		while (control != NULL) {
 			/* all delivered */
@@ -637,7 +637,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 				    control,
-				    &stcb->sctp_socket->so_rcv, 1);
+				    &stcb->sctp_socket->so_rcv, 1, 0);
 				control = at;
 				continue;
 			}
@@ -1753,7 +1753,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (control == NULL) {
 			goto failed_express_del;
 		}
-		sctp_add_to_readq(stcb->sctp_ep, stcb, control, &stcb->sctp_socket->so_rcv, 1);
+		sctp_add_to_readq(stcb->sctp_ep, stcb, control, &stcb->sctp_socket->so_rcv, 1, 0);
 		if ((chunk_flags & SCTP_DATA_UNORDERED) == 0) {
 			/* for ordered, bump what we delivered */
 			asoc->strmin[strmno].last_sequence_delivered++;
@@ -2011,7 +2011,7 @@ failed_express_del:
 			/* queue directly into socket buffer */
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			    control,
-			    &stcb->sctp_socket->so_rcv, 1);
+			    &stcb->sctp_socket->so_rcv, 1, 0);
 		} else {
 			/*
 			 * Special check for when streams are resetting. We
@@ -3196,7 +3196,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					if (tp1->data != NULL) {
 						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &asoc->sent_queue);
+										 &asoc->sent_queue, 0);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3209,7 +3209,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					if (tp1->data != NULL) {
 						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &asoc->sent_queue);
+										 &asoc->sent_queue, 0);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3615,7 +3615,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				if (tp1->data) {
 					(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 					    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-					    &asoc->sent_queue);
+					    &asoc->sent_queue, 0);
 				}
 			} else {
 				/*
@@ -3648,7 +3648,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				 */
 				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 				    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-				    tp1);
+				    tp1, 0);
 				sctp_m_freem(tp1->data);
 				tp1->data = NULL;
 				if(stcb->sctp_socket) {
@@ -5165,7 +5165,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			if(stcb->sctp_socket) {
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
-						  &stcb->sctp_socket->so_rcv, 1);
+						  &stcb->sctp_socket->so_rcv, 1, 0);
 			}
 
 		} else {
@@ -5193,7 +5193,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			if(stcb->sctp_socket) {
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
-						  &stcb->sctp_socket->so_rcv, 1);
+						  &stcb->sctp_socket->so_rcv, 1, 0);
 			}
 			tt = strmin->last_sequence_delivered + 1;
 		} else {
@@ -5436,7 +5436,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 
 					str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
 					sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-							stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
+							stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq, 0);
 
 				}
 				break;
@@ -5452,7 +5452,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		uint32_t str_seq;
 		str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
 		sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-				stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq);
+				stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq, 0);
 		asoc->fragmented_delivery_inprogress = 0;
 	}
 	/*************************************************************/

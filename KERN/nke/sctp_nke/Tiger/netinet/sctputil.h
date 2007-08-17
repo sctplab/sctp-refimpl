@@ -99,7 +99,12 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_queued_to_read *control,
     struct sockbuf *sb,
-    int end);
+    int end,
+    int so_locked
+#if !defined(__APPLE__)
+    SCTP_UNUSED
+#endif
+    );
 
 int
 sctp_append_to_readq(struct sctp_inpcb *inp,
@@ -134,7 +139,11 @@ int sctp_add_pad_tombuf(struct mbuf *, int);
 
 int sctp_pad_lastmbuf(struct mbuf *, int, struct mbuf *);
 
-void sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *);
+void sctp_ulp_notify(uint32_t, struct sctp_tcb *, uint32_t, void *, int
+#if !defined(__APPLE__)
+    SCTP_UNUSED
+#endif
+    );
 
 void
 sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
@@ -144,11 +153,19 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 
 void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
 
-void sctp_report_all_outbound(struct sctp_tcb *, int);
+void sctp_report_all_outbound(struct sctp_tcb *, int, int 
+#if !defined(__APPLE__)
+    SCTP_UNUSED
+#endif
+    );
 
 int sctp_expand_mapping_array(struct sctp_association *, uint32_t);
 
-void sctp_abort_notification(struct sctp_tcb *, int);
+void sctp_abort_notification(struct sctp_tcb *, int, int
+#if !defined(__APPLE__)
+    SCTP_UNUSED
+#endif
+    );
 
 /* We abort responding to an IP packet for some reason */
 void
@@ -224,7 +241,11 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
-    int, struct sctpchunk_listhead *);
+    int, struct sctpchunk_listhead *, int
+#if !defined(__APPLE__)
+    SCTP_UNUSED
+#endif
+);
 
 struct mbuf *sctp_generate_invmanparam(int);
 
