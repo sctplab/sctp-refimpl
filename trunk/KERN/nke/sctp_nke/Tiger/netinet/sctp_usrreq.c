@@ -314,7 +314,7 @@ sctp_notify(struct sctp_inpcb *inp,
 				net->error_count = net->failure_threshold + 1;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 				    stcb, SCTP_FAILED_THRESHOLD,
-				    (void *)net);
+				    (void *)net, 0);
 			}
 			if (stcb) {
 				SCTP_TCB_UNLOCK(stcb);
@@ -328,7 +328,7 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * either case treat it like a OOTB abort with no
 			 * TCB
 			 */
-			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
+			sctp_abort_notification(stcb, SCTP_PEER_FAULTY, 0);
 #if defined(__APPLE__)
 			so = SCTP_INP_SO(inp);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -1083,7 +1083,7 @@ sctp_disconnect(struct socket *so)
 						ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 						ph->param_length = htons(SCTP_BUF_LEN(err));
 					}
-					sctp_send_abort_tcb(stcb, err);
+					sctp_send_abort_tcb(stcb, err, 1);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
@@ -1111,7 +1111,7 @@ sctp_disconnect(struct socket *so)
 					sctp_stop_timers_for_shutdown(stcb);
 					sctp_send_shutdown(stcb,
 					    stcb->asoc.primary_destination);
-					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
+					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, 1);
 					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1173,7 +1173,7 @@ sctp_disconnect(struct socket *so)
 						*ippp = htonl(SCTP_FROM_SCTP_USRREQ+SCTP_LOC_4);
 					}
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_USRREQ+SCTP_LOC_4;
-					sctp_send_abort_tcb(stcb, op_err);
+					sctp_send_abort_tcb(stcb, op_err, 1);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -1274,7 +1274,7 @@ sctp_shutdown(struct socket *so)
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 				    stcb->asoc.primary_destination);
-				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3);
+				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, 0);
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1794,7 +1794,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, stcb->asoc.primary_destination);
 	} else {
 		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
-		sctp_send_initiate(inp, stcb);
+		sctp_send_initiate(inp, stcb, 1);
 	}
 	SCTP_TCB_UNLOCK(stcb);
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
@@ -3520,7 +3520,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		s = splsoftnet();
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ, 1);
 		SCTP_TCB_UNLOCK(stcb);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
@@ -3583,7 +3583,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, inp, stcb, 
 					stcb->asoc.primary_destination,
 					SCTP_FROM_SCTP_USRREQ+SCTP_LOC_9);
-			sctp_send_initiate(inp, stcb);
+			sctp_send_initiate(inp, stcb, 1);
 		} else {
 			/*
 			 * already expired or did not use delayed
@@ -4624,7 +4624,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	/* initialize authentication parameters for the assoc */
 	sctp_initialize_auth_params(inp, stcb);
 
-	sctp_send_initiate(inp, stcb);
+	sctp_send_initiate(inp, stcb, 1);
 	SCTP_TCB_UNLOCK(stcb);
  out_now:
 	if (create_lock_on) {

@@ -252,7 +252,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 			/* in6p's ref-count increased && stcb locked */
 			if ((in6p) && (stcb)) {
 				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
+				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, 0);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
@@ -1120,7 +1120,7 @@ sctp6_disconnect(struct socket *so)
 					struct mbuf *op_err;
 
 					op_err = sctp_generate_invmanparam(SCTP_CAUSE_USER_INITIATED_ABT);
-					sctp_send_abort_tcb(stcb, op_err);
+					sctp_send_abort_tcb(stcb, op_err, 1);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				}
 				SCTP_INP_RUNLOCK(inp);
@@ -1158,7 +1158,7 @@ sctp6_disconnect(struct socket *so)
 				    SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time */
 					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
-					sctp_chunk_output(stcb->sctp_ep, stcb, 1);
+					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, 1);
 					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1524,7 +1524,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	/* initialize authentication parameters for the assoc */
 	sctp_initialize_auth_params(inp, stcb);
 
-	sctp_send_initiate(inp, stcb);
+	sctp_send_initiate(inp, stcb, 1);
 	SCTP_TCB_UNLOCK(stcb);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);

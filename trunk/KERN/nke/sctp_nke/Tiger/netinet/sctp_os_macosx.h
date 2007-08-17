@@ -173,6 +173,7 @@ extern struct fileops socketops;
 
 /* The packed define for 64 bit platforms */
 #define SCTP_PACKED __attribute__((packed))
+#define SCTP_UNUSED __attribute__((unused))
 
 /* 
  * for per socket level locking strategy:
