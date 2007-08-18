@@ -805,7 +805,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
 	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
-			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10)) {
+			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10) == 0) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
 #if defined (__APPLE__)
