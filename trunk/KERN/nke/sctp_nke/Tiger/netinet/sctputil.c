@@ -4579,14 +4579,14 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 #if defined (__APPLE__)
 			struct socket *so;
 			
-			so = SCTP_INP_SO(stcb->sctp_ep);
+			so = SCTP_INP_SO(inp);
 			if (!so_locked) {
 				atomic_add_int(&stcb->asoc.refcnt, 1);
 				SCTP_TCB_UNLOCK(stcb);
 				SCTP_SOCKET_LOCK(so, 1);
 				SCTP_TCB_LOCK(stcb);
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
-				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					SCTP_SOCKET_UNLOCK(so, 1);
 					return;
 				}
@@ -4726,13 +4726,13 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 #if defined (__APPLE__)
 			struct socket *so;
 			
-			so = SCTP_INP_SO(stcb->sctp_ep);
+			so = SCTP_INP_SO(inp);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return(0);
 			}

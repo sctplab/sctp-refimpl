@@ -1303,7 +1303,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
  						return (NULL);
 					}
 #endif
-					soisconnected(stcb->sctp_ep->sctp_socket);
+					soisconnected(stcb->sctp_socket);
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1468,7 +1468,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					return (NULL);
 				}
 #endif
-				soisconnected(stcb->sctp_ep->sctp_socket);
+				soisconnected(stcb->sctp_socket);
 #if defined (__APPLE__)
 				SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1958,7 +1958,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 #endif
-		soisconnected(stcb->sctp_ep->sctp_socket);
+		soisconnected(stcb->sctp_socket);
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -2549,7 +2549,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 				return;
 			}
 #endif
-			soisconnected(stcb->sctp_ep->sctp_socket);
+			soisconnected(stcb->sctp_socket);
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(so, 1);
 #endif
