@@ -621,7 +621,9 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	SCTP_TCB_LOCK(stcb);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
+	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6) == 0) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -802,8 +804,10 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	SCTP_TCB_LOCK(stcb);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
-			SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
+	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
+			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10)) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -942,7 +946,9 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 					SCTP_TCB_LOCK(stcb);
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-					sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
+					if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11) == 0) {
+						SCTP_TCB_UNLOCK(stcb);
+					}
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1780,8 +1786,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
-				SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
+				   SCTP_FROM_SCTP_INPUT+SCTP_LOC_16) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1813,7 +1821,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1830,7 +1840,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1859,7 +1871,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 #endif
-			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18);
+			if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18) == 0) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -1915,7 +1929,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -2398,7 +2414,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				SCTP_TCB_LOCK((*stcb));
 				atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 #endif
-				sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
+				if(sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20) == 0) {
+					SCTP_TCB_UNLOCK(*stcb);
+				}
 #if defined (__APPLE__)
 				SCTP_SOCKET_UNLOCK(pcb_so, 1);
 #endif
@@ -2736,7 +2754,9 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	SCTP_TCB_LOCK(stcb);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-	sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
+	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23) == 0) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 #if defined (__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4070,7 +4090,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						SCTP_TCB_LOCK(stcb);
 						atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-						sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
+						if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27) == 0) {
+							SCTP_TCB_UNLOCK(stcb);
+						}
 #if defined (__APPLE__)
 						SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4380,7 +4402,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_LOCK(stcb);
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
+					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27) == 0) {
+						SCTP_TCB_UNLOCK(stcb);
+					}
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4498,7 +4522,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_TCB_LOCK(stcb);
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
+					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29) == 0) {
+						SCTP_TCB_UNLOCK(stcb);
+					}
 #if defined (__APPLE__)
 					SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4537,7 +4563,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				SCTP_TCB_LOCK(stcb);
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 #if defined (__APPLE__)
 				SCTP_SOCKET_UNLOCK(so, 1);
 #endif

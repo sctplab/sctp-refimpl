@@ -379,7 +379,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if (new_ifn_af) {
 				/* Remove the created one that we don't want */
-                sctp_delete_ifn(sctp_ifnp, 1);
+				sctp_delete_ifn(sctp_ifnp, 1);
 			}
 			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
@@ -399,7 +399,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-                    sctp_delete_ifn(sctp_ifnp, 1);
+					sctp_delete_ifn(sctp_ifnp, 1);
 				}
  				goto exit_stage_left;
 			}
@@ -3267,7 +3267,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 */
 				if(asoc->asoc.total_output_queue_size == 0) {
 					/* Just abandon things in the front states */
-					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
+							    SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
 						SCTP_TCB_UNLOCK(asoc);
 					}
 					continue;
@@ -3308,7 +3309,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
+						    SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
 					SCTP_TCB_UNLOCK(asoc);
 				}
 				continue;
@@ -3385,7 +3387,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
+					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
+							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
 						SCTP_TCB_UNLOCK(asoc);
 					}
 					continue;
@@ -3470,7 +3473,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
-		sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8);
+		if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
+			SCTP_TCB_UNLOCK(asoc);
+		}
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */

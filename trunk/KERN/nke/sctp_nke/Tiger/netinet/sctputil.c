@@ -1891,7 +1891,9 @@ sctp_timeout_handler(void *t)
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -3933,7 +3935,9 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4072,7 +4076,9 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 	}
 #endif
-	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5);
+	if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5) == 0) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 #if defined (__APPLE__)
 	if (!so_locked) {
 		SCTP_SOCKET_UNLOCK(so, 1);
@@ -4963,10 +4969,20 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 		struct sockaddr_in6 *sin6;
 		uint32_t hash_of_addr;
 		sin6 = (struct sockaddr_in6 *)addr;
+#if !defined(__Windows__)
 		hash_of_addr = (sin6->sin6_addr.s6_addr32[0] +
 				sin6->sin6_addr.s6_addr32[1] +
 				sin6->sin6_addr.s6_addr32[2] +
 				sin6->sin6_addr.s6_addr32[3]);
+#else
+		{
+			int i;
+			hash_of_addr = 0;
+			for (i = 0; i < 16; i++) {
+				hash_of_addr += sin6->sin6_addr.s6_addr[i];
+			}
+		}
+#endif
 		hash_of_addr = (hash_of_addr ^ (hash_of_addr >> 16));
 		return (hash_of_addr);
 	}
@@ -6487,7 +6503,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				*error = ENOBUFS;
 				goto out_now;
 			}
@@ -6497,7 +6515,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				*error = ENOBUFS;
 				goto out_now;
 			}
@@ -6612,11 +6632,13 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 			/* can only bind v6 on PF_INET6 sockets */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
