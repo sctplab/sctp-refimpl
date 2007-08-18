@@ -1160,8 +1160,10 @@ sctp6_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, stcb, SCTP_DONOT_SETSCOPE,
-						SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_2);
+				if(sctp_free_assoc(inp, stcb, SCTP_DONOT_SETSCOPE,
+						   SCTP_FROM_SCTP6_USRREQ+SCTP_LOC_2) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				/* No unlock tcb assoc is gone */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
