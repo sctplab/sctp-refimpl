@@ -379,7 +379,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if (new_ifn_af) {
 				/* Remove the created one that we don't want */
-                sctp_delete_ifn(sctp_ifnp, 1);
+				sctp_delete_ifn(sctp_ifnp, 1);
 			}
 			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
@@ -399,7 +399,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-                    sctp_delete_ifn(sctp_ifnp, 1);
+					sctp_delete_ifn(sctp_ifnp, 1);
 				}
  				goto exit_stage_left;
 			}
@@ -3250,10 +3250,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 		    asoc = nasoc) {
 			nasoc = LIST_NEXT(asoc, sctp_tcblist);
+			SCTP_TCB_LOCK(asoc);
 			if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* Skip guys being freed */
 				asoc->sctp_socket = NULL;
 				cnt_in_sd++;
+				SCTP_TCB_UNLOCK(asoc);
 				continue;
 			}
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
@@ -3265,11 +3267,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 */
                                if(asoc->asoc.total_output_queue_size == 0) {
 				       /* Just abandon things in the front states */
-				       sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2);
+
+				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
+							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+					       SCTP_TCB_UNLOCK(asoc);
+				       }
 				       continue;
 			       }
 			}
-			SCTP_TCB_LOCK(asoc);
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
@@ -3305,7 +3310,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4);
+				if(sctp_free_assoc(inp, asoc, 
+						   SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+					SCTP_TCB_UNLOCK(asoc);
+				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
@@ -3380,7 +3388,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_6);
+					if (sctp_free_assoc(inp, asoc, 
+							    SCTP_PCBFREE_NOFORCE, 
+							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
+						SCTP_TCB_UNLOCK(asoc);
+					}
 					continue;
 				}
 			}
@@ -3463,7 +3475,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
-		sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8);
+		if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
+			SCTP_TCB_UNLOCK(asoc);
+		}
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */

@@ -27,3 +27,8 @@
 - Fix it so that if someone is so insane that they drop the 
   send window below the minimal add mark, they still can send.
 - Changed all state for associations to use mask safe macro.
+- During front states in association freeing in sctp_inpcbfree, we
+  had a locking problem where locks were not in place where they
+  should have been.
+- Free association calls were not testing the return value. If its
+  0 then the stcb needs to be unlocked.

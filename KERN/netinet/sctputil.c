@@ -1882,7 +1882,9 @@ sctp_timeout_handler(void *t)
 		/* Can we free it yet? */
 		SCTP_INP_DECR_REF(inp);
 		sctp_timer_stop(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_1 );
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 		/*
 		 * free asoc, always unlocks (or destroy's) so prevent
 		 * duplicate unlock or unlock of a free mtx :-0
@@ -3819,7 +3821,9 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
-		sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
+		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 	} else {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
@@ -3924,7 +3928,9 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	sctp_print_out_track_log(stcb);
 #endif
-	sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5);
+	if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5) == 0) {
+		SCTP_TCB_UNLOCK(stcb);
+	}
 }
 
 void
@@ -6265,7 +6271,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				*error = ENOBUFS;
 				goto out_now;
 			}
@@ -6275,7 +6283,9 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				*error = ENOBUFS;
 				goto out_now;
 			}

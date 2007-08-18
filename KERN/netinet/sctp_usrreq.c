@@ -325,7 +325,9 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * TCB
 			 */
 			sctp_abort_notification(stcb, SCTP_PEER_FAULTY);
-			sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
+			if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2) == 0) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
 			/* no need to unlock here, since the TCB is gone */
 		}
 	} else {
@@ -1086,7 +1088,9 @@ sctp_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_3);
+				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_3) == 0) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				/* No unlock tcb assoc is gone */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
@@ -1175,7 +1179,9 @@ sctp_disconnect(struct socket *so)
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
 					SCTP_INP_RUNLOCK(inp);
-					sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_5);
+					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_5) == 0) {
+						SCTP_TCB_UNLOCK(stcb);
+					}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 					splx(s);
 #endif
@@ -1784,7 +1790,9 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
 	/* Fill in the return id */
 	if (error) {
-		sctp_free_assoc(inp, stcb, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_12);
+		if(sctp_free_assoc(inp, stcb, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_12) == 0) {
+			SCTP_TCB_UNLOCK(stcb);
+		}
 		goto out_now;
 	}
 	a_id = (sctp_assoc_t *)optval;
