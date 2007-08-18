@@ -685,7 +685,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
-			asoc->state = SCTP_STATE_SHUTDOWN_RECEIVED;
+			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_RECEIVED);
 			/* notify upper layer that peer has initiated a shutdown */
 			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL, 0);
 
@@ -717,7 +717,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
-		asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
+		SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 
 		/* start SHUTDOWN timer */
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
@@ -1074,8 +1074,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		return (-1);
 	}
 	/* process according to association state... */
-	state = &stcb->asoc.state;
-	switch (*state & SCTP_STATE_MASK) {
+	switch (stcb->asoc.state & SCTP_STATE_MASK) {
 	case SCTP_STATE_COOKIE_WAIT:
 		/* this is the expected state for this chunk */
 		/* process the INIT-ACK parameters */
@@ -1099,12 +1098,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		}
 		/* update our state */
 		SCTPDBG(SCTP_DEBUG_INPUT2, "moving to COOKIE-ECHOED state\n");
-		if (*state & SCTP_STATE_SHUTDOWN_PENDING) {
-			*state = SCTP_STATE_COOKIE_ECHOED |
-			    SCTP_STATE_SHUTDOWN_PENDING;
-		} else {
-			*state = SCTP_STATE_COOKIE_ECHOED;
-		}
+		SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_ECHOED);
 
 		/* reset the RTO calc */
 		stcb->asoc.overall_error_count = 0;
@@ -1274,14 +1268,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 				else
 					SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
+
+				SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 				if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-					asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 							 stcb->sctp_ep, stcb, asoc->primary_destination);
-
-				} else {
-					/* if ok, move to OPEN state */
-					asoc->state = SCTP_STATE_OPEN;
 				}
 				SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 				sctp_stop_all_cookie_timers(stcb);
@@ -1493,13 +1484,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		} else {
 			SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
 		}
+		SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-			asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
-		} else {
-			asoc->state = SCTP_STATE_OPEN;
 		}
 		sctp_stop_all_cookie_timers(stcb);
 		sctp_toss_old_cookies(stcb, asoc);
@@ -1549,14 +1538,13 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			SCTP_STAT_INCR_GAUGE32(sctps_collisionestab);
 		}
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-			asoc->state = SCTP_STATE_OPEN |
-				SCTP_STATE_SHUTDOWN_PENDING;
+			SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
 		} else if (!(asoc->state & SCTP_STATE_SHUTDOWN_SENT)) {
 			/* move to OPEN state, if not in SHUTDOWN_SENT */
-			asoc->state = SCTP_STATE_OPEN;
+			SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 		}
 		asoc->pre_open_streams =
 			ntohs(initack_cp->init.num_outbound_streams);
@@ -1884,12 +1872,10 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* update current state */
 	SCTPDBG(SCTP_DEBUG_INPUT2, "moving to OPEN state\n");
+	SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 	if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-		asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 				 stcb->sctp_ep, stcb, asoc->primary_destination);
-	} else {
-		asoc->state = SCTP_STATE_OPEN;
 	}
 	sctp_stop_all_cookie_timers(stcb);
 	SCTP_STAT_INCR_COUNTER32(sctps_passiveestab);
@@ -2529,13 +2515,11 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED) {
 		/* state change only needed when I am in right state */
 		SCTPDBG(SCTP_DEBUG_INPUT2, "moving to OPEN state\n");
+		SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
-			asoc->state = SCTP_STATE_OPEN | SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 
-		} else {
-			asoc->state = SCTP_STATE_OPEN;
 		}
 		/* update RTO */
 		SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
@@ -5086,7 +5070,7 @@ sctp_trim_mbuf(struct mbuf *m)
 #endif
 
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 sctp_input(i_pak, off)
 	struct mbuf *i_pak;
@@ -5147,7 +5131,7 @@ sctp_input(i_pak, va_alist)
 	}
 
 	mlen = SCTP_HEADER_LEN(i_pak);
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__))
 	int off;
 	va_list ap;
 
@@ -5201,7 +5185,7 @@ sctp_input(i_pak, va_alist)
 		}
 		ip = mtod(m, struct ip *);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
+#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__Windows__)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
