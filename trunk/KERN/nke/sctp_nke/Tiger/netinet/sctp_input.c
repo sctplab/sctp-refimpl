@@ -669,7 +669,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 			/* assoc was freed while we were unlocked */
 			SCTP_SOCKET_UNLOCK(so, 1);
 			return;
@@ -763,7 +763,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 			/* assoc was freed while we were unlocked */
 			SCTP_SOCKET_UNLOCK(so, 1);
 			return;
@@ -1307,7 +1307,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					SCTP_SOCKET_LOCK(so, 1);
 					SCTP_TCB_LOCK(stcb);
 					atomic_add_int(&stcb->asoc.refcnt, -1);
-					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 						SCTP_SOCKET_UNLOCK(so, 1);
  						return (NULL);
 					}
@@ -1472,7 +1472,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				SCTP_SOCKET_LOCK(so, 1);
 				SCTP_TCB_LOCK(stcb);
 				atomic_add_int(&stcb->asoc.refcnt, -1);
-				if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 					SCTP_SOCKET_UNLOCK(so, 1);
 					return (NULL);
 				}
@@ -1967,7 +1967,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 			SCTP_SOCKET_UNLOCK(so, 1);
 			return (NULL);
 		}
@@ -2560,7 +2560,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return;
 			}

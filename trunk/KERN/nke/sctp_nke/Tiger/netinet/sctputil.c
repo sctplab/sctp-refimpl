@@ -2988,7 +2988,7 @@ int sctp_asoc_change_wake = 0;
 static void
 sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
     uint32_t error, void *data, int so_locked
-#if !defined(__APPE__)
+#if !defined(__APPLE__)
     SCTP_UNUSED
 #endif
     )
@@ -3033,7 +3033,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return;
 			}
@@ -3097,7 +3097,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return;
 			}
@@ -3472,6 +3472,10 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+			SCTP_SOCKET_UNLOCK(so, 1);
+			return;
+		}		
 #endif
 		socantsendmore(stcb->sctp_socket);
 #if defined (__APPLE__)
@@ -4577,6 +4581,10 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 				SCTP_SOCKET_LOCK(so, 1);
 				SCTP_TCB_LOCK(stcb);
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+					SCTP_SOCKET_UNLOCK(so, 1);
+					return;
+				}
 			}
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
@@ -4719,6 +4727,10 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+				SCTP_SOCKET_UNLOCK(so, 1);
+				return(0);
+			}
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
 #if defined (__APPLE__)
@@ -4824,7 +4836,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 				SCTP_SOCKET_LOCK(so, 1);
 				SCTP_TCB_LOCK(stcb);
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
-				if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 					/* assoc was freed while we were unlocked */
 					SCTP_SOCKET_UNLOCK(so, 1);
 					return (ret_sz);

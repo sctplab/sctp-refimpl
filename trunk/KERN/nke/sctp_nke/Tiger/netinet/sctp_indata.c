@@ -1543,7 +1543,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 				/* assoc was freed while we were unlocked */
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return (0);
@@ -3661,7 +3661,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 					SCTP_SOCKET_LOCK(so, 1);
 					SCTP_TCB_LOCK(stcb);
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
-					if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 						/* assoc was freed while we were unlocked */
 						SCTP_SOCKET_UNLOCK(so, 1);
 						return (NULL);
@@ -3981,15 +3981,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 			/* assoc was freed while we were unlocked */
 			SCTP_SOCKET_UNLOCK(so, 1);
 			return;
 		}
 #endif
-		if (stcb->sctp_socket) { /* FIXME MT: Why? */
-			sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
-		}
+		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4707,7 +4705,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		SCTP_SOCKET_LOCK(so, 1);
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 			/* assoc was freed while we were unlocked */
 			SCTP_SOCKET_UNLOCK(so, 1);
 			return;
