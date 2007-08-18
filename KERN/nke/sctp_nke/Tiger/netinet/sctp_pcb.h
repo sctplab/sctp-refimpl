@@ -513,11 +513,6 @@ struct sctp_tcb {
         LIST_ENTRY(sctp_tcb) sctp_asocs;	/* vtag hash list */
 	struct sctp_block_entry *block_entry;	/* pointer locked by  socket
 						 * send buffer */
-#if defined(__APPLE__)
-	uint32_t caller1;
-	uint32_t caller2;
-	uint32_t caller3;
-#endif
 	struct sctp_association asoc;
 	/*-
 	 * freed_by_sorcv_sincelast is protected by the sockbuf_lock NOT the
@@ -542,6 +537,11 @@ struct sctp_tcb {
 #elif defined(__Windows__)
 	KSPIN_LOCK tcb_lock;
 	KSPIN_LOCK tcb_send_lock;
+#endif
+#if defined(__APPLE__)
+	uint32_t caller1;
+	uint32_t caller2;
+	uint32_t caller3;
 #endif
 };
 
