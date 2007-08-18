@@ -4198,7 +4198,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4213,7 +4213,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				goto abort_out_now;
 			}
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
+			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
@@ -4866,7 +4866,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				asoc->state = SCTP_STATE_SHUTDOWN_SENT;
+				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4882,7 +4882,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 				goto abort_out_now;
 			}
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
-			asoc->state = SCTP_STATE_SHUTDOWN_ACK_SENT;
+			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
