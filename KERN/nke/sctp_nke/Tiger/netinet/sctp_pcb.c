@@ -3265,14 +3265,15 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * or connect/send/close. And it wants the data
 				 * to get across first.
 				 */
-				if(asoc->asoc.total_output_queue_size == 0) {
-					/* Just abandon things in the front states */
-					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
-							    SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
-						SCTP_TCB_UNLOCK(asoc);
-					}
-					continue;
-				}
+                               if(asoc->asoc.total_output_queue_size == 0) {
+				       /* Just abandon things in the front states */
+
+				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
+							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+					       SCTP_TCB_UNLOCK(asoc);
+				       }
+				       continue;
+			       }
 			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
@@ -3309,8 +3310,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
-						    SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+				if(sctp_free_assoc(inp, asoc, 
+						   SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
 					SCTP_TCB_UNLOCK(asoc);
 				}
 				continue;
@@ -3387,7 +3388,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
+					if (sctp_free_assoc(inp, asoc, 
+							    SCTP_PCBFREE_NOFORCE, 
 							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
 						SCTP_TCB_UNLOCK(asoc);
 					}
@@ -3473,9 +3475,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
-		if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
+		if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
+			cnt++;
 			SCTP_TCB_UNLOCK(asoc);
-		}
+		} 
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
@@ -4658,7 +4661,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			stcb->block_entry = NULL;
 		}
 	}
-	if ((from_inpcbfree != SCTP_PCBFREE_FORCE) && (stcb->asoc.refcnt)) {
+	if (stcb->asoc.refcnt) {
 		/* reader or writer in the way, we have
 		 * hopefully given him something to chew on
 		 * above.
@@ -5067,10 +5070,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
 	}
-#if defined(__APPLE__)
-	/* who is freeing?! */
-	SAVE_CALLERS(stcb->caller1, stcb->caller2, stcb->caller3);
-#endif
 #ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* now clean up the tasoc itself */
