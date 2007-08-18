@@ -4532,6 +4532,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(SCTP_PER_SOCKET_LOCKING)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
+	SCTP_TCB_LOCK_ASSERT(stcb);
 
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, stcb, 6);
