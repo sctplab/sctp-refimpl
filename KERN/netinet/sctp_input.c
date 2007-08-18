@@ -745,7 +745,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
 	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
-			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10)) {
+			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10) == 0) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
 }
