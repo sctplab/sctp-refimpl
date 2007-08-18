@@ -3476,8 +3476,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
 		if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
+			cnt++;
 			SCTP_TCB_UNLOCK(asoc);
-		}
+		} 
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
@@ -4661,7 +4662,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			stcb->block_entry = NULL;
 		}
 	}
-	if ((from_inpcbfree != SCTP_PCBFREE_FORCE) && (stcb->asoc.refcnt)) {
+	if (stcb->asoc.refcnt) {
 		/* reader or writer in the way, we have
 		 * hopefully given him something to chew on
 		 * above.
