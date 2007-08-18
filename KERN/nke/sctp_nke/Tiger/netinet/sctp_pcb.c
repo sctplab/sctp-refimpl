@@ -5070,6 +5070,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
 	}
+#if defined(__APPLE__)
+	SAVE_CALLERS(stcb->caller1, stcb->caller2, stcb->caller3);
+#endif
 #ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* now clean up the tasoc itself */
@@ -5082,6 +5085,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 	SCTP_DECR_ASOC_COUNT();
 #endif
+#if defined(__APPLE__)
+	/* TEST CODE: DO NOT FREE INPs (or assocs) */
+    	SCTP_INP_DECR_REF(inp);
+
+#else
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
@@ -5106,6 +5114,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			SCTP_INP_DECR_REF(inp);
 		}
 	}
+#endif
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		SCTP_INP_RUNLOCK(inp);
 	}
