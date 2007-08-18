@@ -4548,12 +4548,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		return (1);
 	}
 
+#if !defined(__APPLE__) /* TEMP: moved to below */
         /* TEMP CODE */
 	if (stcb->freed_from_where == 0) {
 		/* Only record the first place free happened from */
 		stcb->freed_from_where = from_location;
 	}
         /* TEMP CODE */
+#endif
 
 	asoc = &stcb->asoc;
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
@@ -5070,8 +5072,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
 	}
-#if defined(__APPLE__)
+#if defined(__APPLE__) /* TEMP CODE */
 	SAVE_CALLERS(stcb->caller1, stcb->caller2, stcb->caller3);
+	stcb->freed_from_where = from_location;
 #endif
 #ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
