@@ -379,7 +379,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		    (sctp_ifap->ifn_p->ifn_index == ifn_index)) {
 			if (new_ifn_af) {
 				/* Remove the created one that we don't want */
-				sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+                sctp_delete_ifn(sctp_ifnp, 1);
 			}
 			if (sctp_ifap->localifa_flags & SCTP_BEING_DELETED) {
 				/* easy to solve, just switch back to active */
@@ -399,7 +399,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-					sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+                    sctp_delete_ifn(sctp_ifnp, 1);
 				}
  				goto exit_stage_left;
 			}
@@ -2144,6 +2144,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		return (ENOBUFS);
 	}
 	/* zap it */
@@ -2226,6 +2227,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		return (EOPNOTSUPP);
 	}
 	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
@@ -2238,6 +2240,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		return (ENOBUFS);
 	}
 #ifdef SCTP_MVRF
@@ -2250,6 +2253,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #if defined(SCTP_PER_SOCKET_LOCKING)
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		return (ENOBUFS);
 	}
 	inp->m_vrf_ids[0] = vrf_id;
@@ -2268,6 +2272,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		return (ENOMEM);
 	}
 #endif
@@ -2333,7 +2338,11 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	m->sctp_sws_sender = SCTP_SWS_SENDER_DEF;
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
 	m->max_burst = sctp_max_burst_default;
+#if !defined(__Windows__) /* XXX */
 	if ((sctp_default_cc_module >= SCTP_CC_RFC2581) && 
+#else
+	if (1 &&
+#endif
 	    (sctp_default_cc_module <= SCTP_CC_HTCP)) {
 		m->sctp_default_cc_module = sctp_default_cc_module;
 	} else {
@@ -2625,6 +2634,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #endif
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) == 0) {
 		/* already did a bind, subsequent binds NOT allowed ! */
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		return (EINVAL);
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -2642,10 +2652,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			/* IPV6_V6ONLY socket? */
 			if (SCTP_IPV6_V6ONLY(ip_inp)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
 			}
-			if (addr->sa_len != sizeof(*sin))
+			if (addr->sa_len != sizeof(*sin)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
+			}
 
 			sin = (struct sockaddr_in *)addr;
 			lport = sin->sin_port;
@@ -2655,8 +2668,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				 * call will tranmute the ip address to the proper
 				 * valie.
 				 */
-				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr))
+				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr)) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return(EINVAL);
+				}
 			}
 #endif
 			if (sin->sin_addr.s_addr != INADDR_ANY) {
@@ -2668,8 +2683,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			sin6 = (struct sockaddr_in6 *)addr;
 
-			if (addr->sa_len != sizeof(*sin6))
+			if (addr->sa_len != sizeof(*sin6)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
+			}
 
 			lport = sin6->sin6_port;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -2685,18 +2702,25 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 				/* KAME hack: embed scopeid */
 #if defined(SCTP_KAME)
-				if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
+				if (sa6_embedscope(sin6, ip6_use_defzone) != 0) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return (EINVAL);
+				}
 #elif defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
-						   ip_inp, NULL) != 0)
+						   ip_inp, NULL) != 0) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return (EINVAL);
+				}
 #elif defined(__FreeBSD__)
 				error = scope6_check_id(sin6, ip6_use_defzone);
-				if (error != 0)
+				if (error != 0) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 					return (error);
+				}
 #else
 				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return (EINVAL);
 				}
 #endif
@@ -2707,6 +2731,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sin6->sin6_scope_id = 0;
 #endif /* SCOPEDROUTING */
 		} else {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EAFNOSUPPORT);
 			return (EAFNOSUPPORT);
 		}
 	}
@@ -2730,6 +2755,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 * already has this one bound.
 		 */
 		/* got to be root to get at low ports */
+#if !defined(__Windows__)
 		if (ntohs(lport) < IPPORT_RESERVED) {
 			if (p && (error =
 #ifdef __FreeBSD__
@@ -2762,6 +2788,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EACCES);
 				return (EACCES);
 			}
 #endif
@@ -2774,9 +2801,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 			return (error);
 		}
 #endif
+#endif /* __Windows__ */
 		SCTP_INP_WUNLOCK(inp);
 		if (bindall) {
 #ifdef SCTP_MVRF
@@ -2802,6 +2831,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 					SCTP_INP_INFO_WUNLOCK();
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
 					return (EADDRINUSE);
 				}
 #ifdef SCTP_MVRF
@@ -2824,6 +2854,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
 				return (EADDRINUSE);
 			}
 		}
@@ -2838,6 +2869,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
 				return (EADDRINUSE);
 			}
 		}
@@ -2846,6 +2878,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
                 uint16_t count;
 		int done;
 
+#if defined(__Windows__)
+		first = 0;
+		last = 0xffff;
+#else
 #if defined(__FreeBSD__) || defined(__APPLE__)
                 if (ip_inp->inp_flags & INP_HIGHPORT) {
                         first = ipport_hifirstauto;
@@ -2872,6 +2908,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 				return (error);
 			}
                         first = ipport_lowfirstauto;
@@ -2883,6 +2920,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #if defined(__FreeBSD__) || defined(__APPLE__)
                 }
 #endif
+#endif /* __Windows__ */
 		if (first > last) {
 			uint16_t temp;
 
@@ -2917,6 +2955,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 					SCTP_INP_INFO_WUNLOCK();
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
 					return (EADDRINUSE);
 				}
 				if (candidate == last)
@@ -2939,6 +2978,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 		SCTP_INP_INFO_WUNLOCK();
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		return (EINVAL);
 	}
 	/* ok we look clear to give out this port, so lets setup the binding */
@@ -3003,6 +3043,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 			SCTP_INP_INFO_WUNLOCK();
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRNOTAVAIL);
 			return (EADDRNOTAVAIL);
 		}
 		if (addr->sa_family == AF_INET6) {
@@ -3014,6 +3055,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 #endif
 				SCTP_INP_INFO_WUNLOCK();
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
 			}
 		}
@@ -3210,7 +3252,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 			nasoc = LIST_NEXT(asoc, sctp_tcblist);
 			if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* Skip guys being freed */
-				asoc->sctp_socket = NULL;
+				/* asoc->sctp_socket = NULL; FIXME MT*/
 				cnt_in_sd++;
 				continue;
 			}
@@ -3283,7 +3325,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					asoc->asoc.state = SCTP_STATE_SHUTDOWN_SENT;
+					SCTP_SET_STATE(&asoc->asoc,SCTP_STATE_SHUTDOWN_SENT);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
@@ -4093,10 +4135,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	 */
 	if (sctppcbinfo.ipi_count_asoc >= SCTP_MAX_NUM_OF_ASOC) {
 		/* Hit max assoc, sorry no more */
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		*error = ENOBUFS;
 		return (NULL);
 	}
 	if( firstaddr == NULL) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4109,6 +4153,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 * off, or connected one does this.. its an error.
 		 */
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4129,6 +4174,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		if ((sin->sin_port == 0) || (sin->sin_addr.s_addr == 0)) {
 			/* Invalid address */
 			SCTP_INP_RUNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -4141,6 +4187,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		    (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))) {
 			/* Invalid address */
 			SCTP_INP_RUNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -4148,6 +4195,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	} else {
 		/* not supported family type */
 		SCTP_INP_RUNLOCK(inp);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4174,6 +4222,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	stcb = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asoc, struct sctp_tcb);
 	if (stcb == NULL) {
 		/* out of memory? */
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		*error = ENOMEM;
 		return (NULL);
 	}
@@ -4217,6 +4266,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #endif
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_DECR_ASOC_COUNT();
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4247,6 +4297,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_INP_WUNLOCK(inp);
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		*error = ENOBUFS;
 		return (NULL);
 	}
@@ -4590,6 +4641,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_READ_UNLOCK(inp);
 		if (stcb->block_entry) {
 			cnt++;
+			SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_PCB, ECONNRESET);
 			stcb->block_entry->error = ECONNRESET;
 			stcb->block_entry = NULL;
 		}
@@ -5360,6 +5412,7 @@ sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		return (EINVAL);
 	}
 	SCTP_INCR_LADDR_COUNT();
@@ -5621,7 +5674,7 @@ sctp_pcb_init()
 #endif
 }
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
@@ -5634,6 +5687,7 @@ sctp_pcb_finish(void)
 	struct sctp_ifa *ifa;
 
 	/* FIXME MT */
+#if defined(__APPLE__)
 	sctp_address_monitor_destroy();
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	/* free the iterator worker thread */
@@ -5641,6 +5695,7 @@ sctp_pcb_finish(void)
 		thread_terminate(sctppcbinfo.thread_proc);
 		sctppcbinfo.thread_proc = THREAD_NULL;
 	}
+#endif
 #endif
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
@@ -5676,7 +5731,9 @@ sctp_pcb_finish(void)
 	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.hash_ifn_hashmark);
 
 	/* free the locks and mutexes */
+#if defined(__APPLE__)
 	SCTP_TIMERQ_LOCK_DESTROY();
+#endif
 #ifdef SCTP_PACKET_LOGGING
 	SCTP_IP_PKTLOG_DESTROY();
  
@@ -5687,9 +5744,21 @@ sctp_pcb_finish(void)
 	SCTP_ITERATOR_LOCK_DESTROY();
 /*	SCTP_STATLOG_DESTROY();*/
 	SCTP_INP_INFO_LOCK_DESTROY();
+#if defined(__APPLE__)
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
 	lck_grp_free(sctppcbinfo.mtx_grp);
 	lck_attr_free(sctppcbinfo.mtx_attr);
+#endif
+
+#if defined(__Windows__)
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_ep);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asoc);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_laddr);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_net);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_chunk);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_readq);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
+#endif
 
 	/*
 	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep", sizeof(struct
@@ -6694,6 +6763,7 @@ sctp_initiate_iterator(inp_func inpf,
 	SCTP_MALLOC(it, struct sctp_iterator *, sizeof(struct sctp_iterator),
 		    SCTP_M_ITER);
 	if (it == NULL) {
+		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		return (ENOMEM);
 	}
 	memset(it, 0, sizeof(*it));

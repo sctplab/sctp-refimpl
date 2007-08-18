@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.24 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -484,6 +484,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.24 2007/07/17 20:58:25 
 #define SCTP_STATE_MASK			0x007f
 
 #define SCTP_GET_STATE(asoc)	((asoc)->state & SCTP_STATE_MASK)
+#define SCTP_SET_STATE(asoc, newstate)  ((asoc)->state = ((asoc)->state & ~SCTP_STATE_MASK) |  newstate)
 
 /* SCTP reachability state for each address */
 #define SCTP_ADDR_REACHABLE		0x001
@@ -839,6 +840,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.24 2007/07/17 20:58:25 
 #define SCTP_FROM_SCTP_OUTPUT  0x90000000
 #define SCTP_FROM_SCTP_PEELOFF 0xa0000000
 #define SCTP_FROM_SCTP_PANDA   0xb0000000
+#define SCTP_FROM_SCTP_SYSCTL  0xc0000000
 
 /* Location ID's */
 #define SCTP_LOC_1  0x00000001
