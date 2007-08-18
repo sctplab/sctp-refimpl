@@ -669,14 +669,16 @@ log_measurement(int proto,struct control_info *ctl, struct timeval *start,
 	);
     }
     {
-	    double time_of_tran,bw;
+	    double time_of_tran,bw, blks, sizt;
 	    char *rate;
 
 	    time_of_tran = (sec * 1000000.0);
 	    time_of_tran += (usec * 1.0);
 	    time_of_tran /= 1000000.0;
-	    bw = ((double)(ntohl(ctl->req.sizetosend) * ntohl(ctl->req.blksize)) / time_of_tran);
-	    bw *= 8.0;
+	    sizt = 1.0 * ntohl(ctl->req.sizetosend);
+	    blks = ntohl(ctl->req.blksize);
+
+	    bw = (8.0 * sizt * blks) / time_of_tran;
 	    if(bw > 1000000000.0) {
 		    rate = "Gigabits";
 		    bw /= 1000000000.0;
