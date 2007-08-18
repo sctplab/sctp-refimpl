@@ -3249,11 +3249,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		cnt_in_sd = 0;
 		for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 		    asoc = nasoc) {
+			SCTP_TCB_LOCK(asoc);
 			nasoc = LIST_NEXT(asoc, sctp_tcblist);
 			if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* Skip guys being freed */
 				/* asoc->sctp_socket = NULL; FIXME MT*/
 				cnt_in_sd++;
+				SCTP_TCB_UNLOCK(asoc);
 				continue;
 			}
 			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
@@ -3263,13 +3265,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * or connect/send/close. And it wants the data
 				 * to get across first.
 				 */
-                               if(asoc->asoc.total_output_queue_size == 0) {
-				       /* Just abandon things in the front states */
-				       sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2);
-				       continue;
-			       }
+				if(asoc->asoc.total_output_queue_size == 0) {
+					/* Just abandon things in the front states */
+					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+						SCTP_TCB_UNLOCK(asoc);
+					}
+					continue;
+				}
 			}
-			SCTP_TCB_LOCK(asoc);
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
 			asoc->asoc.state |= SCTP_STATE_CLOSED_SOCKET;
@@ -3305,7 +3308,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4);
+				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+					SCTP_TCB_UNLOCK(asoc);
+				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
 			           TAILQ_EMPTY(&asoc->asoc.sent_queue) &&
@@ -3380,7 +3385,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_6);
+					if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
+						SCTP_TCB_UNLOCK(asoc);
+					}
 					continue;
 				}
 			}
