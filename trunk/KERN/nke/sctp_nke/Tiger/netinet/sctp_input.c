@@ -4825,7 +4825,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
 		stcb->asoc.seen_a_sack_this_pkt = 0;
-		if (stcb->asoc.state & SCTP_STATE_WAS_ABORTED) {
+		if ((stcb->asoc.state & SCTP_STATE_WAS_ABORTED) || 
+		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)){
 			/*-
 			 * If we hit here, we had a ref count
 			 * up when the assoc was aborted and the
