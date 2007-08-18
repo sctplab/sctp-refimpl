@@ -5067,6 +5067,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
 	}
+#if defined(__APPLE__)
+	/* who is freeing?! */
+	SAVE_CALLERS(stcb->caller1, stcb->caller2, stcb->caller3);
+#endif
 #ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* now clean up the tasoc itself */
