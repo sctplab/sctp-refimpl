@@ -981,8 +981,11 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
 							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
+
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 						SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
@@ -1005,6 +1008,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
 							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
@@ -1062,6 +1067,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
 							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
@@ -1087,6 +1094,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
 							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
