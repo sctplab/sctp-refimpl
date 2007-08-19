@@ -421,10 +421,77 @@ sctp_pkthdr_fix(struct mbuf *m)
 }
 
 inline struct mbuf *
-sctp_m_copym(struct mbuf *m, int off, int len, int wait)
+sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 {
+	struct mbuf *n, **np;
+	int off = off0;
+	struct mbuf *top;
+	int copyhdr = 0;
+
 	sctp_pkthdr_fix(m);
-	return (m_copym(m, off, len, wait));
+
+/*	return (m_copym(m, off, len, wait));*/
+
+	if (off < 0) {
+		panic("m_copym, negative off %d", off);
+	}
+	if (len < 0) {
+		panic("m_copym, negative len %d", len);
+	}
+	MBUF_CHECKSLEEP(wait);
+	if (off == 0 && m->m_flags & M_PKTHDR)
+		copyhdr = 1;
+	while (off > 0) {
+		if (m == NULL) {
+			panic("m_copym, offset > size of mbuf chain");
+		}
+		if (off < m->m_len)
+			break;
+		off -= m->m_len;
+		m = m->m_next;
+	}
+	np = &top;
+	top = 0;
+	while (len > 0) {
+		if (m == NULL) {
+			if (len != M_COPYALL) {
+				panic("m_copym, length > size of mbuf chain");
+			}
+			break;
+		}
+		if (copyhdr)
+			MGETHDR(n, wait, m->m_type);
+		else
+			MGET(n, wait, m->m_type);
+		*np = n;
+		if (n == NULL)
+			goto nospace;
+		if (copyhdr) {
+			if (!m_dup_pkthdr(n, m, wait))
+				goto nospace;
+			if (len == M_COPYALL)
+				n->m_pkthdr.len -= off0;
+			else
+				n->m_pkthdr.len = len;
+			copyhdr = 0;
+		}
+		n->m_len = min(len, m->m_len - off);
+		if (m->m_flags & M_EXT) {
+			n->m_data = m->m_data + off;
+			mb_dupcl(n, m);
+		} else
+			bcopy(mtod(m, caddr_t)+off, mtod(n, caddr_t),
+			    (u_int)n->m_len);
+		if (len != M_COPYALL)
+			len -= n->m_len;
+		off = 0;
+		m = m->m_next;
+		np = &n->m_next;
+	}
+	return (top);
+nospace:
+	sctp_m_freem(top);
+	return (NULL);
 }
 
 
