@@ -30,8 +30,9 @@
 - During front states in association freeing in sctp_inpcbfree, we
   had a locking problem where locks were not in place where they
   should have been.
-- Free association calls were not testing the return value. If its
-  0 then the stcb needs to be unlocked.
+- Free association calls were not testing the return value in
+  sctp_inpcb_free() properly... others should be cast  void returns 
+  where we don't care about the return value.
 - If a reference count is held on an assoc, even from the "force free"
   we should not do the actual free.. but instead let the timer
   free it.
