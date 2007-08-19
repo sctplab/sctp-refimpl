@@ -79,6 +79,7 @@
 
 
 /* Lock for INP */
+#if defined(SCTP_INP_RWLOCK)  /* shared locking */
 #define SCTP_INP_LOCK_INIT(_inp) \
 	(_inp)->inp_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_LOCK_DESTROY(_inp) \
@@ -91,6 +92,20 @@
 	lck_rw_lock_exclusive((_inp)->inp_mtx)
 #define SCTP_INP_WUNLOCK(_inp) \
 	lck_rw_unlock_exclusive((_inp)->inp_mtx)
+#else
+#define SCTP_INP_LOCK_INIT(_inp) \
+	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_RLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_RUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#define SCTP_INP_WLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_WUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#endif
 #define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
 #define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
