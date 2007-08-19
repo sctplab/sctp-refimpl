@@ -73,6 +73,7 @@
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
+#include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
 
 #define APPLE_FILE_NO 5
@@ -431,67 +432,100 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 	sctp_pkthdr_fix(m);
 
 /*	return (m_copym(m, off, len, wait));*/
-
-	if (off < 0) {
-		panic("m_copym, negative off %d", off);
-	}
-	if (len < 0) {
-		panic("m_copym, negative len %d", len);
-	}
-	MBUF_CHECKSLEEP(wait);
+	if (off < 0 || len < 0)
+		panic("m_copym");
 	if (off == 0 && m->m_flags & M_PKTHDR)
 		copyhdr = 1;
-	while (off > 0) {
-		if (m == NULL) {
-			panic("m_copym, offset > size of mbuf chain");
-		}
-		if (off < m->m_len)
-			break;
+
+	while (off >= m->m_len) {
+		if (m == 0)
+			panic("m_copym: null m");
 		off -= m->m_len;
 		m = m->m_next;
 	}
 	np = &top;
 	top = 0;
+
+	MBUF_LOCK();
+
 	while (len > 0) {
-		if (m == NULL) {
-			if (len != M_COPYALL) {
-				panic("m_copym, length > size of mbuf chain");
-			}
+/*
+		m_range_check(mfree);
+		m_range_check(mclfree);
+		m_range_check(mbigfree);*/
+
+		if (m == 0) {
+			if (len != M_COPYALL)
+				panic("m_copym: not M_COPYALL");
 			break;
 		}
-		if (copyhdr)
-			MGETHDR(n, wait, m->m_type);
-		else
-			MGET(n, wait, m->m_type);
+		if ((n = mfree)) {
+			MCHECK(n);
+			++mclrefcnt[mtocl(n)];
+			mbstat.m_mtypes[MT_FREE]--;
+			mbstat.m_mtypes[m->m_type]++;
+			mfree = n->m_next;
+			n->m_next = n->m_nextpkt = 0;
+			n->m_type = m->m_type;
+			n->m_data = n->m_dat;
+			n->m_flags = 0;
+		} else {
+		        MBUF_UNLOCK();
+		        n = m_retry(wait, m->m_type);
+		        MBUF_LOCK();
+		}
 		*np = n;
-		if (n == NULL)
+
+		if (n == 0)
 			goto nospace;
 		if (copyhdr) {
-			if (!m_dup_pkthdr(n, m, wait))
-				goto nospace;
+			M_COPY_PKTHDR(n, m);
 			if (len == M_COPYALL)
 				n->m_pkthdr.len -= off0;
 			else
 				n->m_pkthdr.len = len;
 			copyhdr = 0;
 		}
-		n->m_len = min(len, m->m_len - off);
+		if (len == M_COPYALL) {
+		    if (min(len, (m->m_len - off)) == len) {
+			printf("m->m_len %d - off %d = %d, %d\n", 
+			       m->m_len, off, m->m_len - off,
+			       min(len, (m->m_len - off)));
+		    }
+		}
+		n->m_len = min(len, (m->m_len - off));
+		if (n->m_len == M_COPYALL) {
+		    printf("n->m_len == M_COPYALL, fixing\n");
+		    n->m_len = MHLEN;
+		}
 		if (m->m_flags & M_EXT) {
+			n->m_ext = m->m_ext;
+			insque((queue_t)&n->m_ext.ext_refs, (queue_t)&m->m_ext.ext_refs);
 			n->m_data = m->m_data + off;
-			mb_dupcl(n, m);
-		} else
+			n->m_flags |= M_EXT;
+		} else {
 			bcopy(mtod(m, caddr_t)+off, mtod(n, caddr_t),
-			    (u_int)n->m_len);
+			    (unsigned)n->m_len);
+		}
 		if (len != M_COPYALL)
 			len -= n->m_len;
 		off = 0;
 		m = m->m_next;
 		np = &n->m_next;
 	}
+	MBUF_UNLOCK();
+
+/*	if (top == 0)
+		MCFail++;
+*/
+
 	return (top);
 nospace:
-	sctp_m_freem(top);
-	return (NULL);
+	MBUF_UNLOCK();
+
+	m_freem(top);
+/*	MCFail++;*/
+	return (0);
 }
 
 
