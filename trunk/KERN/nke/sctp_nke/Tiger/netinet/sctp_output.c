@@ -2747,12 +2747,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
-
 	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn(ifn, ifn_index);
 	if (sctp_ifn == NULL) {
 		/* ?? We don't have this guy ?? */
+		SCTPDBG(SCTP_DEBUG_OUTPUT2,"No ifn emit interface?\n");
 		goto bound_all_plan_b;
 	}
+	SCTPDBG(SCTP_DEBUG_OUTPUT2,"ifn_index:%d name:%s is emit interface\n",
+		ifn_index, sctp_ifn->ifn_name);
+
 	if (net) {
 		cur_addr_num = net->indx_of_eligible_next_to_use;
 	}
@@ -2761,8 +2764,8 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 							  non_asoc_addr_ok, 
 							  dest_is_loop, 
 							  dest_is_priv, fam);
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Found %d preferred source addresses\n",
-		num_preferred);
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Found %d preferred source addresses for intf:%s\n",
+		num_preferred, sctp_ifn->ifn_name);
 	if (num_preferred == 0) {
 		/*
 		 * no eligible addresses, we must use some other interface
@@ -2803,13 +2806,18 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
  bound_all_plan_b:
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Trying Plan B\n");
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "Examine interface %s\n",
+			sctp_ifn->ifn_name);
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "skip\n");
 			continue;
 		}
-		if ((sctp_ifn == looked_at) && looked_at)
+		if ((sctp_ifn == looked_at) && looked_at) {
 			/* already looked at this guy */
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "already seen\n");
 			continue;
+		}
 		num_preferred = sctp_count_num_preferred_boundall(sctp_ifn, stcb, non_asoc_addr_ok,
 								dest_is_loop, dest_is_priv, fam);
 		SCTPDBG(SCTP_DEBUG_OUTPUT2,
@@ -2817,6 +2825,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			ifn, num_preferred);
 		if (num_preferred == 0) {
 			/* None on this interface. */
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "No prefered -- skipping to next\n");
 			continue;
 		}
 		SCTPDBG(SCTP_DEBUG_OUTPUT2,
@@ -3324,6 +3333,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	sctphdr = mtod(m, struct sctphdr *);
 	if (sctp_no_csum_on_loopback &&
 	    (stcb) &&
+	    (to->sa_family == AF_INET) &&
 	    (stcb->asoc.loopback_scope)) {
 		sctphdr->checksum = 0;
 		/*
@@ -3660,8 +3670,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
+		{
 			SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 			return (EINVAL);
+		}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
@@ -3760,6 +3772,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if ((error = in6_recoverscope(&lsa6_storage, &lsa6->sin6_addr,
 		    NULL)) != 0) {
 #endif				/* SCTP_KAME */
+			SCTPDBG(SCTP_DEBUG_OUTPUT3, "recover scope fails error %d\n", error);
 			sctp_m_freem(m);
 			return (error);
 		}
@@ -3879,8 +3892,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	else {
 		SCTPDBG(SCTP_DEBUG_OUTPUT1, "Unknown protocol (TSNH) type %d\n",
 			((struct sockaddr *)to)->sa_family);
-		SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EFAULT);
 		sctp_m_freem(m);
+		SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EFAULT);
 		return (EFAULT);
 	}
 }
@@ -3936,6 +3949,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	}
 	if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 		/* This case should not happen */
+		SCTPDBG(SCTP_DEBUG_OUTPUT4, "Sending INIT - failed timer?\n");
 		return;
 	}
 	/* start the INIT timer */
@@ -3944,6 +3958,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 1, M_DONTWAIT, 1, MT_DATA);
 	if (m == NULL) {
 		/* No memory, INIT timer will re-attempt. */
+		SCTPDBG(SCTP_DEBUG_OUTPUT4, "Sending INIT - mbuf?\n");
 		return;
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_msg);
@@ -4152,9 +4167,11 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 		}
 		p_len += padval;
 	}
+	SCTPDBG(SCTP_DEBUG_OUTPUT4, "Sending INIT - calls lowlevel_output\n");
 	ret = sctp_lowlevel_chunk_output(inp, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
 	    m, 0, NULL, 0, 0, NULL, 0, so_locked);
+	SCTPDBG(SCTP_DEBUG_OUTPUT4, "lowlevel_output - %d\n", ret);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 	sctp_timer_start(SCTP_TIMER_TYPE_INIT, inp, stcb, net);
 	(void)SCTP_GETTIME_TIMEVAL(&net->last_sent_time);
