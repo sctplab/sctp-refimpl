@@ -52,3 +52,5 @@
   locked_tcb during association lookup and the 1-2-1 model.
 - Added debug to source address selection.
 - V6 output must always do checksum even for loopback.
+- Remove more locks around inp that are not needed for an atomically
+  added/subtracted ref count.
