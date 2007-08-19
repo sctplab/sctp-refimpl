@@ -254,7 +254,7 @@ int main(int argc, char **argv)
 	}
 	local_addr.sin_port        = htons(local_port);
 
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		perror("socket");
 #ifdef SCTP_AUTH_CHUNK
 	for (chunk_number = 0; chunk_number < number_of_chunks_to_auth; chunk_number++) {
@@ -365,9 +365,10 @@ int main(int argc, char **argv)
 				printf("Sending message number %lu.\n", i);
 			nn = 0;
 			do {
-				if ((n = send(fd, buffer + nn, length - nn, 0)) < 0)
-					perror("sendmsg");
-				else
+				if (((n = send(fd, buffer + nn, length - nn, 0)) < 0) && (errno != EINTR)) {
+					done = 1;
+					perror("send");
+				} else
 					nn += n;
 			} while ((n >= 0) && (nn < length));
 			i++;
