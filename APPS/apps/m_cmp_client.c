@@ -1,4 +1,3 @@
-
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
@@ -176,7 +175,7 @@ inet_pton4(src, dst)
 	const char *pch;
 
 	if ((pch = strchr(digits, ch)) != NULL) {
-	    uint new = *tp * 10 + (pch - digits);
+	    u_int new = *tp * 10 + (pch - digits);
 
 	    if (new > 255)
 		return (0);
@@ -224,7 +223,7 @@ inet_pton6(src, dst)
     u_char tmp[NS_IN6ADDRSZ], *tp, *endp, *colonp;
     const char *xdigits, *curtok;
     int ch, saw_xdigit;
-    uint val;
+    u_int val;
 
     memset((tp = tmp), '\0', NS_IN6ADDRSZ);
     endp = tp + NS_IN6ADDRSZ;
@@ -442,6 +441,7 @@ measure_one(struct control_info *req,
 			fd = socket(AF_INET, SOCK_STREAM, protocol_touse);
 		else {
 			fd = socket(AF_INET, SOCK_SEQPACKET, protocol_touse);
+#ifdef SCTP_EOR
 			if((fd > 0) && (imitation_mode)) {
 				int one = 1;
 				sinfo_flags = SCTP_EOR;
@@ -452,6 +452,7 @@ measure_one(struct control_info *req,
 					printf("m_cmp_client: setsockopt: SCTP_PARTIAL_DELIVERY_POINT failed! errno=%d\n", errno);
 				}
 			}
+#endif
 		}
 
 #ifndef WIN32
@@ -567,10 +568,11 @@ measure_one(struct control_info *req,
 			goto exit_now;
 #else
 		if(protocol_touse == IPPROTO_SCTP) {
-			flen = 0;
+			struct sockaddr_storage addr;
+			flen = sizeof (addr) ;
 			msg.msg_flags = 0;
 			ret += sctp_recvmsg (fd, buffer, sizeof(buffer), 	
-					    (struct sockaddr *)NULL,
+					    (struct sockaddr *)&addr,
 					    &flen, NULL, &msg.msg_flags);
 		}
 		else
@@ -880,7 +882,7 @@ main(int argc, char **argv)
 		tos_value = (uint8_t)strtol(optarg,NULL,0);
 		tos_value &= 0xfc;
 		printf("Tos_value set to %x\n",
-		       (uint)tos_value);
+		       (u_int)tos_value);
 		break;
 	case 't':
 	    tcp_only = 1;
