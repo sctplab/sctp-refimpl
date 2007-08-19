@@ -48,6 +48,7 @@
   We made this change AFTER some conversation and looking to make sure
   that M_PROTO5 does not have a problem between SCTP and the 802.11
   stuff (which is the only other place its used). 
-***************above patch 15 ***********************
 - Fixed lock order reversal and missing atomic protection around
   locked_tcb during association lookup and the 1-2-1 model.
+- Added debug to source address selection.
+- V6 output must always do checksum even for loopback.
