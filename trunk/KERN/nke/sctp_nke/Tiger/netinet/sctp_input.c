@@ -5359,9 +5359,7 @@ sctp_input(i_pak, va_alist)
 	}
 	if ((inp) && (refcount_up)) {
 		/* reduce ref-count */
-		SCTP_INP_WLOCK(inp);
 		SCTP_INP_DECR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
 	}
 	return;
  bad:
@@ -5371,9 +5369,7 @@ sctp_input(i_pak, va_alist)
 
 	if ((inp) && (refcount_up)) {
 		/* reduce ref-count */
-		SCTP_INP_WLOCK(inp);
 		SCTP_INP_DECR_REF(inp);
-		SCTP_INP_WUNLOCK(inp);
 	}
 	if (m) {
 		sctp_m_freem(m);
