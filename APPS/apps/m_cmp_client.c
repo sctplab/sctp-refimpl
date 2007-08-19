@@ -7,7 +7,7 @@
 #ifdef WIN32
 #include <winsock2.h>
 #include <time.h>
-typedef unsigned short u_int16_t;
+typedef unsigned short uint16_t;
 #define IPPROTO_SCTP	132
 #define close		closesocket
 #define sleep(x)	Sleep(x * 1000)
@@ -43,7 +43,7 @@ struct txfr_request {
 	int blksize;
 	int snd_buf;
 	int rcv_buf;
-	u_int8_t tos_value;
+	uint8_t tos_value;
 };
 
 struct control_info {
@@ -54,7 +54,7 @@ struct control_info {
 char *error_rate;
 int blocks_is_error = 0;
 
-static u_int8_t tos_value=0;
+static uint8_t tos_value=0;
 
 #ifdef linux
 #ifndef MSG_NOTIFICATION
@@ -176,7 +176,7 @@ inet_pton4(src, dst)
 	const char *pch;
 
 	if ((pch = strchr(digits, ch)) != NULL) {
-	    u_int new = *tp * 10 + (pch - digits);
+	    uint new = *tp * 10 + (pch - digits);
 
 	    if (new > 255)
 		return (0);
@@ -224,7 +224,7 @@ inet_pton6(src, dst)
     u_char tmp[NS_IN6ADDRSZ], *tp, *endp, *colonp;
     const char *xdigits, *curtok;
     int ch, saw_xdigit;
-    u_int val;
+    uint val;
 
     memset((tp = tmp), '\0', NS_IN6ADDRSZ);
     endp = tp + NS_IN6ADDRSZ;
@@ -840,7 +840,7 @@ main(int argc, char **argv)
     struct timeval start,end;
     int i,num_ctl;
     char *addr=NULL;
-    u_int16_t port = 0, lport = 0;
+    uint16_t port = 0, lport = 0;
     struct control_info *ctl;
     struct sockaddr_in to;
     int maxpass = 0;
@@ -864,7 +864,7 @@ main(int argc, char **argv)
 		imitation_mode = 1;
 		break;
 	case 'P':
-	    lport = (u_int16_t)strtol(optarg,NULL,0);
+	    lport = (uint16_t)strtol(optarg,NULL,0);
 	    break;
 	case 'B':
 	    laddr = optarg;
@@ -877,10 +877,10 @@ main(int argc, char **argv)
 #endif /* WIN32 */
 	    break;
 	case 'Q':
-		tos_value = (u_int8_t)strtol(optarg,NULL,0);
+		tos_value = (uint8_t)strtol(optarg,NULL,0);
 		tos_value &= 0xfc;
 		printf("Tos_value set to %x\n",
-		       (u_int)tos_value);
+		       (uint)tos_value);
 		break;
 	case 't':
 	    tcp_only = 1;
@@ -902,7 +902,7 @@ main(int argc, char **argv)
 	    addr = optarg;
 	    break;
 	case 'p':
-	    port = (u_int16_t)strtol(optarg,NULL,0);
+	    port = (uint16_t)strtol(optarg,NULL,0);
 	    break;
 	case 'T':
 	    sctp_tcpmode=1;		

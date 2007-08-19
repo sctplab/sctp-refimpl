@@ -4,7 +4,7 @@
 #include <sys/types.h>
 #ifdef WIN32
 #include <winsock2.h>
-typedef unsigned short u_int16_t;
+typedef unsigned short uint16_t;
 #define IPPROTO_SCTP	132
 #define close		closesocket
 #else
@@ -110,7 +110,7 @@ struct txfr_request{
 	int blksize;
 	int snd_window;
 	int rcv_window;
-	u_int8_t tos_value;
+	uint8_t tos_value;
 };
 
 int
@@ -120,7 +120,7 @@ main(int argc, char **argv)
 	char buffer[600000];
 	int i,fd,newfd,ret;
 	uint32_t sizetosend,blksize,numblk,sb;
-	u_int16_t port=0;
+	uint16_t port=0;
 	int optval,optlen;
 	socklen_t sa_len;
 	int snd_buf=200;
@@ -179,7 +179,7 @@ main(int argc, char **argv)
 			protocol_touse = IPPROTO_TCP;
 			break;
 		case 'p':
-			port = (u_int16_t)strtol(optarg,NULL,0);
+			port = (uint16_t)strtol(optarg,NULL,0);
 			break;
 		case 'b':
 			sb = strtol(optarg,NULL,0);
@@ -284,7 +284,7 @@ main(int argc, char **argv)
 #endif /* WIN32 */
 	}
 	printf("Got a connection from %x:%d fd:%d\n",
-	       (u_int)ntohl(from.sin_addr.s_addr),
+	       (uint)ntohl(from.sin_addr.s_addr),
 	       (int)ntohs(from.sin_port),
 	       fd);
 	ret = recv(newfd,buffer,sizeof(struct txfr_request),0);
