@@ -456,7 +456,11 @@ struct sctp_inpcb {
 	pthread_mutex_t inp_rdata_mtx;
 	int32_t refcount;
 #elif defined(__APPLE__)
+#if defined(SCTP_APPLE_RWLOCK)
 	lck_rw_t *inp_mtx;
+#else
+	lck_mtx_t *inp_mtx;
+#endif
 	lck_mtx_t *inp_create_mtx;
 	lck_mtx_t *inp_rdata_mtx;
 #elif defined(__Windows__)
