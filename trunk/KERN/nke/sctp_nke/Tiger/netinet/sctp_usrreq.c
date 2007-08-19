@@ -337,9 +337,7 @@ sctp_notify(struct sctp_inpcb *inp,
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-			if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2) == 0) {
-				SCTP_TCB_UNLOCK(stcb);
-			}
+			(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
 #if defined (__APPLE__)
 			SCTP_SOCKET_UNLOCK(so, 1);
 			/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
@@ -1110,9 +1108,7 @@ sctp_disconnect(struct socket *so)
 				    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_3) == 0) {
-					SCTP_TCB_UNLOCK(stcb);
-				}
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_3);
 				/* No unlock tcb assoc is gone */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 				splx(s);
@@ -1201,9 +1197,7 @@ sctp_disconnect(struct socket *so)
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
 					SCTP_INP_RUNLOCK(inp);
-					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_5) == 0) {
-						SCTP_TCB_UNLOCK(stcb);
-					}
+					(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_5);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 					splx(s);
 #endif
@@ -1812,9 +1806,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
 	/* Fill in the return id */
 	if (error) {
-		if(sctp_free_assoc(inp, stcb, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_12) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_12);
 		goto out_now;
 	}
 	a_id = (sctp_assoc_t *)optval;
@@ -2029,20 +2021,20 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	break;
 	/* JRS - Get socket option for pluggable congestion control */
 	case SCTP_PLUGGABLE_CC:
-		{
-			struct sctp_assoc_value *av;
+	{
+		struct sctp_assoc_value *av;
 
-			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
-			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
-			if(stcb) {
-				av->assoc_value = stcb->asoc.congestion_control_module;
-				SCTP_TCB_UNLOCK(stcb);
-			} else {
-				av->assoc_value = inp->sctp_ep.sctp_default_cc_module;
-			}
-			*optsize = sizeof(*av);
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if(stcb) {
+			av->assoc_value = stcb->asoc.congestion_control_module;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			av->assoc_value = inp->sctp_ep.sctp_default_cc_module;
 		}
-		break;
+		*optsize = sizeof(*av);
+	}
+	break;
 	case SCTP_GET_ADDR_LEN:
 	{
 		struct sctp_assoc_value *av;

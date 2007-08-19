@@ -1893,9 +1893,7 @@ sctp_timeout_handler(void *t)
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_2);
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -3937,9 +3935,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_TCB_LOCK(stcb);
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_4);
 #if defined (__APPLE__)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -4078,9 +4074,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 	}
 #endif
-	if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5) == 0) {
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTPUTIL+SCTP_LOC_5);
 #if defined (__APPLE__)
 	if (!so_locked) {
 		SCTP_SOCKET_UNLOCK(so, 1);
@@ -6505,9 +6499,7 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7) == 0) {
-					SCTP_TCB_UNLOCK(stcb);
-				}
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
 				*error = ENOBUFS;
 				goto out_now;
 			}
@@ -6517,9 +6509,7 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
-				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8) == 0) {
-					SCTP_TCB_UNLOCK(stcb);
-				}
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
 				*error = ENOBUFS;
 				goto out_now;
 			}

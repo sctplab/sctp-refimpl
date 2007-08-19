@@ -873,6 +873,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 		 * UN-lock so we can do proper locking here this occurs when
 		 * called from load_addresses_from_init.
 		 */
+		atomic_add_int(&locked_tcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(locked_tcb);
 	}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -898,13 +899,12 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 			    netp, inp->def_vrf_id);
 			if ((stcb != NULL) && (locked_tcb == NULL)) {
 				/* we have a locked tcb, lower refcount */
-				SCTP_INP_WLOCK(inp);
 				SCTP_INP_DECR_REF(inp);
-				SCTP_INP_WUNLOCK(inp);
 			}
 			if ((locked_tcb != NULL) && (locked_tcb != stcb)) {
 				SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 				SCTP_TCB_LOCK(locked_tcb);
+				atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 			}
 #else
@@ -920,14 +920,13 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 								       netp, inp->m_vrf_ids[i]);
 					if ((stcb != NULL) && (locked_tcb == NULL)) {
 						/* we have a locked tcb, lower refcount */
-						SCTP_INP_WLOCK(inp);
 						SCTP_INP_DECR_REF(inp);
-						SCTP_INP_WUNLOCK(inp);
 						break;
 					}
 					if ((locked_tcb != NULL) && (locked_tcb != stcb)) {
 						SCTP_INP_RLOCK(locked_tcb->sctp_ep);
 						SCTP_TCB_LOCK(locked_tcb);
+						atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 						break;
 					}
@@ -982,6 +981,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1005,6 +1005,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1061,6 +1062,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1085,6 +1087,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 							SCTP_INP_DECR_REF(inp);
 						} else if (locked_tcb != stcb) {
 							SCTP_TCB_LOCK(locked_tcb);
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 						}
 						SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1102,6 +1105,7 @@ null_return:
 	/* clean up for returning null */
 	if (locked_tcb) {
 		SCTP_TCB_LOCK(locked_tcb);
+		atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
 	}
 	SCTP_INP_WUNLOCK(inp);
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -3270,7 +3274,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
 							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
-					       SCTP_TCB_UNLOCK(asoc);
+					       cnt_in_sd++;
 				       }
 				       continue;
 			       }
@@ -3310,9 +3314,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if(sctp_free_assoc(inp, asoc, 
-						   SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
-					SCTP_TCB_UNLOCK(asoc);
+				if (sctp_free_assoc(inp, asoc, 
+						    SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+					cnt_in_sd++;
 				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -3388,10 +3392,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					if (sctp_free_assoc(inp, asoc, 
-							    SCTP_PCBFREE_NOFORCE, 
-							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
-						SCTP_TCB_UNLOCK(asoc);
+					if(sctp_free_assoc(inp, asoc, 
+							   SCTP_PCBFREE_NOFORCE, 
+							   SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
+						cnt_in_sd++;
 					}
 					continue;
 				}
@@ -3477,8 +3481,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
 			cnt++;
-			SCTP_TCB_UNLOCK(asoc);
-		} 
+		}
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
@@ -4503,8 +4506,13 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 void panda_wakeup_socket(struct socket *so);
 #endif
 
-/*
- * Free the association after un-hashing the remote port.
+/*-
+ * Free the association after un-hashing the remote port. This
+ * function ALWAYS returns holding NO LOCK on the stcb. It DOES
+ * expect that the input to this function IS a locked TCB. 
+ * It will return 0, if it did NOT destroy the association (instead
+ * it unlocks it. It will return NON-zero if it either destroyed the
+ * association OR the association is already destroyed.
  */
 int
 sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree, int from_location)
