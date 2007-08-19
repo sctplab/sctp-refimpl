@@ -14,7 +14,7 @@ typedef unsigned short uint16_t;
 #include <sys/socket.h>
 #include <netinet/sctp.h>
 #include <errno.h>
-#include <sys/signal.h>
+#include <signal.h>
 #include <netinet/tcp.h>
 #include <arpa/inet.h>
 
@@ -147,8 +147,10 @@ main(int argc, char **argv)
 	while((i= getopt(argc,argv,"itsp:b:Pz:S:m:B:")) != EOF){
 		switch(i){
 		case 'i':
+#ifdef SCTP_EOR
 			immitation_mode = 1;
 			s_info.sinfo_flags = SCTP_EOR;
+#endif
 			break;
 		case 'B':
 			addr_to_bind = optarg;
@@ -212,12 +214,11 @@ main(int argc, char **argv)
 		}
 	}
 	sprintf(name,"./out_log_oferr_tcp.txt");
-#if !defined(WIN32) && !defined(linux)
+#if defined (SCTP_MAXBURST) && !defined(WIN32) && !defined(linux)
 	if((protocol_touse == IPPROTO_SCTP) && maxburst){
 		int sz;
 		sz = sizeof(maxburst);
 		printf("Setting max burst to %d\n",maxburst);
-
 		if(setsockopt(fd,IPPROTO_SCTP,
 			      SCTP_MAXBURST,
 			      &maxburst, sz) != 0) {
@@ -284,7 +285,7 @@ main(int argc, char **argv)
 #endif /* WIN32 */
 	}
 	printf("Got a connection from %x:%d fd:%d\n",
-	       (uint)ntohl(from.sin_addr.s_addr),
+	       (u_int)ntohl(from.sin_addr.s_addr),
 	       (int)ntohs(from.sin_port),
 	       fd);
 	ret = recv(newfd,buffer,sizeof(struct txfr_request),0);
