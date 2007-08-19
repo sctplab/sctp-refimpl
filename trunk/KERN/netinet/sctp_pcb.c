@@ -3274,7 +3274,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
 							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
-					       SCTP_TCB_UNLOCK(asoc);
+					       cnt_in_sd++;
 				       }
 				       continue;
 			       }
@@ -3314,9 +3314,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if(sctp_free_assoc(inp, asoc, 
-						   SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
-					SCTP_TCB_UNLOCK(asoc);
+				if (sctp_free_assoc(inp, asoc, 
+						    SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
+					cnt_in_sd++;
 				}
 				continue;
 			} else if (TAILQ_EMPTY(&asoc->asoc.send_queue) &&
@@ -3392,10 +3392,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					if (sctp_free_assoc(inp, asoc, 
-							    SCTP_PCBFREE_NOFORCE, 
-							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
-						SCTP_TCB_UNLOCK(asoc);
+					if(sctp_free_assoc(inp, asoc, 
+							   SCTP_PCBFREE_NOFORCE, 
+							   SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
+						cnt_in_sd++;
 					}
 					continue;
 				}
@@ -3481,8 +3481,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_FORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_8) == 0) {
 			cnt++;
-			SCTP_TCB_UNLOCK(asoc);
-		} 
+		}
 	}
 	if (cnt) {
 		/* Ok we have someone out there that will kill us */
@@ -4507,8 +4506,13 @@ sctp_iterator_asoc_being_freed(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 void panda_wakeup_socket(struct socket *so);
 #endif
 
-/*
- * Free the association after un-hashing the remote port.
+/*-
+ * Free the association after un-hashing the remote port. This
+ * function ALWAYS returns holding NO LOCK on the stcb. It DOES
+ * expect that the input to this function IS a locked TCB. 
+ * It will return 0, if it did NOT destroy the association (instead
+ * it unlocks it. It will return NON-zero if it either destroyed the
+ * association OR the association is already destroyed.
  */
 int
 sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfree, int from_location)

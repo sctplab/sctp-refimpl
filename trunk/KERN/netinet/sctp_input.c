@@ -609,9 +609,8 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	sctp_print_out_track_log(stcb);
 #endif
-	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6) == 0) {
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
+			      SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: finished\n");
 }
 
@@ -744,10 +743,8 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
-	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
-			   SCTP_FROM_SCTP_INPUT+SCTP_LOC_10) == 0) {
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
+			      SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
 }
 
 /*
@@ -873,9 +870,8 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				    asoc->max_init_times) {
 					sctp_abort_notification(stcb, 0);
 					/* now free the asoc */
-					if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_11) == 0) {
-						SCTP_TCB_UNLOCK(stcb);
-					}
+					(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
+							      SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
 					return (-1);
 				}
 				/* blast back to INIT state */
@@ -1663,10 +1659,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
-				   SCTP_FROM_SCTP_INPUT+SCTP_LOC_16) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
+				      SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -1690,9 +1684,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		retval = 0;
 	if (retval < 0) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -1701,9 +1693,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -1724,9 +1714,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			SCTPDBG(SCTP_DEBUG_AUTH1,
 				"COOKIE-ECHO: AUTH failed\n");
 			atomic_add_int(&stcb->asoc.refcnt, 1);
-			if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18) == 0) {
-				SCTP_TCB_UNLOCK(stcb);
-			}
+			(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18);
 			atomic_add_int(&stcb->asoc.refcnt, -1);
 			return (NULL);
 		} else {
@@ -1774,9 +1762,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		    sizeof(sin6->sin6_addr));
 	} else {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
-		if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19) == 0) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		return (NULL);
 	}
@@ -2223,9 +2209,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 						       sh, op_err, vrf_id);
-				if(sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20) == 0) {
-					SCTP_TCB_UNLOCK(*stcb);
-				}
+				(void)sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
 				return (NULL);
 			}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2520,9 +2504,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_22);
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
-	if(sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23) == 0) {
-		SCTP_TCB_UNLOCK(stcb);
-	}
+	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
 	return;
 }
 
@@ -3842,9 +3824,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					}
 					*offset = length;
 					if (stcb) {
-						if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27) == 0) {
-							SCTP_TCB_UNLOCK(stcb);
-						}
+						(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 					}
 					return (NULL);
 				}
@@ -4143,9 +4123,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 					;
 				} else if (stcb) {
-					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27) == 0) {
-						SCTP_TCB_UNLOCK(stcb);
-					}
+					(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
 					*offset = length;
 					return (NULL);
 				}
@@ -4252,9 +4230,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*fwd_tsn_seen = 1;
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
-					if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29) == 0) {
-						SCTP_TCB_UNLOCK(stcb);
-					}
+					(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
 					*offset = length;
 					return (NULL);
 				}
@@ -4282,9 +4258,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
-				if(sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30) == 0) {
-					SCTP_TCB_UNLOCK(stcb);
-				}
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30);
 				*offset = length;
 				return (NULL);
 			}
