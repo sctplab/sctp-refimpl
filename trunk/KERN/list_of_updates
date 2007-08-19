@@ -32,3 +32,21 @@
   should have been.
 - Free association calls were not testing the return value. If its
   0 then the stcb needs to be unlocked.
+- If a reference count is held on an assoc, even from the "force free"
+  we should not do the actual free.. but instead let the timer
+  free it.
+- When we enter sctp_input(), if the SCTP_ASOC_ABOUT_TO_BE_FREED
+  flag is set, we must NOT process the packet but handle it like
+  ootb. This is because while freeing an assoc we release the
+  locks to get all the higher order locks so we can purge all
+  the hash tables. This leaves a hole if a packet comes in
+  just at that point. Now sctp_common_input_processing() will
+  call the ootb code in such a case.
+- Change MBUF M_NOTIFICATION to use M_PROTO5 (per Sam L). This makes
+  it so we don't have a conflict (I think this is a covertity change).
+  We made this change AFTER some conversation and looking to make sure
+  that M_PROTO5 does not have a problem between SCTP and the 802.11
+  stuff (which is the only other place its used). 
+***************above patch 15 ***********************
+- Fixed lock order reversal and missing atomic protection around
+  locked_tcb during association lookup and the 1-2-1 model.
