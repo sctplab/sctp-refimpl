@@ -133,6 +133,16 @@ MALLOC_DECLARE(SCTP_M_MVRF);
 MALLOC_DECLARE(SCTP_M_ITER);
 MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
+#if defined(SCTP_LOCAL_TRACE_BUF) 
+
+#define SCTP_GET_CYCLECOUNT get_cyclecount()
+#define SCTP_CTR6 sctp_log_trace
+
+#else
+#define SCTP_CTR6 CTR6
+#endif
+
+
 /*
  *
  */
@@ -189,6 +199,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) printf("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
 								     inp, stcb, net, file, __LINE__, err);
 #else
+
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
 #endif
