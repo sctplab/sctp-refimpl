@@ -57,7 +57,11 @@ send_a_request()
 	/* First we must generate the size of
 	 * the message. 
 	 */
+ again:
 	sz = rand() & 0x0003ffff;
+	if(sz < 4) {
+		goto again;
+	}
 	/* round it down to even word boundary */
 	sz &= ~0x03;
 	p = (int *)msg->msg.data;
