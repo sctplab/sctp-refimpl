@@ -1426,7 +1426,7 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
-    struct sctp_nets *net, uint32_t * high_tsn, int *abort_flag,
+    struct sctp_nets *net, uint32_t *high_tsn, int *abort_flag,
     int *break_flag, int last_chunk)
 {
 	/* Process a data chunk */
@@ -1604,6 +1604,14 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		SCTP_STAT_INCR(sctps_badsid);
 		SCTP_TCB_LOCK_ASSERT(stcb);
+#if defined(__APPLE__)
+		/* gap may have changed */
+		if (tsn >= asoc->mapping_array_base_tsn) {
+			gap = tsn - asoc->mapping_array_base_tsn;
+		} else {
+			gap = (MAX_TSN - asoc->mapping_array_base_tsn) + tsn + 1;
+		}
+#endif
 		SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 			/* we have a new high score */
@@ -2112,6 +2120,14 @@ finish_express_del:
 			     asoc->highest_tsn_inside_map, SCTP_MAP_PREPARE_SLIDE);
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
+#if defined(__APPLE__)
+	/* gap may have changed */
+	if (tsn >= asoc->mapping_array_base_tsn) {
+		gap = tsn - asoc->mapping_array_base_tsn;
+	} else {
+		gap = (MAX_TSN - asoc->mapping_array_base_tsn) + tsn + 1;
+	}
+#endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 	/* check the special flag for stream resets */
 	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
