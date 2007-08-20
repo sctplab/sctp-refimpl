@@ -2243,7 +2243,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		return (EOPNOTSUPP);
 	}
-/*	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);*/
+	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
