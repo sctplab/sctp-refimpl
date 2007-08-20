@@ -15,7 +15,7 @@
 
 FILE *sum_out;
 struct pdapi_request request;
-uint8_t large_buffer[132096];
+uint8_t large_buffer[0x40000];
 struct pdapi_request sum;
 struct sockaddr_in peer;
 int sd;
@@ -66,6 +66,7 @@ send_a_request()
 		p++;
 	}
 	/* now we need to csum it */
+	printf("size of message is %d\n", sz);
 	if (sum_out)
 		sum_it_out(msg->msg.data, sz);
 	base_crc = update_crc32(base_crc, msg->msg.data, sz);
@@ -161,7 +162,7 @@ main(int argc, char **argv)
 	struct sctp_event_subscribe event;
 	
 	memset (&peer, 0, sizeof(peer));
-	while((i= getopt(argc,argv,"p:h:s:l:S:B:")) != EOF){
+	while((i= getopt(argc,argv,"p:h:s:l:S:")) != EOF){
 		switch(i){
 		case 'S':
 			sum_out = fopen(optarg, "w+");
