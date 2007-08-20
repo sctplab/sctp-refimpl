@@ -58,3 +58,6 @@
 - It was possible to respond to a ABORT() with bad checksum with
   a PKT-DROP. This lead to a PKT-DROP/ABORT war. Add code to NOT
   send a PKT-DROP to any ABORT().
+- Add an option for local logging (useful for macintosh or when
+  you need better performing during debugging). Note no commands
+  are here to get the log info, you must just use kgdb.
