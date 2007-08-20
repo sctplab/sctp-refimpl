@@ -173,7 +173,10 @@ static char *from_str[]= {
 	/* 116 */ "log sack normal",
 	/* 117 */ "log sack express",
 	/* 118 */ "tsn enters",
-	/* 119 */ "max"
+	/* 119 */ "clear threshold",
+	/* 120 */ "increment threshold",
+	/* 121 */ "max"
+
 };
 
 
@@ -659,6 +662,20 @@ print_event_misc(struct sctp_cwnd_log *log)
 		       log->x.misc.log3,
 		       log->x.misc.log4);
 				       
+	} else if (log->from == SCTP_THRESHOLD_CLEAR) {
+		printf("%s:Clear asoc threshold old val:%d new val:%d FILE:%x LINE:%d\n",
+		       ts,
+		       log->x.misc.log1,
+		       log->x.misc.log2,
+		       log->x.misc.log3,
+		       log->x.misc.log4);
+	} else if (log->from == SCTP_THRESHOLD_INCR) {
+		printf("%s:Increment asoc threshold old val:%d new val:%d FILE:%x LINE:%d\n",
+		       ts,
+		       log->x.misc.log1,
+		       log->x.misc.log2,
+		       log->x.misc.log3,
+		       log->x.misc.log4);
 	} else if (log->from == SCTP_ENTER_USER_RECV) {
 		if(!graph_mode) {
 			printf("%s user_rcv: dif:%d freed:%d sincelast:%d rwnd_req:%d\n",
