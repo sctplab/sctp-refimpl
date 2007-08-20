@@ -51,7 +51,7 @@ fi
 cd $cvsPath/KERN/$BSD_PATH 
 for j in conf/files conf/options kern/syscalls.master \
     kern/uipc_syscalls.c net/rtsock.c netinet/in_proto.c \
-    netinet6/in6_proto.c sys/mbuf.h sys/socket.h
+    netinet6/in6_proto.c netinet6/nd6_nbr.c sys/mbuf.h sys/socket.h
   do
   if test -f $cvsPath/KERN/$BSD_PATH/$j
       then
