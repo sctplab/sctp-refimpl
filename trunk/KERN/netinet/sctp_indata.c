@@ -2703,10 +2703,17 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	}
 	if (num_chunks) {
 		/*
-		 * Did we get data, if so update the time for auto-close and
+		 * Did we get data, if sa update the time for auto-close and
 		 * give peer credit for being alive.
 		 */
 		SCTP_STAT_INCR(sctps_recvpktwithdata);
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+				       stcb->asoc.overall_error_count,
+				       0,
+				       SCTP_FROM_SCTP_INDATA,
+				       __LINE__);
+		}
 		stcb->asoc.overall_error_count = 0;
 		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
@@ -3816,6 +3823,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 
 	asoc->this_sack_highest_gap = cumack;
+	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+			       stcb->asoc.overall_error_count,
+			       0,
+			       SCTP_FROM_SCTP_INDATA,
+			       __LINE__);
+	}
 	stcb->asoc.overall_error_count = 0;
 	if (compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
 		/* process the new consecutive TSN first */
@@ -4244,6 +4258,13 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	num_dup = ntohs(sack->num_dup_tsns);
 
 	old_rwnd = stcb->asoc.peers_rwnd;
+	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+			       stcb->asoc.overall_error_count,
+			       0,
+			       SCTP_FROM_SCTP_INDATA,
+			       __LINE__);
+	}
 	stcb->asoc.overall_error_count = 0;
 	asoc = &stcb->asoc;
 	if(sctp_logging_level & SCTP_SACK_LOGGING_ENABLE) {
