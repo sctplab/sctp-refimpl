@@ -366,7 +366,7 @@ pdapi_process_data(unsigned char *buffer,
 	}
 	blk = malloc(sizeof(struct data_block) + len);
 	if (blk == NULL) {
-		printf("Can't allocate a block of size %d + %d\n", len, sizeof(struct data_block));
+		printf("Can't allocate a block of size %d + %d\n", (int)len, (int)sizeof(struct data_block));
 		abort();
 	}
 	blk->next = NULL;
