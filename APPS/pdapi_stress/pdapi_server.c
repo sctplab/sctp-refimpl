@@ -113,9 +113,10 @@ audit_a_msg (struct requests *who)
 	struct pdapi_request *msg, *end;
 	int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
 	uint32_t base_crc = 0xffffffff, passed_sum, final_sum;
+	ushort ssn_req, ssn_data, ssn_end;
+
 
 	msg = (struct pdapi_request *)who->first->data;
-	ushort ssn_req, ssn_data, ssn_end;
 	if(msg->request != PDAPI_REQUEST_MESSAGE) {
 		/* not a request at the head? */
 		return(0);
@@ -364,6 +365,10 @@ pdapi_process_data(unsigned char *buffer,
 		abort();
 	}
 	blk = malloc(sizeof(struct data_block) + len);
+	if (blk == NULL) {
+		printf("Can't allocate a block of size %d + %d\n", len, sizeof(struct data_block));
+		abort();
+	}
 	blk->next = NULL;
 	memcpy(&blk->info, sinfo, sizeof(struct sctp_sndrcvinfo));
 	blk->sz = len;
@@ -449,12 +454,12 @@ pdapi_process_msg(unsigned char *buffer,
 	}
 }
 
-
+uint8_t buffer[PDAPI_DATA_BLOCK_SIZE];
 
 int
 main(int argc, char **argv)
 {
-	uint8_t buffer[PDAPI_DATA_BLOCK_SIZE];
+
 	int i, fd, flags=0;
 	u_int16_t port=0;
 	int level=SCTP_FRAG_LEVEL_1;
