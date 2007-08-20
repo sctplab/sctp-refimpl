@@ -1225,4 +1225,10 @@ SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
 #endif /* SCTP_DEBUG */
 }
 
+#elif defined(__Windows__)
+void sysctl_setup(void)
+{
+	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", "Configure debug output", &sctp_debug_on, sizeof(sctp_debug_on));
+}
+
 #endif
