@@ -463,7 +463,7 @@ main(int argc, char **argv)
 	
 	memset(&bindto,0,sizeof(bindto));
 	bindto.sin_family = AF_INET;
-	while((i= getopt(argc,argv,"p:vl:S:")) != EOF){
+	while((i= getopt(argc,argv,"p:vl:S:B:")) != EOF){
 		switch(i){
 		case 'S':
 			sum_out = fopen(optarg, "w+");
