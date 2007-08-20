@@ -399,7 +399,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 #define SCTPCTL_LOGGING_LEVEL_DESC	"Ltrace/KTR trace logging level"
 #define SCTPCTL_LOGGING_LEVEL_MIN	0
 #define SCTPCTL_LOGGING_LEVEL_MAX	0xffffffff
-#define SCTPCTL_LOGGING_LEVEL_DEFAULT	0
+#define SCTPCTL_LOGGING_LEVEL_DEFAULT	0x20100
 
 /* JRS 5/2107 - CMT PF type flag */
 #define SCTPCTL_CMT_PF			52
