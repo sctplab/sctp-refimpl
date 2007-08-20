@@ -66,7 +66,7 @@ send_a_request()
 		p++;
 	}
 	/* now we need to csum it */
-	printf("size of message is %d\n", sz);
+	printf("size of message is %d\n", (int)sz);
 	if (sum_out)
 		sum_it_out(msg->msg.data, sz);
 	base_crc = update_crc32(base_crc, msg->msg.data, sz);
