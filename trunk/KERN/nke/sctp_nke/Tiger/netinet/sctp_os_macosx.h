@@ -108,6 +108,12 @@ extern struct fileops socketops;
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
+#if defined(SCTP_LOCAL_TRACE_BUF) 
+#define SCTP_CTR6 sctp_log_trace
+#else
+#define SCTP_CTR6 CTR6
+#endif
+
 /* Empty ktr statement for mac */
 #define	CTR6(m, d, p1, p2, p3, p4, p5, p6)
 #define SCTP_LTRACE_CHK(a, b, c, d)
@@ -503,6 +509,8 @@ void sctp_unlock_assert(struct socket *so);
 
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
+#define SCTP_GET_CYCLECOUNT ticks;
+#define KTR_SUBSYS 1
 
 #define sctp_get_tick_count() (ticks)
 

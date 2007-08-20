@@ -224,6 +224,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
  * This gets the compile in place, but you still need to turn the 
  * logging flag on too in the sysctl (see in sctp.h).
  */
+
+/* For SCTP only logging */
+#define SCTP_MAX_LOGGING_SIZE 30000
+#define SCTP_TRACE_PARAMS 6
+
+
 #define SCTP_LOG_EVENT_UNKNOWN 0
 #define SCTP_LOG_EVENT_CWND  1
 #define SCTP_LOG_EVENT_BLOCK 2
