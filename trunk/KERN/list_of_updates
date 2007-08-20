@@ -65,5 +65,8 @@
   sctp_sack_check() to slide the maps and adjust the cum-ack.
   This is because it may be out of sync cum-ack wise.
 - Added threshold managment logging.
+- If the user picked just the right size, that just filled the send
+  window minus one mtu, we would enter a forever loop not copying and
+  at the same time not blocking. Change from < to <= solves this.
 
 
