@@ -161,7 +161,7 @@ main(int argc, char **argv)
 	struct sctp_event_subscribe event;
 	
 	memset (&peer, 0, sizeof(peer));
-	while((i= getopt(argc,argv,"p:h:s:l:S:")) != EOF){
+	while((i= getopt(argc,argv,"p:h:s:l:S:B:")) != EOF){
 		switch(i){
 		case 'S':
 			sum_out = fopen(optarg, "w+");
