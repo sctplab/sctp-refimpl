@@ -21,7 +21,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
- * $Id: sctp_os_windows.h,v 1.2 2007-08-17 03:25:09 randall Exp $
+ * $Id: sctp_os_windows.h,v 1.3 2007-08-20 06:58:52 ma-kun Exp $
  */
 #ifndef __sctp_os_windows_h__
 #define __sctp_os_windows_h__
@@ -47,6 +47,7 @@
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
 #include <sys/socket.h>
+#include <sys/sysctl.h>
 
 #include <net/if.h>
 #include <net/route.h>
@@ -207,25 +208,13 @@ MALLOC_DECLARE(SCTP_M_MVRF);
 MALLOC_DECLARE(SCTP_M_ITER);
 MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
-/*
- * general memory allocation
- */
 #define SCTP_MALLOC(var, type, size, name) \
-	do { \
-		var = (type)ExAllocatePoolWithTag(NonPagedPool, (size), (ULONG)&(name)); \
-	} while (0)
-
-#define SCTP_FREE(var, type)	ExFreePool(var)
+	MALLOC(var, type, size, name, 0)
+#define SCTP_FREE	FREE
 
 #define SCTP_MALLOC_SONAME(var, type, size) \
-	do { \
-		var = (type)ExAllocatePoolWithTag(NonPagedPool, (size), (ULONG)M_SONAME); \
-		if (var != NULL) { \
-			RtlZeroMemory(var, size); \
-		} \
-	} while (0)
-
-#define SCTP_FREE_SONAME(var)	ExFreePool(var)
+	MALLOC(var, type, size, M_SONAME, M_ZERO)
+#define SCTP_FREE_SONAME(var) FREE(var, M_SONAME)
 
 typedef NPAGED_LOOKASIDE_LIST sctp_zone_t;
 #define UMA_ZFLAG_FULL	0x0020
