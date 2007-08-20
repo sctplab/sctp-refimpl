@@ -2277,9 +2277,11 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	    asoc->highest_tsn_inside_map,
 	    MAX_TSN)) {
 #ifdef INVARIANTS
-		panic("huh, cumack greater than high-tsn in map");
+		panic("huh, cumack 0x%x greater than high-tsn 0x%x in map",
+		      asoc->cumulative_tsn, asoc->highest_tsn_inside_map);
 #else
-		SCTP_PRINTF("huh, cumack greater than high-tsn in map - should panic?\n");
+		SCTP_PRINTF("huh, cumack 0x%x greater than high-tsn 0x%x in map - should panic?\n",
+			    asoc->cumulative_tsn, asoc->highest_tsn_inside_map);
 		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 #endif
 	}
