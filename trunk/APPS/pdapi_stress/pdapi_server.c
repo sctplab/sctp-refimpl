@@ -6,7 +6,9 @@
 #include <sys/time.h>
 #include <netinet/in.h>
 #include <sys/socket.h>
+#include <netinet/in.h>
 #include <netinet/sctp.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <sys/signal.h>
 #include "pdapi_req.h"
@@ -459,6 +461,8 @@ main(int argc, char **argv)
 	struct sockaddr_in bindto,got,from;
 	struct sctp_event_subscribe event;
 	
+	memset(&bindto,0,sizeof(bindto));
+	bindto.sin_family = AF_INET;
 	while((i= getopt(argc,argv,"p:vl:S:")) != EOF){
 		switch(i){
 		case 'S':
@@ -475,6 +479,17 @@ main(int argc, char **argv)
 				       SCTP_FRAG_LEVEL_2);
 				return (-1);
 			}
+			break;
+		case 'B':
+			if (inet_pton(AF_INET, optarg, &bindto.sin_addr)) {
+				bindto.sin_family = AF_INET;
+				bindto.sin_len = sizeof(bindto);
+			} else {
+				printf("Cannot decode bindto address - using INADDR_ANY\n");
+				memset(&bindto,0,sizeof(bindto));
+				bindto.sin_family = AF_INET;
+			}
+			break;
 		case 'v':
 			verbose = 1;
 			break;
@@ -497,10 +512,8 @@ main(int argc, char **argv)
 		printf("Can't set FRAGMENT_INTERLEAVE socket option! err:%d\n", errno);
 		return (-1);
 	}
-	memset(&bindto,0,sizeof(bindto));
 	slen = sizeof(bindto);
 	bindto.sin_len = sizeof(bindto);
-	bindto.sin_family = AF_INET;
 	bindto.sin_port = htons(port);
 	if(bind(fd,(struct sockaddr *)&bindto, slen) < 0){
 		printf("can't bind a socket:%d\n",errno);
