@@ -1451,7 +1451,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	protocol_id = ch->dp.protocol_id;
 	ordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
 	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
-		sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
+		sctp_log_map(tsn, asoc->cumulative_tsn, asoc->highest_tsn_inside_map, SCTP_MAP_TSN_ENTERS);
 	}
 	if(stcb == NULL) {
 		return (0);
@@ -5198,6 +5198,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 
 	if (gap > m_size) {
 		asoc->highest_tsn_inside_map = back_out_htsn;
+		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+		}
 		if ((long)gap > sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv)) {
 			struct mbuf *oper;
 			/*
