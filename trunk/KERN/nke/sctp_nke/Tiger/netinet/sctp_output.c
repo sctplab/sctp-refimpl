@@ -8339,7 +8339,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 				    chk->snd_count,
 				    sctp_max_retran_chunk);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
-			sctp_abort_an_association(stcb->sctp_ep, stcb, 0, NULL);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, 0, NULL, so_locked);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			return (SCTP_RETRAN_EXIT);
