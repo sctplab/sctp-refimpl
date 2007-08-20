@@ -4295,7 +4295,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			/* He's alive so give him credit */
 			if (stcb) {
 				int abort_flag = 0;
-
+				stcb->asoc.overall_error_count = 0;
 				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
