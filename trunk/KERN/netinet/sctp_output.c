@@ -10016,6 +10016,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		default:
 			break;
 		}
+		offset += SCTP_SIZE32(chk_length);
+		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
+		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
 
 	if ((len+SCTP_MAX_OVERHEAD+sizeof(struct sctp_pktdrop_chunk)) > 
