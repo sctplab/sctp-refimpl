@@ -1699,9 +1699,14 @@ sctp_timeout_handler(void *t)
 		if ((stcb == NULL) || (inp == NULL)) {
 			break;
 		}
-		SCTP_STAT_INCR(sctps_timosack);
-		stcb->asoc.timosack++;
-		sctp_send_sack(stcb);
+		{
+			int abort_flag;
+			SCTP_STAT_INCR(sctps_timosack);
+			stcb->asoc.timosack++;
+			if(stcb->asoc.cumulative_tsn != stcb->asoc.highest_tsn_inside_map)
+				sctp_sack_check(stcb, 0, 0, &abort_flag);
+			sctp_send_sack(stcb);
+		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif

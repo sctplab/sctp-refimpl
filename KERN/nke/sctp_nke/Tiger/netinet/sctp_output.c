@@ -9396,8 +9396,14 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			offset += 8;
 		}
 		if (num_gap_blocks == 0) {
-			/* reneged all chunks */
-			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+			/* slide not yet happened, and 
+			 * somehow we got called to send a sack.
+			 * Cumack needs to move up.
+			 */
+			int abort_flag=0;
+			asoc->cumulative_tsn = asoc->highest_tsn_inside_map;
+			sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
+			sctp_sack_check(stcb, 0, 0, &abort_flag);	
 		}
 	}
 	/* now we must add any dups we are going to report. */
