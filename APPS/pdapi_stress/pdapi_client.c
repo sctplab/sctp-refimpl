@@ -66,7 +66,6 @@ send_a_request()
 		p++;
 	}
 	/* now we need to csum it */
-	printf("size of message is %d\n", (int)sz);
 	if (sum_out)
 		sum_it_out(msg->msg.data, sz);
 	base_crc = update_crc32(base_crc, msg->msg.data, sz);
@@ -186,7 +185,7 @@ main(int argc, char **argv)
 		};
 	}
 
-	if ((host == NULL) || (seed = 0) || (port == 0)) {
+	if ((host == NULL) || (seed == 0) || (port == 0)) {
 	use:
 		printf("Use %s -s seed -p port -h dot.host.ip.addr [-l limit]\n",
 		       argv[0]);
