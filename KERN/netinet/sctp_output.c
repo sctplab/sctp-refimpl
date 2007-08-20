@@ -9959,6 +9959,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct ip *iph;
 	int fullsz=0, extra=0;
 	long spc;
+	int offset;
+	struct sctp_chunkhdr *ch, chunk_buf;
+	unsigned int chk_length;
 
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -9996,6 +9999,25 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		ip6h = mtod(m, struct ip6_hdr *);
 		len = chk->send_size = htons(ip6h->ip6_plen);
 	}
+        /* Validate that we do not have an ABORT in here. */
+	offset = iphlen + sizeof(struct sctphdr);
+	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
+						   sizeof(*ch), (uint8_t *) & chunk_buf);
+	while (ch != NULL) {
+		chk_length = ntohs(ch->chunk_length);
+		if (chk_length < sizeof(*ch)) {
+			/* break to abort land */
+			break;
+		}
+		switch (ch->chunk_type) {
+		case SCTP_ABORT_ASSOCIATION:
+			/* we don't respond with an PKT-DROP to an ABORT */
+			return;
+		default:
+			break;
+		}
+	}
+
 	if ((len+SCTP_MAX_OVERHEAD+sizeof(struct sctp_pktdrop_chunk)) > 
 	    min(stcb->asoc.smallest_mtu, MCLBYTES)) {
 		/* only send 1 mtu worth, trim off the
