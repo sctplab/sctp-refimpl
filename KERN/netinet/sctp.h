@@ -42,6 +42,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.17 2007/07/17 20:58:25 rrs Exp $"
 #endif
 #include <sys/types.h>
 
+#if defined(__Windows__)
+#include <packon.h>
+#endif
 /*
  * SCTP protocol - RFC2960.
  */
@@ -529,5 +532,9 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LTRACE_CHUNK_ENABLE                        0x00400000
 #define SCTP_LTRACE_ERROR_ENABLE                        0x00800000
 #define SCTP_LAST_PACKET_TRACING                        0x01000000
+
+#if defined(__Windows__)
+#include <packoff.h>
+#endif
 
 #endif				/* !_NETINET_SCTP_H_ */
