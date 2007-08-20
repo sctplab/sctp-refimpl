@@ -213,8 +213,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
 #define SCTP_FLIGHT_LOG_DOWN_PMTU  115
 #define SCTP_SACK_LOG_NORMAL	   116
 #define SCTP_SACK_LOG_EXPRESS	   117
+#define SCTP_MAP_TSN_ENTERS        118
 
-#define SCTP_LOG_MAX_TYPES 118
+#define SCTP_LOG_MAX_TYPES 119
 /*
  * To turn on various logging, you must first enable 'options KTR' and
  * you might want to bump the entires 'options KTR_ENTRIES=80000'.

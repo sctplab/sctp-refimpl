@@ -2892,7 +2892,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		int done;
 
 #if defined(__Windows__)
-		first = 0;
+		first = 1;
 		last = 0xffff;
 #else
 #if defined(__FreeBSD__) || defined(__APPLE__)
