@@ -2201,7 +2201,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	struct sctp_association *asoc;
 	int i, at;
-	int all_ones, last_all_ones=0;
+	int last_all_ones=0;
 	int slide_from, slide_end, lgap, distance;
 	uint32_t old_cumack, old_base, old_highest;
 	unsigned char aux_array[64];
@@ -2223,7 +2223,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 * We could probably improve this a small bit by calculating the
 	 * offset of the current cum-ack as the starting point.
 	 */
-	all_ones = 1;
 	at = 0;
 	for (i = 0; i < stcb->asoc.mapping_array_size; i++) {
 
@@ -2232,7 +2231,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			last_all_ones = 1;
 		} else {
 			/* there is a 0 bit */
-			all_ones = 0;
 			at += sctp_map_lookup_tab[asoc->mapping_array[i]];
 			last_all_ones = 0;
 			break;
@@ -2252,24 +2250,15 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 #endif
 	}
-	if (all_ones ||
-	    (asoc->cumulative_tsn == asoc->highest_tsn_inside_map && at >= 8)) {
+	if ((asoc->cumulative_tsn == asoc->highest_tsn_inside_map) && (at >= 8)) {
 		/* The complete array was completed by a single FR */
 		/* higest becomes the cum-ack */
 		int clr;
-
 		asoc->cumulative_tsn = asoc->highest_tsn_inside_map;
 		/* clear the array */
-		if (all_ones)
-			clr = asoc->mapping_array_size;
-		else {
-			clr = (at >> 3) + 1;
-			/*
-			 * this should be the allones case but just in case
-			 * :>
-			 */
-			if (clr > asoc->mapping_array_size)
-				clr = asoc->mapping_array_size;
+		clr = (at >> 3) + 1;
+		if (clr > asoc->mapping_array_size) {
+			clr = asoc->mapping_array_size; 
 		}
 		memset(asoc->mapping_array, 0, clr);
 		/* base becomes one ahead of the cum-ack */
