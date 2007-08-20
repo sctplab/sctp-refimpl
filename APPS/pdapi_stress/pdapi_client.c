@@ -130,6 +130,9 @@ handle_notification(char *buf)
 		} else if (asoc->sac_state == SCTP_COMM_LOST) {
 			printf("Got a comm-lost event, exiting\n");
 			return(0);
+		} else if (asoc->sac_state == SCTP_CANT_STR_ASSOC) {
+			printf("Can't start association!\n");
+			return(0);
 		}
 		break;
 	case SCTP_SHUTDOWN_EVENT:
