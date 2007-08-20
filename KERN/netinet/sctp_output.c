@@ -12251,7 +12251,7 @@ sctp_lower_sosend(struct socket *so,
 			 * size we KNOW we will get to sleep safely with the
 			 * wakeup flag in place.
 			 */
-			if(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size + 
+			if(SCTP_SB_LIMIT_SND(so) <= (stcb->asoc.total_output_queue_size + 
 						    min(sctp_add_more_threshold,SCTP_SB_LIMIT_SND(so)))
 				) {
 				if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
