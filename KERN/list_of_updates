@@ -64,6 +64,6 @@
 - The timer code needs to be aware of if it needs to call
   sctp_sack_check() to slide the maps and adjust the cum-ack.
   This is because it may be out of sync cum-ack wise.
-
+- Added threshold managment logging.
 
 

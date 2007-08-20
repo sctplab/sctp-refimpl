@@ -432,6 +432,13 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		op_err = NULL;
 	}
 	/* extract the cookie and queue it to "echo" it back... */
+	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+			       stcb->asoc.overall_error_count,
+			       0,
+			       SCTP_FROM_SCTP_INPUT,
+			       __LINE__);
+	}
 	stcb->asoc.overall_error_count = 0;
 	net->error_count = 0;
 
@@ -1026,6 +1033,13 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_ECHOED);
 
 		/* reset the RTO calc */
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+				       stcb->asoc.overall_error_count,
+				       0,
+				       SCTP_FROM_SCTP_INPUT,
+				       __LINE__);
+		}
 		stcb->asoc.overall_error_count = 0;
 		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 		/*
@@ -3657,6 +3671,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	     (ch->chunk_type == SCTP_HEARTBEAT_REQUEST)) &&
 	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		/* implied cookie-ack.. we must have lost the ack */
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+				       stcb->asoc.overall_error_count,
+				       0,
+				       SCTP_FROM_SCTP_INPUT,
+				       __LINE__);
+		}
 		stcb->asoc.overall_error_count = 0;
 		sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb,
 				       *netp);
@@ -3921,6 +3942,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							chk_length, *netp);
 
 				/* He's alive so give him credit */
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 			}
 			break;
@@ -3935,6 +3963,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			/* He's alive so give him credit */
+			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+					       stcb->asoc.overall_error_count,
+					       0,
+					       SCTP_FROM_SCTP_INPUT,
+					       __LINE__);
+			}
 			stcb->asoc.overall_error_count = 0;
 			SCTP_STAT_INCR(sctps_recvheartbeatack);
 			if (netp && *netp)
@@ -4130,6 +4165,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			/* He's alive so give him credit */
 			if ((stcb) && netp && *netp) {
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch,stcb, *netp);
 			}
@@ -4146,6 +4188,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if(stcb) {
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_ecn_echo((struct sctp_ecne_chunk *)ch,
 						     stcb);
@@ -4163,6 +4212,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if (stcb) {
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_ecn_cwr((struct sctp_cwr_chunk *)ch, stcb);
 			}
@@ -4189,6 +4245,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ASCONF\n");
 			/* He's alive so give him credit */
 			if (stcb) {
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf(m, *offset,
 						   (struct sctp_asconf_chunk *)ch, stcb);
@@ -4206,6 +4269,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			if ((stcb) && netp && *netp) {
 				/* He's alive so give him credit */
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf_ack(m, *offset,
 						       (struct sctp_asconf_ack_chunk *)ch, stcb, *netp);
@@ -4226,7 +4296,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (stcb) {
 				int abort_flag = 0;
 
-				stcb->asoc.overall_error_count = 0;
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				*fwd_tsn_seen = 1;
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
@@ -4240,6 +4316,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					return (NULL);
 				} else {
+					if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+						sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+							       stcb->asoc.overall_error_count,
+							       0,
+							       SCTP_FROM_SCTP_INPUT,
+							       __LINE__);
+					}
 					stcb->asoc.overall_error_count = 0;
 				}
 
@@ -4632,6 +4715,13 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * shows us the cookie-ack was lost. Imply it was
 			 * there.
 			 */
+			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+					       stcb->asoc.overall_error_count,
+					       0,
+					       SCTP_FROM_SCTP_INPUT,
+					       __LINE__);
+			}
 			stcb->asoc.overall_error_count = 0;
 			sctp_handle_cookie_ack((struct sctp_cookie_ack_chunk *)ch, stcb, net);
 			break;

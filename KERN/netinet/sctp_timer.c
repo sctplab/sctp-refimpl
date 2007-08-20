@@ -234,9 +234,23 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	if (net) {
 		if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0) {
+			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				sctp_misc_ints(SCTP_THRESHOLD_INCR,
+					       stcb->asoc.overall_error_count,
+					       (stcb->asoc.overall_error_count+1),
+					       SCTP_FROM_SCTP_TIMER,
+					       __LINE__);
+			}
 			stcb->asoc.overall_error_count++;
 		}
 	} else {
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_INCR,
+				       stcb->asoc.overall_error_count,
+				       (stcb->asoc.overall_error_count+1),
+				       SCTP_FROM_SCTP_TIMER,
+				       __LINE__);
+		}
 		stcb->asoc.overall_error_count++;
 	}
 	SCTPDBG(SCTP_DEBUG_TIMER4, "Overall error count for %p now %d thresh:%u state:%x\n",

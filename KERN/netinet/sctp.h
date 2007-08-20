@@ -532,6 +532,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LTRACE_CHUNK_ENABLE                        0x00400000
 #define SCTP_LTRACE_ERROR_ENABLE                        0x00800000
 #define SCTP_LAST_PACKET_TRACING                        0x01000000
+#define SCTP_THRESHOLD_LOGGING                          0x02000000
 
 #if defined(__Windows__)
 #include <packoff.h>
