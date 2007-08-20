@@ -8316,8 +8316,10 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			SCTP_PRINTF("Gak, chk->snd_count:%d >= max:%d - send abort\n",
 				    chk->snd_count,
 				    sctp_max_retran_chunk);
-			sctp_send_abort_tcb(stcb, NULL);
-			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			sctp_abort_an_association(stcb->sctp_ep, stcb, 0, NULL);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			return (SCTP_RETRAN_EXIT);
 		}
 		/* pick up the net */
