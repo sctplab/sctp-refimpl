@@ -6741,11 +6741,12 @@ sctp_log_trace(uint32_t subsys, const char *str, uint32_t a, uint32_t b, uint32_
 	int saveindex, newindex;
 	do {
 		saveindex = sctp_log_index;
-		newindex = saveindex + 1;
-		if(saveindex > SCTP_MAX_LOGGING_SIZE) {
+		if(saveindex >= SCTP_MAX_LOGGING_SIZE) {
 			saveindex = 0;
+		} else {
+			newindex = saveindex + 1;
 		}
-	} while (atomic_cmpset_rel_int(&sctp_log_index, saveindex, newindex) == 0);
+	} while (atomic_cmpset_int(&sctp_log_index, saveindex, newindex) == 0);
 	sctp_log[saveindex].timestamp = SCTP_GET_CYCLECOUNT;
 	sctp_log[saveindex].subsys = subsys;
 	sctp_log[saveindex].descr = str;
