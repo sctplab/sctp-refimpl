@@ -54,3 +54,7 @@
 - V6 output must always do checksum even for loopback.
 - Remove more locks around inp that are not needed for an atomically
   added/subtracted ref count.
+- slight optimization in the way we zero the array in sctp_sack_check()
+- It was possible to respond to a ABORT() with bad checksum with
+  a PKT-DROP. This lead to a PKT-DROP/ABORT war. Add code to NOT
+  send a PKT-DROP to any ABORT().
