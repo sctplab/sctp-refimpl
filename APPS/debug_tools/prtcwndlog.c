@@ -172,7 +172,8 @@ static char *from_str[]= {
 	/* 115 */ "flight down pmtu",
 	/* 116 */ "log sack normal",
 	/* 117 */ "log sack express",
-	/* 118 */ "max"
+	/* 118 */ "tsn enters",
+	/* 119 */ "max"
 };
 
 
@@ -1083,8 +1084,14 @@ print_event_map(struct sctp_cwnd_log *log)
 		       (int)log->x.map.base,
 		       (int)log->x.map.cum,
 		       (int)log->x.map.high);
-	} else {
+	} else if(log->from == SCTP_MAP_TSN_ENTERS) {
+		printf("%s: tsn:%d  cumack:%d highest:%d\n",
+		       from_str[log->from],
+		       (int)log->x.map.base,
+		       (int)log->x.map.cum,
+		       (int)log->x.map.high);
 
+	} else {
 		printf("%s: Map Base:%u Cum Ack:%u Highest TSN:%u\n",
 		       from_str[log->from],
 		       log->x.map.base,
