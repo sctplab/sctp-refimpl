@@ -1450,7 +1450,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	protocol_id = ch->dp.protocol_id;
 	ordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
 	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
-		sctp_log_map(0, tsn, asoc->cumulative_tsn, SCTP_MAP_PREPARE_SLIDE);
+		sctp_log_map(tsn, asoc->cumulative_tsn, asoc->highest_tsn_inside_map, SCTP_MAP_TSN_ENTERS);
 	}
 	if(stcb == NULL) {
 		return (0);
@@ -2743,6 +2743,13 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 		 * give peer credit for being alive.
 		 */
 		SCTP_STAT_INCR(sctps_recvpktwithdata);
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+				       stcb->asoc.overall_error_count,
+				       0,
+				       SCTP_FROM_SCTP_INDATA,
+				       __LINE__);
+		}
 		stcb->asoc.overall_error_count = 0;
 		(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_last_rcvd);
 	}
@@ -3866,6 +3873,13 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 
 	asoc->this_sack_highest_gap = cumack;
+	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+			       stcb->asoc.overall_error_count,
+			       0,
+			       SCTP_FROM_SCTP_INDATA,
+			       __LINE__);
+	}
 	stcb->asoc.overall_error_count = 0;
 	if (compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
 		/* process the new consecutive TSN first */
@@ -4314,6 +4328,13 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	num_dup = ntohs(sack->num_dup_tsns);
 
 	old_rwnd = stcb->asoc.peers_rwnd;
+	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+			       stcb->asoc.overall_error_count,
+			       0,
+			       SCTP_FROM_SCTP_INDATA,
+			       __LINE__);
+	}
 	stcb->asoc.overall_error_count = 0;
 	asoc = &stcb->asoc;
 	if(sctp_logging_level & SCTP_SACK_LOGGING_ENABLE) {

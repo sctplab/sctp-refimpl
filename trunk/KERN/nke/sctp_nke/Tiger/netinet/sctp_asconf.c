@@ -1154,6 +1154,14 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 			net->error_count = 0;
 		}
 		stcb->asoc.overall_error_count = 0;
+		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+				       stcb->asoc.overall_error_count,
+				       0,
+				       SCTP_FROM_SCTP_ASCONF,
+				       __LINE__);
+		}
+
 		/* queue in an advisory set primary too */
 		(void)sctp_asconf_queue_mgmt(stcb, ifa, SCTP_SET_PRIM_ADDR);
 		/* let caller know we should send this out immediately */
