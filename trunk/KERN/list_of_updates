@@ -61,3 +61,9 @@
 - Add an option for local logging (useful for macintosh or when
   you need better performing during debugging). Note no commands
   are here to get the log info, you must just use kgdb.
+- The timer code needs to be aware of if it needs to call
+  sctp_sack_check() to slide the maps and adjust the cum-ack.
+  This is because it may be out of sync cum-ack wise.
+
+
+

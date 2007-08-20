@@ -9379,7 +9379,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			int abort_flag=0;
 			asoc->cumulative_tsn = asoc->highest_tsn_inside_map;
 			sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
-			sctp_sack_check(stcb, 0, 0, &abort_flag);			
+			sctp_sack_check(stcb, 0, 0, &abort_flag);	
 		}
 	}
 	/* now we must add any dups we are going to report. */
