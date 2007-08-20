@@ -889,7 +889,9 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	 * this will only get called when an address is added/deleted
 	 * XXX pass the ifaddr struct instead if ifa->ifa_addr...
 	 */
-	sctp_addr_change(ifa, cmd);
+	if ((ifa->ifa_addr->sa_family == AF_INET) ||
+	    (ifa->ifa_addr->sa_family == AF_INET6 && cmd == RTM_DELETE)) 
+		sctp_addr_change(ifa, cmd);
 #endif /* SCTP */
 	if (route_cb.any_count == 0)
 		return;

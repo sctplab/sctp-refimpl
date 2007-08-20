@@ -849,7 +849,9 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	KASSERT(cmd == RTM_ADD || cmd == RTM_DELETE,
 		("unexpected cmd %u", cmd));
 #ifdef SCTP
-	sctp_addr_change(ifa, cmd);
+	if ((ifa->ifa_addr->sa_family == AF_INET) ||
+	    (ifa->ifa_addr->sa_family == AF_INET6 && cmd == RTM_DELETE)) 
+		sctp_addr_change(ifa, cmd);
 #endif /* SCTP */
 	if (route_cb.any_count == 0)
 		return;
