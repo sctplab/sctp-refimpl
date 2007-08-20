@@ -28,6 +28,7 @@ struct asoc_read_log {
 struct asoc_read_log rdlog[READ_LOG_SIZE];
 static int rdlog_at=0;
 static int rdlog_wrap=0;
+static unsigned int total_msgs=0;
 
 void
 clean_up_broken_msg(struct requests *who)
@@ -215,6 +216,10 @@ audit_a_msg (struct requests *who)
 		if(passed_sum != final_sum) {
 			printf("Checksum mis-match should be %x but is %x\n",
 			       (u_int)passed_sum, (u_int)final_sum);
+		}
+		total_msgs++;
+		if ((total_msgs % 10000) == 0) {
+			printf("Processed %d messages\n", total_msgs);
 		}
 		return(1);
 	}
