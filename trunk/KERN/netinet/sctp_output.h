@@ -71,7 +71,10 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			      sctp_route_t *ro, struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id);
 
-
+#if defined(__FreeBSD__) || defined(__APPLE__)
+int
+sctp_v6src_match_nexthop(struct sockaddr_in6 *src6);
+#endif
 
 void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
 

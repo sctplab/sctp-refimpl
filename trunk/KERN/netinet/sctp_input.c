@@ -3968,6 +3968,17 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				stcb->asoc.overall_error_count = 0;
 			}
+			/* if need, send SET_PRIMARY (by micchie) */
+			if (sctp_is_mobility_feature_on(inp, 
+			    SCTP_MOBILITY_DO_SETPRIM)) {
+				if (sctp_set_primary_ip_address_sa(stcb, &stcb->asoc.asconf_addr_setprim_pending->address.sa)) {
+					sctp_mobility_feature_off(inp, 
+					    SCTP_MOBILITY_DO_SETPRIM);
+					return(NULL);
+				}
+				sctp_mobility_feature_off(inp, 
+				    SCTP_MOBILITY_DO_SETPRIM);
+			}
 			break;
 		case SCTP_HEARTBEAT_ACK:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_HEARTBEAT-ACK\n");
@@ -4839,9 +4850,12 @@ trigger_send:
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
+	    /* For retransmission to new primary destination (by micchie) */
+	    sctp_is_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF) ||
 	    ((un_sent) &&
 	     (stcb->asoc.peers_rwnd > 0 ||
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
+		sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");

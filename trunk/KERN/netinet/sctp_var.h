@@ -57,6 +57,12 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
 #define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
 
+/* managing mobility_feature in inpcb (by micchie) */
+#define sctp_mobility_feature_on(inp, feature)  (inp->sctp_mobility_features |= feature)
+#define sctp_mobility_feature_off(inp, feature) (inp->sctp_mobility_features &= ~feature)
+#define sctp_is_mobility_feature_on(inp, feature) (inp->sctp_mobility_features & feature)
+#define sctp_is_mobility_feature_off(inp, feature) ((inp->sctp_mobility_features & feature) == 0)
+
 #define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))

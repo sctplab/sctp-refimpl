@@ -423,19 +423,33 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 #define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MAX	2
 #define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DEFAULT	1
 
+/* mobility_base: Enable SCTP mobility support */
+#define SCTPCTL_MOBILITY_BASE		55		
+#define SCTPCTL_MOBILITY_BASE_DESC	"Enable SCTP base mobility"
+#define SCTPCTL_MOBILITY_BASE_MIN	0
+#define SCTPCTL_MOBILITY_BASE_MAX	1
+#define SCTPCTL_MOBILITY_BASE_DEFAULT	SCTP_DEFAULT_MOBILITY_BASE
+
+/* mobility_fasthandoff: Enable SCTP fast handoff support */
+#define SCTPCTL_MOBILITY_FASTHANDOFF		56		
+#define SCTPCTL_MOBILITY_FASTHANDOFF_DESC	"Enable SCTP fast handoff"
+#define SCTPCTL_MOBILITY_FASTHANDOFF_MIN	0
+#define SCTPCTL_MOBILITY_FASTHANDOFF_MAX	1
+#define SCTPCTL_MOBILITY_FASTHANDOFF_DEFAULT	SCTP_DEFAULT_MOBILITY_FASTHANDOFF
+
 
 #ifdef SCTP_DEBUG
 /* debug: Configure debug output */
-#define SCTPCTL_DEBUG		55
+#define SCTPCTL_DEBUG		57
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
 #define SCTPCTL_DEBUG_DEFAULT	0	
 
 
-#define SCTPCTL_MAXID		    55
+#define SCTPCTL_MAXID		    57
 #else
-#define SCTPCTL_MAXID		    56
+#define SCTPCTL_MAXID		    58
 #endif
 
 /*
@@ -499,6 +513,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 	{ "max_retran_chunk", CTLTYPE_INT }, \
 	{ "sctp_logging", CTLTYPE_INT }, \
 	{ "frag_interleave", CTLTYPE_INT }, \
+	{ "mobility_base", CTLTYPE_INT }, \
+	{ "mobility_fasthandoff", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -558,6 +574,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 	{ "max_retran_chunk", CTLTYPE_INT }, \
 	{ "sctp_logging", CTLTYPE_INT }, \
 	{ "frag_interleave", CTLTYPE_INT }, \
+	{ "mobility_base", CTLTYPE_INT }, \
+	{ "mobility_fasthandoff", CTLTYPE_INT }, \
 }
 #endif
 
@@ -624,6 +642,8 @@ extern uint32_t sctp_strict_data_order;
 extern uint32_t sctp_min_residual;
 extern uint32_t sctp_max_retran_chunk;
 extern uint32_t sctp_logging_level;
+extern uint32_t sctp_mobility_base;
+extern uint32_t sctp_mobility_fasthandoff;
 
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;

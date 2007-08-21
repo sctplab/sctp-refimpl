@@ -271,6 +271,20 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
 
+/* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
+#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
+#define SCTP_DEFAULT_MOBILITY_BASE      0
+#else
+#define SCTP_DEFAULT_MOBILITY_BASE	0
+#endif
+
+/* default MOBILITY_FASTHANDOFF mode enable(1)/disable(0) value (sysctl) */
+#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+#define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
+#else
+#define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
+#endif
+
 /*
  * Theshold for rwnd updates, we have to read (sb_hiwat >>
  * SCTP_RWND_HIWAT_SHIFT) before we will look to see if we need to send a
