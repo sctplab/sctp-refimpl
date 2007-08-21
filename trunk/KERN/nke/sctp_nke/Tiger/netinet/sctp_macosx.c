@@ -433,13 +433,13 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 
 /*	return (m_copym(m, off, len, wait));*/
 	if (off < 0 || len < 0)
-		panic("m_copym");
+		panic("sctp_m_copym: bad offset or length");
 	if (off == 0 && m->m_flags & M_PKTHDR)
 		copyhdr = 1;
 
 	while (off >= m->m_len) {
 		if (m == 0)
-			panic("m_copym: null m");
+			panic("sctp_m_copym: null m");
 		off -= m->m_len;
 		m = m->m_next;
 	}
@@ -456,7 +456,7 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 
 		if (m == 0) {
 			if (len != M_COPYALL)
-				panic("m_copym: not M_COPYALL");
+				panic("sctp_m_copym: not M_COPYALL");
 			break;
 		}
 		if ((n = mfree)) {
