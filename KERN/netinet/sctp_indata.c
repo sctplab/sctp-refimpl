@@ -4115,10 +4115,15 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			 */
 			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue), 
 					sctp_streamhead);
-			if ((sp) && (sp->length == 0) && (sp->msg_is_complete == 0)) {
-				asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
-				asoc->locked_on_sending = NULL;
-				asoc->stream_queue_cnt--;
+			if ((sp) && (sp->length == 0)) {
+				/* Let cleanup code purge it */
+				if (sp->msg_is_complete) {
+					asoc->stream_queue_cnt--;
+				} else {
+					asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+					asoc->locked_on_sending = NULL;
+					asoc->stream_queue_cnt--;
+				} 
 			}
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
@@ -4772,10 +4777,14 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			 */
 			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue), 
 					sctp_streamhead);
-			if ((sp) && (sp->length == 0) && (sp->msg_is_complete == 0)) {
-				asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+			if ((sp) && (sp->length == 0)) {
 				asoc->locked_on_sending = NULL;
-				asoc->stream_queue_cnt--;
+				if (sp->msg_is_complete) {
+					asoc->stream_queue_cnt--;
+				} else {
+					asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
+					asoc->stream_queue_cnt--;
+				}
 			}
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
