@@ -2655,6 +2655,21 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 						  dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
+#if defined(__FreeBSD__) || defined(__APPLE__)
+		/* Check if the IPv6 address matches to next-hop.
+		   In the mobile case, old IPv6 address may be not deleted 
+		   from the interface. Then, the interface has previous and 
+		   new addresses.  We should use one corresponding to the 
+		   next-hop.  (by micchie)
+		 */
+		if (stcb && fam == AF_INET6 &&
+		    sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
+			if (sctp_v6src_match_nexthop(&ifa->address.sin6) 
+			    == 0) {
+				continue;
+			}
+		}
+#endif
 		if (stcb) {
 			if ((non_asoc_addr_ok == 0) &&
 			    sctp_is_addr_restricted(stcb, sifa)) {
@@ -12670,3 +12685,40 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 
 	return (m);
 }
+
+#if defined(__FreeBSD__) || defined(__APPLE__)
+int
+sctp_v6src_match_nexthop(struct sockaddr_in6 *src6)
+{
+	struct nd_prefix *pfx = NULL;
+	struct nd_pfxrouter *pfxrtr = NULL;
+
+	/* get prefix entry of address */
+	LIST_FOREACH(pfx, &nd_prefix, ndpr_entry) {
+		if (pfx->ndpr_stateflags & NDPRF_DETACHED) 
+			continue;
+		if (IN6_ARE_MASKED_ADDR_EQUAL(&pfx->ndpr_prefix.sin6_addr,
+		    &src6->sin6_addr, &pfx->ndpr_mask)) 
+			break;
+	}
+	/* no prefix entry in the prefix list */
+	if (pfx == NULL)
+		return (0);
+
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "v6src_match_nexthop()\n");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Prefix entry for ");
+	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)src6);
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "found\n");
+
+	/* search installed default router from prefix entry */
+	for (pfxrtr = pfx->ndpr_advrtrs.lh_first; pfxrtr; pfxrtr = 
+	    pfxrtr->pfr_next) {
+		if (pfxrtr->router->installed) {
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix matches installed gateway\n");
+			return (1);
+		}
+	}
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix does not match installed gatewa\n");
+	return (0);
+}
+#endif

@@ -590,6 +590,8 @@ struct sctp_association {
 
 	/* last local address pending deletion (waiting for an address add) */
 	struct sctp_ifa *asconf_addr_del_pending;
+	/* pending transmission of SET_PRIMARY (waiting for a HEARTBEAT) */
+	struct sctp_ifa *asconf_addr_setprim_pending;
 
 	struct sctpnetlisthead nets;		/* remote address list */
 

@@ -959,6 +959,97 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 	}
 }
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+static void
+sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
+{
+	struct sctp_tmit_chunk *chk;
+
+	sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, stcb, net,
+	    SCTP_FROM_SCTP_TIMER+SCTP_LOC_5);
+	stcb->asoc.cc_functions.sctp_set_initial_cc_param(stcb, net);
+	net->RTO = 0;
+	net->error_count = 0;
+	TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
+		if (chk->whoTo == net) {
+			chk->sent = SCTP_DATAGRAM_RESEND;
+			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+		}
+	}
+}
+
+static void
+sctp_path_check_and_react(struct sctp_tcb *stcb, struct sctp_ifa *newifa)
+{
+	struct sctp_nets *net;
+	int changed = 0;
+
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		struct sockaddr_storage old_gw;
+
+		changed = 0;
+		if (net->src_addr_selected == 0 || net->ro.ro_rt == NULL)
+			continue;
+		/* Store the old nexthop */
+		if (net->ro._l_addr.sa.sa_family == AF_INET) {
+			struct sockaddr_in *sin;
+			memset(&old_gw, 0, sizeof(struct sockaddr_storage));
+			sin = (struct sockaddr_in *)&old_gw;
+			memcpy(sin, 
+			    (struct sockaddr_in *)&net->ro.ro_rt->rt_gateway,
+			    sizeof(struct sockaddr_in));
+		}
+		if (net->ro._l_addr.sa.sa_family == AF_INET6) {
+			struct sockaddr_in6 *sin6;
+			sin6 = (struct sockaddr_in6 *)&old_gw;
+			memcpy(sin6, 
+			    (struct sockaddr_in6 *)&net->ro.ro_rt->rt_gateway,
+			    sizeof(struct sockaddr_in6));
+		}
+
+		SCTPDBG(SCTP_DEBUG_ASCONF2, "Previous nexthop is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, (struct sockaddr *)&old_gw);
+		SCTPDBG(SCTP_DEBUG_ASCONF2, "\n");
+
+		/* Check the current next hop to the destination */
+		SCTP_RTALLOC((sctp_route_t *)&net->ro, 
+		    stcb->sctp_ep->def_vrf_id);
+
+		SCTPDBG(SCTP_DEBUG_ASCONF2, "Current nexthop is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, net->ro.ro_rt->rt_gateway);
+		SCTPDBG(SCTP_DEBUG_ASCONF2, "\n");
+
+		changed = sctp_cmpaddr((struct sockaddr *)&old_gw, 
+		    net->ro.ro_rt->rt_gateway);
+		if (changed) {
+			RTFREE(net->ro.ro_rt);
+			net->ro.ro_rt = NULL;
+			sctp_free_ifa(net->ro._s_addr);
+			net->ro._s_addr = NULL;
+			net->src_addr_selected = 0;
+		}
+		else
+			continue;
+
+		/* Send SET PRIMARY for this new address */
+		if (net == stcb->asoc.primary_destination) {
+			sctp_mobility_feature_on(stcb->sctp_ep, 
+			    SCTP_MOBILITY_DO_SETPRIM);
+			/* We don't queue SET PRIMARY until reception of 
+			   HEARTBEAT (by micchie) 
+			 */
+			stcb->asoc.asconf_addr_setprim_pending = newifa;
+		}
+
+		/* Retransmit unacknowledged DATA chunks immediately */
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+		    SCTP_MOBILITY_FASTHANDOFF)) {
+			sctp_net_immediate_retrans(stcb, net);
+		}
+	}
+}
+#endif /* __FreeBSD__ __APPLE__ */
+
 /*
  * process an ADD/DELETE IP ack from peer.
  * addr: corresponding sctp_ifa to the address being added/deleted.
@@ -982,6 +1073,12 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 		/* success case, so remove from the restricted list */
 		sctp_del_local_addr_restricted(stcb, addr);
 
+#if defined(__FreeBSD__) || defined(__APPLE__)
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
+			sctp_path_check_and_react(stcb, addr);
+			return;
+		}
+#endif /* __FreeBSD__ __APPLE__ */
 		/* clear any cached, topologically incorrect source addresses */
 		sctp_asconf_nets_cleanup(stcb, addr->ifn_p);
 	}

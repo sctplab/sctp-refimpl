@@ -404,6 +404,7 @@ struct sctp_inpcb {
 	struct socket *sctp_socket;
 	uint32_t sctp_flags;	/* INP state flag set */
 	uint32_t sctp_features;	/* Feature flags */
+	uint32_t sctp_mobility_features;/* flags for mobile (by micchie) */
 	struct sctp_pcb sctp_ep;/* SCTP ep data */
 	/* head of the hash of all associations */
 	struct sctpasochead *sctp_tcbhash;

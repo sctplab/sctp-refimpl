@@ -3014,6 +3014,28 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
+		/* set the automatic mobility_base from kernel 
+		   flag (by micchie) 
+		*/
+		if (sctp_mobility_base == 0) {
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
+		}
+		else {
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_SETPRIM);
+		}
+		/* set the automatic mobility_fasthandoff from kernel 
+		   flag (by micchie) 
+		*/
+		if (sctp_mobility_fasthandoff == 0) {
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+		}
+		else {
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_FASTHANDOFF);
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+		}
 	} else {
 		/*
 		 * bind specific, make sure flags is off and add a new
