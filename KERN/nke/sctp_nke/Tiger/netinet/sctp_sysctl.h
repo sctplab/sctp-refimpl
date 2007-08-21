@@ -399,7 +399,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 #define SCTPCTL_LOGGING_LEVEL_DESC	"Ltrace/KTR trace logging level"
 #define SCTPCTL_LOGGING_LEVEL_MIN	0
 #define SCTPCTL_LOGGING_LEVEL_MAX	0xffffffff
-#define SCTPCTL_LOGGING_LEVEL_DEFAULT	0x20100
+#define SCTPCTL_LOGGING_LEVEL_DEFAULT	0
 
 /* JRS 5/2107 - CMT PF type flag */
 #define SCTPCTL_CMT_PF			52
@@ -415,18 +415,27 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 #define SCTPCTL_DEFAULT_CC_MODULE_MAX		2
 #define SCTPCTL_DEFAULT_CC_MODULE_DEFAULT	0
 
+
+/* RRS - default fragment interleave */
+#define SCTPCTL_DEFAULT_FRAG_INTERLEAVE		54
+#define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DESC	"Default fragment interleave level"
+#define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MIN	0
+#define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MAX	2
+#define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DEFAULT	1
+
+
 #ifdef SCTP_DEBUG
 /* debug: Configure debug output */
-#define SCTPCTL_DEBUG		54
+#define SCTPCTL_DEBUG		55
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
 #define SCTPCTL_DEBUG_DEFAULT	0	
 
 
-#define SCTPCTL_MAXID		    54
-#else
 #define SCTPCTL_MAXID		    55
+#else
+#define SCTPCTL_MAXID		    56
 #endif
 
 /*
@@ -489,6 +498,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 	{ "min_residual", CTLTYPE_INT }, \
 	{ "max_retran_chunk", CTLTYPE_INT }, \
 	{ "sctp_logging", CTLTYPE_INT }, \
+	{ "frag_interleave", CTLTYPE_INT }, \
 	{ "debug", CTLTYPE_INT }, \
 }
 #else
@@ -547,6 +557,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.8 2007/07/14 09:36:27 rrs 
 	{ "min_residual", CTLTYPE_INT }, \
 	{ "max_retran_chunk", CTLTYPE_INT }, \
 	{ "sctp_logging", CTLTYPE_INT }, \
+	{ "frag_interleave", CTLTYPE_INT }, \
 }
 #endif
 
@@ -594,6 +605,7 @@ extern uint32_t sctp_cmt_on_off;
 extern uint32_t sctp_cmt_pf;
 /* JRS - Variable for the default congestion control module */
 extern uint32_t sctp_default_cc_module;
+extern uint32_t sctp_default_frag_interleave;
 extern uint32_t sctp_use_cwnd_based_maxburst;
 extern uint32_t sctp_early_fr;
 extern uint32_t sctp_use_rttvar_cc;
