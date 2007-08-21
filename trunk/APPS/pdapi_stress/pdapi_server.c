@@ -116,6 +116,9 @@ audit_a_msg (struct requests *who)
 	ushort ssn_req, ssn_data, ssn_end;
 
 
+	if(who->first == NULL) {
+		return (1);
+	}
 	msg = (struct pdapi_request *)who->first->data;
 	if(msg->request != PDAPI_REQUEST_MESSAGE) {
 		/* not a request at the head? */
@@ -280,11 +283,13 @@ pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
 		perror("out of memory");
 		abort();
 	}
+	memset(who, 0, sizeof(struct requests));
 	who->assoc_id = asoc->sac_assoc_id;
 	who->msg_cnt = 0;
 	who->who = *from;
 	who->prev = who->next = NULL;
 	who->first = NULL;
+	who->tail = NULL;
 	if(base == NULL) {
 		base = who;
 	} else {
