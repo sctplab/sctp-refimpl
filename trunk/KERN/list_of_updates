@@ -74,3 +74,11 @@
   did not add and subtract to it :-() this is now fixed so we handle
   small messages (1 byte etc) better to bring our rwnd down more
   slowly.
+********************Patch 15 above****************************
+- During shutdown pending, when the last sack came in and
+  the last message on the send stream was "null" but still
+  there, a state we allow, we could get hung and not clean
+  it up and wait for the shutdown guard timer to clear the 
+  association without a graceful close. Fix this so that
+  that we properly clean up.
+
