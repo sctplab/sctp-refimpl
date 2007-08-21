@@ -14,6 +14,7 @@
 struct data_block {
 	struct data_block *next;
 	struct sctp_sndrcvinfo info;
+	int last;
 	int sz;
 	unsigned char data[4];
 };

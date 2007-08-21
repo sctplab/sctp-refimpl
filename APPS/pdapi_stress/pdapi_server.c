@@ -30,67 +30,25 @@ static int rdlog_at=0;
 static int rdlog_wrap=0;
 static unsigned int total_msgs=0;
 
-void
-clean_up_broken_msg(struct requests *who)
-{
-	struct data_block *blk;	
-	struct pdapi_request *msg;
-	ushort ssn;
-	int killed=0;
-	printf("Failed to process a message, cleaning\n");
- try_again:
-	if(who->first == NULL) {
-		printf("msg queue now empty\n");
-		return;
-	}
-	msg = (struct pdapi_request *)who->first->data;
-	if(msg->request == PDAPI_REQUEST_MESSAGE) {
-		/* this is correct */
-		printf("First msg is correct\n");
-		ssn = who->first->info.sinfo_ssn;
-	} else if (msg->request == PDAPI_END_MESSAGE) {
-		printf("First msg is a End?? -- unexpected, freeing\n");
-		blk = who->first;
-		who->first = blk->next;
-		blk->next = NULL;
-		if(blk == who->tail) {
-			who->tail = NULL;
-		}
-		free(blk);
-		killed++;
-		goto try_again;
-	} else if (msg->request == PDAPI_DATA_MESSAGE) {
-		printf("First msg is a Data?? -- unexpected freeing\n");
-		blk = who->first;
-		who->first = blk->next;
-		blk->next = NULL;
-		if(blk == who->tail) {
-			who->tail = NULL;
-		}
-		free(blk);
-		killed++;
-		goto try_again;
-	} else {
-		printf("First msg is a partial message of data -- unexpected freeing\n");
-		blk = who->first;
-		who->first = blk->next;
-		blk->next = NULL;
-		if(blk == who->tail) {
-			who->tail = NULL;
-		}
-		free(blk);
-		killed++;
-		goto try_again;
-	}
-	printf("Ok, we killed %d msgs\n", killed);
-	if(killed) {
-		return;
-	}
-	printf("This requires further analysis req-ssn:%d\n",ssn);
-	abort();
-}
 
 int chars_out=0;
+
+
+struct requests *
+find_assoc(sctp_assoc_t id)
+{
+	struct requests *who;
+	who = base;
+	while(who) {
+		if(who->assoc_id == id){
+			break;
+		}
+		who = who->next;
+	}
+	return(who);
+}
+
+
 void
 sum_it_out(uint8_t *data, int size)
 {
@@ -231,50 +189,6 @@ audit_a_msg (struct requests *who)
 }
 
 void
-audit_all_msg(struct requests *who)
-{
-	struct data_block *blk,*nxt;	
-	int cnt=0,ret;
-	ushort ssn;
-	int notset=1, not_done=1;
-
-	blk = who->first;
-	while(blk) {
-		nxt = blk->next;
-		if(notset) {
-			notset = 0;
-			ssn = blk->info.sinfo_ssn;
-			cnt++;
-		} else {
-			if(blk->info.sinfo_ssn == ssn) {
-				goto nxt_msg;
-			} else {
-				cnt++;
-				if(blk->info.sinfo_ssn < ssn) {
-					printf("Found ssn:%d before finding ssn:%d??\n",
-					       ssn, blk->info.sinfo_ssn);
-				}
-				ssn = blk->info.sinfo_ssn;
-			}
-		}
-	nxt_msg:
-		blk = nxt;      
-	}
-	while(not_done) {
-		if(who->first == NULL) {
-			/* all gone */
-			not_done = 0;
-			continue;
-		}
-		ret = audit_a_msg (who);
-		if(ret == 0) {
-			/* we did NOT consume a message */
-			clean_up_broken_msg(who);
-		}
-	}
-}
-
-void
 pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
 {
 	struct requests *who;
@@ -319,26 +233,22 @@ void
 pdapi_delasoc(sctp_assoc_t id)
 {
 	struct requests *who;
-	for(who=base; who; who=who->next) {
-		if(who->assoc_id == id) {
-			if(who->next) {
-				who->next->prev = who->prev;
-			}
-			if(who->prev) {
-				who->prev->next = who->next;
-			} else {
-				base = who->next;
-			}
-			who->next = NULL;
-			who->prev = NULL;
-			audit_all_msg(who);
-			pdapi_clean_all(who);
-			free(who);
-			if(who->first) {
-				printf("Association fails incompletely free:%d msgs\n",
-				       pdapi_clean_all(who));	
-			}
+	who = find_assoc(id);
+	if(who) {
+		if(who->next) {
+			who->next->prev = who->prev;
 		}
+		if(who->prev) {
+			who->prev->next = who->next;
+		} else {
+			base = who->next;
+		}
+		who->next = NULL;
+		who->prev = NULL;
+		audit_a_msg(who);
+		pdapi_clean_all(who);
+		who->first = who->tail = NULL;
+		free(who);
 	}
 }
 
@@ -358,13 +268,7 @@ pdapi_process_data(unsigned char *buffer,
 		printf("Zero'ed assoc id\n");
 		abort();
 	}
-	who = base;
-	while(who) {
-		if(who->assoc_id == sinfo->sinfo_assoc_id){
-			break;
-		}
-		who = who->next;
-	}
+	who = find_assoc(sinfo->sinfo_assoc_id);
 	if(who == NULL) {
 		printf("Huh, can't find asoc %x\n", (u_int)sinfo->sinfo_assoc_id);
 		abort();
@@ -374,6 +278,7 @@ pdapi_process_data(unsigned char *buffer,
 		printf("Can't allocate a block of size %d + %d\n", (int)len, (int)sizeof(struct data_block));
 		abort();
 	}
+	memset(blk, 0, sizeof(struct data_block));
 	blk->next = NULL;
 	memcpy(&blk->info, sinfo, sizeof(struct sctp_sndrcvinfo));
 	blk->sz = len;
@@ -387,6 +292,7 @@ pdapi_process_data(unsigned char *buffer,
 	}
 	if(flags & MSG_EOR) {
 		who->msg_cnt++;
+		blk->last = 1;
 		if ((who->msg_cnt % 3) == 0) {
 			(void)audit_a_msg (who);
 		}
@@ -397,7 +303,13 @@ static void
 pdapi_abortrecption(struct sctp_pdapi_event *pdapi)
 {
 	/* What do we do here? */
-	printf("Help I have fallen and I can't get up\n");
+	struct requests *who;
+	who = find_assoc(pdapi->pdapi_assoc_id);
+	if(who == NULL)
+		return;
+	pdapi_clean_all(who);
+	who->first = who->tail = NULL;
+	who->msg_cnt = 0;
 }
 
 void
@@ -418,6 +330,8 @@ pdapi_notification(unsigned char *buffer,
 		if (asoc->sac_state == SCTP_COMM_UP) {
 			pdapi_addasoc(from, asoc);
 		} else if (asoc->sac_state == SCTP_COMM_LOST) {
+			printf("Comm lost id:%x del assoc\n",
+			       asoc->sac_assoc_id);
 			pdapi_delasoc(asoc->sac_assoc_id);
 		}
 		break;
@@ -427,6 +341,8 @@ pdapi_notification(unsigned char *buffer,
 		break;
 	case SCTP_SHUTDOWN_EVENT:
 		shut = (struct sctp_shutdown_event *)sn_header;
+		printf("Shutdown assoc id:%x del assoc\n",
+		       asoc->sac_assoc_id);
 		pdapi_delasoc(shut->sse_assoc_id);
 		break;
 	case SCTP_REMOTE_ERROR:
