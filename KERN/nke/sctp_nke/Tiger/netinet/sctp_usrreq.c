@@ -79,8 +79,10 @@ sctp_init(void)
 	sctp_recvspace = SB_MAX;
 #else
 
+#if !defined(__APPLE__)
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		sctp_max_chunks_on_queue = (nmbclusters / 8);
+#endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters or
 	 * the SB_MAX whichever is smaller for the send window.
