@@ -2737,7 +2737,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		break;
 	case SCTP_ASCONF_ACK:
 		/* resend last asconf ack */
-		sctp_send_asconf_ack(stcb, 1);
+		sctp_send_asconf_ack(stcb);
 		break;
 	case SCTP_FORWARD_CUM_TSN:
 		send_forward_tsn(stcb, &stcb->asoc);
@@ -3496,6 +3496,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	int got_auth = 0;
 	uint32_t auth_offset = 0, auth_len = 0;
 	int auth_skipped = 0;
+	int asconf_cnt = 0;
 
 	SCTPDBG(SCTP_DEBUG_INPUT1, "sctp_process_control: iphlen=%u, offset=%u, length=%u stcb:%p\n",
 		iphlen, *offset, length, stcb);
@@ -3570,18 +3571,34 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * need to look inside to find the association
 		 */
 		if (ch->chunk_type == SCTP_ASCONF && stcb == NULL) {
+			struct sctp_chunkhdr *asconf_ch = ch;
+			uint32_t asconf_offset = 0, asconf_len = 0;
+
 			/* inp's refcount may be reduced */
 			SCTP_INP_INCR_REF(inp);
 
-			stcb = sctp_findassociation_ep_asconf(m, iphlen,
-							      *offset, sh, &inp, netp);
+			asconf_offset = *offset;
+			do {
+				asconf_len = ntohs(asconf_ch->chunk_length);
+
+				stcb = sctp_findassociation_ep_asconf(m, iphlen,
+								      *offset, sh, &inp, netp);
+				if (stcb != NULL)
+					break;
+				asconf_offset += SCTP_SIZE32(asconf_len);
+				asconf_ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, asconf_offset,
+										  sizeof(struct sctp_chunkhdr), chunk_buf);
+			} while (asconf_ch != NULL && asconf_ch->chunk_type == SCTP_ASCONF);
 			if (stcb == NULL) {
 				/*
 				 * reduce inp's refcount if not reduced in
 				 * sctp_findassociation_ep_asconf().
 				 */
 				SCTP_INP_DECR_REF(inp);
+			} else {
+				locked_tcb = stcb;
 			}
+
 			/* now go back and verify any auth chunk to be sure */
 			if (auth_skipped && (stcb != NULL)) {
 				struct sctp_auth_chunk *auth;
@@ -4254,7 +4271,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf(m, *offset,
-						   (struct sctp_asconf_chunk *)ch, stcb);
+						   (struct sctp_asconf_chunk *)ch, stcb, asconf_cnt == 0);
+				asconf_cnt++;
 			}
 			break;
 		case SCTP_ASCONF_ACK:
@@ -4478,6 +4496,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 		}
 	}			/* while */
+
+	if (asconf_cnt > 0 && stcb != NULL) {
+		sctp_send_asconf_ack(stcb);
+	}
 	return (stcb);
 }
 

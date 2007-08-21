@@ -547,6 +547,16 @@ struct sctp_cc_functions {
 			struct sctp_tcb *stcb, struct sctp_nets *net);
 };
 
+/* used to save ASCONF-ACK chunks for retransmission */
+TAILQ_HEAD(sctp_asconf_ackhead, sctp_asconf_ack);
+struct sctp_asconf_ack {
+	TAILQ_ENTRY(sctp_asconf_ack) next;
+	uint32_t serial_number;
+	struct sctp_nets *last_sent_to;
+	struct mbuf *data;
+	uint16_t len;
+};
+
 /*
  * Here we have information about each individual association that we track.
  * We probably in production would be more dynamic. But for ease of
@@ -623,7 +633,7 @@ struct sctp_association {
 	struct sctp_iterator *stcb_starting_point_for_iterator;
 
 	/* ASCONF save the last ASCONF-ACK so we can resend it if necessary */
-	struct mbuf *last_asconf_ack_sent;
+	struct sctp_asconf_ackhead asconf_ack_sent;
 
 	/*
 	 * pointer to last stream reset queued to control queue by us with

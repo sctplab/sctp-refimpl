@@ -4540,6 +4540,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_laddr *laddr;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_asconf_addr *aparam;
+	struct sctp_asconf_ack *aack;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
 	struct sctp_stream_queue_pending *sp;
@@ -5058,9 +5059,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
 		SCTP_FREE(aparam,SCTP_M_ASC_ADDR);
 	}
-	if (asoc->last_asconf_ack_sent != NULL) {
-		sctp_m_freem(asoc->last_asconf_ack_sent);
-		asoc->last_asconf_ack_sent = NULL;
+	while (!TAILQ_EMPTY(&asoc->asconf_ack_sent)) {
+		aack = TAILQ_FIRST(&asoc->asconf_ack_sent);
+		TAILQ_REMOVE(&asoc->asconf_ack_sent, aack, next);
+		if (aack->last_sent_to != NULL) {
+			sctp_free_remote_addr(aack->last_sent_to);
+		}
+		if (aack->data != NULL) {
+			sctp_m_freem(aack->data);
+		}
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, aack);
 	}
 	/* clean up auth stuff */
 	if (asoc->local_hmacs)
@@ -5638,6 +5646,11 @@ sctp_pcb_init()
 	    sizeof(struct sctp_stream_queue_pending),
 	    (sctp_max_number_of_assoc * sctp_chunkscale));
 
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asconf_ack, "sctp_asconf_ack",
+	    sizeof(struct sctp_asconf_ack),
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
+
+
 	/* Master Lock INIT for info structure */
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	/* allocate the lock group attribute for SCTP PCB mutexes */
@@ -5803,6 +5816,7 @@ sctp_pcb_finish(void)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_chunk);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_readq);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf_ack);
 #endif
 
 	/*
