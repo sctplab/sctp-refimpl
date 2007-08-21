@@ -5753,6 +5753,7 @@ sctp_sorecvmsg(struct socket *so,
 					embuf = m;
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
+					freed_so_far += MSIZE;
 					atomic_subtract_int(&control->length, cp_len);
 					control->data = sctp_m_free(m);
 					m = control->data;
@@ -5798,6 +5799,7 @@ sctp_sorecvmsg(struct socket *so,
 					copied_so_far += cp_len;
 					embuf = m;
 					freed_so_far += cp_len;
+					freed_so_far += MSIZE;
 					if(sctp_logging_level & SCTP_SB_LOGGING_ENABLE) {
 						sctp_sblog(&so->so_rcv, control->do_not_ref_stcb?NULL:stcb,
 							   SCTP_LOG_SBRESULT, 0);
@@ -6025,6 +6027,7 @@ sctp_sorecvmsg(struct socket *so,
 			}
 			sctp_sbfree(control, stcb, &so->so_rcv, m);
 			freed_so_far += SCTP_BUF_LEN(m);
+			freed_so_far += MSIZE;
 			if(sctp_logging_level & SCTP_SB_LOGGING_ENABLE) {
 				sctp_sblog(&so->so_rcv,
 				   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
