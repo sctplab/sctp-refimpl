@@ -2243,8 +2243,16 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		return (EOPNOTSUPP);
 	}
-	sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
-
+	if(sctp_default_frag_interleave == SCTP_FRAG_LEVEL_1) {
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
+	} else if (sctp_default_frag_interleave == SCTP_FRAG_LEVEL_2) {
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+		sctp_feature_on(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
+	} else if (sctp_default_frag_interleave == SCTP_FRAG_LEVEL_0) {
+		sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
+		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
+	}
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {

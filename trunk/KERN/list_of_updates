@@ -68,5 +68,9 @@
 - If the user picked just the right size, that just filled the send
   window minus one mtu, we would enter a forever loop not copying and
   at the same time not blocking. Change from < to <= solves this.
-
-
+- Sysctl added to control the fragment interleave level which defaults
+  to 1.
+- My rwnd control was not being used to control the rwnd properly (we
+  did not add and subtract to it :-() this is now fixed so we handle
+  small messages (1 byte etc) better to bring our rwnd down more
+  slowly.
