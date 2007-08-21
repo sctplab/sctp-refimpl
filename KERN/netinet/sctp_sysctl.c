@@ -101,6 +101,8 @@ uint32_t sctp_max_retran_chunk = SCTPCTL_MAX_RETRAN_CHUNK_DEFAULT;
 /* JRS - Variable for default congestion control module */
 uint32_t sctp_default_cc_module = SCTPCTL_DEFAULT_CC_MODULE_DEFAULT;
 
+uint32_t sctp_default_frag_interleave = SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DEFAULT;
+
 uint32_t sctp_L2_abc_variable = 1;
 uint32_t sctp_early_fr = 0;
 uint32_t sctp_early_fr_msec = SCTP_MINFR_MSEC_TIMER;
@@ -692,36 +694,41 @@ SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cmt_pf, CTLFLAG_RW,
     "CMT PF type flag");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, default_cc_module, CTLFLAG_RW,
-    &sctp_default_cc_module, 0,
-    "Default congestion control module");
+	    &sctp_default_cc_module, 0,
+	    "Default congestion control module");
+
+
+SYSCTL_UINT(_net_inet_sctp, OID_AUTO, default_frag_interleave, CTLFLAG_RW,
+	    &sctp_default_frag_interleave, 0, 
+	    SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DESC);
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLFLAG_RW,
-    &sctp_use_cwnd_based_maxburst, 0,
-    "Use a CWND adjusting maxburst");
+	    &sctp_use_cwnd_based_maxburst, 0,
+	    "Use a CWND adjusting maxburst");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLFLAG_RW,
-    &sctp_early_fr, 0,
-    "Early Fast Retransmit with timer");
+	    &sctp_early_fr, 0,
+	    "Early Fast Retransmit with timer");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, deadlock_detect, CTLFLAG_RW,
-    &sctp_says_check_for_deadlock, 0,
-    "SMP Deadlock detection on/off");
+	    &sctp_says_check_for_deadlock, 0,
+	    "SMP Deadlock detection on/off");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLFLAG_RW,
-    &sctp_early_fr_msec, 0,
-    "Early Fast Retransmit minimum timer value");
+	    &sctp_early_fr_msec, 0,
+	    "Early Fast Retransmit minimum timer value");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, asconf_auth_nochk, CTLFLAG_RW,
-    &sctp_asconf_auth_nochk, 0,
-    "Disable SCTP ASCONF AUTH requirement");
+	    &sctp_asconf_auth_nochk, 0,
+	    "Disable SCTP ASCONF AUTH requirement");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, auth_disable, CTLFLAG_RW,
-    &sctp_auth_disable, 0,
-    "Disable SCTP AUTH function");
+	    &sctp_auth_disable, 0,
+	    "Disable SCTP AUTH function");
 
 SYSCTL_UINT(_net_inet_sctp, OID_AUTO, nat_friendly, CTLFLAG_RW,
-    &sctp_nat_friendly, 0,
-    "SCTP NAT friendly operation");
+	    &sctp_nat_friendly, 0,
+	    "SCTP NAT friendly operation");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, abc_l_var, CTLFLAG_RW,
     &sctp_L2_abc_variable, 0,
@@ -748,12 +755,12 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, abort_at_limit, CTLFLAG_RW,
     "When one-2-one hits qlimit abort");
 
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, strict_data_order, CTLFLAG_RW,
-    &sctp_strict_data_order, 0,
-    "Enforce strict data ordering, abort if control inside data");
+	   &sctp_strict_data_order, 0,
+	   "Enforce strict data ordering, abort if control inside data");
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
-    &sctpstat, sctpstat,
-    "SCTP statistics (struct sctps_stat, netinet/sctp.h");
+	      &sctpstat, sctpstat,
+	      "SCTP statistics (struct sctps_stat, netinet/sctp.h");
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
     0, 0, sctp_assoclist,
@@ -780,450 +787,6 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, debug, CTLFLAG_RW,
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
     &sctp_main_timer, 0, "Main timer interval in ms");
 #endif
-
-#elif defined(__NetBSD__)
-SYSCTL_SETUP(sysctl_net_inet_sctp_setup, "sysctl net.inet.sctp subtree setup")
-{
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT,
-	    CTLTYPE_NODE, "net", NULL,
-	    NULL, 0, NULL, 0,
-	    CTL_NET, CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT,
-	    CTLTYPE_NODE, "inet", NULL,
-	    NULL, 0, NULL, 0,
-	    CTL_NET, PF_INET, CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT,
-	    CTLTYPE_NODE, "sctp",
-	    SYSCTL_DESCR("sctp related settings"),
-	    NULL, 0, NULL, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "maxdgram",
-	    SYSCTL_DESCR("Maximum outgoing SCTP buffer size"),
-	    NULL, 0, &sctp_sendspace, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXDGRAM,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "recvspace",
-	    SYSCTL_DESCR("Maximum incoming SCTP buffer size"),
-	    NULL, 0, &sctp_recvspace, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RECVSPACE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "autoasconf",
-	    SYSCTL_DESCR("Enable SCTP Auto-ASCONF"),
-	    NULL, 0, &sctp_auto_asconf, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTOASCONF,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "ecn_enable",
-	    SYSCTL_DESCR("Enable SCTP ECN"),
-	    NULL, 0, &sctp_ecn_enable, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ECN_ENABLE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "ecn_nonce",
-	    SYSCTL_DESCR("Enable SCTP ECN Nonce"),
-	    NULL, 0, &sctp_ecn_nonce, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ECN_NONCE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "strict_sacks",
-	    SYSCTL_DESCR("Enable SCTP Strict SACK checking"),
-	    NULL, 0, &sctp_strict_sacks, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_SACK,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "loopback_nocsum",
-	    SYSCTL_DESCR("Enable NO Csum on packets sent on loopback"),
-	    NULL, 0, &sctp_no_csum_on_loopback, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NOCSUM_LO,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "strict_init",
-	    SYSCTL_DESCR("Enable strict INIT/INIT-ACK singleton enforcement"),
-	    NULL, 0, &sctp_strict_init, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_INIT,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "peer_chkoh",
-	    SYSCTL_DESCR("Amount to debit peers rwnd per chunk sent"),
-	    NULL, 0, &sctp_peer_chunk_oh, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PEER_CHK_OH,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "maxburst",
-	    SYSCTL_DESCR("Default max burst for sctp endpoints"),
-	    NULL, 0, &sctp_max_burst_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXBURST,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "maxchunks",
-	    SYSCTL_DESCR("Default max chunks on queue per asoc"),
-	    NULL, 0, &sctp_max_chunks_on_queue, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAXCHUNKONQ,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "tcbhashsize",
-	    SYSCTL_DESCR("Tuneable for Hash table sizes"),
-	    NULL, 0, &sctp_hashtblsize, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_TCBHASHSIZE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "pcbhashsize",
-	    SYSCTL_DESCR("Tuneable for PCB Hash table sizes"),
-	    NULL, 0, &sctp_pcbtblsize, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PCBHASHSIZE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "min_split_point",
-	    SYSCTL_DESCR("Minimum size when splitting a chunk"),
-	    NULL, 0, &sctp_min_split_point, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MINSPLIT,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "chunkscale",
-	    SYSCTL_DESCR("Tuneable for Scaling of number of chunks and messages"),
-	    NULL, 0, &sctp_chunkscale, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CHUNKSCALE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "delayed_sack_time",
-	    SYSCTL_DESCR("Default delayed SACK timer in msec"),
-	    NULL, 0, &sctp_delayed_sack_time_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DELAYED_SACK,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "sack_freq",
-	    SYSCTL_DESCR("Default SACK frequency"),
-	    NULL, 0, &sctp_sack_freq_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SACK_FREQ,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "sys_resource",
-	    SYSCTL_DESCR("Max number of cached resources in the system"),
-	    NULL, 0, &sctp_system_free_resc_limit, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SYS_RESC,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "asoc_resource",
-	    SYSCTL_DESCR("Max number of cached resources in an asoc"),
-	    NULL, 0, &sctp_asoc_free_resc_limit, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASOC_RESC,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "heartbeat_interval",
-	    SYSCTL_DESCR("Default heartbeat interval in msec"),
-	    NULL, 0, &sctp_heartbeat_interval_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_HB_INTERVAL,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "pmtu_raise_time",
-	    SYSCTL_DESCR("Default PMTU raise timer in sec"),
-	    NULL, 0, &sctp_pmtu_raise_time_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PMTU_RAISE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "shutdown_guard_time",
-	    SYSCTL_DESCR("Default shutdown guard timer in sec"),
-	    NULL, 0, &sctp_shutdown_guard_time_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SHUTDOWN_GUARD,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "secret_lifetime",
-	    SYSCTL_DESCR("Default secret lifetime in sec"),
-	    NULL, 0, &sctp_secret_lifetime_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_SECRET_LIFETIME,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "rto_max",
-	    SYSCTL_DESCR("Default maximum retransmission timeout in msec"),
-	    NULL, 0, &sctp_rto_max_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MAX,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "rto_min",
-	    SYSCTL_DESCR("Default minimum retransmission timeout in msec"),
-	    NULL, 0, &sctp_rto_min_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_MIN,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "rto_initial",
-	    SYSCTL_DESCR("Default initial retransmission timeout in msec"),
-	    NULL, 0, &sctp_rto_initial_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_RTO_INITIAL,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "init_rto_max",
-	    SYSCTL_DESCR("Default maximum retransmission timeout during association setup in msec"),
-	    NULL, 0, &sctp_init_rto_max_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTO_MAX,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "valid_cookie_life",
-	    SYSCTL_DESCR("Default cookie lifetime in ticks"),
-	    NULL, 0, &sctp_valid_cookie_life_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_COOKIE_LIFE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "init_rtx_max",
-	    SYSCTL_DESCR("Default maximum number of retransmission for INIT chunks"),
-	    NULL, 0, &sctp_init_rtx_max_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_INIT_RTX_MAX,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "assoc_rtx_max",
-	    SYSCTL_DESCR("Default maximum number of retransmissions per association"),
-	    NULL, 0, &sctp_assoc_rtx_max_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASSOC_RTX_MAX,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "path_rtx_max",
-	    SYSCTL_DESCR("Default maximum of retransmissions per path"),
-	    NULL, 0, &sctp_path_rtx_max_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_PATH_RTX_MAX,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "add_more_on_output",
-	    SYSCTL_DESCR("When space wise is it worthwhile to try to add more to a socket send buffer"),
-	    NULL, 0, &sctp_add_more_threshold, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ADD_MORE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "outgoing_streams",
-	    SYSCTL_DESCR("Default number of outgoing streams"),
-	    NULL, 0, &sctp_nr_outgoing_streams_default, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NR_OUTGOING_STREAMS,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "cmt_on_off",
-	    SYSCTL_DESCR("CMT on/off flag"),
-	    NULL, 0, &sctp_cmt_on_off, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_ON_OFF,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "cmt_pf",
-	    SYSCTL_DESCR("CMT PF type flag"),
-	    NULL, 0, &sctp_cmt_pf, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_PF,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "default_cc_module",
-	    SYSCTL_DESCR("Default congestion control module"),
-	    NULL, 0, &sctp_default_cc_module, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEFAULT_CC_MODULE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "cwnd_maxburst",
-	    SYSCTL_DESCR("Use a CWND adjusting maxburst"),
-	    NULL, 0, &sctp_use_cwnd_based_maxburst, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CWND_MAXBURST,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "early_fast_retran",
-	    SYSCTL_DESCR("Early Fast Retransmit with timer"),
-	    NULL, 0, &sctp_early_fr, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "deadlock_detect",
-	    SYSCTL_DESCR("SMP Deadlock detection on/off"),
-	    NULL, 0, &sctp_says_check_for_deadlock, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEADLOCK_DET,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "early_fast_retran_msec",
-	    SYSCTL_DESCR("Early Fast Retransmit minimum timer value"),
-	    NULL, 0, &sctp_early_fr_msec, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_EARLY_FR_MSEC,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "asconf_auth_nochk",
-	    SYSCTL_DESCR("Disable SCTP ASCONF AUTH requirement"),
-	    NULL, 0, &sctp_asconf_auth_nochk, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ASCONF_AUTH_NOCHK,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "auth_disable",
-	    SYSCTL_DESCR("Disable SCTP AUTH function"),
-	    NULL, 0, &sctp_auth_disable, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_AUTH_DISABLE,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "nat_friendly",
-	    SYSCTL_DESCR("SCTP NAT friendly operation"),
-	    NULL, 0, &sctp_nat_friendly, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_NAT_FRIENDLY,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "abc_l_var",
-	    SYSCTL_DESCR("SCTP ABC max increase per SACK (L)"),
-	    NULL, 0, &sctp_L2_abc_variable, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_ABC_L_VAR,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "max_chained_mbufs",
-	    SYSCTL_DESCR("Default max number of small mbufs on a chain"),
-	    NULL, 0, &sctp_mbuf_threshold_count, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_MAX_MBUF_CHAIN,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "cmt_use_dac",
-	    SYSCTL_DESCR("CMT DAC on/off flag"),
-	    NULL, 0, &sctp_cmt_use_dac, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_CMT_USE_DAC,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "do_sctp_drain",
-	    SYSCTL_DESCR("Should SCTP respond to the drain calls"),
-	    NULL, 0, &sctp_do_drain, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DO_DRAIN,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "hb_max_burst",
-	    SYSCTL_DESCR("Confirmation Heartbeat max burst?"),
-	    NULL, 0, &sctp_hb_maxburst, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_HB_MAXBURST,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "abort_at_limit",
-	    SYSCTL_DESCR("When one-2-one hits qlimit abort"),
-	    NULL, 0, &sctp_abort_if_one_2_one_hits_limit, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_QLIMIT_ABORT,
-	    CTL_EOL);
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "strict_data_order",
-	    SYSCTL_DESCR("Enforce strict data ordering, abort if control inside data"),
-	    NULL, 0, &sctp_strict_data_order, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_STRICT_ORDER,
-	    CTL_EOL);
-
-
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "sctp_logging",
-	    SYSCTL_DESCR( SCTPCTL_LOGGING_LEVEL_DESC ),
-	    NULL, 0, &sctp_logging_level, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_LOGGING_LEVEL,
-	    CTL_EOL);
-
-
-#ifdef SCTP_DEBUG
-	sysctl_createv(clog, 0, NULL, NULL,
-	    CTLFLAG_PERMANENT | CTLFLAG_READWRITE,
-	    CTLTYPE_INT, "debug",
-	    SYSCTL_DESCR("Configure debug output"),
-	    NULL, 0, &sctp_debug_on, 0,
-	    CTL_NET, PF_INET, IPPROTO_SCTP, SCTPCTL_DEBUG,
-	    CTL_EOL);
-#endif /* SCTP_DEBUG */
-}
 
 #elif defined(__Windows__)
 void sysctl_setup(void)
