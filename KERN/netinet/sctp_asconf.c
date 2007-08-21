@@ -575,11 +575,12 @@ sctp_process_asconf_set_primary(struct mbuf *m,
  */
 void
 sctp_handle_asconf(struct mbuf *m, unsigned int offset,
-		   struct sctp_asconf_chunk *cp, struct sctp_tcb *stcb)
+		   struct sctp_asconf_chunk *cp, struct sctp_tcb *stcb,
+		   int first)
 {
 	struct sctp_association *asoc;
 	uint32_t serial_num;
-	struct mbuf *m_ack, *m_result, *m_tail;
+	struct mbuf *n, *m_ack, *m_result, *m_tail;
 	struct sctp_asconf_ack_chunk *ack_cp;
 	struct sctp_asconf_paramhdr *aph, *ack_aph;
 	struct sctp_ipv6addr_param *p_addr;
@@ -588,6 +589,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 	/* asconf param buffer */
 	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
+	struct sctp_asconf_ack *ack, *ack_next;
 
 	/* verify minimum length */
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_asconf_chunk)) {
@@ -599,19 +601,19 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	asoc = &stcb->asoc;
 	serial_num = ntohl(cp->serial_number);
 
-	if (serial_num == asoc->asconf_seq_in) {
+	if (compare_with_wrap(asoc->asconf_seq_in, serial_num, MAX_SEQ) ||
+	    serial_num == asoc->asconf_seq_in) {
 		/* got a duplicate ASCONF */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"handle_asconf: got duplicate serial number = %xh\n",
 			serial_num);
-		/* resend last ASCONF-ACK... */
-		sctp_send_asconf_ack(stcb, 1);
 		return;
 	} else if (serial_num != (asoc->asconf_seq_in + 1)) {
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "handle_asconf: incorrect serial number = %xh (expected next = %xh)\n",
 			serial_num, asoc->asconf_seq_in + 1);
 		return;
 	}
+
 	/* it's the expected "next" sequence number, so process it */
 	asoc->asconf_seq_in = serial_num;	/* update sequence */
 	/* get length of all the param's in the ASCONF */
@@ -619,11 +621,27 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	SCTPDBG(SCTP_DEBUG_ASCONF1,
 		"handle_asconf: asconf_limit=%u, sequence=%xh\n",
 		asconf_limit, serial_num);
-	if (asoc->last_asconf_ack_sent != NULL) {
-		/* free last ASCONF-ACK message sent */
-		sctp_m_freem(asoc->last_asconf_ack_sent);
-		asoc->last_asconf_ack_sent = NULL;
+
+	if (first) {
+		/* delete old cache */
+		SCTPDBG(SCTP_DEBUG_ASCONF1,"handle_asconf: Now processing firstASCONF. Try to delte old cache\n");
+
+		ack = TAILQ_FIRST(&stcb->asoc.asconf_ack_sent);
+		while (ack != NULL) {
+			ack_next = TAILQ_NEXT(ack, next);
+			if (ack->serial_number == serial_num)
+				break;
+			SCTPDBG(SCTP_DEBUG_ASCONF1,"handle_asconf: delete old(%u) < first(%u)\n",
+			    ack->serial_number, serial_num);
+			TAILQ_REMOVE(&stcb->asoc.asconf_ack_sent, ack, next);
+			if (ack->data != NULL) {
+				sctp_m_freem(ack->data);
+			}
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, ack);
+			ack = ack_next;
+		}
 	}
+
 	m_ack = sctp_get_mbuf_for_msg(sizeof(struct sctp_asconf_ack_chunk), 0,
 				      M_DONTWAIT, 1, MT_DATA);
 	if (m_ack == NULL) {
@@ -767,7 +785,21 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
  send_reply:
 	ack_cp->ch.chunk_length = htons(ack_cp->ch.chunk_length);
 	/* save the ASCONF-ACK reply */
-	asoc->last_asconf_ack_sent = m_ack;
+	ack = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asconf_ack,
+	    struct sctp_asconf_ack);
+	if (ack == NULL) {
+		sctp_m_freem(m_ack);
+		return;
+	}
+	ack->serial_number = serial_num;
+	ack->last_sent_to = NULL;
+	ack->data = m_ack;
+	n = m_ack;
+	while(n) {
+		ack->len += SCTP_BUF_LEN(n);
+		n = SCTP_BUF_NEXT(n);
+	}
+	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_ack_sent, ack, next);
 
 	/* see if last_control_chunk_from is set properly (use IP src addr) */
 	if (stcb->asoc.last_control_chunk_from == NULL) {
@@ -834,8 +866,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 #endif
 		}
 	}
-	/* and send it (a new one) out... */
-	sctp_send_asconf_ack(stcb, 0);
 }
 
 /*

@@ -190,6 +190,7 @@ struct sctp_epinfo {
 	sctp_zone_t ipi_zone_chunk;
 	sctp_zone_t ipi_zone_readq;
 	sctp_zone_t ipi_zone_strmoq;
+	sctp_zone_t ipi_zone_asconf_ack;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
 	struct mtx ipi_ep_mtx;

@@ -8074,79 +8074,83 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 }
 
 void
-sctp_send_asconf_ack(struct sctp_tcb *stcb, uint32_t retrans)
+sctp_send_asconf_ack(struct sctp_tcb *stcb)
 {
 	/*
 	 * formulate and queue a asconf-ack back to sender.
 	 * the asconf-ack must be stored in the tcb.
 	 */
 	struct sctp_tmit_chunk *chk;
+	struct sctp_asconf_ack *ack, *latest_ack;
 	struct mbuf *m_ack, *m;
+	struct sctp_nets *net = NULL;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	/* is there a asconf-ack mbuf chain to send? */
-	if (stcb->asoc.last_asconf_ack_sent == NULL) {
+	/* Get the latest ASCONF-ACK */
+	latest_ack = TAILQ_LAST(&stcb->asoc.asconf_ack_sent, sctp_asconf_ackhead);
+	if (latest_ack == NULL) {
 		return;
 	}
-	/* copy the asconf_ack */
-	m_ack = SCTP_M_COPYM(stcb->asoc.last_asconf_ack_sent, 0, M_COPYALL,
-			     M_DONTWAIT);
-	if (m_ack == NULL) {
-		/* couldn't copy it */
-		return;
-	}
-	sctp_alloc_a_chunk(stcb, chk);
-	if (chk == NULL) {
-		/* no memory */
-		if (m_ack)
-			sctp_m_freem(m_ack);
-		return;
-	}
-	chk->copy_by_ref = 0;
-	/* figure out where it goes to */
-	if (retrans) {
+	if (latest_ack->last_sent_to != NULL &&
+	    latest_ack->last_sent_to == stcb->asoc.last_control_chunk_from) {
 		/* we're doing a retransmission */
-		if (stcb->asoc.used_alt_asconfack > 2) {
-			/* tried alternate nets already, go back */
-			chk->whoTo = NULL;
-		} else {
-			/* need to try and alternate net */
-			chk->whoTo = sctp_find_alternate_net(stcb, stcb->asoc.last_control_chunk_from, 0);
-			stcb->asoc.used_alt_asconfack++;
-		}
-		if (chk->whoTo == NULL) {
+		net = sctp_find_alternate_net(stcb, stcb->asoc.last_control_chunk_from, 0);
+		if (net == NULL) {
 			/* no alternate */
 			if (stcb->asoc.last_control_chunk_from == NULL)
-				chk->whoTo = stcb->asoc.primary_destination;
+				net = stcb->asoc.primary_destination;
 			else
-				chk->whoTo = stcb->asoc.last_control_chunk_from;
-			stcb->asoc.used_alt_asconfack = 0;
+				net = stcb->asoc.last_control_chunk_from;
 		}
 	} else {
 		/* normal case */
 		if (stcb->asoc.last_control_chunk_from == NULL)
-			chk->whoTo = stcb->asoc.primary_destination;
+			net = stcb->asoc.primary_destination;
 		else
-			chk->whoTo = stcb->asoc.last_control_chunk_from;
-		stcb->asoc.used_alt_asconfack = 0;
+			net = stcb->asoc.last_control_chunk_from;
 	}
-	chk->data = m_ack;
-	chk->send_size = 0;
-	/* Get size */
-	m = m_ack;
-	while (m) {
-		chk->send_size += SCTP_BUF_LEN(m);
-		m = SCTP_BUF_NEXT(m);
+	latest_ack->last_sent_to = net;
+
+	atomic_add_int(&latest_ack->last_sent_to->ref_count, 1);
+
+	TAILQ_FOREACH(ack, &stcb->asoc.asconf_ack_sent, next) {
+		if (ack->data == NULL) {
+			continue;
+		}
+
+		/* copy the asconf_ack */
+		m_ack = SCTP_M_COPYM(ack->data, 0, M_COPYALL, M_DONTWAIT);
+		if (m_ack == NULL) {
+			/* couldn't copy it */
+			return;
+		}
+
+		sctp_alloc_a_chunk(stcb, chk);
+		if (chk == NULL) {
+			/* no memory */
+			if (m_ack)
+				sctp_m_freem(m_ack);
+			return;
+		}
+		chk->copy_by_ref = 0;
+
+		chk->whoTo = net;
+		chk->data = m_ack;
+		chk->send_size = 0;
+		/* Get size */
+		m = m_ack;
+		chk->send_size = ack->len;
+		chk->rec.chunk_id.id = SCTP_ASCONF_ACK;
+		chk->rec.chunk_id.can_take_data = 1;
+		chk->sent = SCTP_DATAGRAM_UNSENT;
+		chk->snd_count = 0;
+		chk->flags |= CHUNK_FLAGS_FRAGMENT_OK; /* XXX */
+		chk->asoc = &stcb->asoc;
+		atomic_add_int(&chk->whoTo->ref_count, 1);
+
+		TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
+		chk->asoc->ctrl_queue_cnt++;
 	}
-	chk->rec.chunk_id.id = SCTP_ASCONF_ACK;
-	chk->rec.chunk_id.can_take_data = 1;
-	chk->sent = SCTP_DATAGRAM_UNSENT;
-	chk->snd_count = 0;
-	chk->flags = 0;
-	chk->asoc = &stcb->asoc;
-	atomic_add_int(&chk->whoTo->ref_count, 1);
-	TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
-	chk->asoc->ctrl_queue_cnt++;
 	return;
 }
 
