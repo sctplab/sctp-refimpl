@@ -198,6 +198,7 @@ pdapi_addasoc( struct sockaddr_in *from, struct sctp_assoc_change *asoc)
 		abort();
 	}
 	memset(who, 0, sizeof(struct requests));
+	printf("adding assocation %x\n", asoc->sac_assoc_id);
 	who->assoc_id = asoc->sac_assoc_id;
 	who->msg_cnt = 0;
 	who->who = *from;
@@ -342,7 +343,7 @@ pdapi_notification(unsigned char *buffer,
 	case SCTP_SHUTDOWN_EVENT:
 		shut = (struct sctp_shutdown_event *)sn_header;
 		printf("Shutdown assoc id:%x del assoc\n",
-		       asoc->sac_assoc_id);
+		       shut->sse_assoc_id);
 		pdapi_delasoc(shut->sse_assoc_id);
 		break;
 	case SCTP_REMOTE_ERROR:
