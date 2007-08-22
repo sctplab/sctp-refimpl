@@ -11656,10 +11656,8 @@ sctp_lower_sosend(struct socket *so,
 
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NO_FRAGMENT)) {
 		if(sndlen > asoc->smallest_mtu) {
+			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
 			error = EMSGSIZE;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11673,9 +11671,6 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EWOULDBLOCK);
 			error = EWOULDBLOCK;
 			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11725,9 +11720,6 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_OUTPUT, ECONNRESET);
 			error = ECONNRESET;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11884,9 +11876,6 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_UNLOCK(stcb);
 		hold_tcblock = 0;
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	/* Is the stream no. valid? */
 	if (srcv->sinfo_stream >= asoc->streamoutcnt) {
 		/* Invalid stream number */
@@ -12504,9 +12493,6 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if ((queue_only == 0) && (nagle_applies == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
 		/* we can attempt to send too. */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#endif
 		if (hold_tcblock == 0) {
 			/* If there is activity recv'ing sacks no need to send */
 			if(SCTP_TCB_TRYLOCK(stcb)) {
@@ -12516,24 +12502,15 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
 		}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
 		   (stcb->asoc.total_flight == 0)) {
 		/* We get to have a probe outstanding */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#endif
 		if (hold_tcblock == 0) {
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 	} else if (some_on_control) {
 		int num_out, reason, cwnd_full, frag_point;
 
