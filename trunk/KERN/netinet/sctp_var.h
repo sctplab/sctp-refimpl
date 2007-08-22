@@ -243,7 +243,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #else
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
-	uint32_t val; \
+	int32_t val; \
 	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
 	if (val < SCTP_BUF_LEN((m))) { \
 	   panic("sb_cc goes negative"); \
