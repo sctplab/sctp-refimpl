@@ -959,7 +959,7 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 	}
 }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) /* || defined(__APPLE__) */
 static void
 sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
@@ -1048,7 +1048,7 @@ sctp_path_check_and_react(struct sctp_tcb *stcb, struct sctp_ifa *newifa)
 		}
 	}
 }
-#endif /* __FreeBSD__ __APPLE__ */
+#endif /* __FreeBSD__ */
 
 /*
  * process an ADD/DELETE IP ack from peer.
