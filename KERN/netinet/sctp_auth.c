@@ -456,28 +456,28 @@ sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 
 	/* concatenate the keys */
 	if (sctp_compare_key(key1, key2) <= 0) {
-		/* key is key1 + shared + key2 */
-		if (sctp_get_keylen(key1)) {
-			bcopy(key1->key, key_ptr, key1->keylen);
-			key_ptr += key1->keylen;
-		}
+		/* key is shared + key1 + key2 */
 		if (sctp_get_keylen(shared)) {
 			bcopy(shared->key, key_ptr, shared->keylen);
 			key_ptr += shared->keylen;
+		}
+		if (sctp_get_keylen(key1)) {
+			bcopy(key1->key, key_ptr, key1->keylen);
+			key_ptr += key1->keylen;
 		}
 		if (sctp_get_keylen(key2)) {
 			bcopy(key2->key, key_ptr, key2->keylen);
 			key_ptr += key2->keylen;
 		}
 	} else {
-		/* key is key2 + shared + key1 */
-		if (sctp_get_keylen(key2)) {
-			bcopy(key2->key, key_ptr, key2->keylen);
-			key_ptr += key2->keylen;
-		}
+		/* key is shared + key2 + key1 */
 		if (sctp_get_keylen(shared)) {
 			bcopy(shared->key, key_ptr, shared->keylen);
 			key_ptr += shared->keylen;
+		}
+		if (sctp_get_keylen(key2)) {
+			bcopy(key2->key, key_ptr, key2->keylen);
+			key_ptr += key2->keylen;
 		}
 		if (sctp_get_keylen(key1)) {
 			bcopy(key1->key, key_ptr, key1->keylen);
@@ -1928,8 +1928,8 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 			}
 			if (num_chunks)
 				got_chklist = 1;
-
 		}
+
 		offset += SCTP_SIZE32(plen);
 		if (offset >= limit) {
 			break;
@@ -1953,7 +1953,7 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 		SCTPDBG(SCTP_DEBUG_AUTH1,
 			"SCTP: peer supports ASCONF but not AUTH\n");
 		return (-1);
-	}else if ((peer_supports_asconf) && (peer_supports_auth) &&
+	} else if ((peer_supports_asconf) && (peer_supports_auth) &&
 		   ((saw_asconf == 0) || (saw_asconf_ack == 0)) ){
 		return (-2);
 	}
