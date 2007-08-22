@@ -2973,7 +2973,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		break;
 	case SCTP_ASCONF_ACK:
 		/* resend last asconf ack */
-		sctp_send_asconf_ack(stcb, 1);
+		sctp_send_asconf_ack(stcb);
 		break;
 	case SCTP_FORWARD_CUM_TSN:
 		send_forward_tsn(stcb, &stcb->asoc);
@@ -3732,6 +3732,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	int got_auth = 0;
 	uint32_t auth_offset = 0, auth_len = 0;
 	int auth_skipped = 0;
+	int asconf_cnt = 0;
 #if defined(__APPLE__)
 	struct socket *so;
 #endif
@@ -3809,18 +3810,35 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * need to look inside to find the association
 		 */
 		if (ch->chunk_type == SCTP_ASCONF && stcb == NULL) {
+			struct sctp_chunkhdr *asconf_ch = ch;
+			uint32_t asconf_offset = 0, asconf_len = 0;
+
 			/* inp's refcount may be reduced */
 			SCTP_INP_INCR_REF(inp);
 
-			stcb = sctp_findassociation_ep_asconf(m, iphlen,
-							      *offset, sh, &inp, netp);
+			asconf_offset = *offset;
+			do {
+				asconf_len = ntohs(asconf_ch->chunk_length);
+				if (asconf_len < sizeof(struct sctp_asconf_paramhdr)) 
+					break;
+				stcb = sctp_findassociation_ep_asconf(m, iphlen,
+								      *offset, sh, &inp, netp);
+				if (stcb != NULL)
+					break;
+				asconf_offset += SCTP_SIZE32(asconf_len);
+				asconf_ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, asconf_offset,
+										  sizeof(struct sctp_chunkhdr), chunk_buf);
+			} while (asconf_ch != NULL && asconf_ch->chunk_type == SCTP_ASCONF);
 			if (stcb == NULL) {
 				/*
 				 * reduce inp's refcount if not reduced in
 				 * sctp_findassociation_ep_asconf().
 				 */
 				SCTP_INP_DECR_REF(inp);
+			} else {
+				locked_tcb = stcb;
 			}
+
 			/* now go back and verify any auth chunk to be sure */
 			if (auth_skipped && (stcb != NULL)) {
 				struct sctp_auth_chunk *auth;
@@ -4192,7 +4210,25 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							chk_length, *netp);
 
 				/* He's alive so give him credit */
+				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+						       stcb->asoc.overall_error_count,
+						       0,
+						       SCTP_FROM_SCTP_INPUT,
+						       __LINE__);
+				}
 				stcb->asoc.overall_error_count = 0;
+			}
+			/* if need, send SET_PRIMARY (by micchie) */
+			if (sctp_is_mobility_feature_on(inp, 
+			    SCTP_MOBILITY_DO_SETPRIM)) {
+				if (sctp_set_primary_ip_address_sa(stcb, &stcb->asoc.asconf_addr_setprim_pending->address.sa)) {
+					sctp_mobility_feature_off(inp, 
+					    SCTP_MOBILITY_DO_SETPRIM);
+					return(NULL);
+				}
+				sctp_mobility_feature_off(inp, 
+				    SCTP_MOBILITY_DO_SETPRIM);
 			}
 			break;
 		case SCTP_HEARTBEAT_ACK:
@@ -4206,6 +4242,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			/* He's alive so give him credit */
+			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
+					       stcb->asoc.overall_error_count,
+					       0,
+					       SCTP_FROM_SCTP_INPUT,
+					       __LINE__);
+			}
 			stcb->asoc.overall_error_count = 0;
 			SCTP_STAT_INCR(sctps_recvheartbeatack);
 			if (netp && *netp)
@@ -4501,7 +4544,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf(m, *offset,
-						   (struct sctp_asconf_chunk *)ch, stcb);
+						   (struct sctp_asconf_chunk *)ch, stcb, asconf_cnt == 0);
+				asconf_cnt++;
 			}
 			break;
 		case SCTP_ASCONF_ACK:
@@ -4747,6 +4791,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			return (NULL);
 		}
 	}			/* while */
+
+	if (asconf_cnt > 0 && stcb != NULL) {
+		sctp_send_asconf_ack(stcb);
+	}
 	return (stcb);
 }
 
@@ -5086,9 +5134,12 @@ trigger_send:
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
+	    /* For retransmission to new primary destination (by micchie) */
+	    sctp_is_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF) ||
 	    ((un_sent) &&
 	     (stcb->asoc.peers_rwnd > 0 ||
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
+		sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, 0);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");

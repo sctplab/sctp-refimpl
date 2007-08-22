@@ -3014,6 +3014,28 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
+		/* set the automatic mobility_base from kernel 
+		   flag (by micchie) 
+		*/
+		if (sctp_mobility_base == 0) {
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
+		}
+		else {
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_SETPRIM);
+		}
+		/* set the automatic mobility_fasthandoff from kernel 
+		   flag (by micchie) 
+		*/
+		if (sctp_mobility_fasthandoff == 0) {
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+		}
+		else {
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_FASTHANDOFF);
+			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+		}
 	} else {
 		/*
 		 * bind specific, make sure flags is off and add a new
@@ -4540,6 +4562,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct sctp_laddr *laddr;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_asconf_addr *aparam;
+	struct sctp_asconf_ack *aack;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_queued_to_read *sq;
 	struct sctp_stream_queue_pending *sp;
@@ -5057,9 +5080,16 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
 		SCTP_FREE(aparam,SCTP_M_ASC_ADDR);
 	}
-	if (asoc->last_asconf_ack_sent != NULL) {
-		sctp_m_freem(asoc->last_asconf_ack_sent);
-		asoc->last_asconf_ack_sent = NULL;
+	while (!TAILQ_EMPTY(&asoc->asconf_ack_sent)) {
+		aack = TAILQ_FIRST(&asoc->asconf_ack_sent);
+		TAILQ_REMOVE(&asoc->asconf_ack_sent, aack, next);
+		if (aack->last_sent_to != NULL) {
+			sctp_free_remote_addr(aack->last_sent_to);
+		}
+		if (aack->data != NULL) {
+			sctp_m_freem(aack->data);
+		}
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, aack);
 	}
 	/* clean up auth stuff */
 	if (asoc->local_hmacs)
@@ -5641,6 +5671,11 @@ sctp_pcb_init()
 	    sizeof(struct sctp_stream_queue_pending),
 	    (sctp_max_number_of_assoc * sctp_chunkscale));
 
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asconf_ack, "sctp_asconf_ack",
+	    sizeof(struct sctp_asconf_ack),
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
+
+
 	/* Master Lock INIT for info structure */
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	/* allocate the lock group attribute for SCTP PCB mutexes */
@@ -5804,6 +5839,7 @@ sctp_pcb_finish(void)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_chunk);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_readq);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf_ack);
 #endif
 
 	/*
@@ -5862,6 +5898,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	uint8_t hmacs_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_hmac_algo *hmacs = NULL;
 	uint16_t hmacs_len = 0;
+	uint8_t saw_asconf=0;
+	uint8_t saw_asconf_ack=0;
 	uint8_t chunks_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_chunk_list *chunks = NULL;
 	uint16_t num_chunks = 0;
@@ -6307,6 +6345,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			for (i = 0; i < num_chunks; i++) {
 				(void)sctp_auth_add_chunk(chunks->chunk_types[i],
 						    stcb->asoc.peer_auth_chunks);
+				/* record asconf/asconf-ack if listed */
+				if(chunks->chunk_types[i] == SCTP_ASCONF)
+					saw_asconf = 1;
+				if(chunks->chunk_types[i] == SCTP_ASCONF_ACK)
+					saw_asconf_ack = 1;
+
 			}
 			got_chklist = 1;
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
@@ -6369,8 +6413,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	    !stcb->asoc.peer_supports_auth) {
 		/* peer supports asconf but not auth? */
 		return (-32);
+	} else if ((stcb->asoc.peer_supports_asconf) && (stcb->asoc.peer_supports_auth) &&
+		   ((saw_asconf == 0) || (saw_asconf_ack == 0)) ){
+		return (-33);
 	}
-
 	/* concatenate the full random key */
 #ifdef SCTP_AUTH_DRAFT_04
 	keylen = random_len;
@@ -6405,7 +6451,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 #endif
 	else {
 		/* failed to get memory for the key */
-		return (-33);
+		return (-34);
 	}
 	if (stcb->asoc.authinfo.peer_random != NULL)
 		sctp_free_key(stcb->asoc.authinfo.peer_random);

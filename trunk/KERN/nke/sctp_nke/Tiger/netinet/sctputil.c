@@ -1022,7 +1022,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 
 	TAILQ_INIT(&asoc->nets);
 	TAILQ_INIT(&asoc->pending_reply_queue);
-	asoc->last_asconf_ack_sent = NULL;
+	TAILQ_INIT(&asoc->asconf_ack_sent);
 	/* Setup to fill the hb random cache at first HB */
 	asoc->hb_random_idx = 4;
 
@@ -1161,6 +1161,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later whe
 	 * the association is freed.
 	 */
+	asoc->asconf_addr_setprim_pending = NULL;
 	return (0);
 }
 
