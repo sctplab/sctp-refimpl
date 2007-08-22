@@ -98,6 +98,6 @@
    o Get rid of HAVE_XXX declarations.
    o add a sctp_pr_policy in hole in sndrcvinfo structure
    o add a PR_SCTP_POLICY_VALID type flag.
-
+- Change key concatenation order to match the auth RFC
 
 
