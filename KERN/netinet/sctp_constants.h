@@ -797,6 +797,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
 #define SCTP_CHUNK_BUFFER_SIZE	512
 #define SCTP_PARAM_BUFFER_SIZE	512
 
+/* small chunk store for looking at chunk_list in auth */
+#define SCTP_SMALL_CHUNK_STORE 260
+
 #define SCTP_DEFAULT_MINSEGMENT 512	/* MTU size ... if no mtu disc */
 #define SCTP_HOW_MANY_SECRETS	2	/* how many secrets I keep */
 
