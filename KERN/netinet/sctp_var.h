@@ -172,12 +172,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 	if (val < MSIZE) { \
 	    panic("sb_mbcnt goes negative"); \
 	} \
-	if (SCTP_BUF_IS_EXTENDED(m)) { \
-		val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(SCTP_BUF_EXTEND_SIZE(m))); \
-		if (val < SCTP_BUF_EXTEND_SIZE(m)) { \
-		    panic("sb_mbcnt goes negative2"); \
-		} \
-	} \
 	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
 	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
 	  if (val < SCTP_BUF_LEN((m))) {\
@@ -197,8 +191,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,SCTP_BUF_LEN((m))); \
 	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
-	if (SCTP_BUF_IS_EXTENDED(m)) \
-		atomic_add_int(&(sb)->sb_mbcnt,SCTP_BUF_EXTEND_SIZE(m)); \
 	if (stcb) { \
 		atomic_add_int(&(stcb)->asoc.sb_cc,SCTP_BUF_LEN((m))); \
 		atomic_add_int(&(stcb)->asoc.my_rwnd_control_len, MSIZE); \
@@ -251,32 +243,24 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #else
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
-	if ((sb)->sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
-		atomic_subtract_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
-	} else { \
-		(sb)->sb_cc = 0; \
+	uint32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	   panic("sb_cc goes negative"); \
 	} \
-	if (((ctl)->do_not_ref_stcb == 0) && stcb) { \
-		if ((stcb)->asoc.sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
-			atomic_subtract_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
-		} else { \
-			(stcb)->asoc.sb_cc = 0; \
-		} \
-		if ((stcb)->asoc.my_rwnd_control_len >= MSIZE) { \
-			atomic_subtract_int(&(stcb)->asoc.my_rwnd_control_len, MSIZE); \
-		} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    panic("sb_mbcnt goes negative"); \
 	} \
-	if ((sb)->sb_mbcnt >= MSIZE) { \
-		atomic_subtract_int(&(sb)->sb_mbcnt, MSIZE); \
-		if (SCTP_BUF_IS_EXTENDED(m)) { \
-			if ((sb)->sb_mbcnt >= (uint32_t)SCTP_BUF_EXTEND_SIZE(m)) { \
-				atomic_subtract_int(&(sb)->sb_mbcnt, SCTP_BUF_EXTEND_SIZE(m)); \
-			} else { \
-				(sb)->sb_mbcnt = 0; \
-			} \
-		} \
-	} else { \
-		(sb)->sb_mbcnt = 0; \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	     panic("stcb->sb_cc goes negative"); \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     panic("asoc->mbcnt goes negative"); \
+	  } \
 	} \
 }
 
@@ -287,8 +271,6 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
 		atomic_add_int(&(stcb)->asoc.my_rwnd_control_len, MSIZE); \
 	} \
-	if (SCTP_BUF_IS_EXTENDED(m)) \
-		atomic_add_int(&(sb)->sb_mbcnt, SCTP_BUF_EXTEND_SIZE(m)); \
 }
 #endif
 #endif
