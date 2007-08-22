@@ -94,5 +94,10 @@
    o non-eeor mode messages be atomic.
    o Allow implicit setup of an assoc in 1-2-1 model if
      using the sctp_**() send calls.
-  Small fixes on sctp_output.c to make this possible.
+     Small fixes on sctp_output.c to make this possible.
+   o Get rid of HAVE_XXX declarations.
+   o add a sctp_pr_policy in hole in sndrcvinfo structure
+   o add a PR_SCTP_POLICY_VALID type flag.
+
+
 
