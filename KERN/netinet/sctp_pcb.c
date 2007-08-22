@@ -5774,6 +5774,24 @@ sctp_pcb_finish(void)
 		sctppcbinfo.thread_proc = THREAD_NULL;
 	}
 #endif
+#elif defined(__Windows__)
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	if (sctppcbinfo.iterator_thread_obj != NULL) {
+		KIRQL oldIrql;
+		NTSTATUS status = STATUS_SUCCESS;
+
+		KeLowerIrql(PASSIVE_LEVEL);
+		KeSetEvent(&sctppcbinfo.iterator_wakeup[1], IO_NO_INCREMENT, FALSE);
+		status = KeWaitForSingleObject(sctppcbinfo.iterator_thread_obj,
+					       Executive,
+					       KernelMode,
+					       FALSE,
+					       NULL);
+		ObDereferenceObject(sctppcbinfo.iterator_thread_obj);
+
+		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
+	}
+#endif
 #endif
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
