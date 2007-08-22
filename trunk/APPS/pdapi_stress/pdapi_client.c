@@ -111,6 +111,10 @@ send_a_request()
 		       ret, errno);
 		return(0);
 	
+	} else if (ret < sz) {
+		printf("Msg send incomplete, wanted to send %d  actual:%d\n",
+		       sz, ret);
+
 	}
 	sum.seq = ntohs(seq);
 	seq++;
