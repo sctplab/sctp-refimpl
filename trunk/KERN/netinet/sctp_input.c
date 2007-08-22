@@ -3580,7 +3580,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			asconf_offset = *offset;
 			do {
 				asconf_len = ntohs(asconf_ch->chunk_length);
-
+				if (asconf_len < sizeof(struct sctp_asconf_paramhdr)) 
+					break;
 				stcb = sctp_findassociation_ep_asconf(m, iphlen,
 								      *offset, sh, &inp, netp);
 				if (stcb != NULL)
