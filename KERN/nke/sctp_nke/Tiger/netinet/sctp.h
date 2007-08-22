@@ -347,18 +347,6 @@ struct sctp_error_unrecognized_chunk {
 	struct sctp_chunkhdr ch;/* header from chunk in error */
 } __attribute__((packed));
 
-#define HAVE_SCTP			1
-#define HAVE_KERNEL_SCTP		1
-#define HAVE_SCTP_PRSCTP		1
-#define HAVE_SCTP_ADDIP			1
-#define HAVE_SCTP_CANSET_PRIMARY	1
-#define HAVE_SCTP_SAT_CAPABILITY	1
-#define HAVE_SCTP_MULTIBUF              1
-#define HAVE_SCTP_NOCONNECT             0
-#define HAVE_SCTP_ECN_NONCE             1	/* ECN Nonce option */
-#define HAVE_SCTP_AUTH			1
-#define HAVE_SCTP_EXT_RCVINFO		1
-#define HAVE_SCTP_CONNECTX              1
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
  * can find them.
@@ -533,6 +521,12 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LTRACE_ERROR_ENABLE                        0x00800000
 #define SCTP_LAST_PACKET_TRACING                        0x01000000
 #define SCTP_THRESHOLD_LOGGING                          0x02000000
+
+/* mobility_features parameters (by micchie) */
+#define SCTP_MOBILITY_BASE			0x00000001
+#define SCTP_MOBILITY_FASTHANDOFF		0x00800002
+#define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000003
+#define SCTP_MOBILITY_DO_SETPRIM		0x00000004
 
 #if defined(__Windows__)
 #include <packoff.h>
