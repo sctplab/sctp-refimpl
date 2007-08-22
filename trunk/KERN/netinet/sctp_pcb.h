@@ -271,9 +271,15 @@ struct sctp_epinfo {
 	/* address work queue handling */
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	uint32_t iterator_running;
+#if !defined(__Windows__)
 	SCTP_PROCESS_STRUCT thread_proc;
+#else
+	PFILE_OBJECT iterator_thread_obj;
+#endif
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_cond_t iterator_wakeup;
+#elif defined(__Windows__)
+	KEVENT iterator_wakeup[2];
 #endif
 #endif
 	struct sctp_timer addr_wq_timer;
