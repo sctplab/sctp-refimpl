@@ -5897,6 +5897,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	uint8_t hmacs_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_hmac_algo *hmacs = NULL;
 	uint16_t hmacs_len = 0;
+	uint8_t saw_asconf=0;
+	uint8_t saw_asconf_ack=0;
 	uint8_t chunks_store[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_auth_chunk_list *chunks = NULL;
 	uint16_t num_chunks = 0;
@@ -6342,6 +6344,12 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			for (i = 0; i < num_chunks; i++) {
 				(void)sctp_auth_add_chunk(chunks->chunk_types[i],
 						    stcb->asoc.peer_auth_chunks);
+				/* record asconf/asconf-ack if listed */
+				if(chunks->chunk_types[i] == SCTP_ASCONF)
+					saw_asconf = 1;
+				if(chunks->chunk_types[i] == SCTP_ASCONF_ACK)
+					saw_asconf_ack = 1;
+
 			}
 			got_chklist = 1;
 		} else if ((ptype == SCTP_HEARTBEAT_INFO) ||
@@ -6404,8 +6412,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	    !stcb->asoc.peer_supports_auth) {
 		/* peer supports asconf but not auth? */
 		return (-32);
+	} else if ((stcb->asoc.peer_supports_asconf) && (stcb->asoc.peer_supports_auth) &&
+		   ((saw_asconf == 0) || (saw_asconf_ack == 0)) ){
+		return (-33);
 	}
-
 	/* concatenate the full random key */
 #ifdef SCTP_AUTH_DRAFT_04
 	keylen = random_len;
@@ -6440,7 +6450,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 #endif
 	else {
 		/* failed to get memory for the key */
-		return (-33);
+		return (-34);
 	}
 	if (stcb->asoc.authinfo.peer_random != NULL)
 		sctp_free_key(stcb->asoc.authinfo.peer_random);
