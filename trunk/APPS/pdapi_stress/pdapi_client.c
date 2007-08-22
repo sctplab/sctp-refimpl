@@ -19,6 +19,8 @@ uint8_t large_buffer[0x40000];
 struct pdapi_request sum;
 struct sockaddr_in peer;
 int sd;
+uint16_t seq=0;
+
 
 int chars_out=0;
 void
@@ -54,6 +56,7 @@ send_a_request()
 	request.request = PDAPI_REQUEST_MESSAGE;
 	msg->request = PDAPI_DATA_MESSAGE;
 	sum.request = PDAPI_END_MESSAGE;
+	
 	/* First we must generate the size of
 	 * the message. 
 	 */
@@ -86,6 +89,8 @@ send_a_request()
 	/* Increase it to include the header */
 	sz += sizeof(request) - sizeof(int);
 
+	request.seq = ntohs(seq);
+	seq++;
 	/* Note for now we just send in stream 0 */
 	ret = sctp_sendx(sd, &request, sizeof(request), 
 			 (struct sockaddr *)&peer, 1,
@@ -95,6 +100,8 @@ send_a_request()
 		       ret, errno);
 		return(0);
 	}
+	msg->seq = ntohs(seq);
+	seq++;
 	ret = sctp_sendx(sd, large_buffer, sz,
 			 (struct sockaddr *)&peer, 1,
 			 &sinfo, 0);
@@ -104,6 +111,8 @@ send_a_request()
 		return(0);
 	
 	}
+	sum.seq = ntohs(seq);
+	seq++;
 	ret = sctp_sendx(sd, &sum, sizeof(sum), 
 			 (struct sockaddr *)&peer, 1,
 			 &sinfo, 0);
