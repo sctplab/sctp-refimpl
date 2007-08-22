@@ -81,4 +81,13 @@
   it up and wait for the shutdown guard timer to clear the 
   association without a graceful close. Fix this so that
   that we properly clean up.
+- Added support for Multiple ASCONF per new RFC. We only
+  (so far) accept input of these and cannot yet generate
+  a multi-asconf.
+- Sysctl'd support for experimental Fast Handover feature. Always
+  disabled unless sysctl or socket option changes to enable.
+- Error case in add-ip where the peer supports AUTH and ADD-IP
+  but does NOT require AUT of ASCONF/ASCONF-ACK. We need to
+  ABORT in this case.
+
 
