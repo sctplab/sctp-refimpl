@@ -67,8 +67,8 @@ sum_it_out(uint8_t *data, int size)
 int
 audit_a_msg (struct requests *who)
 {
-	struct data_block *blk, *end_blk;	
-	struct pdapi_request *msg, *end;
+	struct data_block *blk, *end_blk, *dat=NULL, *req=NULL;	
+	struct pdapi_request *msg, *end; 
 	int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
 	uint32_t base_crc = 0xffffffff, passed_sum, final_sum;
 	ushort ssn_req, ssn_data, ssn_end;
@@ -82,6 +82,7 @@ audit_a_msg (struct requests *who)
 		/* not a request at the head? */
 		return(0);
 	} else {
+		req = who->first;;
 		tot_size = ntohl(msg->msg.size);
 	}
 	ssn_req = who->first->info.sinfo_ssn;
@@ -91,6 +92,9 @@ audit_a_msg (struct requests *who)
 	blk = who->first->next;
 	while(blk) {
 		if(blk->info.sinfo_ssn == ssn_data) {
+			if(dat == NULL) {
+				dat = blk;
+			}
 			cnt_data++;
 		} else if (blk->info.sinfo_ssn == ssn_end) {
 			cnt_end++;
@@ -104,14 +108,7 @@ audit_a_msg (struct requests *who)
 	if(cnt_data && cnt_end) {
 		/* we have at least ONE complete message */
 		/* get rid of request */
-		blk = who->first;
-		who->first = blk->next;
-		if(blk == who->tail) {
-			/* should not happen */
-			who->tail = NULL;
-		}
-		free(blk);
-		blk = who->first;
+		blk = dat;
 		if(blk->info.sinfo_ssn != ssn_data) {
 			printf("Out of order\n");
 			return(0);
@@ -127,49 +124,26 @@ audit_a_msg (struct requests *who)
 			sum_it_out(msg->msg.data, calc_size);
 		}
 		base_crc = update_crc32(base_crc, msg->msg.data, calc_size);
-		who->first = blk->next;
-		if(blk == who->tail) {
-			/* should not happen */
-			who->tail = NULL;
-		}
-		free(blk);
-		blk = who->first;
+		blk = blk->next;
 		while(blk && (blk != end_blk)) {
 			base_crc = update_crc32(base_crc, blk->data, blk->sz);
 			if(sum_out) {
 				sum_it_out(blk->data, blk->sz);
 			}
 			calc_size += blk->sz;
-			who->first = blk->next;
-			if(blk == who->tail) {
-				/* should not happen */
-				who->tail = NULL;
-			}
-			free(blk);
-			blk = who->first;
+			blk = blk->next;
 		}
-		if(who->first == end_blk) {
-			final_sum = sctp_csum_finalize(base_crc);
-                        if(sum_out) {
-				fprintf(sum_out, "\n");
-				fflush(sum_out);
-			}
-			msg = (struct pdapi_request *)end_blk->data;
-			if (msg->request != PDAPI_END_MESSAGE) {
-				printf("Last msg not END?\n");
-				passed_sum = 0;
-			} else {
-				passed_sum = msg->msg.checksum;
-			}
-			who->first = end_blk->next;
-			if(who->tail == end_blk) {
-				/* may happen */
-				who->tail = NULL;
-			}
-			free(end_blk);
+		final_sum = sctp_csum_finalize(base_crc);
+		if(sum_out) {
+			fprintf(sum_out, "\n");
+			fflush(sum_out);
+		}
+		msg = (struct pdapi_request *)end_blk->data;
+		if (msg->request != PDAPI_END_MESSAGE) {
+			printf("Last msg not END?\n");
+			passed_sum = 0;
 		} else {
-			printf("corrupt chain\n");
-			return(0);
+			passed_sum = msg->msg.checksum;
 		}
 		if(calc_size != tot_size) {
 			printf("Message size was supposed to be %d but saw %d\n",
@@ -183,6 +157,19 @@ audit_a_msg (struct requests *who)
 		if ((total_msgs % 10000) == 0) {
 			printf("Processed %d messages\n", total_msgs);
 		}
+		/* clean up time */
+		who->msg_cnt -= 3;
+		while ((who->first != end_blk) && (who->first != NULL)) {
+			blk = who->first;
+			who->first = blk->next;
+			free(blk);
+		}
+		if(who->first == end_blk) {
+			who->first = end_blk->next;
+			free(end_blk);
+		}
+		if(who->first == NULL) 
+			who->tail = NULL;
 		return(1);
 	}
 	return (1);
@@ -284,9 +271,14 @@ pdapi_process_data(unsigned char *buffer,
 	memcpy(&blk->info, sinfo, sizeof(struct sctp_sndrcvinfo));
 	blk->sz = len;
 	memcpy(blk->data, buffer, len);
-	if(who->tail) {
-		who->tail->next = blk;
-		who->tail = blk;
+	if(who->first != NULL) {
+		if(who->tail) {
+			who->tail->next = blk;
+			who->tail = blk;
+		} else {
+			/* huh? */
+			abort();
+		}
 	} else {
 		who->first = blk;
 		who->tail = blk;

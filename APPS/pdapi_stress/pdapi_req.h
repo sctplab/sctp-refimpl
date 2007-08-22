@@ -32,7 +32,8 @@ struct requests {
 
 struct pdapi_request {
 	unsigned char request;
-	unsigned char filler[3];
+	unsigned char filler;
+	uint16_t seq;
 	union {  
 		uint32_t checksum;
 		int size;
