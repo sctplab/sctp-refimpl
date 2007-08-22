@@ -11024,15 +11024,6 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	s = splsoftnet();
 #endif
 	*error = 0;
-        /* Unless E_EOR mode is on, we must make a send FIT in one call. */
-	if (((user_marks_eor == 0) && non_blocking) && 
-	    (uio->uio_resid > (int)SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
-		/* It will NEVER fit */
-		SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
-		*error = EMSGSIZE;
-		goto out_now;
-	}
-
 	/* Now can we send this? */
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) ||
 	    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) ||
@@ -11233,6 +11224,7 @@ sctp_lower_sosend(struct socket *so,
 	struct sctp_nets *net;
 	struct sctp_association *asoc;
 	struct sctp_inpcb *t_inp;
+	int user_marks_eor;
 	int create_lock_applied = 0;
 	int nagle_applies = 0;
 	int some_on_control = 0;
@@ -11240,6 +11232,7 @@ sctp_lower_sosend(struct socket *so,
 	int hold_tcblock = 0;
 	int non_blocking = 0;
 	int temp_flags = 0;
+	uint32_t local_add_more;
 
 	error = 0;
 	net = NULL;
@@ -11261,7 +11254,7 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 		return (EINVAL);
 	}
-
+	user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	atomic_add_int(&inp->total_sends, 1);
 	if (uio) {
 		if (uio->uio_resid < 0) {
@@ -11507,15 +11500,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	if(stcb == NULL) {
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, ENOTCONN);
-			error = ENOTCONN;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
-			goto out_unlocked;
-		} else if (addr == NULL) {
+		if (addr == NULL) {
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, ENOENT);
 			error = ENOENT;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
@@ -11915,8 +11900,27 @@ sctp_lower_sosend(struct socket *so,
 		error = EFAULT;
 		goto out_unlocked;
 	}
+
+        /* Unless E_EOR mode is on, we must make a send FIT in one call. */
+	if ((user_marks_eor == 0) && 
+	    (uio->uio_resid > (int)SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
+		/* It will NEVER fit */
+		SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
+		error = EMSGSIZE;
+		goto out_unlocked;
+	}
+	if (user_marks_eor) {
+		local_add_more = sctp_add_more_threshold;
+	} else {
+		/*-
+		 * For non-eeor the whole message must fit in
+		 * the socket send buffer.
+		 */
+ 		local_add_more = uio->uio_resid;
+	}
 	len = 0;
-	if ((max_len < sctp_add_more_threshold) && (SCTP_SB_LIMIT_SND(so) > sctp_add_more_threshold)) {
+	if ((max_len < local_add_more) && 
+	    (SCTP_SB_LIMIT_SND(so) > local_add_more)) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
 		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
@@ -11985,7 +11989,6 @@ sctp_lower_sosend(struct socket *so,
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
-		int user_marks_eor;
 		initial_out = uio->uio_resid;
 
 		SCTP_TCB_SEND_LOCK(stcb);
@@ -11999,7 +12002,6 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_SEND_UNLOCK(stcb);
 
 		strm = &stcb->asoc.strmout[srcv->sinfo_stream];
-		user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 		if(strm->last_msg_incomplete == 0) {
 		do_a_copy_in:
 			sp = sctp_copy_it_in(stcb, asoc, srcv, uio, net, max_len, user_marks_eor, &error, non_blocking);

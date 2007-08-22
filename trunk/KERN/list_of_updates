@@ -89,5 +89,10 @@
 - Error case in add-ip where the peer supports AUTH and ADD-IP
   but does NOT require AUT of ASCONF/ASCONF-ACK. We need to
   ABORT in this case.
-
+- According to the Kyoto summit of socket api developers 
+  (Solaris, Linux, BSD). We need to have:
+   o non-eeor mode messages be atomic.
+   o Allow implicit setup of an assoc in 1-2-1 model if
+     using the sctp_**() send calls.
+  Small fixes on sctp_output.c to make this possible.
 
