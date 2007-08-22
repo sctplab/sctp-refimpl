@@ -72,7 +72,7 @@ audit_a_msg (struct requests *who)
 	int cnt_data=0, cnt_end=0, tot_size, calc_size=0;
 	uint32_t base_crc = 0xffffffff, passed_sum, final_sum;
 	ushort ssn_req, ssn_data, ssn_end;
-
+	int ret=1;
 
 	if(who->first == NULL) {
 		return (1);
@@ -80,7 +80,8 @@ audit_a_msg (struct requests *who)
 	msg = (struct pdapi_request *)who->first->data;
 	if(msg->request != PDAPI_REQUEST_MESSAGE) {
 		/* not a request at the head? */
-		return(0);
+		ret = 0;
+		goto clean_it;
 	} else {
 		req = who->first;;
 		tot_size = ntohl(msg->msg.size);
@@ -111,12 +112,14 @@ audit_a_msg (struct requests *who)
 		blk = dat;
 		if(blk->info.sinfo_ssn != ssn_data) {
 			printf("Out of order\n");
-			return(0);
+			ret = 0;
+			goto clean_it;
 		}
 		msg = (struct pdapi_request *)blk->data;
 		if(msg->request != PDAPI_DATA_MESSAGE) {
 			printf("Data garbled -- not request data type\n");
-			return (0);
+			ret = 0;
+			goto clean_it;
 		}
 		/* csum the first msg */
 		calc_size = blk->sz - sizeof(struct pdapi_request) + sizeof(int);
@@ -158,6 +161,7 @@ audit_a_msg (struct requests *who)
 			printf("Processed %d messages\n", total_msgs);
 		}
 		/* clean up time */
+	clean_it:
 		who->msg_cnt -= 3;
 		while ((who->first != end_blk) && (who->first != NULL)) {
 			blk = who->first;
@@ -170,9 +174,8 @@ audit_a_msg (struct requests *who)
 		}
 		if(who->first == NULL) 
 			who->tail = NULL;
-		return(1);
 	}
-	return (1);
+	return (ret);
 }
 
 void

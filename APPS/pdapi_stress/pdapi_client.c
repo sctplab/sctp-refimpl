@@ -20,7 +20,7 @@ struct pdapi_request sum;
 struct sockaddr_in peer;
 int sd;
 uint16_t seq=0;
-
+int max_size = 0x3ffff;
 
 int chars_out=0;
 void
@@ -52,6 +52,7 @@ send_a_request()
 	/* 3) The end message with the crc32 we caculated */
 	memset(large_buffer,0, sizeof(large_buffer));
 	memset(&sinfo, 0, sizeof(sinfo));
+	sinfo.sinfo_flags = SCTP_EOR;
 	msg = (struct pdapi_request *)&large_buffer[0];
 	request.request = PDAPI_REQUEST_MESSAGE;
 	msg->request = PDAPI_DATA_MESSAGE;
@@ -62,7 +63,7 @@ send_a_request()
 	 */
  again:
 	sz = rand() & 0x0003ffff;
-	if(sz < 4) {
+	if ((sz < 4) || (sz > max_size)) {
 		goto again;
 	}
 	/* round it down to even word boundary */
@@ -105,7 +106,7 @@ send_a_request()
 	ret = sctp_sendx(sd, large_buffer, sz,
 			 (struct sockaddr *)&peer, 1,
 			 &sinfo, 0);
-	if (ret < sz) {
+	if (ret == -1) {
 		printf("error in sending message %d errno:%d\n",
 		       ret, errno);
 		return(0);
@@ -227,6 +228,24 @@ main(int argc, char **argv)
 		printf("error %d can't open sctp socket\n", errno);
 		return (-1);
 	}
+#ifdef SCTP_EOR
+	if(sd > 0) {
+		int one = 1;
+		if(setsockopt(sd, IPPROTO_SCTP, SCTP_EXPLICIT_EOR, &one, sizeof(one)) < 0) {
+			printf("pdapi_server: setsockopt: SCTP_EXPLICIT_EOR failed! errno=%d\n", errno);
+		}
+	}
+#else
+        {
+		int optlen = sizeof(maxsz);
+		if(getsockopt(sd, SOL_SOCKET, SO_SNDBUF, &maxsz, &optlen) != 0)	
+			exit(-1);
+		else
+			printf("Max msg size shrinks from 0x3ffff to %x due to missing Explicit-EOR mode\n", maxsz)
+	}
+
+#endif
+
 	memset(&event, 0, sizeof(event));
 	event.sctp_data_io_event = 1;
 	event.sctp_association_event = 1;
