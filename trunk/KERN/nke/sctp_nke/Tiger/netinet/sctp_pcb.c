@@ -3440,7 +3440,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					}
 					continue;
 				} else {
-					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING, 1);
 				}
 			}
 			cnt_in_sd++;
