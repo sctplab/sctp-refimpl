@@ -959,7 +959,7 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 	}
 }
 
-#if defined(__FreeBSD__) /* || defined(__APPLE__) */
+#if defined(__FreeBSD__) || defined(__APPLE__)
 static void
 sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
