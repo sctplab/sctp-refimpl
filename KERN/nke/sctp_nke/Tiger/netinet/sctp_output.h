@@ -73,7 +73,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 int
-sctp_v6src_match_nexthop(struct sockaddr_in6 *src6);
+sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro);
 #endif
 
 void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
