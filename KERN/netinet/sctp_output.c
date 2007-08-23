@@ -10535,6 +10535,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		abm = (struct sctp_abort_msg *)((caddr_t)ip6_out + iphlen_out);
 	} else {
 		/* Currently not supported */
+		if (err_cause)
+			sctp_m_freem(err_cause);
+		sctp_m_freem(mout);
 		return;
 	}
 
@@ -10576,11 +10579,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
-		abm->sh.checksum = 0;
-	} else {
-		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
-	}
+	abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
 	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
@@ -10704,11 +10703,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		m_copyback(scm, len, padlen, (caddr_t)&cpthis);
 		len += padlen;
 	}
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
-		val = 0;
-	} else {
-		val = sctp_calculate_sum(scm, NULL, 0);
-	}
+	val = sctp_calculate_sum(scm, NULL, 0);
 	mout = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr), 1, M_DONTWAIT, 1, MT_DATA);
 	if(mout == NULL) {
 		sctp_m_freem(scm);
