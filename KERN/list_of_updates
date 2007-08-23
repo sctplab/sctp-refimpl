@@ -110,4 +110,9 @@
 - inpcb_free front state had a bug where in queue
   data could wedge an assoc. We need to just abandon
   ones in front states (free_assoc).
-
+- If a peer sends us a 64k abort, we would try to
+  assemble a response packet which may be larger than
+  64k. This then would be dropped by IP. Instead make
+  a "minimum" size for us 64k-2k (we want at least
+  2k for our init). If we receive such an init
+  discard it early without all the processing.

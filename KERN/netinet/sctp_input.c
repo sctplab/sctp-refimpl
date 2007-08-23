@@ -3814,7 +3814,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					return (NULL);
 				}
 			}
-			if ((num_chunks > 1) ||
+			if ((chk_length > SCTP_LARGEST_INIT_ACCEPTED) ||
+			    (num_chunks > 1) ||
 			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb) {
