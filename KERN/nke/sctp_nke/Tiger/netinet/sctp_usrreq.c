@@ -1196,7 +1196,7 @@ sctp_disconnect(struct socket *so)
 #endif
 					return (0);
 				} else {
-					sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING);
+					sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING, 1);
 				}
 			}
 			SCTP_TCB_UNLOCK(stcb);
@@ -1352,7 +1352,7 @@ sctp_shutdown(struct socket *so)
 							  op_err, 1);
 				goto skip_unlock;
 			} else {
-				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING);
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING, 1);
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
