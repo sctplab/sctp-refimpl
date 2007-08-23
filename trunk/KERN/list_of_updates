@@ -101,5 +101,5 @@
 - Optimize sctp6 calls to reuse code in sctp_usrreq. Also optimize
   when we close sending out the data and disabling Nagle.
 - Change key concatenation order to match the auth RFC
-
+- When sending OOTB shutdown_complete always do csum.
 
