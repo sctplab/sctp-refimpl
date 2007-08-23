@@ -456,6 +456,21 @@ sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 
 	/* concatenate the keys */
 	if (sctp_compare_key(key1, key2) <= 0) {
+#ifdef SCTP_AUTH_DRAFT_04
+		/* key is key1 + shared + key2 */
+		if (sctp_get_keylen(key1)) {
+			bcopy(key1->key, key_ptr, key1->keylen);
+			key_ptr += key1->keylen;
+		}
+		if (sctp_get_keylen(shared)) {
+			bcopy(shared->key, key_ptr, shared->keylen);
+			key_ptr += shared->keylen;
+		}
+		if (sctp_get_keylen(key2)) {
+			bcopy(key2->key, key_ptr, key2->keylen);
+			key_ptr += key2->keylen;
+		}
+#else
 		/* key is shared + key1 + key2 */
 		if (sctp_get_keylen(shared)) {
 			bcopy(shared->key, key_ptr, shared->keylen);
@@ -469,7 +484,23 @@ sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 			bcopy(key2->key, key_ptr, key2->keylen);
 			key_ptr += key2->keylen;
 		}
+#endif
 	} else {
+#ifdef SCTP_AUTH_DRAFT_04
+		/* key is key2 + shared + key1 */
+		if (sctp_get_keylen(key2)) {
+			bcopy(key2->key, key_ptr, key2->keylen);
+			key_ptr += key2->keylen;
+		}
+		if (sctp_get_keylen(shared)) {
+			bcopy(shared->key, key_ptr, shared->keylen);
+			key_ptr += shared->keylen;
+		}
+		if (sctp_get_keylen(key1)) {
+			bcopy(key1->key, key_ptr, key1->keylen);
+			key_ptr += key1->keylen;
+		}
+#else
 		/* key is shared + key2 + key1 */
 		if (sctp_get_keylen(shared)) {
 			bcopy(shared->key, key_ptr, shared->keylen);
@@ -483,6 +514,7 @@ sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 			bcopy(key1->key, key_ptr, key1->keylen);
 			key_ptr += key1->keylen;
 		}
+#endif
 	}
 	return (new_key);
 }
