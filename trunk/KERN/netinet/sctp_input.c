@@ -5059,49 +5059,38 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
-	if ((sctp_no_csum_on_loopback == 0) || !SCTP_IS_IT_LOOPBACK(m)) {
-		/*
-		 * we do NOT validate things from the loopback if the sysctl
-		 * is set to 1.
-		 */
-		check = sh->checksum;	/* save incoming checksum */
-		if ((check == 0) && (sctp_no_csum_on_loopback)) {
-			/*
-			 * special hook for where we got a local address
-			 * somehow routed across a non IFT_LOOP type
-			 * interface
-			 */
-			if (ip->ip_src.s_addr == ip->ip_dst.s_addr)
-				goto sctp_skip_csum_4;
-		}
-		sh->checksum = 0;	/* prepare for calc */
-		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
-		if (calc_check != check) {
-			SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-				calc_check, check, m, mlen, iphlen);
-
-			stcb = sctp_findassociation_addr(m, iphlen,
-							 offset - sizeof(*ch),
-							 sh, ch, &inp, &net,
-							 vrf_id);
-			if ((inp) && (stcb)) {
-				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
-			} else if ((inp != NULL) && (stcb == NULL)) {
-				refcount_up = 1;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
-			}
-			SCTP_STAT_INCR(sctps_badsum);
-			SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
-			goto bad;
-		}
-		sh->checksum = calc_check;
+	check = sh->checksum;	/* save incoming checksum */
+	if ((check == 0) && (sctp_no_csum_on_loopback) &&
+	    (ip->ip_src.s_addr == ip->ip_dst.s_addr)) {
+			goto sctp_skip_csum_4;
 	}
+	sh->checksum = 0;	/* prepare for calc */
+	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+	if (calc_check != check) {
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
+			calc_check, check, m, mlen, iphlen);
+
+		stcb = sctp_findassociation_addr(m, iphlen,
+						 offset - sizeof(*ch),
+						 sh, ch, &inp, &net,
+						 vrf_id);
+		if ((inp) && (stcb)) {
+			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
+		} else if ((inp != NULL) && (stcb == NULL)) {
+			refcount_up = 1;
+#if defined(SCTP_PER_SOCKET_LOCKING)
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
+#endif
+		}
+		SCTP_STAT_INCR(sctps_badsum);
+		SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
+		goto bad;
+	}
+	sh->checksum = calc_check;
  sctp_skip_csum_4:
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
