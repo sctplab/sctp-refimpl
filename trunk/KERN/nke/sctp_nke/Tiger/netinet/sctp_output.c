@@ -2642,7 +2642,9 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 						 uint8_t dest_is_loop, 
 						 uint8_t dest_is_priv, 
 						 int addr_wanted,
-						 sa_family_t fam)
+						 sa_family_t fam,
+						 sctp_route_t *ro
+						 )
 {
 	struct sctp_ifa *ifa, *sifa;
 	int num_eligible_addr = 0;
@@ -2655,7 +2657,7 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 						  dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
-#if defined(__FreeBSD__) /* || defined(__APPLE__) */
+#if defined(__FreeBSD__) || defined(__APPLE__) 
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted 
 		   from the interface. Then, the interface has previous and 
@@ -2664,7 +2666,7 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 		 */
 		if (stcb && fam == AF_INET6 &&
 		    sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
-			if (sctp_v6src_match_nexthop(&ifa->address.sin6) 
+			if (sctp_v6src_match_nexthop(&ifa->address.sin6, ro) 
 			    == 0) {
 				continue;
 			}
@@ -2803,7 +2805,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "cur_addr_num:%d\n", cur_addr_num);
 
 	sctp_ifa = sctp_select_nth_preferred_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, dest_is_loop,
-								   dest_is_priv, cur_addr_num, fam);
+								   dest_is_priv, cur_addr_num, fam, ro);
 
 	/* if sctp_ifa is NULL something changed??, fall to plan b. */
 	if (sctp_ifa) {
@@ -2856,7 +2858,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			cur_addr_num = 0;
 		}
 		sifa = sctp_select_nth_preferred_addr_from_ifn_boundall(sctp_ifn, stcb, non_asoc_addr_ok, dest_is_loop,
-								       dest_is_priv, cur_addr_num, fam);
+								       dest_is_priv, cur_addr_num, fam, ro);
 		if (sifa == NULL)
 			continue;
 		if (net) {
@@ -11947,11 +11949,14 @@ sctp_lower_sosend(struct socket *so,
  		local_add_more = uio->uio_resid;
 	}
 	len = 0;
-	if ((max_len < local_add_more) && 
-	    (SCTP_SB_LIMIT_SND(so) > local_add_more)) {
+	if (((max_len < local_add_more) && 
+	    (SCTP_SB_LIMIT_SND(so) > local_add_more)) ||
+	    ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) > sctp_max_chunks_on_queue)) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+		while ((SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) ||
+		       ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) > sctp_max_chunks_on_queue)) {
+
 			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 					       so, asoc, uio->uio_resid);
@@ -11980,7 +11985,6 @@ sctp_lower_sosend(struct socket *so,
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
 			}
-
 		}
 		if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
 			max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
@@ -12532,9 +12536,6 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if ((queue_only == 0) && (nagle_applies == 0) && (stcb->asoc.peers_rwnd && un_sent)) {
 		/* we can attempt to send too. */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#endif
 		if (hold_tcblock == 0) {
 			/* If there is activity recv'ing sacks no need to send */
 			if(SCTP_TCB_TRYLOCK(stcb)) {
@@ -12544,24 +12545,15 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 1);
 		}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
 		   (stcb->asoc.total_flight == 0)) {
 		/* We get to have a probe outstanding */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		s = splsoftnet();
-#endif
 		if (hold_tcblock == 0) {
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 1);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 	} else if (some_on_control) {
 		int num_out, reason, cwnd_full, frag_point;
 
@@ -12716,12 +12708,16 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 	return (m);
 }
 
-#if defined(__FreeBSD__) /* || defined(__APPLE__) */
+#if defined(__FreeBSD__)  || defined(__APPLE__) 
 int
-sctp_v6src_match_nexthop(struct sockaddr_in6 *src6)
+sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 {
 	struct nd_prefix *pfx = NULL;
 	struct nd_pfxrouter *pfxrtr = NULL;
+	struct sockaddr_in6 gw6;
+
+	if (ro == NULL || ro->ro_rt == NULL)
+		return (0);
 
 	/* get prefix entry of address */
 	LIST_FOREACH(pfx, &nd_prefix, ndpr_entry) {
@@ -12738,12 +12734,22 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6)
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "v6src_match_nexthop()\n");
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Prefix entry for ");
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)src6);
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "found\n");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "is found\n");
 
-	/* search installed default router from prefix entry */
-	for (pfxrtr = pfx->ndpr_advrtrs.lh_first; pfxrtr; pfxrtr = 
-	    pfxrtr->pfr_next) {
-		if (pfxrtr->router->installed) {
+	/* search installed gateway from prefix entry */
+	for (pfxrtr = pfx->ndpr_advrtrs.lh_first; pfxrtr; pfxrtr =
+	     pfxrtr->pfr_next) {
+		memset(&gw6, 0, sizeof(struct sockaddr_in6));
+		gw6.sin6_family = AF_INET6;
+		gw6.sin6_len = sizeof(struct sockaddr_in6);
+		memcpy(&gw6.sin6_addr, &pfxrtr->router->rtaddr, 
+		    sizeof(struct in6_addr));
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "prefix router is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)&gw6);
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "installed router is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, ro->ro_rt->rt_gateway);
+		if (sctp_cmpaddr((struct sockaddr *)&gw6, 
+				ro->ro_rt->rt_gateway)) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix matches installed gateway\n");
 			return (1);
 		}
