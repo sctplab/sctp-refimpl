@@ -61,7 +61,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.39 2007/07/21 21:41:30 rrs
 void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	uint32_t calc, calc_w_oh;
+	uint32_t calc, calc_save;
 
 	/*
 	 * This is really set wrong with respect to a 1-2-m socket. Since
@@ -96,32 +96,34 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		return;
 	}
 	/* what is the overhead of all these rwnd's */
-	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
+
+	calc = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
+	calc_save = calc;
+
 	asoc->my_rwnd = calc;
-	if (calc_w_oh == 0) {
-		/*
-		 * If our overhead is greater than the advertised rwnd, we
-		 * clamp the rwnd to 1. This lets us still accept inbound
-		 * segments, but hopefully will shut the sender down when he
-		 * finally gets the message.
-		 */
+	if ((asoc->my_rwnd == 0) && 
+	    (calc < stcb->asoc.my_rwnd_control_len)) {
+		/*-
+		 * If our rwnd == 0 && the overhead is greater than the 
+ 		 * data onqueue, we clamp the rwnd to 1. This lets us 
+ 		 * still accept inbound segments, but hopefully will shut 
+ 		 * the sender down when he finally gets the message. This
+		 * hopefully will gracefully avoid discarding packets.
+ 		 */
 		asoc->my_rwnd = 1;
-	} else {
-		/* SWS threshold */
-		if (asoc->my_rwnd &&
-		    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
-			/* SWS engaged, tell peer none left */
-			asoc->my_rwnd = 1;
-		}
+	}
+	if (asoc->my_rwnd &&
+	    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
+		/* SWS engaged, tell peer none left */
+		asoc->my_rwnd = 1;
 	}
 }
 
 /* Calculate what the rwnd would be */
-
 uint32_t 
 sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	uint32_t calc=0, calc_w_oh;
+	uint32_t calc=0, calc_save=0, result=0;
 
 	/*
 	 * This is really set wrong with respect to a 1-2-m socket. Since
@@ -155,24 +157,27 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		return (calc);
 	}
 	/* what is the overhead of all these rwnd's */
-	calc_w_oh = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
-	if (calc_w_oh == 0) {
-		/*
-		 * If our overhead is greater than the advertised rwnd, we
-		 * clamp the rwnd to 1. This lets us still accept inbound
-		 * segments, but hopefully will shut the sender down when he
-		 * finally gets the message.
-		 */
-		calc = 1;
-	} else {
-		/* SWS threshold */
-		if (calc &&
-		    (calc < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
-			/* SWS engaged, tell peer none left */
-			calc = 1;
-		}
+	calc = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
+	calc_save = calc;
+
+	result = calc;
+	if ((result == 0) && 
+	    (calc < stcb->asoc.my_rwnd_control_len)) {
+		/*-
+		 * If our rwnd == 0 && the overhead is greater than the 
+ 		 * data onqueue, we clamp the rwnd to 1. This lets us 
+ 		 * still accept inbound segments, but hopefully will shut 
+ 		 * the sender down when he finally gets the message. This
+		 * hopefully will gracefully avoid discarding packets.
+ 		 */
+		result = 1;
 	}
-	return (calc);
+	if (asoc->my_rwnd &&
+	    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
+		/* SWS engaged, tell peer none left */
+		result = 1;
+	}
+	return (result);
 }
 
 
