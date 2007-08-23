@@ -3381,7 +3381,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
-					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
 				} 
 			} else {
 				/* mark into shutdown pending */
@@ -3437,6 +3437,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						cnt_in_sd++;
 					}
 					continue;
+				} else {
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
 				}
 			}
 			cnt_in_sd++;

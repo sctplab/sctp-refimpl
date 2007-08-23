@@ -11910,11 +11910,14 @@ sctp_lower_sosend(struct socket *so,
  		local_add_more = uio->uio_resid;
 	}
 	len = 0;
-	if ((max_len < local_add_more) && 
-	    (SCTP_SB_LIMIT_SND(so) > local_add_more)) {
+	if (((max_len < local_add_more) && 
+	    (SCTP_SB_LIMIT_SND(so) > local_add_more)) ||
+	    ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) > sctp_max_chunks_on_queue)) {
 		/* No room right no ! */
 		SOCKBUF_LOCK(&so->so_snd);
-		while(SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) {
+		while ((SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) ||
+		       ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) > sctp_max_chunks_on_queue)) {
+
 			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 					       so, asoc, uio->uio_resid);
@@ -11943,7 +11946,6 @@ sctp_lower_sosend(struct socket *so,
 			if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				goto out_unlocked;
 			}
-
 		}
 		if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
 			max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
@@ -12420,6 +12422,7 @@ sctp_lower_sosend(struct socket *so,
 				}
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
+				sctp_feature_off(inp, SCTP_PCB_FLAGS_NODELAY);
 			}
 		}
 	}
