@@ -102,4 +102,6 @@
   when we close sending out the data and disabling Nagle.
 - Change key concatenation order to match the auth RFC
 - When sending OOTB shutdown_complete always do csum.
-
+- Don't send PKT-DROP to a PKT-DROP
+- check for no checksum on loopback now only disables
+  checksum if the src/dest is the same.
