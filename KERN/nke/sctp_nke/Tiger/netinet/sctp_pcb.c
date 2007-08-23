@@ -2243,6 +2243,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		return (EOPNOTSUPP);
 	}
+
 	if(sctp_default_frag_interleave == SCTP_FRAG_LEVEL_1) {
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
@@ -2253,6 +2254,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 	}
+
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
@@ -3437,6 +3439,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						cnt_in_sd++;
 					}
 					continue;
+				} else {
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
 				}
 			}
 			cnt_in_sd++;
@@ -5775,6 +5779,24 @@ sctp_pcb_finish(void)
 	if (sctppcbinfo.thread_proc != THREAD_NULL) {
 		thread_terminate(sctppcbinfo.thread_proc);
 		sctppcbinfo.thread_proc = THREAD_NULL;
+	}
+#endif
+#elif defined(__Windows__)
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	if (sctppcbinfo.iterator_thread_obj != NULL) {
+		KIRQL oldIrql;
+		NTSTATUS status = STATUS_SUCCESS;
+
+		KeLowerIrql(PASSIVE_LEVEL);
+		KeSetEvent(&sctppcbinfo.iterator_wakeup[1], IO_NO_INCREMENT, FALSE);
+		status = KeWaitForSingleObject(sctppcbinfo.iterator_thread_obj,
+					       Executive,
+					       KernelMode,
+					       FALSE,
+					       NULL);
+		ObDereferenceObject(sctppcbinfo.iterator_thread_obj);
+
+		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 	}
 #endif
 #endif

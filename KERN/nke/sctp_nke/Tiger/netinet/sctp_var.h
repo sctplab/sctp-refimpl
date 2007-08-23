@@ -371,6 +371,14 @@ struct sctp_inpcb;
 struct sctp_tcb;
 struct sctphdr;
 
+
+#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+void sctp_close(struct socket *so);
+#else
+int sctp_detach(struct socket *so);
+#endif
+int sctp_disconnect(struct socket *so);
+
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
