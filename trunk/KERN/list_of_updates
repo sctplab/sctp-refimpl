@@ -105,3 +105,9 @@
 - Don't send PKT-DROP to a PKT-DROP
 - check for no checksum on loopback now only disables
   checksum if the src/dest is the same.
+- For abort chunks just always checksums same for
+  shutdown-complete
+- inpcb_free front state had a bug where in queue
+  data could wedge an assoc. We need to just abandon
+  ones in front states (free_assoc).
+

@@ -3308,15 +3308,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * or connect/send/close. And it wants the data
 				 * to get across first.
 				 */
-                               if(asoc->asoc.total_output_queue_size == 0) {
-				       /* Just abandon things in the front states */
-
-				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
-							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
-					       cnt_in_sd++;
-				       }
-				       continue;
-			       }
+				/* Just abandon things in the front states */
+				
+				if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
+						   SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+					cnt_in_sd++;
+				}
+				continue;
 			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
