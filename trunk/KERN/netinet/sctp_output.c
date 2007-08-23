@@ -9633,11 +9633,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(mout)){
-		comp_cp->sh.checksum = 0;
-	} else {
-		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
-	}
+	comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
 	if (iph_out != NULL) {
 		sctp_route_t ro;
 		int ret;
