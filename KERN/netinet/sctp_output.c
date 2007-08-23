@@ -2657,7 +2657,7 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 						  dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
-#if defined(__FreeBSD__) /* || defined(__APPLE__) */
+#if defined(__FreeBSD__) || defined(__APPLE__) 
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted 
 		   from the interface. Then, the interface has previous and 
@@ -12667,7 +12667,7 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 	return (m);
 }
 
-#if defined(__FreeBSD__) /* || defined(__APPLE__) */
+#if defined(__FreeBSD__)  || defined(__APPLE__) 
 int
 sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 {
@@ -12693,7 +12693,7 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "v6src_match_nexthop()\n");
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Prefix entry for ");
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)src6);
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "found\n");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "is found\n");
 
 	/* search installed gateway from prefix entry */
 	for (pfxrtr = pfx->ndpr_advrtrs.lh_first; pfxrtr; pfxrtr =
@@ -12703,8 +12703,10 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 		gw6.sin6_len = sizeof(struct sockaddr_in6);
 		memcpy(&gw6.sin6_addr, &pfxrtr->router->rtaddr, 
 		    sizeof(struct in6_addr));
-		SCTPDBG(SCTP_DEBUG_OUTPUT2, "gateway is ");
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "prefix router is ");
 		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)&gw6);
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "installed router is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, ro->ro_rt->rt_gateway);
 		if (sctp_cmpaddr((struct sockaddr *)&gw6, 
 				ro->ro_rt->rt_gateway)) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix matches installed gateway\n");
