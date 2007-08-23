@@ -754,7 +754,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 }
 
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
-static void
+void
 sctp_close(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -814,13 +814,8 @@ sctp_close(struct socket *so)
 
 #else
 
-#if defined(__Panda__) || defined(__Windows__)
+
 int
-#elif defined(__FreeBSD__) && __FreeBSD_version > 690000
-static void
-#else
-static int
-#endif
 sctp_detach(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -1005,11 +1000,7 @@ connected_type:
 }
 #endif
 
-#if defined(__Panda__) || defined(__Windows__)
 int
-#else
-static int
-#endif
 sctp_disconnect(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -1180,6 +1171,8 @@ sctp_disconnect(struct socket *so)
 					splx(s);
 #endif
 					return (0);
+				} else {
+					sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING);
 				}
 			}
 			SCTP_TCB_UNLOCK(stcb);
@@ -1334,6 +1327,8 @@ sctp_shutdown(struct socket *so)
 							  SCTP_RESPONSE_TO_USER_REQ,
 							  op_err);
 				goto skip_unlock;
+			} else {
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING);
 			}
 		}
 		SCTP_TCB_UNLOCK(stcb);
