@@ -30,7 +30,7 @@
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.36 2007/07/24 20:06:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.37 2007/08/24 00:53:53 rrs Exp $");
 #endif
 
 
@@ -155,7 +155,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	int length, mlen, offset, iphlen;
 	uint8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
-    int pkt_len = 0;
+	int pkt_len = 0;
 #ifndef __Panda__
 	int off = *offp;
 #else
@@ -237,56 +237,45 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0)
 		goto bad;
-	if ((sctp_no_csum_on_loopback == 0) ||
-	    (!SCTP_IS_IT_LOOPBACK(m))) {
-		/*
-		 * we do NOT validate things from the loopback if the sysctl
-		 * is set to 1.
-		 */
-		check = sh->checksum;	/* save incoming checksum */
-		if ((check == 0) && (sctp_no_csum_on_loopback)) {
-			/*
-			 * special hook for where we got a local address
-			 * somehow routed across a non IFT_LOOP type
-			 * interface
-			 */
-			if (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))
-				goto sctp_skip_csum;
-		}
-		sh->checksum = 0;	/* prepare for calc */
-		calc_check = sctp_calculate_sum(m, &mlen, iphlen);
-		if (calc_check != check) {
-			SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-				calc_check, check, m, mlen, iphlen);
-			stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-			    sh, ch, &in6p, &net, vrf_id);
-			/* in6p's ref-count increased && stcb locked */
-			if ((in6p) && (stcb)) {
-				sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-				sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, 0);
+	check = sh->checksum;	/* save incoming checksum */
+	if ((check == 0) && (sctp_no_csum_on_loopback) &&
+	    (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))) {
+		goto sctp_skip_csum;
+	}
+	sh->checksum = 0;	/* prepare for calc */
+	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+	if (calc_check != check) {
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
+			calc_check, check, m, mlen, iphlen);
+		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+						 sh, ch, &in6p, &net, vrf_id);
+		/* in6p's ref-count increased && stcb locked */
+		if ((in6p) && (stcb)) {
+			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
+			sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
 #if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
-			} else if ((in6p != NULL) && (stcb == NULL)) {
+		} else if ((in6p != NULL) && (stcb == NULL)) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
+			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
-				refcount_up = 1;
-			}
-			SCTP_STAT_INCR(sctps_badsum);
-			SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
-			goto bad;
+			refcount_up = 1;
 		}
-		sh->checksum = calc_check;
-	} 
-sctp_skip_csum:
+		SCTP_STAT_INCR(sctps_badsum);
+		SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
+		goto bad;
+	}
+	sh->checksum = calc_check;
+
+ sctp_skip_csum:
 	net = NULL;
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
 	 */
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
-	    sh, ch, &in6p, &net, vrf_id);
+					 sh, ch, &in6p, &net, vrf_id);
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
@@ -299,8 +288,8 @@ sctp_skip_csum:
 			 * common header.
 			 */
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
-			    iphlen + sizeof(*sh), sizeof(*init_chk),
-			    (uint8_t *) & chunk_buf);
+									   iphlen + sizeof(*sh), sizeof(*init_chk),
+									   (uint8_t *) & chunk_buf);
 			if(init_chk)
 				sh->v_tag = init_chk->init.initiate_tag;
 			else 
@@ -349,9 +338,9 @@ sctp_skip_csum:
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-    /*sa_ignore NO_NULL_CHK*/
+	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-	    in6p, stcb, net, ecn_bits, vrf_id);
+				     in6p, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
@@ -367,7 +356,7 @@ sctp_skip_csum:
 	}
 	return IPPROTO_DONE;
 
-bad:
+ bad:
 	if (stcb) {
 		SCTP_TCB_UNLOCK(stcb);
 	}
