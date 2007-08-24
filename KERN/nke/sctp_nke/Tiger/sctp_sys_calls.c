@@ -941,7 +941,7 @@ int
 sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 {
 	struct sctp_peeloff_opt peeloff;
-	int error;
+	int result;
 	socklen_t optlen;
 
 	/* set in the socket option params */
@@ -949,10 +949,9 @@ sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 	peeloff.s = sd;
 	peeloff.assoc_id = assoc_id;
 	optlen = sizeof(peeloff);
-	error = getsockopt(sd, IPPROTO_SCTP, SCTP_PEELOFF, (void *)&peeloff,
-	    &optlen);
-	if (error) {
-		errno = error;
+	result = getsockopt(sd, IPPROTO_SCTP, SCTP_PEELOFF, (void *)&peeloff, &optlen);
+	
+	if (result < 0) {
 		return (-1);
 	} else {
 		return (peeloff.new_sd);
