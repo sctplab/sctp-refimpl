@@ -180,11 +180,9 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	struct fileproc *fp;
 	int error;
 	struct socket *head, *so = NULL;
-	lck_mtx_t *mutex_held;
 	int fd = uap->s;
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
-	int dosocklock = 0;
 
 	/* AUDIT_ARG(fd, uap->s); */
 	error = fp_getfsock(p, fd, &fp, &head);
@@ -198,21 +196,11 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	if (head->so_proto->pr_getlock != NULL)  {
-		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
-		dosocklock = 1;
-	}
-	else {
-		mutex_held = head->so_proto->pr_domain->dom_mtx;
-		dosocklock = 0;
-	}
-
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
 		return (error);
 	}
 
-	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
 	fflag = fp->f_flag;
 	proc_fdlock(p);
@@ -231,6 +219,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 	*fdflags(p, newfd) &= ~UF_RESERVED;
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
+
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
@@ -240,12 +229,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-        if (dosocklock)
-                socket_lock(so, 1);
+	/* sctp_get_peeloff() returns a new locked socket */
         so->so_state &= ~SS_COMP;
         so->so_head = NULL;
-        if (dosocklock)
-                socket_unlock(so, 1);
+	socket_unlock(so, 1);
 out:
 	file_drop(fd);
 	return (error);
