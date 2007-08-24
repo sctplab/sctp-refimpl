@@ -198,8 +198,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		goto out;
 	}
 
-	socket_lock(head, 1);
-
 	if (head->so_proto->pr_getlock != NULL)  {
 		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
 		dosocklock = 1;
@@ -211,7 +209,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-		socket_unlock(head, 1);
 		return (error);
 	}
 
@@ -229,10 +226,12 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		 */
 		/* SCTP will NOT put the connection back onto queue */
 		proc_fdunlock(p);
+		socket_lock(head, 0);
 		goto out;
 	}
 	*fdflags(p, newfd) &= ~UF_RESERVED;
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
+	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	fp->f_type = DTYPE_SOCKET;
@@ -241,7 +240,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-        socket_lock(head, 0);
         if (dosocklock)
                 socket_lock(so, 1);
         so->so_state &= ~SS_COMP;
