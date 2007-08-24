@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.56 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.57 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3817,6 +3817,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((chk_length > SCTP_LARGEST_INIT_ACCEPTED) ||
 			    (num_chunks > 1) ||
 			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
+				printf("chk_length:%d > large:%d\n",
+				       chk_length, SCTP_LARGEST_INIT_ACCEPTED);
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -5062,7 +5064,9 @@ sctp_input(i_pak, va_alist)
 	/* validate SCTP checksum */
 	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (sctp_no_csum_on_loopback) &&
-	    (ip->ip_src.s_addr == ip->ip_dst.s_addr)) {
+	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
+	     (SCTP_IS_IT_LOOPBACK(m)))
+		) {
 			goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
