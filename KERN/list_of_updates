@@ -41,3 +41,7 @@
   discard it early without all the processing.
 - When we peel off we must increment the tcb ref count
   to keep it from being freed from underneath us.
+- handling fwd-tsn had bugs that caused memory overwrites
+  when given faulty data, fixed so can't happen and we
+  also stop at the first bad stream no.
+- Fixed so comm-up generates the adaption indication.
