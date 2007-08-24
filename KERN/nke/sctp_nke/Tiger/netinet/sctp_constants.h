@@ -59,6 +59,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
  */
 #define SCTP_ADDRESS_LIMIT 1080
 
+/* We need at least 2k of space for us, inits
+ * larger than that lets abort.
+ */
+#define SCTP_LARGEST_INIT_ACCEPTED (65535 - 2048)
+
 /* Number of addresses where we just skip the counting */
 #define SCTP_COUNT_LIMIT 40
 

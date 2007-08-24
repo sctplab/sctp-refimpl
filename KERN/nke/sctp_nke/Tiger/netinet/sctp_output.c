@@ -9660,11 +9660,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(mout)){
-		comp_cp->sh.checksum = 0;
-	} else {
-		comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
-	}
+	comp_cp->sh.checksum = sctp_calculate_sum(mout, NULL, offset_out);
 	if (iph_out != NULL) {
 		sctp_route_t ro;
 		int ret;
@@ -10069,8 +10065,12 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 			break;
 		}
 		switch (ch->chunk_type) {
+		case SCTP_PACKET_DROPPED:
 		case SCTP_ABORT_ASSOCIATION:
-			/* we don't respond with an PKT-DROP to an ABORT */
+			/*-
+			 * we don't respond with an PKT-DROP to an ABORT 
+			 * or PKT-DROP
+			 */
 			return;
 		default:
 			break;
@@ -10562,6 +10562,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		abm = (struct sctp_abort_msg *)((caddr_t)ip6_out + iphlen_out);
 	} else {
 		/* Currently not supported */
+		if (err_cause)
+			sctp_m_freem(err_cause);
+		sctp_m_freem(mout);
 		return;
 	}
 
@@ -10603,11 +10606,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
-		abm->sh.checksum = 0;
-	} else {
-		abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
-	}
+	abm->sh.checksum = sctp_calculate_sum(mout, NULL, iphlen_out);
 	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
@@ -10731,11 +10730,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		m_copyback(scm, len, padlen, (caddr_t)&cpthis);
 		len += padlen;
 	}
-	if ((sctp_no_csum_on_loopback) && SCTP_IS_IT_LOOPBACK(m)) {
-		val = 0;
-	} else {
-		val = sctp_calculate_sum(scm, NULL, 0);
-	}
+	val = sctp_calculate_sum(scm, NULL, 0);
 	mout = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr), 1, M_DONTWAIT, 1, MT_DATA);
 	if(mout == NULL) {
 		sctp_m_freem(scm);
@@ -11686,10 +11681,8 @@ sctp_lower_sosend(struct socket *so,
 
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NO_FRAGMENT)) {
 		if(sndlen > asoc->smallest_mtu) {
+			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
 			error = EMSGSIZE;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11703,9 +11696,6 @@ sctp_lower_sosend(struct socket *so,
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EWOULDBLOCK);
 			error = EWOULDBLOCK;
 			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11755,9 +11745,6 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_OUTPUT, ECONNRESET);
 			error = ECONNRESET;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			goto out_unlocked;
 		}
 	}
@@ -11914,9 +11901,6 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_TCB_UNLOCK(stcb);
 		hold_tcblock = 0;
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	/* Is the stream no. valid? */
 	if (srcv->sinfo_stream >= asoc->streamoutcnt) {
 		/* Invalid stream number */
@@ -12461,6 +12445,7 @@ sctp_lower_sosend(struct socket *so,
 				}
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
 						 asoc->primary_destination);
+				sctp_feature_off(inp, SCTP_PCB_FLAGS_NODELAY);
 			}
 		}
 	}

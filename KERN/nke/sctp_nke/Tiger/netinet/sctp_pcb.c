@@ -2243,7 +2243,6 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		return (EOPNOTSUPP);
 	}
-
 	if(sctp_default_frag_interleave == SCTP_FRAG_LEVEL_1) {
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
@@ -2254,7 +2253,6 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 	}
-
 	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
@@ -3025,7 +3023,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
-			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_SETPRIM);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
 		}
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 
@@ -3036,7 +3034,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_FASTHANDOFF);
-			sctp_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		}
 	} else {
 		/*
@@ -3310,15 +3308,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * or connect/send/close. And it wants the data
 				 * to get across first.
 				 */
-                               if(asoc->asoc.total_output_queue_size == 0) {
-				       /* Just abandon things in the front states */
-
-				       if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
-							  SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
-					       cnt_in_sd++;
-				       }
-				       continue;
-			       }
+				/* Just abandon things in the front states */
+				if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
+						   SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
+					cnt_in_sd++;
+				}
+				continue;
 			}
 			/* Disconnect the socket please */
 			asoc->sctp_socket = NULL;
