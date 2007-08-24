@@ -693,6 +693,8 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		}
 		SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 
+		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, 
+				SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
 		/* start SHUTDOWN timer */
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
 				 stcb, net);
@@ -3910,12 +3912,21 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_sack_chunk))) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on sack chunk, too small\n");
+				ignore_sack:
 					*offset = length;
 					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
 					}
 					return (NULL);
 				}
+				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
+					/*-
+					 * If we have sent a shutdown-ack, we will pay no
+					 * attention to a sack sent in to us since
+					 * we don't care anymore.
+					 */
+ 					goto ignore_sack;
+				} 
 				sack = (struct sctp_sack_chunk *)ch;
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
 				cum_ack = ntohl(sack->sack.cum_tsn_ack);

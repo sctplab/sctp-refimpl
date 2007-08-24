@@ -878,7 +878,7 @@ struct sctp_association {
 	uint32_t refcnt;
 	uint32_t chunks_on_out_queue;	/* total chunks floating around,
 					 * locked by send socket buffer */
-
+	uint32_t peers_adaptation;
 	uint16_t peer_hmac_id;	/* peer HMAC id to send */
 
 	/*
@@ -1009,6 +1009,8 @@ struct sctp_association {
 	uint8_t saw_sack_with_frags;
 	uint8_t in_restart_hash;
 	uint8_t assoc_up_sent;
+	uint8_t adaptation_needed;
+	uint8_t adaptation_sent;
 	/* CMT variables */
 	uint8_t cmt_dac_pkts_rcvd;
 	uint8_t sctp_cmt_on_off;
