@@ -6187,8 +6187,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 							   (struct sctp_paramhdr *)&ai, sizeof(ai));
 				aip = (struct sctp_adaptation_layer_indication *)phdr;
 				if(aip) {
-					sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
-							stcb, ntohl(aip->indication), NULL);
+					stcb->asoc.peers_adaptation = ntohl(aip->indication);
+					stcb->asoc.adaptation_needed = 1;
 				} 
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {

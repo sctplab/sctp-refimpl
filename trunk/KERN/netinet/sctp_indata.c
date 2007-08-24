@@ -5186,7 +5186,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * report where we are.
 	 */
 	struct sctp_association *asoc;
-	uint32_t new_cum_tsn, gap, back_out_htsn;
+	uint32_t new_cum_tsn, gap;
 	unsigned int i, cnt_gone, fwd_sz, cumack_set_flag, m_size;
 	struct sctp_stream_in *strm;
 	struct sctp_tmit_chunk *chk, *at;
@@ -5210,7 +5210,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		/* Already got there ... */
 		return;
 	}
-	back_out_htsn = asoc->highest_tsn_inside_map;
 	if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_map,
 			      MAX_TSN)) {
 		asoc->highest_tsn_inside_map = new_cum_tsn;
@@ -5231,8 +5230,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		gap = new_cum_tsn + (MAX_TSN - asoc->mapping_array_base_tsn) + 1;
 	}
 
-	if (gap > m_size) {
-		asoc->highest_tsn_inside_map = back_out_htsn;
+	if (gap >= m_size) {
 		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 		}
@@ -5265,46 +5263,39 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 						  SCTP_PEER_FAULTY, oper);
 			return;
 		}
-		if (asoc->highest_tsn_inside_map >
-		    asoc->mapping_array_base_tsn) {
-			gap = asoc->highest_tsn_inside_map -
-				asoc->mapping_array_base_tsn;
-		} else {
-			gap = asoc->highest_tsn_inside_map +
-				(MAX_TSN - asoc->mapping_array_base_tsn) + 1;
-		}
 		SCTP_STAT_INCR(sctps_fwdtsn_map_over);
+	slide_out:
+		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		cumack_set_flag = 1;
-	}
-	SCTP_TCB_LOCK_ASSERT(stcb);
-	for (i = 0; i <= gap; i++) {
-		SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
-	}
-	/*
-	 * Now after marking all, slide thing forward but no sack please.
-	 */
-	sctp_sack_check(stcb, 0, 0, abort_flag);
-	if (*abort_flag)
-		return;
+		asoc->mapping_array_base_tsn = new_cum_tsn + 1;
+		asoc->cumulative_tsn = asoc->highest_tsn_inside_map = new_cum_tsn;
 
-	if (cumack_set_flag) {
-		/*
-		 * fwd-tsn went outside my gap array - not a common
-		 * occurance. Do the same thing we do when a cookie-echo
-		 * arrives.
-		 */
-		asoc->highest_tsn_inside_map = new_cum_tsn - 1;
-		asoc->mapping_array_base_tsn = new_cum_tsn;
-		asoc->cumulative_tsn = asoc->highest_tsn_inside_map;
 		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 3, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 		}
 		asoc->last_echo_tsn = asoc->highest_tsn_inside_map;
+
+	} else {
+		SCTP_TCB_LOCK_ASSERT(stcb);
+		if ((compare_with_wrap(((uint32_t)asoc->cumulative_tsn+gap),asoc->highest_tsn_inside_map, MAX_TSN)) ||
+		    (((uint32_t)asoc->cumulative_tsn+gap) == asoc->highest_tsn_inside_map)) {
+			goto slide_out;
+		} else {
+			for (i = 0; i <= gap; i++) {
+				SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
+			}
+		}
+		/*
+		 * Now after marking all, slide thing forward but no sack please.
+		 */
+		sctp_sack_check(stcb, 0, 0, abort_flag);
+		if (*abort_flag)
+			return;
 	}
+
 	/*************************************************************/
 	/* 2. Clear up re-assembly queue                             */
 	/*************************************************************/
-
 	/*
 	 * First service it if pd-api is up, just in case we can progress it
 	 * forward
