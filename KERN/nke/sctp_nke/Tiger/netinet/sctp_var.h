@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.16 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.17 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -105,19 +105,24 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_free_a_chunk(_stcb, _chk) { \
-        SCTP_TCB_LOCK_ASSERT((_stcb)); \
-        if ((_chk)->whoTo) { \
-                sctp_free_remote_addr((_chk)->whoTo); \
-                (_chk)->whoTo = NULL; \
-	} \
-	if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
-	    (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
+        if(_stcb) { \
+          SCTP_TCB_LOCK_ASSERT((_stcb)); \
+          if ((_chk)->whoTo) { \
+                  sctp_free_remote_addr((_chk)->whoTo); \
+                  (_chk)->whoTo = NULL; \
+          } \
+          if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
+               (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
+	 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+	 	SCTP_DECR_CHK_COUNT(); \
+	  } else { \
+	 	TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
+	 	(_stcb)->asoc.free_chunk_cnt++; \
+	 	atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+          } \
+        } else { \
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
 		SCTP_DECR_CHK_COUNT(); \
-	} else { \
-		TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
-		(_stcb)->asoc.free_chunk_cnt++; \
-		atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
 	} \
 }
 

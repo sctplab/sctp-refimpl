@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.26 2007/08/24 00:53:51 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -834,9 +834,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.25 2007/08/06 15:46:46 
 #define SCTP_NOTIFY_ASCONF_DELETE_IP	16
 #define SCTP_NOTIFY_ASCONF_SET_PRIMARY	17
 #define SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION 18
-#define SCTP_NOTIFY_ADAPTATION_INDICATION       19
-/* same as above */
-#define SCTP_NOTIFY_ADAPTION_INDICATION         19
 #define SCTP_NOTIFY_INTERFACE_CONFIRMED 20
 #define SCTP_NOTIFY_STR_RESET_RECV      21
 #define SCTP_NOTIFY_STR_RESET_SEND      22

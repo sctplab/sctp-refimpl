@@ -3021,11 +3021,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		*/
 		if (sctp_mobility_base == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
 		}
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 
@@ -6189,8 +6187,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 							   (struct sctp_paramhdr *)&ai, sizeof(ai));
 				aip = (struct sctp_adaptation_layer_indication *)phdr;
 				if(aip) {
-					sctp_ulp_notify(SCTP_NOTIFY_ADAPTATION_INDICATION,
-							stcb, ntohl(aip->indication), NULL, 0);
+					stcb->asoc.peers_adaptation = ntohl(aip->indication);
+					stcb->asoc.adaptation_needed = 1;
 				} 
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {
