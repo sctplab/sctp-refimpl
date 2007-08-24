@@ -252,7 +252,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		/* in6p's ref-count increased && stcb locked */
 		if ((in6p) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-			sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, 2);
+			sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, 0);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
 #endif
