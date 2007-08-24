@@ -3021,11 +3021,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		*/
 		if (sctp_mobility_base == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_SETPRIM);
 		}
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 

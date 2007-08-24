@@ -1161,7 +1161,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later whe
 	 * the association is freed.
 	 */
-	asoc->asconf_addr_setprim_pending = NULL;
 	return (0);
 }
 

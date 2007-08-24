@@ -3970,17 +3970,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				stcb->asoc.overall_error_count = 0;
 			}
-			/* if need, send SET_PRIMARY (by micchie) */
-			if (sctp_is_mobility_feature_on(inp, 
-			    SCTP_MOBILITY_DO_SETPRIM)) {
-				if (sctp_set_primary_ip_address_sa(stcb, &stcb->asoc.asconf_addr_setprim_pending->address.sa)) {
-					sctp_mobility_feature_off(inp, 
-					    SCTP_MOBILITY_DO_SETPRIM);
-					return(NULL);
-				}
-				sctp_mobility_feature_off(inp, 
-				    SCTP_MOBILITY_DO_SETPRIM);
-			}
 			break;
 		case SCTP_HEARTBEAT_ACK:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_HEARTBEAT-ACK\n");
