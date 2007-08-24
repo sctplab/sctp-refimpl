@@ -2666,8 +2666,15 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 		 */
 		if (stcb && fam == AF_INET6 &&
 		    sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
-			if (sctp_v6src_match_nexthop(&ifa->address.sin6, ro) 
+			if (sctp_v6src_match_nexthop(&sifa->address.sin6, ro) 
 			    == 0) {
+				continue;
+			}
+		}
+		/* Avoid topologically incorrect IPv4 address */
+		if (stcb && fam == AF_INET &&
+		    sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
+			if (sctp_v4src_match_nexthop(sifa, ro) == 0) {
 				continue;
 			}
 		}
@@ -12673,7 +12680,7 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 	struct nd_pfxrouter *pfxrtr = NULL;
 	struct sockaddr_in6 gw6;
 
-	if (ro == NULL || ro->ro_rt == NULL)
+	if (ro == NULL || ro->ro_rt == NULL || src6->sin6_family != AF_INET6)
 		return (0);
 
 	/* get prefix entry of address */
@@ -12685,13 +12692,14 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 			break;
 	}
 	/* no prefix entry in the prefix list */
-	if (pfx == NULL)
+	if (pfx == NULL) {
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "No prefix entry for ");
+		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)src6);
 		return (0);
+	}
 
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "v6src_match_nexthop()\n");
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Prefix entry for ");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "v6src_match_nexthop(), Prefix entry is ");
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)src6);
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "is found\n");
 
 	/* search installed gateway from prefix entry */
 	for (pfxrtr = pfx->ndpr_advrtrs.lh_first; pfxrtr; pfxrtr =
@@ -12707,11 +12715,40 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 		SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, ro->ro_rt->rt_gateway);
 		if (sctp_cmpaddr((struct sockaddr *)&gw6, 
 				ro->ro_rt->rt_gateway)) {
-			SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix matches installed gateway\n");
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "pfxrouter is installed\n");
 			return(1);
 		}
 	}
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "This prefix does not match installed gatewa\n");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "pfxrouter is not installed\n");
 	return (0);
+}
+int
+sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
+{
+	struct sockaddr_in *sin, *mask;
+	struct ifaddr *ifa;
+	struct in_addr srcnetaddr, gwnetaddr;
+
+	if (ro == NULL || ro->ro_rt == NULL || 
+	    sifa->address.sa.sa_family != AF_INET) {
+		return(0);
+	}
+	ifa = (struct ifaddr *)sifa->ifa;
+	mask = (struct sockaddr_in *)(ifa->ifa_netmask);
+	sin = (struct sockaddr_in *)&sifa->address.sin;
+	srcnetaddr.s_addr = (sin->sin_addr.s_addr & mask->sin_addr.s_addr);
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "match_nexthop4: src address is ");
+	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, &sifa->address.sa);
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "network address is %x\n", srcnetaddr.s_addr);
+
+	sin = (struct sockaddr_in *)ro->ro_rt->rt_gateway;
+	gwnetaddr.s_addr = (sin->sin_addr.s_addr & mask->sin_addr.s_addr);
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "match_nexthop4: nexthop is ");
+	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, ro->ro_rt->rt_gateway);
+	SCTPDBG(SCTP_DEBUG_OUTPUT1, "network address is %x\n", gwnetaddr.s_addr);
+	if (srcnetaddr.s_addr == gwnetaddr.s_addr) {
+		return(1);
+	}
+	return(0);
 }
 #endif
