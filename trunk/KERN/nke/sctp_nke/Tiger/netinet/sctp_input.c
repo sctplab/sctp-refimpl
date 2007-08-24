@@ -5360,7 +5360,7 @@ sctp_input(i_pak, va_alist)
 						 vrf_id);
 		if ((inp) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, 0);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
