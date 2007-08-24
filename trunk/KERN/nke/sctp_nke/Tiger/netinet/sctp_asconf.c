@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.24 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.25 2007/08/24 00:53:51 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -959,15 +959,19 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 }
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
+static int
+sctp_asconf_queue_mgmt(struct sctp_tcb *, struct sctp_ifa *, uint16_t);
+
 static void
 sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_tmit_chunk *chk;
 
+	SCTPDBG(SCTP_DEBUG_ASCONF2, "net_immediate_retrans()\n");
+	SCTPDBG(SCTP_DEBUG_ASCONF2, "RTO is %d\n", net->RTO);
 	sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, stcb, net,
 	    SCTP_FROM_SCTP_TIMER+SCTP_LOC_5);
 	stcb->asoc.cc_functions.sctp_set_initial_cc_param(stcb, net);
-	net->RTO = 0;
 	net->error_count = 0;
 	TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 		if (chk->whoTo == net) {
@@ -981,69 +985,86 @@ static void
 sctp_path_check_and_react(struct sctp_tcb *stcb, struct sctp_ifa *newifa)
 {
 	struct sctp_nets *net;
-	int changed = 0;
+	int addrnum, changed;
 
+	/*   If number of local valid addresses is 1, the valid address is 
+	     probably newly added address.  
+	     Several valid addresses in this association.  A source address 
+	     may not be changed.  Additionally, they can be configured on a 
+	     same interface as "alias" addresses.  (by micchie) 
+	 */
+	addrnum = sctp_local_addr_count(stcb);
+	SCTPDBG(SCTP_DEBUG_ASCONF1, "p_check_react(): %d local addresses\n", 
+		addrnum);
+	if (addrnum == 1) {
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			/* clear any cached route and source address */
+			if (net->ro.ro_rt) {
+				RTFREE(net->ro.ro_rt);
+				net->ro.ro_rt = NULL;
+			}
+			if (net->src_addr_selected) {
+				sctp_free_ifa(net->ro._s_addr);
+				net->ro._s_addr = NULL;
+				net->src_addr_selected = 0;
+			}
+			/* Retransmit unacknowledged DATA chunks immediately */
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+		    		SCTP_MOBILITY_FASTHANDOFF)) {
+				sctp_net_immediate_retrans(stcb, net);
+			}
+			/* also, SET PRIMARY is maybe already sent */
+		}
+		return;
+	}
+
+	/* Multiple local addresses exsist in the association.  */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		struct sockaddr_storage old_gw;
-
-		changed = 0;
-		if (net->src_addr_selected == 0 || net->ro.ro_rt == NULL)
-			continue;
-		/* Store the old nexthop */
-		if (net->ro._l_addr.sa.sa_family == AF_INET) {
-			struct sockaddr_in *sin;
-			memset(&old_gw, 0, sizeof(struct sockaddr_storage));
-			sin = (struct sockaddr_in *)&old_gw;
-			memcpy(sin, 
-			    (struct sockaddr_in *)&net->ro.ro_rt->rt_gateway,
-			    sizeof(struct sockaddr_in));
-		}
-		if (net->ro._l_addr.sa.sa_family == AF_INET6) {
-			struct sockaddr_in6 *sin6;
-			sin6 = (struct sockaddr_in6 *)&old_gw;
-			memcpy(sin6, 
-			    (struct sockaddr_in6 *)&net->ro.ro_rt->rt_gateway,
-			    sizeof(struct sockaddr_in6));
-		}
-
-		SCTPDBG(SCTP_DEBUG_ASCONF2, "Previous nexthop is ");
-		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, (struct sockaddr *)&old_gw);
-		SCTPDBG(SCTP_DEBUG_ASCONF2, "\n");
-
-		/* Check the current next hop to the destination */
-		SCTP_RTALLOC((sctp_route_t *)&net->ro, 
-		    stcb->sctp_ep->def_vrf_id);
-
-		SCTPDBG(SCTP_DEBUG_ASCONF2, "Current nexthop is ");
-		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, net->ro.ro_rt->rt_gateway);
-		SCTPDBG(SCTP_DEBUG_ASCONF2, "\n");
-
-		changed = sctp_cmpaddr((struct sockaddr *)&old_gw, 
-		    net->ro.ro_rt->rt_gateway);
-		if (changed) {
+		/* clear any cached route and source address */
+		if (net->ro.ro_rt) {
 			RTFREE(net->ro.ro_rt);
 			net->ro.ro_rt = NULL;
+		}
+		if (net->src_addr_selected) {
 			sctp_free_ifa(net->ro._s_addr);
 			net->ro._s_addr = NULL;
 			net->src_addr_selected = 0;
 		}
-		else
-			continue;
+		/* Check if the nexthop is corresponding to the new address.
+		   If the new address is corresponding to the current nexthop, 
+		   the path will be changed.  
+		   If the new address is NOT corresponding to the current 
+		   nexthop, the path will not be changed.  
+		 */
+		SCTP_RTALLOC((sctp_route_t *)&net->ro, 
+			     stcb->sctp_ep->def_vrf_id);
+		if (net->ro.ro_rt == NULL) 
+			continue; // have to be considered...
 
-		/* Send SET PRIMARY for this new address */
-		if (net == stcb->asoc.primary_destination) {
-			sctp_mobility_feature_on(stcb->sctp_ep, 
-			    SCTP_MOBILITY_DO_SETPRIM);
-			/* We don't queue SET PRIMARY until reception of 
-			   HEARTBEAT (by micchie) 
-			 */
-			stcb->asoc.asconf_addr_setprim_pending = newifa;
+		changed = 0;
+		if (net->ro._l_addr.sa.sa_family == AF_INET) {
+			if (sctp_v4src_match_nexthop(newifa, (sctp_route_t *)&net->ro))
+				changed = 1;
 		}
-
+		if (net->ro._l_addr.sa.sa_family == AF_INET6) {
+			if (sctp_v6src_match_nexthop(
+			    &newifa->address.sin6, (sctp_route_t *)&net->ro))
+				changed = 1;
+		}
+		/* if the newly added address does not relate routing 
+		   information, we skip. 
+		 */
+		if (changed == 0) 
+			continue;
 		/* Retransmit unacknowledged DATA chunks immediately */
 		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-		    SCTP_MOBILITY_FASTHANDOFF)) {
+		   		SCTP_MOBILITY_FASTHANDOFF)) {
 			sctp_net_immediate_retrans(stcb, net);
+		}
+		/* Send SET PRIMARY for this new address */
+		if (net == stcb->asoc.primary_destination) {
+			(void)sctp_asconf_queue_mgmt(stcb, newifa, 
+						     SCTP_SET_PRIM_ADDR);
 		}
 	}
 }

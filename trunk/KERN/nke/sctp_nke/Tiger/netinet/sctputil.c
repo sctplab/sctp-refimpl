@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.55 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.56 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1161,7 +1161,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later whe
 	 * the association is freed.
 	 */
-	asoc->asconf_addr_setprim_pending = NULL;
 	return (0);
 }
 
@@ -3359,7 +3358,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	sai->sai_type = SCTP_ADAPTATION_INDICATION;
 	sai->sai_flags = 0;
 	sai->sai_length = sizeof(struct sctp_adaptation_event);
-	sai->sai_adaptation_ind = error;
+	sai->sai_adaptation_ind = stcb->asoc.peers_adaptation;
 	sai->sai_assoc_id = sctp_get_associd(stcb);
 
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_adaptation_event);
@@ -3631,21 +3630,14 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 			return;
 		}
 	}
-	if (stcb && (stcb->asoc.assoc_up_sent == 0) && (notification != SCTP_NOTIFY_ASSOC_UP)) {
-		if ((notification != SCTP_NOTIFY_ASSOC_DOWN) &&
-		    (notification != SCTP_NOTIFY_ASSOC_ABORTED) &&
-		    (notification != SCTP_NOTIFY_SPECIAL_SP_FAIL) &&
-		    (notification != SCTP_NOTIFY_DG_FAIL) &&
-		    (notification != SCTP_NOTIFY_PEER_SHUTDOWN)) {
-			sctp_notify_assoc_change(SCTP_COMM_UP, stcb, 0, NULL, so_locked);
-			stcb->asoc.assoc_up_sent = 1;
-		}
-	}
 	switch (notification) {
 	case SCTP_NOTIFY_ASSOC_UP:
 		if (stcb->asoc.assoc_up_sent == 0) {
 			sctp_notify_assoc_change(SCTP_COMM_UP, stcb, error, NULL, so_locked);
 			stcb->asoc.assoc_up_sent = 1;
+		}
+		if(stcb->asoc.adaptation_needed && (stcb->asoc.adaptation_sent == 0)) {
+			sctp_notify_adaptation_layer(stcb, error);
 		}
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
@@ -3685,10 +3677,6 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_DG_FAIL:
 		sctp_notify_send_failed(stcb, error,
 		    (struct sctp_tmit_chunk *)data, so_locked);
-		break;
-	case SCTP_NOTIFY_ADAPTATION_INDICATION:
-		/* Here the error is the adaptation indication */
-		sctp_notify_adaptation_layer(stcb, error);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
 	{

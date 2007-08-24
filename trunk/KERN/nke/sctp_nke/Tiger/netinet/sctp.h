@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.17 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.18 2007/08/24 00:53:51 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -526,7 +526,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_MOBILITY_BASE			0x00000001
 #define SCTP_MOBILITY_FASTHANDOFF		0x00800002
 #define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000003
-#define SCTP_MOBILITY_DO_SETPRIM		0x00000004
 
 #if defined(__Windows__)
 #include <packoff.h>

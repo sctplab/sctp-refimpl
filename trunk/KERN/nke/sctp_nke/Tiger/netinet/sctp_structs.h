@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.22 2007/07/24 20:06:02 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.23 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -590,8 +590,6 @@ struct sctp_association {
 
 	/* last local address pending deletion (waiting for an address add) */
 	struct sctp_ifa *asconf_addr_del_pending;
-	/* pending transmission of SET_PRIMARY (waiting for a HEARTBEAT) */
-	struct sctp_ifa *asconf_addr_setprim_pending;
 
 	struct sctpnetlisthead nets;		/* remote address list */
 
@@ -880,7 +878,7 @@ struct sctp_association {
 	uint32_t refcnt;
 	uint32_t chunks_on_out_queue;	/* total chunks floating around,
 					 * locked by send socket buffer */
-
+	uint32_t peers_adaptation;
 	uint16_t peer_hmac_id;	/* peer HMAC id to send */
 
 	/*
@@ -1011,6 +1009,8 @@ struct sctp_association {
 	uint8_t saw_sack_with_frags;
 	uint8_t in_restart_hash;
 	uint8_t assoc_up_sent;
+	uint8_t adaptation_needed;
+	uint8_t adaptation_sent;
 	/* CMT variables */
 	uint8_t cmt_dac_pkts_rcvd;
 	uint8_t sctp_cmt_on_off;

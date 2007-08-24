@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.56 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.57 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -727,6 +727,8 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		}
 		SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 
+		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, 
+				SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
 		/* start SHUTDOWN timer */
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
 				 stcb, net);
@@ -4160,12 +4162,21 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_sack_chunk))) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on sack chunk, too small\n");
+				ignore_sack:
 					*offset = length;
 					if (locked_tcb) {
 						SCTP_TCB_UNLOCK(locked_tcb);
 					}
 					return (NULL);
 				}
+				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
+					/*-
+					 * If we have sent a shutdown-ack, we will pay no
+					 * attention to a sack sent in to us since
+					 * we don't care anymore.
+					 */
+ 					goto ignore_sack;
+				} 
 				sack = (struct sctp_sack_chunk *)ch;
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
 				cum_ack = ntohl(sack->sack.cum_tsn_ack);
@@ -4219,17 +4230,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						       __LINE__);
 				}
 				stcb->asoc.overall_error_count = 0;
-			}
-			/* if need, send SET_PRIMARY (by micchie) */
-			if (sctp_is_mobility_feature_on(inp, 
-			    SCTP_MOBILITY_DO_SETPRIM)) {
-				if (sctp_set_primary_ip_address_sa(stcb, &stcb->asoc.asconf_addr_setprim_pending->address.sa)) {
-					sctp_mobility_feature_off(inp, 
-					    SCTP_MOBILITY_DO_SETPRIM);
-					return(NULL);
-				}
-				sctp_mobility_feature_off(inp, 
-				    SCTP_MOBILITY_DO_SETPRIM);
 			}
 			break;
 		case SCTP_HEARTBEAT_ACK:
@@ -5345,7 +5345,9 @@ sctp_input(i_pak, va_alist)
 	/* validate SCTP checksum */
 	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (sctp_no_csum_on_loopback) &&
-	    (ip->ip_src.s_addr == ip->ip_dst.s_addr)) {
+	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
+	     (SCTP_IS_IT_LOOPBACK(m)))
+		) {
 			goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
