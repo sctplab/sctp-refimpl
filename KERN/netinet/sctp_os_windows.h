@@ -354,6 +354,7 @@ typedef struct sctp_os_timer {
 	BOOLEAN pending;
 	BOOLEAN active;
 	KTIMER tmr;
+	KSPIN_LOCK lock;
 	KDPC dpc;
 	int ticks;
 	sctp_timeout_t func;
@@ -367,27 +368,40 @@ VOID CustomTimerDpc(IN struct _KDPC *, IN PVOID, IN PVOID, IN PVOID);
 __inline void
 SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *arg)
 {
+	LARGE_INTEGER ExpireTime;
+
 	if (tmr->initialized == FALSE) {
 		tmr->func = func;
 		tmr->arg = arg;
+		KeInitializeSpinLock(&tmr->lock);
 		KeInitializeDpc(&tmr->dpc, CustomTimerDpc, tmr);
 		KeInitializeTimer(&tmr->tmr);
 		tmr->initialized = TRUE;
 	}
+	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
+
 	tmr->ticks = ticks;
-	tmr->pending = TRUE;
 	if (tmr->active == FALSE) {
-		LARGE_INTEGER ExpireTime;
+		if (tmr->pending == TRUE) {
+			KeCancelTimer(&tmr->tmr);
+		}
 		KeQuerySystemTime(&ExpireTime);
 		ExpireTime.QuadPart += (LONGLONG)(100 * 10000)*ticks;
 		KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
+		tmr->pending = TRUE;
 	}
+
+	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
 }
 
 __inline void
 SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
-	KeCancelTimer(&tmr->tmr);
+	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
+	if (tmr->active == FALSE && tmr->pending == TRUE) {
+		KeCancelTimer(&tmr->tmr);
+	}
 	tmr->pending = FALSE;
+	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
 }
 
 #define SCTP_OS_TIMER_PENDING(tmr)	FALSE
