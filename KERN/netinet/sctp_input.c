@@ -3817,8 +3817,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((chk_length > SCTP_LARGEST_INIT_ACCEPTED) ||
 			    (num_chunks > 1) ||
 			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
-				printf("chk_length:%d > large:%d\n",
-				       chk_length, SCTP_LARGEST_INIT_ACCEPTED);
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
