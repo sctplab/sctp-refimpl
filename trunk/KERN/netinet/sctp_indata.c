@@ -5423,8 +5423,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 								    sizeof(struct sctp_strseq),
 								    (uint8_t *)&strseqbuf);
 			offset += sizeof(struct sctp_strseq);
-			if(stseq == NULL)
+			if(stseq == NULL) {
 				break;
+			}
 			/* Convert */
 			xx = (unsigned char *)&stseq[i];
 			st = ntohs(stseq[i].stream);
@@ -5433,13 +5434,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			stseq[i].sequence = st;
 			/* now process */
 			if (stseq[i].stream >= asoc->streamincnt) {
-				/*
-				 * It is arguable if we should continue.
-				 * Since the peer sent bogus stream info we
-				 * may be in deep trouble.. a return may be
-				 * a better choice?
-				 */
-				continue;
+				/* screwed up streams, stop!  */
+				break;
 			}
 			strm = &asoc->strmin[stseq[i].stream];
 			if (compare_with_wrap(stseq[i].sequence,
