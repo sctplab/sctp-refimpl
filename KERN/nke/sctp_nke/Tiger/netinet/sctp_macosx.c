@@ -96,6 +96,11 @@ extern uint32_t sctp_debug_on;
 #endif /* SCTP_DEBUG */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
+
+/*
+ * NOTE!! sctp_peeloff_option() MUST be kept in sync with the Apple accept()
+ * call.
+ */
 #ifdef SCTP_APPLE_PANTHER
 int
 sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
@@ -188,30 +193,39 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 			error = ENOTSOCK;
 		return (error);
 	}
-	head = (struct socket *)fp->f_data;
 	if (head == NULL) {
 		error = EBADF;
 		goto out;
 	}
-	mutex_held = (*head->so_proto->pr_getlock) (head, 0);
+
+	socket_lock(head, 1);
+
+	if (head->so_proto->pr_getlock != NULL)  {
+		mutex_held = (*head->so_proto->pr_getlock)(head, 0);
+		dosocklock = 1;
+	}
+	else {
+		mutex_held = head->so_proto->pr_domain->dom_mtx;
+		dosocklock = 0;
+	}
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
+		socket_unlock(head, 1);
 		return (error);
 	}
-	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
-	socket_unlock(head, 0);
 
-	/* unlock head to avoid deadlock with select,
-	 * keep a ref on head */
+	lck_mtx_assert(mutex_held, LCK_MTX_ASSERT_OWNED);
+        socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
 	fflag = fp->f_flag;
 	proc_fdlock(p);
 	error = falloc_locked(p, &fp, &newfd, 1);
 	if (error) {
 		/*
-		 * Probably ran out of file descriptors. Put the unaccepted
-		 * connection back onto the queue and do another wakeup so
-		 * some other process might have a chance at it.
+		 * Probably ran out of file descriptors. Put the
+		 * unaccepted connection back onto the queue and
+		 * do another wakeup so some other process might
+		 * have a chance at it.
 		 */
 		/* SCTP will NOT put the connection back onto queue */
 		proc_fdunlock(p);
@@ -227,10 +241,13 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-	so->so_state &= ~SS_COMP;
-	so->so_state &= ~SS_NOFDREF;
-	so->so_head = NULL;
-	socket_unlock(so, 1);
+        socket_lock(head, 0);
+        if (dosocklock)
+                socket_lock(so, 1);
+        so->so_state &= ~SS_COMP;
+        so->so_head = NULL;
+        if (dosocklock)
+                socket_unlock(so, 1);
 out:
 	file_drop(fd);
 	return (error);
