@@ -20,7 +20,7 @@
      Small fixes on sctp_output.c to make this possible.
    o Get rid of HAVE_XXX declarations.
    o add a sctp_pr_policy in hole in sndrcvinfo structure
-   o add a PR_SCTP_POLICY_VALID type flag.
+   o add a PR_SCTP_POLICY_VALID type flag (yet to-do).
 - Optimize sctp6 calls to reuse code in sctp_usrreq. Also optimize
   when we close sending out the data and disabling Nagle.
 - Change key concatenation order to match the auth RFC
@@ -37,5 +37,5 @@
   assemble a response packet which may be larger than
   64k. This then would be dropped by IP. Instead make
   a "minimum" size for us 64k-2k (we want at least
-  2k for our init). If we receive such an init
+  2k for our initack). If we receive such an init
   discard it early without all the processing.
