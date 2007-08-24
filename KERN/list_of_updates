@@ -39,3 +39,5 @@
   a "minimum" size for us 64k-2k (we want at least
   2k for our initack). If we receive such an init
   discard it early without all the processing.
+- When we peel off we must increment the tcb ref count
+  to keep it from being freed from underneath us.
