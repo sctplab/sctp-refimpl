@@ -223,14 +223,17 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+	socket_unlock(head, 0);
 	fp->f_type = DTYPE_SOCKET;
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
+	socket_lock(head, 0);
 	/* sctp_get_peeloff() returns a new locked socket */
         so->so_state &= ~SS_COMP;
+        so->so_state &= ~SS_NOFDREF;
         so->so_head = NULL;
 	socket_unlock(so, 1);
 out:
