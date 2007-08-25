@@ -616,6 +616,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	sctp_print_out_track_log(stcb);
 #endif
+	stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
 	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 			      SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: finished\n");
@@ -2503,6 +2504,8 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* process according to association state */
 	if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* unexpected SHUTDOWN-COMPLETE... so ignore... */
+		SCTPDBG(SCTP_DEBUG_INPUT2,
+			"sctp_handle_shutdown_complete: not in SCTP_STATE_SHUTDOWN_ACK_SENT --- ignore\n");
 		SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
@@ -2520,6 +2523,9 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_22);
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB */
+	SCTPDBG(SCTP_DEBUG_INPUT2,
+		"sctp_handle_shutdown_complete: calls free-asoc\n");
+
 	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
 	return;
 }
@@ -4626,13 +4632,15 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	sctp_auditing(0, inp, stcb, net);
 #endif
 
-	SCTPDBG(SCTP_DEBUG_INPUT1, "Ok, Common input processing called, m:%p iphlen:%d offset:%d\n",
-		m, iphlen, offset);
-
+	SCTPDBG(SCTP_DEBUG_INPUT1, "Ok, Common input processing called, m:%p iphlen:%d offset:%d stcb:%p\n",
+		m, iphlen, offset, stcb);
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
 		stcb->asoc.seen_a_sack_this_pkt = 0;
+		SCTPDBG(SCTP_DEBUG_INPUT1, "stcb:%p state:%x\n",
+			stcb, stcb->asoc.state);
+
 		if ((stcb->asoc.state & SCTP_STATE_WAS_ABORTED) || 
 		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)){
 			/*-
