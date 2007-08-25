@@ -9919,7 +9919,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk)
+			sctp_free_a_chunk((struct sctp_tcb *)NULL, chk);
 			return (-1);
 		}
 	}
