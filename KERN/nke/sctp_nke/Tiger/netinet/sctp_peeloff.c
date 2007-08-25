@@ -185,8 +185,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 #endif
         n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	SOCK_LOCK(head);
-	SCTP_INP_WLOCK(inp);
-	SCTP_INP_WLOCK(n_inp);
 	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |
 	    SCTP_PCB_FLAGS_IN_TCPPOOL |	/* Turn on Blocking IO */
@@ -244,8 +242,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 * Now we must move it from one hash table to another and get the
 	 * stcb in the right place.
 	 */
-	SCTP_INP_WUNLOCK(n_inp);
-	SCTP_INP_WUNLOCK(inp);
         sctp_move_pcb_and_assoc(inp, n_inp, stcb);
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
