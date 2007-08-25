@@ -7996,7 +7996,6 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return;
 	}
 	chk->copy_by_ref = 0;
-
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id.id = SCTP_SHUTDOWN_ACK;
 	chk->rec.chunk_id.can_take_data = 1;
@@ -10055,6 +10054,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * we don't respond with an PKT-DROP to an ABORT 
 			 * or PKT-DROP
 			 */
+			sctp_free_a_chunk(stcb, chk);
 			return;
 		default:
 			break;
