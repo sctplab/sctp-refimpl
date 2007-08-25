@@ -680,7 +680,6 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	}
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	SCTP_INP_WLOCK(inp);
-
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUND_V6;	/* I'm not v6! */
 	ip_inp = &inp->ip_inp.inp;
 #if defined(__FreeBSD__) || defined(__APPLE__) 
@@ -690,7 +689,6 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	inp->inp_vflag |= INP_IPV4;
 	inp->inp_ip_ttl = ip_defttl;
 #endif
-
 #ifdef IPSEC
 #if !(defined(__APPLE__))
 	error = ipsec_init_policy(so, &ip_inp->inp_sp);
