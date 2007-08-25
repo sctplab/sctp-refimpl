@@ -45,3 +45,11 @@
   when given faulty data, fixed so can't happen and we
   also stop at the first bad stream no.
 - Fixed so comm-up generates the adaption indication.
+- peeloff did not get the hmac params copied. 
+- fix it so we lock the addr list when doing src-addr selection.
+- During lowlevel output, we could end up with a _l_addr set
+  to null if the iterator is calling the output routine. Thhis
+  means we would possibly crash when we gather the MTU info.
+  Fix so we only do the gather where we have a src address
+  cached.
+
