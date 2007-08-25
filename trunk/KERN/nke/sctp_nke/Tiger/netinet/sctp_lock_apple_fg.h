@@ -135,13 +135,13 @@
 #define SCTP_TCB_LOCK(_tcb) \
 do { \
 	lck_mtx_lock((_tcb)->tcb_mtx); \
-	SAVE_CALLERS((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
+	SAVE_CALLERS_NOSKIP((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
 } while (0)
 #define SCTP_TCB_TRYLOCK(_tcb) \
 	lck_mtx_try_lock((_tcb)->tcb_mtx)
 #define SCTP_TCB_UNLOCK(_tcb) \
 do { \
-	SAVE_CALLERS((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
+	SAVE_CALLERS_NOSKIP((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
 	lck_mtx_unlock((_tcb)->tcb_mtx); \
 } while (0)
 #define SCTP_TCB_LOCK_ASSERT(_tcb) \
@@ -199,8 +199,18 @@ do { \
         prev_ebp = *(unsigned int *)prev_ebp; \
         c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
 }
+#define SAVE_CALLERS_NOSKIP(a, b, c) { \
+        unsigned int ebp = 0; \
+        unsigned int prev_ebp = 0; \
+        asm("movl %%ebp, %0;" : "=r"(ebp)); \
+        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+	c = 0; \
+}
 #else
 #define SAVE_CALLERS(caller1, caller2, caller3)
+#define SAVE_CALLERS_NOSKIP(caller1, caller2, caller3)
 #endif
 
 #define SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
