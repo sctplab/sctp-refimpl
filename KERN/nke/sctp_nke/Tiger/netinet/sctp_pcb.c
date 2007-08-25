@@ -5124,7 +5124,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_RLOCK(inp);
 	}
 #if defined(__APPLE__) /* TEMP CODE */
-	SAVE_CALLERS(stcb->caller1, stcb->caller2, stcb->caller3);
 	stcb->freed_from_where = from_location;
 #endif
 #ifdef SCTP_TRACK_FREED_ASOCS
