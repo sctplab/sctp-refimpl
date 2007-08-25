@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.18 2007/08/24 00:53:51 rrs Exp $"
 /*
  * SCTP protocol - RFC2960.
  */
-
 struct sctphdr {
 	uint16_t src_port;	/* source port */
 	uint16_t dest_port;	/* destination port */
