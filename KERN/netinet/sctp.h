@@ -471,6 +471,12 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 #define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00400000
 
+/* mobility_features parameters (by micchie) */
+#define SCTP_MOBILITY_BASE		0x00800000
+#define SCTP_MOBILITY_FASTHANDOFF	0x01000000
+#define SCTP_MOBILITY_DO_FASTHANDOFF	0x02000000
+
+
 #define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
 
 #include <netinet/sctp_uio.h>
@@ -522,10 +528,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LAST_PACKET_TRACING                        0x01000000
 #define SCTP_THRESHOLD_LOGGING                          0x02000000
 
-/* mobility_features parameters (by micchie) */
-#define SCTP_MOBILITY_BASE			0x00000001
-#define SCTP_MOBILITY_FASTHANDOFF		0x00000002
-#define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000004
 
 #if defined(__Windows__)
 #include <packoff.h>
