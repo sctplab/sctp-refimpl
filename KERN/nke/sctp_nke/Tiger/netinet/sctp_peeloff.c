@@ -65,8 +65,8 @@ sctp_can_peel_off(struct socket *head, sctp_assoc_t assoc_id)
 	}
 	stcb = sctp_findassociation_ep_asocid(inp, assoc_id, 1);
 	if (stcb == NULL) {
-		SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_PEELOFF, ENOTCONN);
-		return (ENOTCONN);
+		SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_PEELOFF, ENOENT);
+		return (ENOENT);
 	}
 	state = SCTP_GET_STATE((&stcb->asoc));
 	if ((state == SCTP_STATE_EMPTY) ||
@@ -172,6 +172,8 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		*error = ENOTCONN;
 		return (NULL);
 	}
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
 	newso = sonewconn(head, SS_ISCONNECTED
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 	    , NULL
@@ -184,7 +186,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		SCTPDBG(SCTP_DEBUG_PEEL1, "sctp_peeloff:sonewconn failed\n");
 		SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_PEELOFF, ENOMEM);
 		*error = ENOMEM;
-		SCTP_TCB_UNLOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 
 	}
@@ -193,7 +195,9 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 		SCTP_SOCKET_LOCK(newso, 1);
 	}
 #endif
-        n_inp = (struct sctp_inpcb *)newso->so_pcb;
+	SCTP_TCB_LOCK(stcb);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
+	n_inp = (struct sctp_inpcb *)newso->so_pcb;
 	SOCK_LOCK(head);
 	n_inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 	    SCTP_PCB_FLAGS_CONNECTED |
@@ -261,7 +265,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 */
 	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
-
 	return (newso);
 #endif
 }
