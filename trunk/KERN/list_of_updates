@@ -52,4 +52,7 @@
   means we would possibly crash when we gather the MTU info.
   Fix so we only do the gather where we have a src address
   cached.
-
+- we need to be sure to set abort flag on conn state when
+  we receive an abort.
+- peeloff could leak a socket. Moved code so the close will
+  find the socket if the peeloff fails.
