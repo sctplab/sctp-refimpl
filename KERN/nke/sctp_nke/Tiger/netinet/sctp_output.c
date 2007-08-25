@@ -3078,6 +3078,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	}
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Select source addr for:");
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, (struct sockaddr *)to);
+	SCTP_IPI_ADDR_LOCK();
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		/*
 		 * Bound all case
@@ -3085,6 +3086,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 		answer = sctp_choose_boundall(inp, stcb, net, ro, vrf_id,
 					      dest_is_priv, dest_is_loop, 
 					      non_asoc_addr_ok, fam);
+		SCTP_IPI_ADDR_UNLOCK();
 		return (answer);
 	}
 	/*
@@ -3101,6 +3103,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 						       dest_is_priv,
 						       dest_is_loop, fam);
 	}
+	SCTP_IPI_ADDR_UNLOCK();
 	return (answer);
 }
 
@@ -3605,7 +3608,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 		} else {
 			/* PMTU check versus smallest asoc MTU goes here */
-			if (ro->ro_rt != NULL) {
+			if ((ro->ro_rt != NULL) && 
+			    (net->ro._s_addr)) {
 				uint32_t mtu;
 				mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, ro->ro_rt);
 				if (mtu &&
@@ -3617,7 +3621,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
 					net->mtu = mtu;
 				}
-			} else {
+			} else if (ro->ro_rt == NULL) {
 				/* route was freed */
 				if (net->ro._s_addr &&
 				    net->src_addr_selected){
@@ -3876,7 +3880,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				}
 				net->src_addr_selected = 0;
 			}
-			if (ro->ro_rt != NULL) {
+			if ((ro->ro_rt != NULL) &&
+			    (net->ro._s_addr)) {
 				uint32_t mtu;
 				mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, ro->ro_rt);
 				if (mtu &&

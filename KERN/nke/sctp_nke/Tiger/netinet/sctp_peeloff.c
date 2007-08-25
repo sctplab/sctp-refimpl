@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.13 2007/07/17 20:58:25 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.14 2007/08/24 00:53:52 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -121,7 +121,17 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
 	n_inp->inp_starting_point_for_iterator = NULL;
-
+	/* copy in the authentication parameters from the original endpoint */
+	if (n_inp->sctp_ep.local_hmacs)
+		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
+	n_inp->sctp_ep.local_hmacs =
+	    sctp_copy_hmaclist(inp->sctp_ep.local_hmacs);
+	if (n_inp->sctp_ep.local_auth_chunks)
+		sctp_free_chunklist(n_inp->sctp_ep.local_auth_chunks);
+	n_inp->sctp_ep.local_auth_chunks =
+	    sctp_copy_chunklist(inp->sctp_ep.local_auth_chunks);
+	(void)sctp_copy_skeylist(&inp->sctp_ep.shared_keys,
+	    &n_inp->sctp_ep.shared_keys);
 	/*
 	 * Now we must move it from one hash table to another and get the
 	 * stcb in the right place.
