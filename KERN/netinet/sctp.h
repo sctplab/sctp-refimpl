@@ -524,8 +524,8 @@ struct sctp_error_unrecognized_chunk {
 
 /* mobility_features parameters (by micchie) */
 #define SCTP_MOBILITY_BASE			0x00000001
-#define SCTP_MOBILITY_FASTHANDOFF		0x00800002
-#define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000003
+#define SCTP_MOBILITY_FASTHANDOFF		0x00000002
+#define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000004
 
 #if defined(__Windows__)
 #include <packoff.h>
