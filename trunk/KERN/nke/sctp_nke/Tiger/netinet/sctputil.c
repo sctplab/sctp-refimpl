@@ -1835,7 +1835,7 @@ sctp_timeout_handler(void *t)
 		}
 		SCTP_STAT_INCR(sctps_timoshutdownguard);
 		sctp_abort_an_association(inp, stcb,
-		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL, 0);
+		    SCTP_SHUTDOWN_GUARD_EXPIRES, NULL, SCTP_SO_NOT_LOCKED);
 		/* no need to unlock on tcb its gone */
 		goto out_decr;
 
@@ -4012,7 +4012,12 @@ sctp_print_out_track_log(struct sctp_tcb *stcb)
 
 void
 sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-			  int error, struct mbuf *op_err, int so_locked)
+			  int error, struct mbuf *op_err,
+			  int so_locked
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+                          SCTP_UNUSED
+#endif
+)
 {
 	uint32_t vtag;
 #if defined(__APPLE__)

@@ -180,7 +180,11 @@ sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
 /* We choose to abort via user input */
 void
 sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
-    struct mbuf *, int);
+    struct mbuf *, int
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+    SCTP_UNUSED
+#endif
+);
 
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
     struct sctp_inpcb *, struct mbuf *, uint32_t);

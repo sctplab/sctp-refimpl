@@ -280,7 +280,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			*ippp = htonl(SCTP_FROM_SCTP_TIMER+SCTP_LOC_1);
 		}
 		inp->last_abort_code = SCTP_FROM_SCTP_TIMER+SCTP_LOC_1;
-		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper, 0);
+		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper, SCTP_SO_NOT_LOCKED);
 		return (1);
 	}
 	return (0);
@@ -1206,7 +1206,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 			}
 			inp->last_abort_code = SCTP_FROM_SCTP_TIMER+SCTP_LOC_4;
 			sctp_abort_an_association(inp, stcb, SCTP_INTERNAL_ERROR,
-			    oper, 0);
+			    oper, SCTP_SO_NOT_LOCKED);
 		} else {
 #ifdef INVARIANTS
 			panic("Cookie timer expires in wrong state?");

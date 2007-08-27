@@ -1347,7 +1347,7 @@ sctp_shutdown(struct socket *so)
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_USRREQ+SCTP_LOC_6;
 				sctp_abort_an_association(stcb->sctp_ep, stcb,
 							  SCTP_RESPONSE_TO_USER_REQ,
-							  op_err, 1);
+							  op_err, SCTP_SO_LOCKED);
 				goto skip_unlock;
 			} else {
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING, SCTP_SO_LOCKED);
