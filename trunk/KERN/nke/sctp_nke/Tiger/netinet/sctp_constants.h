@@ -1045,8 +1045,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.26 2007/08/24 00:53:51 
  * defines for socket lock states.
  * Used by __APPLE__ and SCTP_SO_LOCK_TESTING
  */
-#define SCTP_SO_LOCKED		0
-#define SCTP_SO_NOT_LOCKED	1
+#define SCTP_SO_LOCKED		1
+#define SCTP_SO_NOT_LOCKED	0
 
 
 #define IN4_ISPRIVATE_ADDRESS(a) \
