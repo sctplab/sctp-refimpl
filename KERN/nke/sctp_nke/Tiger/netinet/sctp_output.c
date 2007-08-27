@@ -3308,7 +3308,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
     struct sctp_tmit_chunk *chk,
     int out_of_asoc_ok,
     int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3930,7 +3930,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 void
 sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -5269,7 +5269,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		p_len += padval;
 	}
 	(void)sctp_lowlevel_chunk_output(inp, NULL, NULL, to, m, 0, NULL, 0, 0,
-				   NULL, 0, 0);
+				   NULL, 0, SCTP_SO_NOT_LOCKED);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 }
 
@@ -5380,7 +5380,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 							cause = SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_UNSENT;
 						ret_spc = sctp_release_pr_sctp_chunk(stcb, chk,
 						    cause,
-						    &asoc->sent_queue, 1);
+						    &asoc->sent_queue, SCTP_SO_LOCKED);
 						freed_spc += ret_spc;
 						if (freed_spc >= dataout) {
 							return;
@@ -5405,7 +5405,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 
 						ret_spc = sctp_release_pr_sctp_chunk(stcb, chk,
 						    SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_UNSENT,
-						    &asoc->send_queue, 1);
+						    &asoc->send_queue, SCTP_SO_LOCKED);
 
 						freed_spc += ret_spc;
 						if (freed_spc >= dataout) {
@@ -5782,7 +5782,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      int *reason_code,
 		      int control_only, int *cwnd_full, int from_where,
 		      struct timeval *now, int *now_filled, int frag_point, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
 		      SCTP_UNUSED
 #endif
                       );
@@ -5938,14 +5938,14 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		do_chunk_output = 0;
 	}
 	if(do_chunk_output)
-	   sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 0);
+	   sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_NOT_LOCKED);
 	else if(added_control) {
 		int num_out=0, reason=0, cwnd_full=0, now_filled=0;
 		struct timeval now;
 		int frag_point;
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, 0);
+				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_NOT_LOCKED);
 	}
  no_chunk_output:
 	if (ret) {
@@ -6958,7 +6958,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
     int *reason_code,
     int control_only, int *cwnd_full, int from_where,
     struct timeval *now, int *now_filled, int frag_point, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -8207,7 +8207,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     int *cnt_out, struct timeval *now, int *now_filled, int *fr_done, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -8720,7 +8720,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     int from_where,
     int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -9476,7 +9476,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 
 void
 sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -9579,7 +9579,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 	SCTP_BUF_LEN(m_shutdown_comp) = sizeof(struct sctp_shutdown_complete_msg);
 	(void)sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
 	    (struct sockaddr *)&net->ro._l_addr,
-	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0, 0);
+	    m_shutdown_comp, 0, NULL, 1, 0, NULL, 0, SCTP_SO_NOT_LOCKED);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 	return;
 }
@@ -12252,7 +12252,7 @@ sctp_lower_sosend(struct socket *so,
 					queue_only_for_init = 0;
 					queue_only = 0;
 				} else {
-					sctp_send_initiate(inp, stcb, 1);
+					sctp_send_initiate(inp, stcb, SCTP_SO_LOCKED);
 					SCTP_SET_STATE(asoc, SCTP_STATE_COOKIE_WAIT);
 					queue_only_for_init = 0;
 					queue_only = 1;
@@ -12272,12 +12272,12 @@ sctp_lower_sosend(struct socket *so,
 						hold_tcblock = 1;
 						sctp_chunk_output(inp, 
 								  stcb, 
-								  SCTP_OUTPUT_FROM_USR_SEND, 1);
+								  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 					}
 				} else {
 					sctp_chunk_output(inp, 
 							  stcb, 
-							  SCTP_OUTPUT_FROM_USR_SEND, 1);
+							  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 				}
 				if(hold_tcblock == 1) {
 					SCTP_TCB_UNLOCK(stcb);
@@ -12524,7 +12524,7 @@ sctp_lower_sosend(struct socket *so,
 			queue_only_for_init = 0;
 			queue_only = 0;
 		} else {
-			sctp_send_initiate(inp, stcb, 1);
+			sctp_send_initiate(inp, stcb, SCTP_SO_LOCKED);
 			SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_WAIT);
 			queue_only_for_init = 0;
 			queue_only = 1;
@@ -12535,11 +12535,11 @@ sctp_lower_sosend(struct socket *so,
 		if (hold_tcblock == 0) {
 			/* If there is activity recv'ing sacks no need to send */
 			if(SCTP_TCB_TRYLOCK(stcb)) {
-				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 1);
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 				hold_tcblock = 1;
 			}
 		} else {
-			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 1);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 		}
 	} else if ((queue_only == 0) &&
 		   (stcb->asoc.peers_rwnd == 0) &&
@@ -12549,7 +12549,7 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 			SCTP_TCB_LOCK(stcb);
 		}
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, 1);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 	} else if (some_on_control) {
 		int num_out, reason, cwnd_full, frag_point;
 
@@ -12563,7 +12563,7 @@ sctp_lower_sosend(struct socket *so,
 		}
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-					    &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, 1);
+					    &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
