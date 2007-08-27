@@ -285,7 +285,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		    aparam_length);
 	} else {
 		/* notify upper layer */
-		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_ADD_IP, stcb, 0, sa, 0);
+		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_ADD_IP, stcb, 0, sa, SCTP_SO_NOT_LOCKED);
 		if (response_required) {
 			m_reply =
 			    sctp_asconf_success_response(aph->correlation_id);
@@ -322,7 +322,7 @@ sctp_asconf_del_remote_addrs_except(struct sctp_tcb *stcb, struct sockaddr *src)
 				     (struct sockaddr *)&net->ro._l_addr);
 			/* notify upper layer */
 			sctp_ulp_notify(SCTP_NOTIFY_ASCONF_DELETE_IP, stcb, 0,
-			    (struct sockaddr *)&net->ro._l_addr, 0);
+			    (struct sockaddr *)&net->ro._l_addr, SCTP_SO_NOT_LOCKED);
 		}
 	}
 	return 0;
@@ -458,7 +458,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	 		m_reply = sctp_asconf_success_response(aph->correlation_id);
 		}
 		/* notify upper layer */
-		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_DELETE_IP, stcb, 0, sa, 0);
+		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_DELETE_IP, stcb, 0, sa, SCTP_SO_NOT_LOCKED);
 	}
 	return m_reply;
 }
@@ -551,7 +551,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"process_asconf_set_primary: primary address set\n");
 		/* notify upper layer */
-		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_SET_PRIMARY, stcb, 0, sa, 0);
+		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_SET_PRIMARY, stcb, 0, sa, SCTP_SO_NOT_LOCKED);
 
 		if (response_required) {
 			m_reply = sctp_asconf_success_response(aph->correlation_id);

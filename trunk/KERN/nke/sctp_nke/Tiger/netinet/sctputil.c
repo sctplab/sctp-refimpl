@@ -1303,7 +1303,7 @@ select_a_new_ep:
 		 * first I must verify that this won't effect things :-0
 		 */
 		if (it->no_chunk_output == 0)
-			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3, 0);
+			sctp_chunk_output(it->inp, it->stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
 
 		SCTP_TCB_UNLOCK(it->stcb);
 	next_assoc:
@@ -1665,7 +1665,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
 		if ((stcb->asoc.num_send_timers_up == 0) &&
 		    (stcb->asoc.sent_queue_cnt > 0)
 		    ) {
@@ -1710,7 +1710,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SACK_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SACK_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWN:
 		if ((stcb == NULL) || (inp == NULL)) {
@@ -1725,7 +1725,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		{
@@ -1755,7 +1755,7 @@ sctp_timeout_handler(void *t)
 #endif
 			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
 					 stcb->sctp_ep, stcb, lnet);
-			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR, 0);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR, SCTP_SO_NOT_LOCKED);
 		}
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
@@ -1776,7 +1776,7 @@ sctp_timeout_handler(void *t)
 		 * We consider T3 and Cookie timer pretty much the same with
 		 * respect to where from in chunk_output.
 		 */
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_NEWCOOKIE:
 		{
@@ -1827,7 +1827,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_ACK_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_ACK_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_SHUTDOWNGUARD:
 		if ((stcb == NULL) || (inp == NULL)) {
@@ -1848,7 +1848,7 @@ sctp_timeout_handler(void *t)
 			goto out_decr;
 		}
 		SCTP_STAT_INCR(sctps_timostrmrst);
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 		/* Need to do FR of things for net */
@@ -1870,7 +1870,7 @@ sctp_timeout_handler(void *t)
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_ASCONF_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_ASCONF_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
@@ -1879,7 +1879,7 @@ sctp_timeout_handler(void *t)
 		}
 		SCTP_STAT_INCR(sctps_timoautoclose);
 		sctp_autoclose_timer(inp, stcb, net);
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR, 0);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_AUTOCLOSE_TMR, SCTP_SO_NOT_LOCKED);
 		did_output = 0;
 		break;
 	case SCTP_TIMER_TYPE_ASOCKILL:
@@ -2997,7 +2997,7 @@ int sctp_asoc_change_wake = 0;
 static void
 sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
     uint32_t error, void *data, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3192,14 +3192,14 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
-	    &stcb->sctp_socket->so_rcv, 1, 0);
+	    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
 }
 
 
 static void
 sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
     struct sctp_tmit_chunk *chk, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3269,7 +3269,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 static void
 sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 			 struct sctp_stream_queue_pending *sp, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
                          SCTP_UNUSED
 #endif
                          )    
@@ -3379,7 +3379,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
-	    &stcb->sctp_socket->so_rcv, 1, 0);
+	    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
 }
 
 /* This always must be called with the read-queue LOCKED in the INP */
@@ -3526,7 +3526,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
-	    &stcb->sctp_socket->so_rcv, 1, 0);
+	    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
 }
 
 static void
@@ -3594,14 +3594,14 @@ sctp_notify_stream_reset(struct sctp_tcb *stcb,
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
 	    control,
-	    &stcb->sctp_socket->so_rcv, 1, 0);
+	    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
 }
 
 
 void
 sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
     uint32_t error, void *data, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3759,7 +3759,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 
 void
 sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3875,7 +3875,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 
 void
 sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -3913,7 +3913,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (stcb != NULL) {
 		/* We have a TCB to abort, send notification too */
 		vtag = stcb->asoc.peer_vtag;
-		sctp_abort_notification(stcb, 0, 0);
+		sctp_abort_notification(stcb, 0, SCTP_SO_NOT_LOCKED);
 		/* get the assoc vrf id and table id */
 		vrf_id = stcb->asoc.vrf_id;
 		stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
@@ -4500,7 +4500,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sockbuf *sb,
     int end,
     int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -4808,7 +4808,7 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
     int reason, struct sctpchunk_listhead *queue, int so_locked
-#if !defined(__APPLE__)
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
     )
@@ -4826,7 +4826,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 
 #endif
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
-			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, 0);
+			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, SCTP_SO_NOT_LOCKED);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
 #if defined (__APPLE__)
@@ -5105,7 +5105,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, uint32_t *freed_so_far, int hold_rlock,
 		SCTP_STAT_INCR(sctps_wu_sacks_sent);
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb,
-				  SCTP_OUTPUT_FROM_USR_RCVD, 1);
+				  SCTP_OUTPUT_FROM_USR_RCVD, SCTP_SO_LOCKED);
 		/* make sure no timer is running */
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTPUTIL+SCTP_LOC_6 );
 		SCTP_TCB_UNLOCK(stcb);
