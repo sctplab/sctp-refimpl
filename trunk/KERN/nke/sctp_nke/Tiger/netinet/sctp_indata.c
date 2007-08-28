@@ -1539,7 +1539,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		if (stcb->sctp_socket->so_rcv.sb_cc) {
 			/* some to read, wake-up */
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
 			
 			so = SCTP_INP_SO(stcb->sctp_ep);
@@ -1555,7 +1555,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 #endif
 			sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 		}
@@ -3672,7 +3672,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				sctp_m_freem(tp1->data);
 				tp1->data = NULL;
 				if(stcb->sctp_socket) {
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 					struct socket *so;
 					
 					so = SCTP_INP_SO(stcb->sctp_ep);
@@ -3688,7 +3688,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 					}
 #endif
 					sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 					SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 					if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
@@ -3993,7 +3993,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 	}
 	if (stcb->sctp_socket) {
-#if defined(__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		struct socket *so;
 #endif
 
@@ -4001,7 +4001,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cumack, 1, SCTP_WAKESND_FROM_SACK);
 		}
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		so = SCTP_INP_SO(stcb->sctp_ep);
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
@@ -4015,7 +4015,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 #endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	} else {
@@ -4730,14 +4730,14 @@ sctp_handle_sack(struct mbuf *m, int offset,
 
  done_with_it:
 	if ((wake_him) && (stcb->sctp_socket)) {
-#if defined(__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		struct socket *so;
 #endif
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		if(sctp_logging_level & SCTP_WAKE_LOGGING_ENABLE) {
 			sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);
 		}
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		so = SCTP_INP_SO(stcb->sctp_ep);
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
@@ -4751,7 +4751,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		}
 #endif
 		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	} else {
