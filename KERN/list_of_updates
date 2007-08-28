@@ -1,1 +1,21 @@
--
+Updates waiting for Michales finish:
+**********************************
+- send call has a reference to uio->uioresid in
+  the recent send code, but uio may be NULL on send
+  file calls. Need to change to use sndlen.
+- Need to do this for all calls above the copy loops.
+  (change to sndlen all uio->xxx)
+- EMSGSIZE is not being returned in non-blocking mode
+  and needs a small tweak to look if the msg would
+  ever fit when returning EWOULDBLOCK.
+- FWD-TSN has a bug in stream processing which could
+  cause a panic. This is a follow on to the codenomicon
+  fix.
+- PDAPI level 1 and 2 do not work unless the reader
+  gets his returned buffer full.
+- Honda-san has a patch in queue to.
+*************************************
+For all but Honda-san's patch I am maintaining
+a patch.txt file on my local machine. For Panda 
+we are applying the patches in the Panda side
+only.
