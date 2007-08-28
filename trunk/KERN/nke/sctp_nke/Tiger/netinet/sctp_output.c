@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.50 2007/08/24 00:53:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.51 2007/08/27 05:19:47 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2162,7 +2162,7 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 			   sa_family_t fam)
 {
 	uint8_t dest_is_global=0;
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
@@ -2264,7 +2264,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 {
 	uint8_t dest_is_global=0;
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
@@ -5797,9 +5797,6 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	int added_control=0;
 	int un_sent, do_chunk_output=1;
 	struct sctp_association *asoc;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
 		return;
@@ -7013,9 +7010,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	sctp_audit_log(0xC2, 2);
 #endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	hbflag = 0;
 	if ((control_only) || (asoc->stream_reset_outstanding))
 		no_data_chunks = 1;
@@ -8014,7 +8008,6 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 		return;
 	}
 	chk->copy_by_ref = 0;
-
 	chk->send_size = sizeof(struct sctp_chunkhdr);
 	chk->rec.chunk_id.id = SCTP_SHUTDOWN_ACK;
 	chk->rec.chunk_id.can_take_data = 1;
@@ -8774,9 +8767,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		sctp_send_sack(stcb);
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	while (asoc->sent_queue_retran_cnt) {
 		/*-
 		 * Ok, it is retransmission time only, we send out only ONE
@@ -9208,12 +9198,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	unsigned int num_gap_blocks = 0, space;
 	int num_dups = 0;
 	int space_req;
-
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	if (stcb == NULL)
-		panic("sctp_send_sack");
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 
 	a_chk = NULL;
 	asoc = &stcb->asoc;
@@ -9946,7 +9930,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 				sctp_free_remote_addr(chk->whoTo);
 				chk->whoTo = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk)
+			sctp_free_a_chunk((struct sctp_tcb *)NULL, chk);
 			return (-1);
 		}
 	}
@@ -10082,6 +10066,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * we don't respond with an PKT-DROP to an ABORT 
 			 * or PKT-DROP
 			 */
+			sctp_free_a_chunk(stcb, chk);
 			return;
 		default:
 			break;
@@ -11991,7 +11976,7 @@ sctp_lower_sosend(struct socket *so,
 	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		goto out_unlocked;
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
@@ -12310,7 +12295,7 @@ sctp_lower_sosend(struct socket *so,
 #ifndef __Panda__
 				stcb->block_entry = &be;
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 				sbunlock(&so->so_snd, 1);
 #endif
 #if defined (__NetBSD__)
@@ -12331,7 +12316,7 @@ sctp_lower_sosend(struct socket *so,
 					goto out_unlocked;
 				}
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
@@ -12574,7 +12559,7 @@ sctp_lower_sosend(struct socket *so,
 		stcb->asoc.total_output_queue_size, error);
 
  out:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sbunlock(&so->so_snd, 1);
 #endif
 #if defined(__NetBSD__)

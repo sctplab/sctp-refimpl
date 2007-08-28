@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.18 2007/08/24 00:53:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.19 2007/08/27 05:19:46 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.18 2007/08/24 00:53:51 rrs Exp $"
 /*
  * SCTP protocol - RFC2960.
  */
-
 struct sctphdr {
 	uint16_t src_port;	/* source port */
 	uint16_t dest_port;	/* destination port */
@@ -471,6 +470,17 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 #define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00400000
 
+/*-
+ * mobility_features parameters (by micchie).Note
+ * these features are applied against the
+ * sctp_mobility_features flags.. not the sctp_features
+ * flags.
+ */
+#define SCTP_MOBILITY_BASE		0x00000001
+#define SCTP_MOBILITY_FASTHANDOFF	0x00000002
+#define SCTP_MOBILITY_DO_FASTHANDOFF	0x00000004
+
+
 #define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
 
 #include <netinet/sctp_uio.h>
@@ -522,10 +532,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LAST_PACKET_TRACING                        0x01000000
 #define SCTP_THRESHOLD_LOGGING                          0x02000000
 
-/* mobility_features parameters (by micchie) */
-#define SCTP_MOBILITY_BASE			0x00000001
-#define SCTP_MOBILITY_FASTHANDOFF		0x00800002
-#define SCTP_MOBILITY_DO_FASTHANDOFF		0x00000003
 
 #if defined(__Windows__)
 #include <packoff.h>

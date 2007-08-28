@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.27 2007/07/24 20:06:01 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.29 2007/08/27 05:19:47 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -177,7 +177,7 @@ struct sctp_epinfo {
 	struct sctppcbhead listhead;
 	struct sctpladdr addr_wq;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	struct inpcbhead inplisthead;
 #endif
 	struct sctpiterators iteratorhead;
@@ -205,7 +205,7 @@ struct sctp_epinfo {
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 	pthread_mutex_t ipi_pktlog_mtx;
-#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
@@ -273,9 +273,15 @@ struct sctp_epinfo {
 	/* address work queue handling */
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	uint32_t iterator_running;
+#if !defined(__Windows__)
 	SCTP_PROCESS_STRUCT thread_proc;
+#else
+	PFILE_OBJECT iterator_thread_obj;
+#endif
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_cond_t iterator_wakeup;
+#elif defined(__Windows__)
+	KEVENT iterator_wakeup[2];
 #endif
 #endif
 	struct sctp_timer addr_wq_timer;
@@ -383,7 +389,7 @@ struct sctp_inpcb {
 		        ~SCTP_ALIGNM1];
 	}     ip_inp;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	/* leave some space in case i386 inpcb is bigger than ppc */
 	uint8_t		padding[128];
 #endif
@@ -406,7 +412,7 @@ struct sctp_inpcb {
 	struct socket *sctp_socket;
 	uint32_t sctp_flags;	/* INP state flag set */
 	uint32_t sctp_features;	/* Feature flags */
-	uint32_t sctp_mobility_features;/* flags for mobile (by micchie) */
+	uint32_t sctp_mobility_features; /* Mobility  Feature flags */
 	struct sctp_pcb sctp_ep;/* SCTP ep data */
 	/* head of the hash of all associations */
 	struct sctpasochead *sctp_tcbhash;
@@ -471,7 +477,7 @@ struct sctp_inpcb {
 	KSPIN_LOCK inp_rdata_lock;
 	int32_t refcount;
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	int32_t refcount;
 
 	uint32_t lock_caller1;
@@ -556,7 +562,7 @@ struct sctp_tcb {
 
 #include <netinet/sctp_lock_bsd.h>
 
-#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(__APPLE__)
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
@@ -692,7 +698,7 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 void sctp_pcb_finish(void);
 #endif
 
