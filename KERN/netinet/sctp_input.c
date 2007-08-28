@@ -63,9 +63,6 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 	 * all collision cases.
 	 */
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		if (net->rxt_timer.type == SCTP_TIMER_TYPE_COOKIE) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
@@ -2422,9 +2419,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 				return (NULL);
 			}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_LOCK(so, 1);
-#endif
 			inp = (struct sctp_inpcb *)so->so_pcb;
 			SCTP_INP_INCR_REF(inp);
 			/* 
@@ -2488,9 +2482,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			SCTP_INP_DECR_REF(inp);
 			/* Switch over to the new guy */
 			*inp_p = inp;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(oso, 1);
-#endif
 			sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 
 			/* Pull it from the incomplete queue and wake the guy */
@@ -4901,13 +4892,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int abort_flag = 0;
 	int un_sent;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	/* inp is never NULL. stcb can be NULL */
-	sctp_lock_assert(SCTP_INP_SO(inp));
-	if ((stcb) && (stcb->sctp_ep != inp)) {
-		panic("sctp_common_input_processing: stcb->sctp_ep != inp\n");
-	}
-#endif
 	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xE0, 1);
@@ -4966,27 +4950,18 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
 		}
 		if (stcb == NULL) {
 			/* out of the blue DATA chunk */
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL,
 					 vrf_id);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
 			/* v_tag mismatch! */
 			SCTP_STAT_INCR(sctps_badvtag);
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
 		}
 	}
@@ -4997,14 +4972,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * packet while processing control, or we're done with this
 		 * packet (done or skip rest of data), so we drop it...
 		 */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 		goto out_now;
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 
 	/*
 	 * DATA chunk processing
@@ -5057,9 +5026,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			sctp_handle_ootb(m, iphlen, offset, sh, inp, NULL,
 					 vrf_id);
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
             /*sa_ignore NOTREACHED*/
 			break;
@@ -5069,9 +5035,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		case SCTP_STATE_SHUTDOWN_ACK_SENT:
 		default:
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
             /*sa_ignore NOTREACHED*/
 			break;
@@ -5092,9 +5055,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * The association aborted, NO UNLOCK needed since
 			 * the association is destroyed.
 			 */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
 		}
 		data_processed = 1;
@@ -5122,9 +5082,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			goto out_now;
 		}
 	}
@@ -5157,9 +5114,6 @@ trigger_send:
 	sctp_auditing(2, inp, stcb, net);
 #endif
 	SCTP_TCB_UNLOCK(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
  out_now:
 #ifdef INVARIANTS
 	sctp_validate_no_locks(inp);
@@ -5370,14 +5324,8 @@ sctp_input(i_pak, va_alist)
 		if ((inp) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, SCTP_SO_NOT_LOCKED);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 		} else if ((inp != NULL) && (stcb == NULL)) {
 			refcount_up = 1;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 		}
 		SCTP_STAT_INCR(sctps_badsum);
 		SCTP_STAT_INCR_COUNTER32(sctps_checksumerrors);
