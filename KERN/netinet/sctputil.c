@@ -4279,7 +4279,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	error = sblock(&old_so->so_rcv, 0);
 #endif
 #if defined(__NetBSD__)
@@ -4333,7 +4333,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sbunlock(&old_so->so_rcv, 1);
 #endif
 #if defined (__NetBSD__) 
@@ -4368,7 +4368,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	SCTP_INP_READ_UNLOCK(new_inp);
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
@@ -5112,7 +5112,7 @@ sctp_sorecvmsg(struct socket *so,
 			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
 	}
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 #if defined(__NetBSD__)
@@ -5135,7 +5135,7 @@ sctp_sorecvmsg(struct socket *so,
 		hold_sblock = 1;
 	}
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sbunlock(&so->so_rcv, 1);
 #endif
 #if defined (__NetBSD__) 
@@ -5258,7 +5258,7 @@ sctp_sorecvmsg(struct socket *so,
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 #if defined(__NetBSD__)
@@ -5817,7 +5817,7 @@ sctp_sorecvmsg(struct socket *so,
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 		sbunlock(&so->so_rcv, 1);
 #endif
 		if(so->so_rcv.sb_cc <= control->held_length) {
@@ -5831,7 +5831,7 @@ sctp_sorecvmsg(struct socket *so,
 			}
 			control->held_length = 0;
 		}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 		if(hold_sblock) {
@@ -5934,7 +5934,7 @@ sctp_sorecvmsg(struct socket *so,
 		hold_sblock = 0;
 	}
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sbunlock(&so->so_rcv, 1);
 #endif
 #if defined(__NetBSD__)

@@ -401,7 +401,7 @@ int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 void sctp_finish(void);
 #endif
 

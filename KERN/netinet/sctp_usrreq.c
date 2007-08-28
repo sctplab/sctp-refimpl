@@ -104,7 +104,7 @@ sctp_init(void)
 #endif
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 void
 sctp_finish(void)
 {
@@ -600,7 +600,7 @@ sctp_abort(struct socket *so)
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 		so->so_usecount--;
 #else
 		/* Now null out the reference, we are completely detached. */
@@ -815,7 +815,7 @@ sctp_close(struct socket *so)
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
 
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(__APPLE__)
 		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
@@ -882,7 +882,7 @@ sctp_detach(struct socket *so)
 		 * here for the accounting/select.
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(__APPLE__)
 		/* Now disconnect */
 		so->so_pcb = NULL;
 #endif

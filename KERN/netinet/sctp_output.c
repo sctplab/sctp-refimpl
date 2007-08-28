@@ -11976,7 +11976,7 @@ sctp_lower_sosend(struct socket *so,
 	if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		goto out_unlocked;
 	}
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
@@ -12295,7 +12295,7 @@ sctp_lower_sosend(struct socket *so,
 #ifndef __Panda__
 				stcb->block_entry = &be;
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 				sbunlock(&so->so_snd, 1);
 #endif
 #if defined (__NetBSD__)
@@ -12316,7 +12316,7 @@ sctp_lower_sosend(struct socket *so,
 					goto out_unlocked;
 				}
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
 #if defined(__NetBSD__)
@@ -12559,7 +12559,7 @@ sctp_lower_sosend(struct socket *so,
 		stcb->asoc.total_output_queue_size, error);
 
  out:
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sbunlock(&so->so_snd, 1);
 #endif
 #if defined(__NetBSD__)

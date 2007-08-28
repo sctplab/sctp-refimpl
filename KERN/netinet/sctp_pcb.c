@@ -83,7 +83,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
 	 * We really don't need to lock this, but I will just because it
 	 * does not hurt.
 	 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	/*
 	 * On Tiger the caller MUST do all necessary locking.
 	 */
@@ -1901,7 +1901,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	bzero(inp, sizeof(*inp));
 
 	/* bump generations */
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(__APPLE__)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_INUSE;
 #endif
 	/* setup socket pointers */
@@ -2007,7 +2007,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #endif
 	inp->def_vrf_id = vrf_id;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	/* LOCK init's */
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
@@ -2034,7 +2034,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 
 	/* add it to the info area */
 	LIST_INSERT_HEAD(&sctppcbinfo.listhead, inp, sctp_list);
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(__APPLE__)
 	LIST_INSERT_HEAD(&sctppcbinfo.inplisthead, &inp->ip_inp.inp, inp_list);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
@@ -3314,7 +3314,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 
 	inp_save = LIST_NEXT(inp, sctp_list);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
 	if (in_pcb_checkstate(&inp->ip_inp.inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
 		panic("sctp_inpcb_free inp = %x couldn't set to STOPUSING\n", inp);
@@ -3363,7 +3363,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_ASOC_CREATE_LOCK_DESTROY(inp);
 	SCTP_INP_INFO_WUNLOCK();
 	SCTP_ITERATOR_UNLOCK();
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(__APPLE__)
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 	SCTP_DECR_EP_COUNT();
 #else
@@ -5170,7 +5170,7 @@ sctp_pcb_init()
 	(void)SCTP_GETTIME_TIMEVAL(&sctpstat.sctps_discontinuitytime);
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
+#if defined(__APPLE__)
 	LIST_INIT(&sctppcbinfo.inplisthead);
 #endif
 
@@ -5328,7 +5328,7 @@ sctp_pcb_init()
 #endif
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
