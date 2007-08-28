@@ -338,15 +338,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	number_of_associations = 0;
 	number_of_remote_addresses = 0;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 	SCTP_INP_INFO_RLOCK();
 	if (req->oldptr == USER_ADDR_NULL) {
 		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
-#endif
 			SCTP_INP_RLOCK(inp);
 			number_of_endpoints++;
 			number_of_local_addresses += number_of_addresses(inp);
@@ -357,14 +351,8 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 					number_of_remote_addresses++;
 				}
 			}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 			SCTP_INP_RUNLOCK(inp);
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_RUNLOCK();
 		n = (number_of_endpoints + 1) * sizeof(struct xsctp_inpcb) +
 		    (number_of_local_addresses + number_of_endpoints + number_of_associations) * sizeof(struct xsctp_laddr) +
@@ -377,18 +365,12 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	}
 
 	if (req->newptr != USER_ADDR_NULL) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_RUNLOCK();
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_SYSCTL, EPERM);
 		return EPERM;
 	}
 
 	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
-#endif
 		SCTP_INP_RLOCK(inp);
 		xinpcb.last                   = 0;
 		xinpcb.local_port             = ntohs(inp->sctp_lport);
@@ -406,10 +388,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
 		if (error) {
 			SCTP_INP_DECR_REF(inp);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 			return error;
 		}
 		SCTP_INP_INFO_RLOCK();
@@ -417,10 +395,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		error = copy_out_local_addresses(inp, NULL, req);
 		if (error) {
 			SCTP_INP_DECR_REF(inp);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 			return error;
 		}
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -458,10 +432,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 				SCTP_INP_DECR_REF(inp);
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
@@ -470,10 +440,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_RLOCK(inp);
 			error = copy_out_local_addresses(inp, stcb, req);
 			if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 				SCTP_INP_DECR_REF(inp);
 				atomic_add_int(&stcb->asoc.refcnt, -1);
 				return error;
@@ -496,10 +462,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				SCTP_INP_INFO_RUNLOCK();
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 				if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-					SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-					SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 					SCTP_INP_DECR_REF(inp);
 					atomic_add_int(&stcb->asoc.refcnt, -1);
 					return error;
@@ -514,36 +476,23 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 			if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-				SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-				SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 				SCTP_INP_DECR_REF(inp);
 				return error;
 			}
 			SCTP_INP_INFO_RLOCK();
 			SCTP_INP_RLOCK(inp);
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-#endif
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
 		memset((void *)&xstcb, 0, sizeof(struct xsctp_tcb));
 		xstcb.last = 1;
 		error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 		if (error) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 			return error;
 		}
 		SCTP_INP_INFO_RLOCK();
 		SCTP_INP_DECR_REF(inp);
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 	SCTP_INP_INFO_RUNLOCK();
 
 	memset((void *)&xinpcb, 0, sizeof(struct xsctp_inpcb));

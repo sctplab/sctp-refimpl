@@ -469,11 +469,6 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (inp != NULL) {
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-		}
-#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
@@ -2636,17 +2631,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		struct sctp_pcbinfo *spcb;
 
 		SCTP_CHECK_AND_CAST(spcb, optval, struct sctp_pcbinfo, *optsize);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (!SCTP_TRYLOCK_SHARED(sctppcbinfo.ipi_ep_mtx)) {
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
-			SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
-		}
-#endif
 		sctp_fill_pcbinfo(spcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 		*optsize = sizeof(struct sctp_pcbinfo);
 	}
 	break;
@@ -2969,9 +2954,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	struct sctp_inpcb *inp=NULL;
 	uint32_t vrf_id;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(so);
-#endif
 	if (optval == NULL) {
 		SCTP_PRINTF("optval is NULL\n");
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);

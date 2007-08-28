@@ -253,13 +253,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		if ((in6p) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 			sctp_chunk_output((struct sctp_inpcb *)in6p, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, SCTP_SO_NOT_LOCKED);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
-#endif
 		} else if ((in6p != NULL) && (stcb == NULL)) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(in6p), 1);
-#endif
 			refcount_up = 1;
 		}
 		SCTP_STAT_INCR(sctps_badsum);
@@ -561,11 +555,6 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 			if (stcb)
 				SCTP_TCB_UNLOCK(stcb);
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (inp != NULL) {
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-		}
-#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif

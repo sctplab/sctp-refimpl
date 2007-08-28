@@ -5797,9 +5797,6 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	int added_control=0;
 	int un_sent, do_chunk_output=1;
 	struct sctp_association *asoc;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
 		return;
@@ -7013,9 +7010,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	sctp_audit_log(0xC2, 2);
 #endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	hbflag = 0;
 	if ((control_only) || (asoc->stream_reset_outstanding))
 		no_data_chunks = 1;
@@ -8773,9 +8767,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		sctp_send_sack(stcb);
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 	}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(inp));
-#endif
 	while (asoc->sent_queue_retran_cnt) {
 		/*-
 		 * Ok, it is retransmission time only, we send out only ONE
@@ -9207,12 +9198,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	unsigned int num_gap_blocks = 0, space;
 	int num_dups = 0;
 	int space_req;
-
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	if (stcb == NULL)
-		panic("sctp_send_sack");
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 
 	a_chk = NULL;
 	asoc = &stcb->asoc;
