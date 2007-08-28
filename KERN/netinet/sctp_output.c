@@ -3340,6 +3340,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	uint32_t vrf_id;
 	sctp_route_t *ro = NULL;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 	if ((net) && (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)) {
 		SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EFAULT);
 		sctp_m_freem(m);
@@ -3948,6 +3955,13 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	int num_ext;
 	int p_len;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 	/* INIT's always go to the primary (and usually ONLY address) */
 	mp_last = NULL;
 	net = stcb->asoc.primary_destination;
@@ -6990,6 +7004,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int pf_hbflag = 0;
 	int quit_now = 0;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 	*num_out = 0;
 	cwnd_full_ind = 0;
 
@@ -8231,6 +8252,13 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	uint32_t dmtu = 0;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	tmr_started = ctl_cnt = bundle_at = error = 0;
 	no_fragmentflg = 1;
@@ -8742,6 +8770,13 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	int un_sent=0;
 	int fr_done, tot_frs=0;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 	asoc = &stcb->asoc;
 	if(from_where == SCTP_OUTPUT_FROM_USR_SEND) {
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY)) {
@@ -9473,6 +9508,13 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
 	struct sctp_auth_chunk *auth = NULL;
 	struct sctphdr *shdr;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	/*-
 	 * Add an AUTH chunk, if chunk requires it and save the offset into
 	 * the chain for AUTH
