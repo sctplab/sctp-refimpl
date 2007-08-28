@@ -46,7 +46,7 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 #include <sys/proc_internal.h>
 #include <sys/uio_internal.h>
 #endif

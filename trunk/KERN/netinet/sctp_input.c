@@ -2382,7 +2382,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			SCTP_SOCKET_LOCK(oso, 1);
 #endif
 			so = sonewconn(oso, 0
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 			    ,NULL
 #endif
 #ifdef __Panda__
