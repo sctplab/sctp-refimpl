@@ -5666,7 +5666,7 @@ sctp_pcb_init()
 
 
 	/* Master Lock INIT for info structure */
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	/* allocate the lock group attribute for SCTP PCB mutexes */
 	sctppcbinfo.mtx_grp_attr = lck_grp_attr_alloc_init();
 	lck_grp_attr_setdefault(sctppcbinfo.mtx_grp_attr);

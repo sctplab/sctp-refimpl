@@ -32,7 +32,6 @@
 
 /*
  * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
- * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy macros.
  */
 
 /* for now, all locks use this group and attributes */

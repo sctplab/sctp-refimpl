@@ -2162,7 +2162,7 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 			   sa_family_t fam)
 {
 	uint8_t dest_is_global=0;
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
@@ -2264,7 +2264,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 {
 	uint8_t dest_is_global=0;
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);

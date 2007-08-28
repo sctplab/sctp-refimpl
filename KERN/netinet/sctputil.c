@@ -322,7 +322,7 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
  		sctp_clog.x.lock.sock = (void *) NULL;
 	}
 	sctp_clog.x.lock.inp = (void *) inp;
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER))
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__))
 	if (stcb) {
 		sctp_clog.x.lock.tcb_lock = mtx_owned(&stcb->tcb_mtx);
 	} else {
@@ -1444,13 +1444,6 @@ sctp_timeout_handler(void *t)
 	int did_output;
 	struct sctp_iterator *it = NULL;
 
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-	boolean_t funnel_state;
-
-	/* get BSD kernel funnel/mutex */
-	funnel_state = thread_funnel_set(network_flock, TRUE);
-#endif
-
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
@@ -1474,10 +1467,6 @@ sctp_timeout_handler(void *t)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-		/* release BSD kernel funnel/mutex */
-		(void)thread_funnel_set(network_flock, FALSE);
-#endif
 		return;
 	}
 	tmr->stopped_from = 0xa001;
@@ -1489,20 +1478,12 @@ sctp_timeout_handler(void *t)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-		/* release BSD kernel funnel/mutex */
-		(void)thread_funnel_set(network_flock, FALSE);
-#endif
 		return;
 	}
 	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
-#endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-		/* release BSD kernel funnel/mutex */
-		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 		return;
 	}
@@ -1524,10 +1505,6 @@ sctp_timeout_handler(void *t)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
 #endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-			/* release BSD kernel funnel/mutex */
-			(void)thread_funnel_set(network_flock, FALSE);
-#endif
 			SCTP_INP_DECR_REF(inp);
 			return;
 		}
@@ -1542,10 +1519,6 @@ sctp_timeout_handler(void *t)
 			atomic_add_int(&stcb->asoc.refcnt, -1);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 			splx(s);
-#endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-			/* release BSD kernel funnel/mutex */
-			(void)thread_funnel_set(network_flock, FALSE);
 #endif
 			if (inp) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1562,10 +1535,6 @@ sctp_timeout_handler(void *t)
 	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
-#endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-		/* release BSD kernel funnel/mutex */
-		(void)thread_funnel_set(network_flock, FALSE);
 #endif
 		if (inp) {
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -1963,10 +1932,6 @@ out_no_decr:
 		tmr->type);
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
-#endif
-#if defined(__APPLE__) && defined(SCTP_APPLE_PANTHER)
-	/* release BSD kernel funnel/mutex */
-	(void)thread_funnel_set(network_flock, FALSE);
 #endif
 	if (inp) {
 #if defined(SCTP_PER_SOCKET_LOCKING)

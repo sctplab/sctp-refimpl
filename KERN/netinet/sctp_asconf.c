@@ -1802,7 +1802,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 {
 	int status;
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
@@ -2247,7 +2247,7 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
 
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
@@ -2875,7 +2875,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
     uint32_t type, uint32_t vrf_id, struct sctp_ifa *sctp_ifap)
 {
 	struct sctp_ifa *ifa;
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	struct timeval timenow;
 
 	getmicrotime(&timenow);
