@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.14 2007/08/24 00:53:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.15 2007/08/27 05:19:47 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -117,6 +117,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	    (SCTP_PCB_COPY_FLAGS & inp->sctp_flags));
 	n_inp->sctp_socket = so;
 	n_inp->sctp_features = inp->sctp_features;
+	n_inp->sctp_mobility_features = inp->sctp_mobility_features;
 	n_inp->sctp_frag_point = inp->sctp_frag_point;
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
@@ -175,7 +176,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
 	newso = sonewconn(head, SS_ISCONNECTED
-#if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
+#if defined(__APPLE__)
 	    , NULL
 #elif defined(__Panda__)
 	    /* place this socket in the assoc's vrf id */

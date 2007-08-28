@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.42 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.44 2007/08/27 05:19:47 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -104,7 +104,7 @@ sctp_init(void)
 #endif
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 void
 sctp_finish(void)
 {
@@ -469,11 +469,6 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_WUNLOCK(inp);
 			}
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (inp != NULL) {
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
-		}
-#endif
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
@@ -605,7 +600,7 @@ sctp_abort(struct socket *so)
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 		so->so_usecount--;
 #else
 		/* Now null out the reference, we are completely detached. */
@@ -820,7 +815,7 @@ sctp_close(struct socket *so)
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
 
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(__APPLE__)
 		/* Now null out the reference, we are completely detached. */
 		so->so_pcb = NULL;
 #endif
@@ -887,7 +882,7 @@ sctp_detach(struct socket *so)
 		 * here for the accounting/select.
 		 */
 		SCTP_SB_CLEAR(so->so_rcv);
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if !defined(__APPLE__)
 		/* Now disconnect */
 		so->so_pcb = NULL;
 #endif
@@ -2636,17 +2631,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		struct sctp_pcbinfo *spcb;
 
 		SCTP_CHECK_AND_CAST(spcb, optval, struct sctp_pcbinfo, *optsize);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		if (!SCTP_TRYLOCK_SHARED(sctppcbinfo.ipi_ep_mtx)) {
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
-			SCTP_LOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 0);
-		}
-#endif
 		sctp_fill_pcbinfo(spcb);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_SHARED(sctppcbinfo.ipi_ep_mtx);
-#endif
 		*optsize = sizeof(struct sctp_pcbinfo);
 	}
 	break;
@@ -2969,9 +2954,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	struct sctp_inpcb *inp=NULL;
 	uint32_t vrf_id;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(so);
-#endif
 	if (optval == NULL) {
 		SCTP_PRINTF("optval is NULL\n");
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);

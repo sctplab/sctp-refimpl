@@ -89,15 +89,29 @@ MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
 void
 sctp_wakeup_iterator(void)
 {
+#if !defined(__Windows__)
 	wakeup(&sctppcbinfo.iterator_running);
+#else
+	KeSetEvent(&sctppcbinfo.iterator_wakeup[0],
+		   IO_NO_INCREMENT,
+		   FALSE);
+#endif
 }
 
 static void
 sctp_iterator_thread(void *v)
 {
+#if defined(__Windows__)
+	KIRQL oldIrql;
+	NTSTATUS status = STATUS_SUCCESS;
+	PVOID events[2];
+
+	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
+#endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	sctppcbinfo.iterator_running = 0;
 	while (1) {
+#if !defined(__Windows__)
 		msleep(&sctppcbinfo.iterator_running,
 #if defined(__FreeBSD__)
 		       &sctppcbinfo.ipi_iterator_wq_mtx,
@@ -105,8 +119,31 @@ sctp_iterator_thread(void *v)
 		       sctppcbinfo.ipi_iterator_wq_mtx,
 #endif
 	 	       0, "waiting_for_work", 0);
+#else
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+		KeLowerIrql(oldIrql);
+
+		events[0] = &sctppcbinfo.iterator_wakeup[0];
+		events[1] = &sctppcbinfo.iterator_wakeup[1];
+		status = KeWaitForMultipleObjects(2,
+					       events,
+					       WaitAny,
+					       Executive,
+					       KernelMode,
+					       FALSE,
+					       NULL,
+					       NULL);
+		if (status == STATUS_WAIT_1) {
+			break;
+		}
+		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
+		SCTP_IPI_ITERATOR_WQ_LOCK();
+#endif /* !__Windows__ */
 		sctp_iterator_worker();
 	}
+#if defined(__Windows__)
+	PsTerminateSystemThread(STATUS_SUCCESS);
+#endif
 }
 
 void
@@ -123,6 +160,40 @@ sctp_startup_iterator(void)
 #elif defined(__APPLE__)
 	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread,
 						 (void *)NULL);
+#elif defined(__Windows__)
+	NTSTATUS status = STATUS_SUCCESS;
+	OBJECT_ATTRIBUTES objectAttributes;
+	HANDLE iterator_thread_handle;
+
+	KeInitializeEvent(&sctppcbinfo.iterator_wakeup[0],
+			  SynchronizationEvent,
+			  FALSE);
+	KeInitializeEvent(&sctppcbinfo.iterator_wakeup[1],
+			  SynchronizationEvent,
+			  FALSE);
+	InitializeObjectAttributes(&objectAttributes,
+				   NULL,
+				   OBJ_KERNEL_HANDLE,
+				   NULL,
+				   NULL);
+	status = PsCreateSystemThread(&iterator_thread_handle,
+				      0,
+				      &objectAttributes,
+				      NULL,
+				      NULL,
+				      sctp_iterator_thread,
+				      NULL);
+	if (status == STATUS_SUCCESS) {
+		ObReferenceObjectByHandle(iterator_thread_handle,
+					  THREAD_ALL_ACCESS,
+					  NULL,
+					  KernelMode,
+					  (PVOID)&sctppcbinfo.iterator_thread_obj,
+					  NULL);
+		ZwClose(iterator_thread_handle);
+	} else {
+		sctppcbinfo.iterator_thread_obj = NULL;
+	}
 #endif
 }
 #endif

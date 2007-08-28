@@ -32,7 +32,6 @@
 
 /*
  * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
- * 10.3.x systems (SCTP_APPLE_PANTHER defined) builds use the emtpy macros.
  */
 
 /* for now, all locks use this group and attributes */
@@ -52,7 +51,6 @@
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_LOCK_DESTROY() \
         lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
-
 #define SCTP_IPI_COUNT_INIT() \
 	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_COUNT_DESTROY() \

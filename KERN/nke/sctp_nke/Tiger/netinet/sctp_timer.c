@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.26 2007/08/16 01:51:22 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.27 2007/08/24 00:53:52 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -562,9 +562,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	uint32_t orig_flight, orig_tf;
 	uint32_t tsnlast, tsnfirst;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 
 	/* none in flight now */
 	audit_tf = 0;
@@ -877,9 +874,6 @@ sctp_move_all_chunks_to_alt(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk;
 	struct sctp_stream_queue_pending *sp;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	if (net == alt)
 		/* nothing to do */
 		return;
@@ -919,9 +913,6 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	int win_probe, num_mk;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	if(sctp_logging_level & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
 	}
@@ -1122,9 +1113,6 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	/* bump the thresholds */
 	if (stcb->asoc.delayed_connection) {
 		/*
@@ -1176,9 +1164,6 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *cookie;
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	/* first before all else we must find the cookie */
 	TAILQ_FOREACH(cookie, &stcb->asoc.control_send_queue, sctp_next) {
 		if (cookie->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
@@ -1526,9 +1511,6 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net, int cnt_of_unconf)
 {
 	int ret;
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	if (net) {
 		if (net->hb_responded == 0) {
 			if(net->ro._s_addr) {
@@ -1768,12 +1750,6 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 	}
 }
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
-/*
- * This function assumes that no socket lock is locked. The function
- * called per association gets the socket locked.
- */
-#endif
 void
 sctp_iterator_timer(struct sctp_iterator *it)
 {
@@ -1789,15 +1765,9 @@ sctp_iterator_timer(struct sctp_iterator *it)
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_WLOCK();
 		TAILQ_REMOVE(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_WUNLOCK();
 		(void)SCTP_OS_TIMER_STOP(&it->tmr.timer);
 		if (it->function_atend != NULL) {
@@ -1807,9 +1777,6 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 	SCTP_INP_WLOCK(it->inp);
 	while (((it->pcb_flags) &&
 		((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) ||
@@ -1817,32 +1784,20 @@ select_a_new_ep:
 		((it->inp->sctp_features & it->pcb_features) != it->pcb_features))) {
 		/* endpoint flags or features don't match, so keep looking */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 			SCTP_INP_WUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		it->inp = LIST_NEXT(it->inp, sctp_list);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_SOCKET_LOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 		SCTP_INP_WLOCK(it->inp);
 	}
 	if ((it->inp->inp_starting_point_for_iterator != NULL) &&
 	    (it->inp->inp_starting_point_for_iterator != it)) {
 		SCTP_PRINTF("Iterator collision, waiting for one at %p\n",
 			    it->inp);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		/* Unlock done at start_timer_return */
-#endif
 		SCTP_INP_WUNLOCK(it->inp);
 		goto start_timer_return;
 	}
@@ -1887,9 +1842,6 @@ select_a_new_ep:
 		iteration_count++;
 		if (iteration_count > SCTP_ITERATOR_MAX_AT_ONCE) {
 	start_timer_return:
-#if defined(SCTP_PER_SOCKET_LOCKING)
-			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 			/* set a timer to continue this later */
 			if(it->stcb) 
 				SCTP_TCB_UNLOCK(it->stcb);
@@ -1925,20 +1877,11 @@ select_a_new_ep:
 	SCTP_INP_WLOCK(it->inp);
 	it->inp->inp_starting_point_for_iterator = NULL;
 	SCTP_INP_WUNLOCK(it->inp);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(it->inp), 1);
-#endif
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_LOCK_EXC(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-#if defined(SCTP_PER_SOCKET_LOCKING)
-		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
-#endif
 		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {

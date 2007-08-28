@@ -85,10 +85,8 @@
 
 extern struct fileops socketops;
 
-#ifndef SCTP_APPLE_PANTHER
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
-#endif /* !SCTP_APPLE_PANTHER */
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
@@ -101,70 +99,6 @@ extern uint32_t sctp_debug_on;
  * NOTE!! sctp_peeloff_option() MUST be kept in sync with the Apple accept()
  * call.
  */
-#ifdef SCTP_APPLE_PANTHER
-int
-sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
-{
-	struct file *fp;
-	int error, s;
-	struct socket *head, *so;
-	int fd;
-	short fflag;		/* type must match fp->f_flag */
-
-	/* AUDIT_ARG(fd, uap->s); */
-	error = getsock(p->p_fd, uap->s, &fp);
-	if (error)
-		return (error);
-	s = splnet();
-	head = (struct socket *)fp->f_data;
-	if (head == NULL) {
-		splx(s);
-		return (EBADF);
-	}
-	error = sctp_can_peel_off(head, uap->assoc_id);
-	if (error) {
-		splx(s);
-		return (error);
-	}
-	fflag = fp->f_flag;
-	thread_funnel_switch(NETWORK_FUNNEL, KERNEL_FUNNEL);
-	error = falloc(p, &fp, &fd);
-	thread_funnel_switch(KERNEL_FUNNEL, NETWORK_FUNNEL);
-	if (error) {
-		/*
-		 * Probably ran out of file descriptors. Put the unaccepted
-		 * connection back onto the queue and do another wakeup so
-		 * some other process might have a chance at it.
-		 */
-		/* SCTP will NOT put the connection back onto queue */
-		splx(s);
-		return (error);
-	} else {
-		*fdflags(p, fd) &= ~UF_RESERVED;
-		/* return the new descriptor to caller */
-		uap->new_sd = fd;
-	}
-
-	so = sctp_get_peeloff(head, uap->assoc_id, &error);
-	if (so == NULL) {
-		/* Either someone else peeled it off or can't get a socket */
-		splx(s);
-		return (error);
-	}
-	so->so_state &= ~SS_COMP;
-	so->so_state &= ~SS_NOFDREF;
-	so->so_head = NULL;
-	fp->f_type = DTYPE_SOCKET;
-	fp->f_flag = fflag;
-	fp->f_ops = &socketops;
-	fp->f_data = (caddr_t)so;
-
-	splx(s);
-	return (error);
-}
-
-#else
-/* TIGER */
 
 #define f_flag f_fglob->fg_flag
 #define f_type f_fglob->fg_type
@@ -240,12 +174,11 @@ out:
 	file_drop(fd);
 	return (error);
 }
-#endif				/* SCTP_APPLE_PANTHER */
 #endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 
 /* socket lock pr_xxx functions */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 /* Tiger only */
 int
 sctp_lock(struct socket *so, int refcount, int lr)
@@ -355,7 +288,7 @@ sctp_unlock_assert(struct socket *so)
 		panic("sctp_unlock_assert: so=%p has sp->so_pcb==NULL.\n", so);
 	}
 }
-#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+#endif /* __APPLE__ */
 
 /*
  * timer functions
@@ -382,7 +315,7 @@ sctp_stop_main_timer(void) {
 /*
  * locks
  */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 lck_rw_t *sctp_calloutq_mtx;
 #else
@@ -579,7 +512,7 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
         return (m);
 }
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 void
 sctp_slowtimo()
 {

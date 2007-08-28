@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.23 2007/08/24 00:53:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.24 2007/08/27 05:19:47 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
