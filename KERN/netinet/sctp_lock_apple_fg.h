@@ -42,10 +42,14 @@
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_INP_INFO_RLOCK()
-#define SCTP_INP_INFO_RUNLOCK() 
-#define SCTP_INP_INFO_WLOCK() 
-#define SCTP_INP_INFO_WUNLOCK()
+#define SCTP_INP_INFO_RLOCK() \
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK() \
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WLOCK() \
+	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WUNLOCK() \
+	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_LOCK_DESTROY() \
         lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
 #define SCTP_IPI_COUNT_INIT() \
@@ -53,60 +57,94 @@
 #define SCTP_IPI_COUNT_DESTROY() \
         lck_mtx_free(sctppcbinfo.ipi_count_mtx, SCTP_MTX_GRP)
 
-#define SCTP_IPI_ADDR_INIT()
-#define SCTP_IPI_ADDR_DESTROY(_inp)
-#define SCTP_IPI_ADDR_LOCK()
-#define SCTP_IPI_ADDR_UNLOCK()
+#define SCTP_IPI_ADDR_INIT() \
+	sctppcbinfo.ipi_addr_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_IPI_ADDR_DESTROY() \
+	lck_mtx_free(sctppcbinfo.ipi_addr_mtx, SCTP_MTX_GRP)
+#define SCTP_IPI_ADDR_LOCK() \
+	lck_mtx_lock(sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_UNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.ipi_addr_mtx)
 
 
-#define SCTP_TCB_SEND_LOCK_INIT(_tcb)
-#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
-#define SCTP_TCB_SEND_LOCK(_tcb)
-#define SCTP_TCB_SEND_UNLOCK(_tcb)
-
-
-
-#define SCTP_STATLOG_INIT_LOCK() \
-	sctppcbinfo.logging_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
-#define SCTP_STATLOG_LOCK() \
-	lck_mtx_lock(sctppcbinfo.logging_mtx)
-#define SCTP_STATLOG_UNLOCK() \
-	lck_mtx_unlock(sctppcbinfo.logging_mtx)
-#define SCTP_STATLOG_DESTROY() \
-	lck_mtx_free(sctppcbinfo.logging_mtx, SCTP_MTX_GRP)
-
+#define SCTP_TCB_SEND_LOCK_INIT(_tcb) \
+	(_tcb)->tcb_send_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) \
+	lck_mtx_free((_tcb)->tcb_send_mtx, SCTP_MTX_GRP)
+#define SCTP_TCB_SEND_LOCK(_tcb) \
+	lck_mtx_lock((_tcb)->tcb_send_mtx)
+#define SCTP_TCB_SEND_UNLOCK(_tcb) \
+	lck_mtx_unlock((_tcb)->tcb_send_mtx)
 
 
 /* Lock for INP */
-#define SCTP_INP_LOCK_INIT(_inp)
-#define SCTP_INP_LOCK_DESTROY(_inp)
+#if defined(SCTP_INP_RWLOCK)  /* shared locking */
+#define SCTP_INP_LOCK_INIT(_inp) \
+	(_inp)->inp_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	lck_rw_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_RLOCK(_inp) \
+	lck_rw_lock_exclusive((_inp)->inp_mtx)
+#define SCTP_INP_RUNLOCK(_inp) \
+	lck_rw_unlock_exclusive((_inp)->inp_mtx)
+#define SCTP_INP_WLOCK(_inp) \
+	lck_rw_lock_exclusive((_inp)->inp_mtx)
+#define SCTP_INP_WUNLOCK(_inp) \
+	lck_rw_unlock_exclusive((_inp)->inp_mtx)
+#else
+#define SCTP_INP_LOCK_INIT(_inp) \
+	(_inp)->inp_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_RLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_RUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#define SCTP_INP_WLOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_mtx)
+#define SCTP_INP_WUNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_mtx)
+#endif
+#define SCTP_INP_INCR_REF(_inp) atomic_add_int(&((_inp)->refcount), 1)
+#define SCTP_INP_DECR_REF(_inp) atomic_add_int(&((_inp)->refcount), -1)
 
-#define SCTP_INP_RLOCK(_inp)
-#define SCTP_INP_RUNLOCK(_inp)
-#define SCTP_INP_WLOCK(_inp)
-#define SCTP_INP_WUNLOCK(_inp)
-#define SCTP_INP_INCR_REF(_inp)
-#define SCTP_INP_DECR_REF(_inp)
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
+	(_inp)->inp_create_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_create_mtx, SCTP_MTX_GRP)
+#define SCTP_ASOC_CREATE_LOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_create_mtx)
+#define SCTP_ASOC_CREATE_UNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_create_mtx)
 
-#define SCTP_ASOC_CREATE_LOCK_INIT(_inp)
-#define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp)
-#define SCTP_ASOC_CREATE_LOCK(_inp)
-#define SCTP_ASOC_CREATE_UNLOCK(_inp)
-
-#define SCTP_INP_READ_INIT(_inp)
-#define SCTP_INP_READ_DESTROY(_inp)
-#define SCTP_INP_READ_LOCK(_inp)
-#define SCTP_INP_READ_UNLOCK(_inp)
+#define SCTP_INP_READ_INIT(_inp) \
+	(_inp)->inp_rdata_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_READ_DESTROY(_inp) \
+	lck_mtx_free((_inp)->inp_rdata_mtx, SCTP_MTX_GRP)
+#define SCTP_INP_READ_LOCK(_inp) \
+	lck_mtx_lock((_inp)->inp_rdata_mtx)
+#define SCTP_INP_READ_UNLOCK(_inp) \
+	lck_mtx_unlock((_inp)->inp_rdata_mtx)
 
 /* Lock for TCB */
-
-#define SCTP_TCB_LOCK_INIT(_tcb)
-#define SCTP_TCB_LOCK_DESTROY(_tcb)
-#define SCTP_TCB_LOCK(_tcb)
-#define SCTP_TCB_TRYLOCK(_tcb) 1
-#define SCTP_TCB_UNLOCK(_tcb)
-#define SCTP_TCB_UNLOCK_IFOWNED(_tcb)
-#define SCTP_TCB_LOCK_ASSERT(_tcb)
+#define SCTP_TCB_LOCK_INIT(_tcb) \
+	(_tcb)->tcb_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_TCB_LOCK_DESTROY(_tcb) \
+	lck_mtx_free((_tcb)->tcb_mtx, SCTP_MTX_GRP)
+#define SCTP_TCB_LOCK(_tcb) \
+do { \
+	lck_mtx_lock((_tcb)->tcb_mtx); \
+	SAVE_CALLERS_NOSKIP((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
+} while (0)
+#define SCTP_TCB_TRYLOCK(_tcb) \
+	lck_mtx_try_lock((_tcb)->tcb_mtx)
+#define SCTP_TCB_UNLOCK(_tcb) \
+do { \
+	SAVE_CALLERS_NOSKIP((_tcb)->caller1, (_tcb)->caller2, (_tcb)->caller3); \
+	lck_mtx_unlock((_tcb)->tcb_mtx); \
+} while (0)
+#define SCTP_TCB_LOCK_ASSERT(_tcb) \
+	lck_mtx_assert((_tcb)->tcb_mtx, LCK_MTX_ASSERT_OWNED)
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
@@ -160,8 +198,18 @@
         prev_ebp = *(unsigned int *)prev_ebp; \
         c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
 }
+#define SAVE_CALLERS_NOSKIP(a, b, c) { \
+        unsigned int ebp = 0; \
+        unsigned int prev_ebp = 0; \
+        asm("movl %%ebp, %0;" : "=r"(ebp)); \
+        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+	c = 0; \
+}
 #else
 #define SAVE_CALLERS(caller1, caller2, caller3)
+#define SAVE_CALLERS_NOSKIP(caller1, caller2, caller3)
 #endif
 
 #define SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
