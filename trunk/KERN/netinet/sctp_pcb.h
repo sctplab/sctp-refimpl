@@ -177,7 +177,7 @@ struct sctp_epinfo {
 	struct sctppcbhead listhead;
 	struct sctpladdr addr_wq;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	struct inpcbhead inplisthead;
 #endif
 	struct sctpiterators iteratorhead;
@@ -205,7 +205,7 @@ struct sctp_epinfo {
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 	pthread_mutex_t ipi_pktlog_mtx;
-#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
@@ -389,7 +389,7 @@ struct sctp_inpcb {
 		        ~SCTP_ALIGNM1];
 	}     ip_inp;
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	/* leave some space in case i386 inpcb is bigger than ppc */
 	uint8_t		padding[128];
 #endif
@@ -477,7 +477,7 @@ struct sctp_inpcb {
 	KSPIN_LOCK inp_rdata_lock;
 	int32_t refcount;
 #endif
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	int32_t refcount;
 
 	uint32_t lock_caller1;
@@ -562,7 +562,7 @@ struct sctp_tcb {
 
 #include <netinet/sctp_lock_bsd.h>
 
-#elif defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#elif defined(__APPLE__)
 /*
  * Apple MacOS X 10.4 "Tiger"
  */
@@ -698,7 +698,7 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__)
 void sctp_pcb_finish(void);
 #endif
 

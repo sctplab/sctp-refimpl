@@ -240,7 +240,7 @@ extern struct fileops socketops;
 /*
  * general memory allocation
  */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_WAITOK); \
@@ -290,7 +290,7 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
  * timers
  */
 #include <netinet/sctp_callout.h>
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 extern lck_rw_t *sctp_calloutq_mtx;
 #else
@@ -491,7 +491,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 
 /* additional protosw entries for Mac OS X 10.4 */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 int sctp_lock(struct socket *so, int refcount, int lr);
 int sctp_unlock(struct socket *so, int refcount, int lr);
 
@@ -502,7 +502,7 @@ void *sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
 void sctp_lock_assert(struct socket *so);
 void sctp_unlock_assert(struct socket *so);
-#endif /* SCTP_APPLE_FINE_GRAINED_LOCKING */
+#endif /* __APPLE__ */
 
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
