@@ -78,7 +78,11 @@ int
 sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro);
 #endif
 
-void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *);
+void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+    SCTP_UNUSED
+#endif
+    );
 
 void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
@@ -148,8 +152,16 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_stream_out *strq, int holdslock);
 
-void sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int);
-void sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *);
+void sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int, int
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+    SCTP_UNUSED
+#endif
+    );
+void sctp_send_abort_tcb(struct sctp_tcb *, struct mbuf *, int
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+    SCTP_UNUSED
+#endif
+    );
 
 void send_forward_tsn(struct sctp_tcb *, struct sctp_association *);
 

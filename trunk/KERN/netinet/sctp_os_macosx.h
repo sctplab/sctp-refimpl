@@ -182,6 +182,7 @@ extern struct fileops socketops;
 
 /* The packed define for 64 bit platforms */
 #define SCTP_PACKED __attribute__((packed))
+#define SCTP_UNUSED __attribute__((unused))
 
 /* 
  * for per socket level locking strategy:
@@ -198,7 +199,6 @@ extern struct fileops socketops;
  * SCTP_UNLOCK_SHARED(lck): unlock shared
  * SCTP_TRYLOCK_SHARED(lck): trylock shared
  */
-#define SCTP_PER_SOCKET_LOCKING
 #define SCTP_INP_SO(sctpinp)	(sctpinp)->ip_inp.inp.inp_socket
 #define SCTP_SOCKET_LOCK(so, refcnt)	socket_lock(so, refcnt)
 #define SCTP_SOCKET_UNLOCK(so, refcnt)	socket_unlock(so, refcnt)
@@ -507,6 +507,7 @@ void sctp_unlock_assert(struct socket *so);
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
 #define SCTP_GET_CYCLECOUNT ticks;
+#define KTR_SUBSYS 1
 
 #define sctp_get_tick_count() (ticks)
 

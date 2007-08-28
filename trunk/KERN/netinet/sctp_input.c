@@ -279,7 +279,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 					asoc->stream_queue_cnt--;
 					sctp_ulp_notify(SCTP_NOTIFY_SPECIAL_SP_FAIL,
 					    stcb, SCTP_NOTIFY_DATAGRAM_UNSENT,
-					    sp);
+					    sp, SCTP_SO_NOT_LOCKED);
 					if (sp->data) {
 						sctp_m_freem(sp->data);
 						sp->data = NULL;
@@ -389,7 +389,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    &abort_flag, (struct sctp_chunkhdr *)cp);
 	if (abort_flag) {
 		/* Send an abort and notify peer */
-		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_CAUSE_PROTOCOL_VIOLATION, op_err);
+		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_CAUSE_PROTOCOL_VIOLATION, op_err, SCTP_SO_NOT_LOCKED);
 		*abort_no_unlock = 1;
 		return (-1);
 	}
@@ -557,7 +557,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			}
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
-		    stcb, 0, (void *)r_net);
+		    stcb, 0, (void *)r_net, SCTP_SO_NOT_LOCKED);
 	}
 	r_net->error_count = 0;
 	r_net->hb_responded = 1;
@@ -567,7 +567,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		r_net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 		r_net->dest_state |= SCTP_ADDR_REACHABLE;
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net);
+		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net, SCTP_SO_NOT_LOCKED);
 		/* now was it the primary? if so restore */
 		if (r_net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
 			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
@@ -599,6 +599,10 @@ static void
 sctp_handle_abort(struct sctp_abort_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
+#if defined(__APPLE__)
+	struct socket *so;
+#endif
+
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: handling ABORT\n");
 	if (stcb == NULL)
 		return;
@@ -606,7 +610,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	/* stop any receive timers */
 	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 	/* notify user of the abort and clean up... */
-	sctp_abort_notification(stcb, 0);
+	sctp_abort_notification(stcb, 0, SCTP_SO_NOT_LOCKED);
 	/* free the tcb */
 	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
@@ -616,9 +620,20 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	sctp_print_out_track_log(stcb);
 #endif
+#if defined(__APPLE__)
+	so = SCTP_INP_SO(stcb->sctp_ep);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_SOCKET_LOCK(so, 1);
+	SCTP_TCB_LOCK(stcb);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 	stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
 	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 			      SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
+#if defined (__APPLE__)
+	SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: finished\n");
 }
 
@@ -628,6 +643,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 {
 	struct sctp_association *asoc;
 	int some_on_streamwheel;
+#if defined(__APPLE__)
+	struct socket *so;
+#endif
 
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_shutdown: handling SHUTDOWN\n");
@@ -653,7 +671,23 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		asoc->control_pdapi->pdapi_aborted = 1;
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+#if defined (__APPLE__)
+		so = SCTP_INP_SO(stcb->sctp_ep);
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(so, 1);
+			return;
+		}
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 	}
 	/* goto SHUTDOWN_RECEIVED state to block new requests */
 	if (stcb->sctp_socket) {
@@ -662,7 +696,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_RECEIVED);
 			/* notify upper layer that peer has initiated a shutdown */
-			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL);
+			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 
 			/* reset time */
 			(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
@@ -707,7 +741,11 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_association *asoc;
+#if defined(__APPLE__)
+	struct socket *so;
 
+	so = SCTP_INP_SO(stcb->sctp_ep);
+#endif
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_shutdown_ack: handling SHUTDOWN ACK\n");
 	if (stcb == NULL)
@@ -730,13 +768,28 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 		asoc->control_pdapi->pdapi_aborted = 1;
 		asoc->control_pdapi = NULL;
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
+#if defined (__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+			/* assoc was freed while we were unlocked */
+			SCTP_SOCKET_UNLOCK(so, 1);
+			return;
+		}
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 	}
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
 	    !TAILQ_EMPTY(&asoc->out_wheel)) {
-		sctp_report_all_outbound(stcb, 0);
+		sctp_report_all_outbound(stcb, 0, SCTP_SO_NOT_LOCKED);
 	}
 	/* stop the timer */
 	sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_9);
@@ -744,7 +797,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	sctp_send_shutdown_complete(stcb, net);
 	/* notify upper layer protocol */
 	if(stcb->sctp_socket) {
-		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			/* Set the connected flag to disconnected */
@@ -753,8 +806,18 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
+#if defined(__APPLE__)
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_SOCKET_LOCK(so, 1);
+	SCTP_TCB_LOCK(stcb);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 			      SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
+#if defined (__APPLE__)
+	SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 }
 
 /*
@@ -838,8 +901,10 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 	uint16_t error_type;
 	uint16_t error_len;
 	struct sctp_association *asoc;
-
 	int adjust;
+#if defined(__APPLE__)
+	struct socket *so;
+#endif
 
 	/* parse through all of the errors and process */
 	asoc = &stcb->asoc;
@@ -878,10 +943,21 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				asoc->stale_cookie_count++;
 				if (asoc->stale_cookie_count >
 				    asoc->max_init_times) {
-					sctp_abort_notification(stcb, 0);
+					sctp_abort_notification(stcb, 0, SCTP_SO_NOT_LOCKED);
 					/* now free the asoc */
+#if defined(__APPLE__)
+					so = SCTP_INP_SO(stcb->sctp_ep);
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_SOCKET_LOCK(so, 1);
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 					(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, 
 							      SCTP_FROM_SCTP_INPUT+SCTP_LOC_11);
+#if defined (__APPLE__)
+					SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 					return (-1);
 				}
 				/* blast back to INIT state */
@@ -889,7 +965,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 				asoc->state |= SCTP_STATE_COOKIE_WAIT;
 
 				sctp_stop_all_cookie_timers(stcb);
-				sctp_send_initiate(stcb->sctp_ep, stcb);
+				sctp_send_initiate(stcb->sctp_ep, stcb, SCTP_SO_NOT_LOCKED);
 			}
 			break;
 		case SCTP_CAUSE_UNRESOLVABLE_ADDR:
@@ -1024,7 +1100,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 			stcb->asoc.primary_destination->dest_state &=
 			    ~SCTP_ADDR_UNCONFIRMED;
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
-			    stcb, 0, (void *)stcb->asoc.primary_destination);
+			    stcb, 0, (void *)stcb->asoc.primary_destination, SCTP_SO_NOT_LOCKED);
 		}
 		if (sctp_process_init_ack(m, iphlen, offset, sh, cp, stcb,
 					  net, abort_no_unlock, vrf_id) < 0) {
@@ -1222,6 +1298,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 				    (inp->sctp_socket->so_qlimit == 0)
 					) {
+#if defined(__APPLE__)
+					struct socket *so;
+#endif
 					/*
 					 * Here is where collision would go if we
 					 * did a connect() and instead got a
@@ -1230,7 +1309,22 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					 */
 					stcb->sctp_ep->sctp_flags |=
 						SCTP_PCB_FLAGS_CONNECTED;
-					soisconnected(stcb->sctp_ep->sctp_socket);
+#if defined(__APPLE__)
+					so = SCTP_INP_SO(stcb->sctp_ep);
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_SOCKET_LOCK(so, 1);
+					SCTP_TCB_LOCK(stcb);
+					atomic_add_int(&stcb->asoc.refcnt, -1);
+					if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+						SCTP_SOCKET_UNLOCK(so, 1);
+ 						return (NULL);
+					}
+#endif
+					soisconnected(stcb->sctp_socket);
+#if defined (__APPLE__)
+					SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 				}
 				/* notify upper layer */
 				*notification = SCTP_NOTIFY_ASSOC_UP;
@@ -1375,9 +1469,27 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 			    (inp->sctp_socket->so_qlimit == 0)) {
+#if defined(__APPLE__)
+				struct socket *so;
+#endif
 				stcb->sctp_ep->sctp_flags |=
 					SCTP_PCB_FLAGS_CONNECTED;
-				soisconnected(stcb->sctp_ep->sctp_socket);
+#if defined(__APPLE__)
+				so = SCTP_INP_SO(stcb->sctp_ep);
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_SOCKET_LOCK(so, 1);
+				SCTP_TCB_LOCK(stcb);
+				atomic_add_int(&stcb->asoc.refcnt, -1);
+				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+					SCTP_SOCKET_UNLOCK(so, 1);
+					return (NULL);
+				}
+#endif
+				soisconnected(stcb->sctp_socket);
+#if defined (__APPLE__)
+				SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 			}
 			if (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)
 				SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
@@ -1406,7 +1518,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			 * sctp_chunk_output will get the retrans out
 			 * behind this.
 			 */
-			sctp_chunk_output(inp,stcb, SCTP_OUTPUT_FROM_COOKIE_ACK);
+			sctp_chunk_output(inp,stcb, SCTP_OUTPUT_FROM_COOKIE_ACK, SCTP_SO_NOT_LOCKED);
 		}
 		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 11;
@@ -1475,7 +1587,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* send up all the data */
 		SCTP_TCB_SEND_LOCK(stcb);
 
-		sctp_report_all_outbound(stcb, 1);
+		sctp_report_all_outbound(stcb, 1, SCTP_SO_NOT_LOCKED);
 		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].stream_no = i;
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
@@ -1575,6 +1687,11 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	int error = 0;
 	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
+#if defined(__APPLE__)
+	struct socket *so;
+
+	so = SCTP_INP_SO(inp);
+#endif
 
 	/*
 	 * find and validate the INIT chunk in the cookie (peer's info) the
@@ -1676,9 +1793,17 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
+#if defined(__APPLE__)
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+#endif
 		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, 
 				      SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
@@ -1701,8 +1826,16 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		retval = 0;
 	if (retval < 0) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
+#if defined(__APPLE__)
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+#endif
 		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_16);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/* load all addresses */
@@ -1710,8 +1843,16 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
+#if defined(__APPLE__)
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+#endif
 		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_17);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 	/*
@@ -1731,8 +1872,16 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			SCTPDBG(SCTP_DEBUG_AUTH1,
 				"COOKIE-ECHO: AUTH failed\n");
 			atomic_add_int(&stcb->asoc.refcnt, 1);
+#if defined(__APPLE__)
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 1);
+			SCTP_TCB_LOCK(stcb);
+#endif
 			(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_18);
-			atomic_add_int(&stcb->asoc.refcnt, -1);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			return (NULL);
 		} else {
 			/* remaining chunks checked... good to go */
@@ -1779,8 +1928,16 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		    sizeof(sin6->sin6_addr));
 	} else {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
+#if defined(__APPLE__)
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+#endif
 		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_19);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
 		return (NULL);
 	}
 
@@ -1796,6 +1953,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (inp->sctp_socket->so_qlimit == 0)) {
+#if defined(__APPLE__)
+		struct socket *so_pcb;
+#endif
 		/*
 		 * This is an endpoint that called connect() how it got a
 		 * cookie that is NEW is a bit of a mystery. It must be that
@@ -1805,7 +1965,21 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 * a bit of protection is worth having..
 		 */
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
-		soisconnected(stcb->sctp_ep->sctp_socket);
+#if defined(__APPLE__)
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+			SCTP_SOCKET_UNLOCK(so, 1);
+			return (NULL);
+		}
+#endif
+		soisconnected(stcb->sctp_socket);
+#if defined (__APPLE__)
+		SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 	} else if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_socket->so_qlimit)) {
 		/*
@@ -2168,7 +2342,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			(void)sctp_set_primary_addr((*stcb), (struct sockaddr *)NULL,
 			    netl);
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
-			    (*stcb), 0, (void *)netl);
+			    (*stcb), 0, (void *)netl, SCTP_SO_NOT_LOCKED);
 		}
 	}
 	if (*stcb) {
@@ -2191,7 +2365,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * For a restart we will keep the same
 				 * socket, no need to do anything. I THINK!!
 				 */
-				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id);
+				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id, SCTP_SO_NOT_LOCKED);
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
@@ -2204,6 +2378,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
+#if defined(__APPLE__)
+			SCTP_SOCKET_LOCK(oso, 1);
+#endif
 			so = sonewconn(oso, 0
 #if defined(__APPLE__) && !defined(SCTP_APPLE_PANTHER)
 			    ,NULL
@@ -2215,18 +2392,34 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if (defined(__FreeBSD__) && __FreeBSD_version < 700000)
 			NET_UNLOCK_GIANT();
 #endif
+#if defined(__APPLE__)
+			SCTP_SOCKET_UNLOCK(oso, 1);
+#endif
 			SCTP_TCB_LOCK((*stcb));
 			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 
 			if (so == NULL) {
 				struct mbuf *op_err;
-
+#if defined(__APPLE__)
+				struct socket *pcb_so;
+#endif
 				/* Too many sockets */
 				SCTPDBG(SCTP_DEBUG_INPUT1, "process_cookie_new: no room for another socket!\n");
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 						       sh, op_err, vrf_id);
+#if defined(__APPLE__)
+				pcb_so = SCTP_INP_SO(*inp_p);
+				atomic_add_int(&(*stcb)->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK((*stcb));
+				SCTP_SOCKET_LOCK(pcb_so, 1);
+				SCTP_TCB_LOCK((*stcb));
+				atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
+#endif
 				(void)sctp_free_assoc(*inp_p, *stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_20);
+#if defined (__APPLE__)
+				SCTP_SOCKET_UNLOCK(pcb_so, 1);
+#endif
 				return (NULL);
 			}
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -2246,7 +2439,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			    (SCTP_PCB_COPY_FLAGS & (*inp_p)->sctp_flags) |
 			    SCTP_PCB_FLAGS_DONT_WAKE);
 			inp->sctp_features = (*inp_p)->sctp_features;
-
 			inp->sctp_socket = so;
 			inp->sctp_frag_point = (*inp_p)->sctp_frag_point;
 			inp->partial_delivery_point = (*inp_p)->partial_delivery_point;
@@ -2299,15 +2491,25 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(oso, 1);
 #endif
-			sctp_ulp_notify(notification, *stcb, 0, NULL);
+			sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 
 			/* Pull it from the incomplete queue and wake the guy */
+#if defined (__APPLE__)
+			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK((*stcb));
+			SCTP_SOCKET_LOCK(so, 1);
+			SCTP_TCB_LOCK((*stcb));
+			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
+#endif
 			soisconnected(so);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 			return (m);
 		}
 	}
 	if ((notification) && ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
-		sctp_ulp_notify(notification, *stcb, 0, NULL);
+		sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 	}
 	return (m);
 }
@@ -2345,11 +2547,30 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			    &asoc->time_entered, sctp_align_safe_nocopy);
 		}
 		(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
-		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL);
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+#if defined(__APPLE__)
+			struct socket *so;
+
+#endif
 			stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
-			soisconnected(stcb->sctp_ep->sctp_socket);
+#if defined (__APPLE__)
+			so = SCTP_INP_SO(stcb->sctp_ep);
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+				SCTP_SOCKET_UNLOCK(so, 1);
+				return;
+			}
+#endif
+			soisconnected(stcb->sctp_socket);
+#if defined (__APPLE__)
+			SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 		}
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
 		    stcb, net);
@@ -2495,6 +2716,9 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_association *asoc;
+#if defined(__APPLE__)
+	struct socket *so;
+#endif
 
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_shutdown_complete: handling SHUTDOWN-COMPLETE\n");
@@ -2512,12 +2736,12 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	}
 	/* notify upper layer protocol */
 	if(stcb->sctp_socket) {
-		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL);
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 		/* are the queues empty? they should be */
 		if (!TAILQ_EMPTY(&asoc->send_queue) ||
 		    !TAILQ_EMPTY(&asoc->sent_queue) ||
 		    !TAILQ_EMPTY(&asoc->out_wheel)) {
-			sctp_report_all_outbound(stcb, 0);
+			sctp_report_all_outbound(stcb, 0, SCTP_SO_NOT_LOCKED);
 		}
 	}
 	/* stop the timer */
@@ -2526,8 +2750,18 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 	/* free the TCB */
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_shutdown_complete: calls free-asoc\n");
-
+#if defined(__APPLE__)
+	so = SCTP_INP_SO(stcb->sctp_ep);
+	atomic_add_int(&stcb->asoc.refcnt, 1);
+	SCTP_TCB_UNLOCK(stcb);
+	SCTP_SOCKET_LOCK(so, 1);
+	SCTP_TCB_LOCK(stcb);
+	atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 	(void)sctp_free_assoc(stcb->sctp_ep, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_23);
+#if defined (__APPLE__)
+	SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 	return;
 }
 
@@ -2702,7 +2936,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 			 */
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT, stcb->sctp_ep,
 					stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_25);
-			sctp_send_initiate(stcb->sctp_ep, stcb);
+			sctp_send_initiate(stcb->sctp_ep, stcb, SCTP_SO_NOT_LOCKED);
 		}
 		break;
 	case SCTP_SELECTIVE_ACK:
@@ -2791,7 +3025,7 @@ sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t * list)
 			stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
 		}
 	}
-	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_RECV, stcb, number_entries, (void *)list);
+	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_RECV, stcb, number_entries, (void *)list, SCTP_SO_NOT_LOCKED);
 }
 
 static void
@@ -2815,7 +3049,7 @@ sctp_reset_out_streams(struct sctp_tcb *stcb, int number_entries, uint16_t * lis
 			stcb->asoc.strmout[temp].next_sequence_sent = 0;
 		}
 	}
-	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_SEND, stcb, number_entries, (void *)list);
+	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_SEND, stcb, number_entries, (void *)list, SCTP_SO_NOT_LOCKED);
 }
 
 
@@ -2920,7 +3154,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					/* do it */
 					sctp_reset_out_streams(stcb, number_entries, srparam->list_of_streams);
 				} else {
-					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_OUT, stcb, number_entries, srparam->list_of_streams);
+					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_OUT, stcb, number_entries, srparam->list_of_streams, SCTP_SO_NOT_LOCKED);
 				}
 			} else if (type == SCTP_STR_RESET_IN_REQUEST) {
 				/* Answered my request */
@@ -2928,7 +3162,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 				if (asoc->stream_reset_outstanding)
 					asoc->stream_reset_outstanding--;
 				if (action != SCTP_STREAM_RESET_PERFORMED) {
-					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_IN, stcb, number_entries, srparam->list_of_streams);
+					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_IN, stcb, number_entries, srparam->list_of_streams, SCTP_SO_NOT_LOCKED);
 				}
 			} else if (type == SCTP_STR_RESET_TSN_REQUEST) {
 				/**
@@ -3506,6 +3740,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	uint32_t auth_offset = 0, auth_len = 0;
 	int auth_skipped = 0;
 	int asconf_cnt = 0;
+#if defined(__APPLE__)
+	struct socket *so;
+#endif
 
 	SCTPDBG(SCTP_DEBUG_INPUT1, "sctp_process_control: iphlen=%u, offset=%u, length=%u stcb:%p\n",
 		iphlen, *offset, length, stcb);
@@ -3838,7 +4075,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				sctp_send_shutdown_ack(stcb,
 						       stcb->asoc.primary_destination);
 				*offset = length;
-				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
+				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
 				}
@@ -3873,7 +4110,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					}
 					*offset = length;
 					if (stcb) {
+#if defined(__APPLE__)
+						so = SCTP_INP_SO(inp);
+						atomic_add_int(&stcb->asoc.refcnt, 1);
+						SCTP_TCB_UNLOCK(stcb);
+						SCTP_SOCKET_LOCK(so, 1);
+						SCTP_TCB_LOCK(stcb);
+						atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 						(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
+#if defined (__APPLE__)
+						SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 					}
 					return (NULL);
 				}
@@ -3900,7 +4148,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 
 			if ((stcb) && ret == 0)
-				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
+				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 			*offset = length;
 			if (locked_tcb) {
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -4195,7 +4443,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 					;
 				} else if (stcb) {
+#if defined(__APPLE__)
+					so = SCTP_INP_SO(inp);
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_SOCKET_LOCK(so, 1);
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 					(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_27);
+#if defined (__APPLE__)
+					SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 					*offset = length;
 					return (NULL);
 				}
@@ -4344,7 +4603,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*fwd_tsn_seen = 1;
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
+#if defined(__APPLE__)
+					so = SCTP_INP_SO(inp);
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_SOCKET_LOCK(so, 1);
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 					(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_29);
+#if defined (__APPLE__)
+					SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 					*offset = length;
 					return (NULL);
 				}
@@ -4379,7 +4649,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* We are not interested anymore */
+#if defined(__APPLE__)
+				so = SCTP_INP_SO(inp);
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_SOCKET_LOCK(so, 1);
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
 				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_INPUT+SCTP_LOC_30);
+#if defined (__APPLE__)
+				SCTP_SOCKET_UNLOCK(so, 1);
+#endif
 				*offset = length;
 				return (NULL);
 			}
@@ -4868,7 +5149,7 @@ trigger_send:
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
 		sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC);
+		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");
 	}
 #ifdef SCTP_AUDITING_ENABLED
@@ -5088,7 +5369,7 @@ sctp_input(i_pak, va_alist)
 						 vrf_id);
 		if ((inp) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
-			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR);
+			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, SCTP_SO_NOT_LOCKED);
 #if defined(SCTP_PER_SOCKET_LOCKING)
 			SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif

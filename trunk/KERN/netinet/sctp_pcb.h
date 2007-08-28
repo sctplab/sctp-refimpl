@@ -213,7 +213,9 @@ struct sctp_epinfo {
 	lck_rw_t *ipi_ep_mtx;
 	lck_mtx_t *it_mtx;
 	lck_mtx_t *ipi_iterator_wq_mtx;
+	lck_mtx_t *ipi_addr_mtx;
 	lck_mtx_t *ipi_count_mtx;
+	lck_mtx_t *ipi_pktlog_mtx;
 	lck_mtx_t *logging_mtx;
 #else
 	void *mtx_grp_attr;
@@ -461,6 +463,14 @@ struct sctp_inpcb {
 	pthread_mutex_t inp_create_mtx;
 	pthread_mutex_t inp_rdata_mtx;
 	int32_t refcount;
+#elif defined(__APPLE__)
+#if defined(SCTP_APPLE_RWLOCK)
+	lck_rw_t *inp_mtx;
+#else
+	lck_mtx_t *inp_mtx;
+#endif
+	lck_mtx_t *inp_create_mtx;
+	lck_mtx_t *inp_rdata_mtx;
 #elif defined(__Windows__)
 	KSPIN_LOCK inp_lock;
 	KSPIN_LOCK inp_create_lock;
@@ -533,9 +543,17 @@ struct sctp_tcb {
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t tcb_mtx;
 	pthread_mutex_t tcb_send_mtx;
+#elif defined(__APPLE__)
+	lck_mtx_t* tcb_mtx;
+	lck_mtx_t* tcb_send_mtx;
 #elif defined(__Windows__)
 	KSPIN_LOCK tcb_lock;
 	KSPIN_LOCK tcb_send_lock;
+#endif
+#if defined(__APPLE__)
+	uint32_t caller1;
+	uint32_t caller2;
+	uint32_t caller3;
 #endif
 };
 

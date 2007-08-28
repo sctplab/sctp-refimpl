@@ -2294,7 +2294,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
-		return ENOMEM);
+		return (ENOMEM);
 	}
 #endif
 #if defined(SCTP_PER_SOCKET_LOCKING)
@@ -3233,7 +3233,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	s = splsoftnet();
 #endif
 
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
 #ifdef SCTP_LOG_CLOSING
@@ -3292,11 +3292,11 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		cnt_in_sd = 0;
 		for ((asoc = LIST_FIRST(&inp->sctp_asoc_list)); asoc != NULL;
 		    asoc = nasoc) {
-			nasoc = LIST_NEXT(asoc, sctp_tcblist);
 			SCTP_TCB_LOCK(asoc);
+			nasoc = LIST_NEXT(asoc, sctp_tcblist);
 			if(asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				/* Skip guys being freed */
-				asoc->sctp_socket = NULL;
+				/* asoc->sctp_socket = NULL; FIXME MT*/
 				cnt_in_sd++;
 				SCTP_TCB_UNLOCK(asoc);
 				continue;
@@ -3309,7 +3309,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * to get across first.
 				 */
 				/* Just abandon things in the front states */
-				
 				if(sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
 						   SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
 					cnt_in_sd++;
@@ -3345,7 +3344,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					*ippp = htonl(SCTP_FROM_SCTP_PCB+SCTP_LOC_3);
 				}
 				asoc->sctp_ep->last_abort_code = SCTP_FROM_SCTP_PCB+SCTP_LOC_3;
-				sctp_send_abort_tcb(asoc, op_err);
+				sctp_send_abort_tcb(asoc, op_err, SCTP_SO_LOCKED);
 				SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 				if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -3379,7 +3378,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    asoc->asoc.primary_destination);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
-					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR, SCTP_SO_LOCKED);
 				} 
 			} else {
 				/* mark into shutdown pending */
@@ -3423,7 +3422,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 						*ippp = htonl(SCTP_FROM_SCTP_PCB+SCTP_LOC_5);
 					}
 					asoc->sctp_ep->last_abort_code = SCTP_FROM_SCTP_PCB+SCTP_LOC_5;
-					sctp_send_abort_tcb(asoc, op_err);
+					sctp_send_abort_tcb(asoc, op_err, SCTP_SO_LOCKED);
 					SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 					if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -3436,7 +3435,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					}
 					continue;
 				} else {
-					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING);
+					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_CLOSING, SCTP_SO_LOCKED);
 				}
 			}
 			cnt_in_sd++;
@@ -3507,7 +3506,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 			}
 			asoc->sctp_ep->last_abort_code = SCTP_FROM_SCTP_PCB+SCTP_LOC_7;
-			sctp_send_abort_tcb(asoc, op_err);
+			sctp_send_abort_tcb(asoc, op_err, SCTP_SO_LOCKED);
 			SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			cnt++;
@@ -4575,10 +4574,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	s = splsoftnet();
 #endif
-#if defined(SCTP_PER_SOCKET_LOCKING)
+#if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
-	SCTP_TCB_LOCK_ASSERT(stcb);
 
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, stcb, 6);
@@ -4594,12 +4592,14 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		return (1);
 	}
 
+#if !defined(__APPLE__) /* TEMP: moved to below */
         /* TEMP CODE */
 	if (stcb->freed_from_where == 0) {
 		/* Only record the first place free happened from */
 		stcb->freed_from_where = from_location;
 	}
         /* TEMP CODE */
+#endif
 
 	asoc = &stcb->asoc;
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
@@ -4826,9 +4826,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if(from_inpcbfree == SCTP_NORMAL_PROC) {
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_WUNLOCK(inp);
-#if !defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 		SCTP_ITERATOR_UNLOCK();
-#endif
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
@@ -5115,16 +5113,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	/* Get rid of LOCK */
 	SCTP_TCB_LOCK_DESTROY(stcb);
 	SCTP_TCB_SEND_LOCK_DESTROY(stcb);
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
-	if(from_inpcbfree == SCTP_NORMAL_PROC) {
-		SCTP_UNLOCK_EXC(sctppcbinfo.ipi_ep_mtx);
-		SCTP_ITERATOR_UNLOCK();
-	}
-#endif
 	if(from_inpcbfree == SCTP_NORMAL_PROC) {
 		SCTP_INP_INFO_WUNLOCK();
 		SCTP_INP_RLOCK(inp);
 	}
+#if defined(__APPLE__) /* TEMP CODE */
+	stcb->freed_from_where = from_location;
+#endif
 #ifdef SCTP_TRACK_FREED_ASOCS
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 		/* now clean up the tasoc itself */
@@ -5683,7 +5678,9 @@ sctp_pcb_init()
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
+#if !defined(__APPLE__)
 	SCTP_STATLOG_INIT_LOCK();
+#endif
 	SCTP_ITERATOR_LOCK_INIT();
 
 	SCTP_IPI_COUNT_INIT();
@@ -5762,7 +5759,7 @@ sctp_pcb_finish(void)
 	struct sctp_ifa *ifa;
 
 	/* FIXME MT */
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	sctp_address_monitor_destroy();
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	/* free the iterator worker thread */
@@ -5823,8 +5820,8 @@ sctp_pcb_finish(void)
 	SCTP_HASH_FREE(sctppcbinfo.sctp_vrfhash, sctppcbinfo.hashvrfmark);
 	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.hash_ifn_hashmark);
 
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
 	/* free the locks and mutexes */
+#if defined(__APPLE__)
 	SCTP_TIMERQ_LOCK_DESTROY();
 #endif
 #ifdef SCTP_PACKET_LOGGING
@@ -5833,13 +5830,15 @@ sctp_pcb_finish(void)
 #endif
 	SCTP_IPI_ITERATOR_WQ_DESTROY();
 	SCTP_IPI_ADDR_DESTROY();
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	SCTP_IPI_COUNT_DESTROY();
 #endif
 	SCTP_ITERATOR_LOCK_DESTROY();
+#if !defined(__APPLE__)
 	SCTP_STATLOG_DESTROY();
+#endif
 	SCTP_INP_INFO_LOCK_DESTROY();
-#if defined(SCTP_APPLE_FINE_GRAINED_LOCKING)
+#if defined(__APPLE__)
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
 	lck_grp_free(sctppcbinfo.mtx_grp);
 	lck_attr_free(sctppcbinfo.mtx_attr);
@@ -6783,7 +6782,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		asoc->last_revoke_count = cnt;
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 		sctp_send_sack(stcb);
-		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_DRAIN);
+		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_DRAIN, SCTP_SO_NOT_LOCKED);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
 		reneged_at++;
 	}
