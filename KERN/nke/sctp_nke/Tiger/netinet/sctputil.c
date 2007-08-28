@@ -2892,6 +2892,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
+
 	/*
 	 * First if we are are going down dump everything we can to the
 	 * socket rcv queue.
@@ -2905,6 +2906,13 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 		/* If the socket is gone we are out of here */
 		return;
 	}
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	/*
 	 * For TCP model AND UDP connected sockets we will send an error up
 	 * when an ABORT comes in.
@@ -3096,6 +3104,13 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		/* event not enabled */
 		return;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	length = sizeof(struct sctp_send_failed) + chk->send_size;
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
@@ -3165,6 +3180,13 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	if ((stcb == NULL) || (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)))
 		/* event not enabled */
 		return;
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 
 	length = sizeof(struct sctp_send_failed) + sp->length;
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
@@ -3493,6 +3515,13 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		/* unlikely but */
 		return;
 	}
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) 
@@ -3657,6 +3686,13 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 	if (stcb == NULL) {
 		return;
 	}
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
@@ -3767,6 +3803,13 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
 	if (stcb == NULL) {
 		return;
 	}
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
@@ -3909,6 +3952,13 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	so = SCTP_INP_SO(inp);
+#endif
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
 #endif
 	if (stcb == NULL) {
 		/* Got to have a TCB */
@@ -4407,6 +4457,13 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 #endif
 		return;
 	}
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(inp));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(inp));
+	}
+#endif
 
 	SCTP_INP_READ_LOCK(inp);
 	if (!(control->spec_flags & M_NOTIFICATION)) {
@@ -4705,6 +4762,13 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	int notdone;
 	uint8_t foundeom = 0;
 
+#if defined(__APPLE__)
+	if (so_locked) {
+		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	} else {
+		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
+	}
+#endif
 	do {
 		ret_sz += tp1->book_size;
 		tp1->sent = SCTP_FORWARD_TSN_SKIP;
