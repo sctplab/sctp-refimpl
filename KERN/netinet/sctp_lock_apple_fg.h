@@ -34,6 +34,11 @@
  * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
  */
 
+#define SCTP_STATLOG_INIT_LOCK() 
+#define SCTP_STATLOG_LOCK()
+#define SCTP_STATLOG_UNLOCK()
+#define SCTP_STATLOG_DESTROY()
+
 /* for now, all locks use this group and attributes */
 #define SCTP_MTX_GRP sctppcbinfo.mtx_grp
 #define SCTP_MTX_ATTR sctppcbinfo.mtx_attr

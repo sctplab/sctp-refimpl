@@ -5260,9 +5260,7 @@ sctp_pcb_init()
 	lck_attr_setdefault(sctppcbinfo.mtx_attr);
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
-#if !defined(__APPLE__)
 	SCTP_STATLOG_INIT_LOCK();
-#endif
 	SCTP_ITERATOR_LOCK_INIT();
 
 	SCTP_IPI_COUNT_INIT();
@@ -5416,9 +5414,7 @@ sctp_pcb_finish(void)
 	SCTP_IPI_COUNT_DESTROY();
 #endif
 	SCTP_ITERATOR_LOCK_DESTROY();
-#if !defined(__APPLE__)
 	SCTP_STATLOG_DESTROY();
-#endif
 	SCTP_INP_INFO_LOCK_DESTROY();
 #if defined(__APPLE__)
 	lck_grp_attr_free(sctppcbinfo.mtx_grp_attr);
