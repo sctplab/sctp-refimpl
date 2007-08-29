@@ -23,3 +23,5 @@
 - Fix sctp_peeloff() system call when no true system call
   exists to screen arguments for errors. In cases where a
   real system call exists the system call itself does this.
+- Fix raddr leak in recent add-ip code change for bundled
+  asconfs (even when non-bundled asconfs are received)
