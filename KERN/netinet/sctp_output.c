@@ -8172,8 +8172,6 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb)
 	}
 	latest_ack->last_sent_to = net;
 
-	atomic_add_int(&latest_ack->last_sent_to->ref_count, 1);
-
 	TAILQ_FOREACH(ack, &stcb->asoc.asconf_ack_sent, next) {
 		if (ack->data == NULL) {
 			continue;
