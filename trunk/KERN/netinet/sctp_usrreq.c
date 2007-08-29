@@ -1384,9 +1384,11 @@ sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
 void in6_sin_2_v4mapsin6
 __P((struct sockaddr_in *sin,
     struct sockaddr_in6 *sin6));
-
 #endif
 
+/*
+ * NOTE: assumes addr lock is held
+ */
 static size_t
 sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 			   struct sctp_tcb *stcb,
@@ -1571,7 +1573,10 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	size_t size = 0;
 #ifdef SCTP_MVRF
 	uint32_t id;
+#endif
 
+	SCTP_IPI_ADDR_LOCK();
+#ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL report duplicate addresses if they appear
  * in more than one VRF.
@@ -1587,9 +1592,13 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	size = sctp_fill_up_addresses_vrf(inp, stcb, limit, sas,
 					  inp->def_vrf_id);    
 #endif
+	SCTP_IPI_ADDR_UNLOCK();
 	return (size);
 }
 
+/*
+ * NOTE: assumes addr lock is held
+ */
 static int
 sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 {
@@ -1605,7 +1614,7 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 	 */
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
-		return(0);
+		return (0);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct sctp_ifn *sctp_ifn;
@@ -1647,7 +1656,10 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	int cnt = 0;
 #ifdef SCTP_MVRF
 	int id;
+#endif
 
+	SCTP_IPI_ADDR_LOCK();
+#ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL count duplicate addresses if they appear
  * in more than one VRF.
@@ -1660,6 +1672,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	/* count addresses for the endpoint's default VRF */
 	cnt = sctp_count_max_addresses_vrf(inp, inp->def_vrf_id);
 #endif
+	SCTP_IPI_ADDR_UNLOCK();
 	return (cnt);
 }
 
