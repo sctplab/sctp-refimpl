@@ -5884,6 +5884,11 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__APPLE__)
 		sbunlock(&so->so_rcv, 1);
 #endif
+		if ((copied_so_far) && (control->length == 0) &&
+		    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE))
+			){
+			goto release;
+		}
 		if(so->so_rcv.sb_cc <= control->held_length) {
 			error = sbwait(&so->so_rcv);
 			if (error){
