@@ -637,10 +637,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			if (ack->data != NULL) {
 				sctp_m_freem(ack->data);
 			}
-			if (ack->last_sent_to) {
-				sctp_free_remote_addr(ack->last_sent_to);
-				ack->last_sent_to = NULL;
-			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, ack);
 			ack = ack_next;
 		}
