@@ -11963,7 +11963,7 @@ sctp_lower_sosend(struct socket *so,
 
         /* Unless E_EOR mode is on, we must make a send FIT in one call. */
 	if ((user_marks_eor == 0) && 
-	    (sndlen > (int)SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
+	    (sndlen > SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
 		/* It will NEVER fit */
 		SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
 		error = EMSGSIZE;
