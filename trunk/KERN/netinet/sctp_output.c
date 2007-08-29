@@ -11868,7 +11868,7 @@ sctp_lower_sosend(struct socket *so,
 			if (tot_demand > SCTP_DEFAULT_ADD_MORE) {
 				/* To big */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
-				error = EMSGSIZEM;
+				error = EMSGSIZE;
 				goto out;
 			}
 			mm = sctp_get_mbuf_for_msg(tot_demand, 0, M_WAIT, 1, MT_DATA);
