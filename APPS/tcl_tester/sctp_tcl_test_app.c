@@ -455,6 +455,7 @@ setup_a_socket()
 		}
 	}
 	siz = sizeof(fragment_interleave);
+	printf("Set fragment interleave level %d\n", fragment_interleave);
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_FRAGMENT_INTERLEAVE, &fragment_interleave, siz) != 0) {
 		printf("Can't set fragment interleave error:%d - exiting\n", errno);
 		exit (-1);
@@ -531,17 +532,27 @@ struct msg_of *
 find_the_msg(struct sctp_sndrcvinfo *sinfo, int flags)
 {
 	struct msg_of *at;
+	if(verbose) {
+		printf("Looking for assoc_id:%x stream:%d\n",
+		       sinfo->sinfo_assoc_id, sinfo->sinfo_stream);
+	}
 	at = base;
 	while(at) {
 		if (flags & MSG_NOTIFICATION) {
 			if ((at->id == sinfo->sinfo_assoc_id) &&
 			    (at->notification)) {
+				if(verbose) {
+					printf("Found notification\n");
+				}
 				return (at);
 			}
 		} else {
 			if ((at->id == sinfo->sinfo_assoc_id) &&
 			    (at->stream == sinfo->sinfo_stream) &&
 				(at->notification == 0)) {
+				if(verbose) {
+					printf("Found the message\n");
+				}
 				return (at);
 			}
 		}
@@ -552,7 +563,7 @@ find_the_msg(struct sctp_sndrcvinfo *sinfo, int flags)
 
 
 char *
-sctp_msg_recv(char *rbuf, int len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
+sctp_msg_recv(char *rbuf, int *in_len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
 {
 	/* Need to assemble the incoming messages into
 	 * complete messages. assoc_id and stream number are
@@ -564,7 +575,9 @@ sctp_msg_recv(char *rbuf, int len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
 	 * for getting them.
 	 */
 	struct msg_of *it;
+	int len;
 
+	len = *in_len;
 	it = find_the_msg(sinfo_in, flags);
 	if(it == NULL) {
 		it = (struct msg_of *)malloc(sizeof(struct msg_of));
@@ -573,6 +586,10 @@ sctp_msg_recv(char *rbuf, int len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
 			it->notification = 1;
 		} else {
 			it->notification = 0;
+		}
+		if(verbose) {
+			printf("New msg stream:%d for assoc:%x notification:%d\n", sinfo_in->sinfo_stream,
+			       sinfo_in->sinfo_assoc_id, it->notification);
 		}
 		it->id = sinfo_in->sinfo_assoc_id;
 		it->stream = sinfo_in->sinfo_stream;
@@ -583,18 +600,30 @@ sctp_msg_recv(char *rbuf, int len, struct sctp_sndrcvinfo *sinfo_in,  int flags)
 		base = it;
 	} else {
 		char *temp;
+		if(verbose) {
+			printf("Found length is %d new len is %d\n",
+			       it->length, len);
+		}
 		temp = malloc(len + it->length);
 		memcpy(temp, it->buffer, it->length);
 		memcpy(&temp[it->length], rbuf, len);
 		free(it->buffer);
 		it->buffer = temp;
 		it->length += len;
+		if(verbose) {
+			printf("New buffer is %d bytes\n", it->length);
+		}
 	}
 	if(flags & MSG_EOR) {
 		it->done = 1;
 	}
 	if (it->done) {
+		if(verbose) {
+			printf("msg complete now\n");
+		}
+		*in_len = it->length;
 		return(it->buffer);
+
 	} else {
 		return (NULL);
 	}
@@ -637,7 +666,7 @@ handle_read_event(int *notDone, int sd)
 	if (msg_flags & MSG_EOR)
 		msg_in_cnt_weor++;
 
-	buf = sctp_msg_recv(receive_buffer, ret, &sinfo_in,  msg_flags);
+	buf = sctp_msg_recv(receive_buffer, &ret, &sinfo_in,  msg_flags);
 	if(buf) {
 		rcv = (testDgram_t *)buf;
 	} else {
@@ -654,12 +683,16 @@ handle_read_event(int *notDone, int sd)
 			}
 		}
 		if ((rcv->type == SCTP_TEST_LOOPREQ) && (do_not_respond == 0)) {
+			if(verbose) {
+				printf("Got loop request id:%x - send resp\n",sinfo_in.sinfo_assoc_id);
+			}
+			       
 			rcv->type = SCTP_TEST_LOOPRESP;
 			if (verbose) {
 				printf("Send loop response of size %d\n", ret);
 			}
 			sends_ping_resp++;
-			respmsg = sctp_send(sd, receive_buffer, ret, &sinfo_in, 0);
+			respmsg = sctp_send(sd, buf, ret, &sinfo_in, 0);
 			if(respmsg < 0) {
 				if(quiet_mode == 0) {
 					print_stats();
