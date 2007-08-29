@@ -6,11 +6,9 @@
   It also allows us to test (with witness) the locking used
   by apple via a compile switch.
 ********************************Above patch 18***************
-- send call has a reference to uio->uioresid in
-  the recent send code, but uio may be NULL on send
-  file calls. Need to change to use sndlen.
-- Need to do this for all calls above the copy loops.
-  (change to sndlen all uio->xxx)
+- send call has a reference to uio->uio_resid in
+  the recent send code, but uio may be NULL on sendfile
+  calls. Change to use sndlen variable.
 - EMSGSIZE is not being returned in non-blocking mode
   and needs a small tweak to look if the msg would
   ever fit when returning EWOULDBLOCK.
@@ -18,6 +16,10 @@
   cause a panic. This is a follow on to the codenomicon
   fix.
 - PDAPI level 1 and 2 do not work unless the reader
-  gets his returned buffer full.
+  gets his returned buffer full. Fix so we can break
+  out when at level 1 or 2.
 - Fix fast-handoff features to copy across properly on
   accepted sockets
+- Fix sctp_peeloff() system call when no true system call
+  exists to screen arguments for errors. In cases where a
+  real system call exists the system call itself does this.
