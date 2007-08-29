@@ -4675,7 +4675,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				SCTP_SOCKET_UNLOCK(so, 1);
-				return(0);
+				return (0);
 			}
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
@@ -4897,7 +4897,7 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 	if (holds_lock == 0) {
 		SCTP_INP_RUNLOCK(inp);
 	}
-	return(NULL);
+	return (NULL);
 }
 
 uint32_t
@@ -4906,7 +4906,7 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 	if (addr->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		sin = (struct sockaddr_in *)addr;
-		return(sin->sin_addr.s_addr ^ (sin->sin_addr.s_addr >> 16));
+		return (sin->sin_addr.s_addr ^ (sin->sin_addr.s_addr >> 16));
 	}else if (addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 		uint32_t hash_of_addr;
@@ -4946,7 +4946,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	if (vrf == NULL) {
 		if (holds_lock == 0)
 			SCTP_IPI_ADDR_UNLOCK();
-		return(NULL);
+		return (NULL);
 	}
 
 	hash_of_addr = sctp_get_ifa_hash_val(addr);
@@ -6103,7 +6103,7 @@ sctp_m_free(struct mbuf *m)
 			sctp_log_mb(m, SCTP_MBUF_IFREE);
 		}
 	}
-	return(m_free(m));
+	return (m_free(m));
 }
 
 void sctp_m_freem(struct mbuf *mb)
@@ -6126,7 +6126,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	if(ifa == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, EADDRNOTAVAIL);
-		return(EADDRNOTAVAIL);
+		return (EADDRNOTAVAIL);
 	}
 	/* Now that we have the ifa we must awaken the
 	 * iterator with this message.
@@ -6134,7 +6134,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (wi == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
-		return(ENOMEM);
+		return (ENOMEM);
 	}
 	/* Now incr the count and int wi structure */
 	SCTP_INCR_LADDR_COUNT();
@@ -6422,7 +6422,7 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 #ifdef INVARIANTS
 		panic("flag incorrect in hashinit_flags");
 #else
-		return(NULL);
+		return (NULL);
 #endif
 	}
 	for (i = 0; i < hashsize; i++)
@@ -6472,7 +6472,7 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
  out_now:
-	return(added);
+	return (added);
 } 
 
 struct sctp_tcb *
@@ -6806,9 +6806,11 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 		ipv4_addr_legal = 1;
 	}
 
+	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	if (vrf == NULL) {
 		/* no vrf, no addresses */
+		SCTP_IPI_ADDR_UNLOCK();
 		return (0);
 	}
 
@@ -6903,6 +6905,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 			count++;
 		}
 	}
+	SCTP_IPI_ADDR_UNLOCK();
 	return (count);
 }
 
