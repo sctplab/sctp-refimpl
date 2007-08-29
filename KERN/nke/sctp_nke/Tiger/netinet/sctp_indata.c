@@ -5502,8 +5502,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		num_str = fwd_sz / sizeof(struct sctp_strseq);
 		for (i = 0; i < num_str; i++) {
 			uint16_t st;
-			unsigned char *xx;
-
 			stseq = (struct sctp_strseq *)sctp_m_getptr(m, offset, 
 								    sizeof(struct sctp_strseq),
 								    (uint8_t *)&strseqbuf);
@@ -5512,22 +5510,21 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				break;
 			}
 			/* Convert */
-			xx = (unsigned char *)&stseq[i];
-			st = ntohs(stseq[i].stream);
-			stseq[i].stream = st;
-			st = ntohs(stseq[i].sequence);
-			stseq[i].sequence = st;
+			st = ntohs(stseq->stream);
+			stseq->stream = st;
+			st = ntohs(stseq->sequence);
+			stseq->sequence = st;
 			/* now process */
-			if (stseq[i].stream >= asoc->streamincnt) {
+			if (stseq->stream >= asoc->streamincnt) {
 				/* screwed up streams, stop!  */
 				break;
 			}
-			strm = &asoc->strmin[stseq[i].stream];
-			if (compare_with_wrap(stseq[i].sequence,
+			strm = &asoc->strmin[stseq->stream];
+			if (compare_with_wrap(stseq->sequence,
 					      strm->last_sequence_delivered, MAX_SEQ)) {
 				/* Update the sequence number */
 				strm->last_sequence_delivered =
-					stseq[i].sequence;
+					stseq->sequence;
 			}
 			/* now kick the stream the new way */
 			sctp_kick_prsctp_reorder_queue(stcb, strm);

@@ -11577,8 +11577,7 @@ sctp_lower_sosend(struct socket *so,
 			if ((use_rcvinfo) && (srcv) &&
 			    ((srcv->sinfo_flags & SCTP_ABORT) ||
 			     ((srcv->sinfo_flags & SCTP_EOF) &&
-			      (uio) &&
-			      (uio->uio_resid == 0)))) {
+			      (sndlen == 0)))) {
 				/*-
 				 * User asks to abort a non-existant assoc,
 				 * or EOF a non-existant assoc with no data
@@ -11732,7 +11731,11 @@ sctp_lower_sosend(struct socket *so,
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EWOULDBLOCK);
-			error = EWOULDBLOCK;
+			if(sndlen > SCTP_SB_LIMIT_SND(so))
+				error = EMSGSIZE;
+			else
+				error = EWOULDBLOCK;
+
 			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
 			goto out_unlocked;
 		}
@@ -11860,9 +11863,14 @@ sctp_lower_sosend(struct socket *so,
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
 		} else {
 			/* Must fit in a MTU */
-			if(uio)
-				tot_out = uio->uio_resid;
+			tot_out = sndlen;
 			tot_demand = (tot_out + sizeof(struct sctp_paramhdr));
+			if (tot_demand > SCTP_DEFAULT_ADD_MORE) {
+				/* To big */
+				SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
+				error = EMSGSIZE;
+				goto out;
+			}
 			mm = sctp_get_mbuf_for_msg(tot_demand, 0, M_WAIT, 1, MT_DATA);
 		}
 		if(mm == NULL) {
@@ -11955,7 +11963,7 @@ sctp_lower_sosend(struct socket *so,
 
         /* Unless E_EOR mode is on, we must make a send FIT in one call. */
 	if ((user_marks_eor == 0) && 
-	    (uio->uio_resid > (int)SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
+	    (sndlen > SCTP_SB_LIMIT_SND(stcb->sctp_socket))) {
 		/* It will NEVER fit */
 		SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EMSGSIZE);
 		error = EMSGSIZE;
@@ -11968,7 +11976,7 @@ sctp_lower_sosend(struct socket *so,
 		 * For non-eeor the whole message must fit in
 		 * the socket send buffer.
 		 */
- 		local_add_more = uio->uio_resid;
+ 		local_add_more = sndlen;
 	}
 	len = 0;
 	if (((max_len < local_add_more) && 
@@ -11981,7 +11989,7 @@ sctp_lower_sosend(struct socket *so,
 
 			if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
 				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
-					       so, asoc, uio->uio_resid);
+					       so, asoc, sndlen);
 			}
 			be.error = 0;
 #ifndef __Panda__
@@ -12029,7 +12037,7 @@ sctp_lower_sosend(struct socket *so,
 	 * uio_resid covers for the non-mbuf case
 	 * NOTE: uio will be null when top/mbuf is passed
 	 */
-	if ( (sndlen == 0) || ((uio) && (uio->uio_resid == 0)) ) {
+	if (sndlen == 0) {
 		if (srcv->sinfo_flags & SCTP_EOF) {
 			got_all_of_the_send = 1;
 			goto dataless_eof;
