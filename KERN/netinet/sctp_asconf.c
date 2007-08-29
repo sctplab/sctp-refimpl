@@ -637,6 +637,10 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			if (ack->data != NULL) {
 				sctp_m_freem(ack->data);
 			}
+			if (ack->last_sent_to) {
+				sctp_free_remote_addr(ack->last_sent_to);
+				ack->last_sent_to = NULL;
+			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, ack);
 			ack = ack_next;
 		}
@@ -2252,8 +2256,10 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 
 	getmicrotime(&timenow);
 #endif
+	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	if (vrf == NULL) {
+		SCTP_IPI_ADDR_UNLOCK();
 		return (NULL);
 	}
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
@@ -2279,6 +2285,7 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 				if (sctp_is_addr_restricted(stcb,sctp_ifa))
 					continue;
 				/* found a valid local v4 address to use */
+				SCTP_IPI_ADDR_UNLOCK();
 				return (&sctp_ifa->address.sa);
 			} else if (sctp_ifa->address.sa.sa_family == AF_INET6 &&
 			    stcb->asoc.ipv6_addr_legal) {
@@ -2301,11 +2308,13 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 					continue;
 
 				/* found a valid local v6 address to use */
+				SCTP_IPI_ADDR_UNLOCK();
 				return (&sctp_ifa->address.sa);
 			}
 		}
 	}
 	/* no valid addresses found */
+	SCTP_IPI_ADDR_UNLOCK();
 	return (NULL);
 }
 
@@ -2807,8 +2816,10 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 	}  else {
 		return;
 	}
+	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
+		SCTP_IPI_ADDR_UNLOCK();
 		return;
 	}
 	/* go through all our known interfaces */
@@ -2830,8 +2841,9 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 				sctp_addr_mgmt_assoc(stcb->sctp_ep, stcb,
 				    sctp_ifa, SCTP_ADD_IP_ADDRESS);
 			}
-		}		/* end foreach ifa */
-	}			/* end foreach ifn */
+		} /* end foreach ifa */
+	} /* end foreach ifn */
+	SCTP_IPI_ADDR_UNLOCK();
 }
 
 /*
