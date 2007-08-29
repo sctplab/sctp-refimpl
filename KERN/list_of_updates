@@ -25,3 +25,5 @@
   real system call exists the system call itself does this.
 - Fix raddr leak in recent add-ip code change for bundled
   asconfs (even when non-bundled asconfs are received)
+- Make sure ipi_addr lock is held when walking global addr
+  list
