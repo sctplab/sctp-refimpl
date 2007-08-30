@@ -2083,9 +2083,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			error = 0;
 		}
 #endif
-		if (error)
+		if (error) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
-
+		}
 		*optsize = sizeof(*av); 
 	}
 	break;

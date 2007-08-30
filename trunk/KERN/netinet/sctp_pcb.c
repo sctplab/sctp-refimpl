@@ -4703,6 +4703,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_FREE(aparam,SCTP_M_ASC_ADDR);
 	}
 	while (!TAILQ_EMPTY(&asoc->asconf_ack_sent)) {
+        /*sa_ignore FREED_MEMORY*/
 		aack = TAILQ_FIRST(&asoc->asconf_ack_sent);
 		TAILQ_REMOVE(&asoc->asconf_ack_sent, aack, next);
 		if (aack->data != NULL) {
