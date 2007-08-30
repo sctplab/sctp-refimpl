@@ -209,9 +209,8 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_free_remote_addr(__net) { \
-	if ((__net)) {  \
+	if ((__net)) { \
 		if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
-SCTP_PRINTF("%s:%d: freeing net %p\n", __FUNCTION__, __LINE__, (__net)); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
