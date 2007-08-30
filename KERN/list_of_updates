@@ -27,3 +27,5 @@
   asconfs (even when non-bundled asconfs are received)
 - Make sure ipi_addr lock is held when walking global addr
   list
+- Add don't wake flag on both input and output when the
+  socket is closing.
