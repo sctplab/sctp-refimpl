@@ -209,12 +209,21 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 
 #define sctp_free_remote_addr(__net) { \
-	if ((__net)) { \
-		atomic_subtract_int(&(__net)->ref_count, 1); \
-		if ((__net)->ref_count == 0) { \
+	if ((__net)) {  \
+		if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
+SCTP_PRINTF("%s:%d: freeing net %p\n", __FUNCTION__, __LINE__, (__net)); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
 			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+                        if ((__net)->ro.ro_rt) { \
+				RTFREE((__net)->ro.ro_rt); \
+				(__net)->ro.ro_rt = NULL; \
+                        } \
+			if ((__net)->src_addr_selected) { \
+				sctp_free_ifa((__net)->ro._s_addr); \
+				(__net)->ro._s_addr = NULL; \
+			} \
+                        (__net)->src_addr_selected = 0; \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
