@@ -6103,7 +6103,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 			ca->sndlen += SCTP_BUF_LEN(m);
 			m = SCTP_BUF_NEXT(m);
 		}
-		ca->m = m;
+		ca->m = mat;
 	}
 	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator, NULL, 
 				     SCTP_PCB_ANY_FLAGS, SCTP_PCB_ANY_FEATURES,
