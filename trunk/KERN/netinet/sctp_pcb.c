@@ -2949,8 +2949,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		 * sockets layer.
 		 */
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
-		/* prohibit wakeup of our socket */
-		inp->sctp_flags |= (SCTP_PCB_FLAGS_WAKEOUTPUT|SCTP_PCB_FLAGS_WAKEINPUT);
+		/* socket is gone, so no more wakeups allowed */
+		inp->sctp_flags |= SCTP_PCB_FLAGS_DONT_WAKE;
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL, 
 			SCTP_FROM_SCTP_PCB+SCTP_LOC_1 );
