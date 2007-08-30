@@ -4705,9 +4705,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	while (!TAILQ_EMPTY(&asoc->asconf_ack_sent)) {
 		aack = TAILQ_FIRST(&asoc->asconf_ack_sent);
 		TAILQ_REMOVE(&asoc->asconf_ack_sent, aack, next);
-		if (aack->last_sent_to != NULL) {
-			sctp_free_remote_addr(aack->last_sent_to);
-		}
 		if (aack->data != NULL) {
 			sctp_m_freem(aack->data);
 		}
