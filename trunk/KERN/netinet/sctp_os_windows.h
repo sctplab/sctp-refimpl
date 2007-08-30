@@ -90,22 +90,21 @@ struct proc {
 #define SCTP_PROCESS_STRUCT struct proc *
 
 
-struct wsacmsghdr {
-  UINT        cmsg_len;
-  INT         cmsg_level;
-  INT         cmsg_type;
-  /* followed by UCHAR cmsg_data[] */
-} WSACMSGHDR;
-
-#define cmsghdr		wsacmsghdr
-#define CMSG_ALIGN	TDI_CMSGHDR_ALIGN
-#define CMSGDATA_ALIGN	TDI_CMSGDATA_ALIGN
-#define CMSG_DATA	TDI_CMSG_DATA
-#define CMSG_SPACE	TDI_CMSG_SPACE
-#define CMSG_LEN	TDI_CMSG_LEN
+#if _WIN32_WINNT < 0x0600
+#define cmsghdr		_WSACMSGHDR
+#define CMSG_ALIGN	WSA_CMSGHDR_ALIGN
+#define CMSGDATA_ALIGN	WSA_CMSGDATA_ALIGN
+#define CMSG_DATA	WSA_CMSG_DATA
+#define CMSG_SPACE	WSA_CMSG_SPACE
+#define CMSG_LEN	WSA_CMSG_LEN
+#else
+#define CMSG_ALIGN	WSA_CMSGHDR_ALIGN
+#define CMSG_DATA	WSA_CMSG_DATA
+#endif
 
 
 #define SCTP_PACKED
+#define SCTP_UNUSED
 
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
@@ -482,18 +481,16 @@ struct inpcb {
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
 
-#define	MSG_OOB		0x1		/* process out-of-band data */
-#define	MSG_PEEK	0x2		/* peek at incoming message */
-#define	MSG_DONTROUTE	0x4		/* send without using routing tables */
-#define	MSG_EOR		0x8		/* data completes record */
-#define	MSG_TRUNC	0x1		/* data discarded before delivery */
-#define	MSG_CTRUNC	0x20		/* control data lost before delivery */
-#define	MSG_WAITALL	0x40		/* wait for full request or error */
-#define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
-#define	MSG_EOF		0x100		/* data completes connection */
-#define	MSG_NBIO	0x4000		/* FIONBIO mode, used by fifofs */
-#define	MSG_COMPAT	0x8000		/* used in sendit() */
-#define	MSG_NOTIFICATION 0xf000
+#define	MSG_OOB		0x0f00
+#define	MSG_PEEK	0x1000
+#define	MSG_DONTROUTE	0x2000
+#define	MSG_EOR		0x4000
+#define	MSG_WAITALL	0x8000
+#define	MSG_DONTWAIT	0x0001
+#define	MSG_EOF		0x0002
+#define	MSG_NBIO	0x0004
+#define	MSG_COMPAT	0x0008
+#define	MSG_NOTIFICATION 0x000f
 
 /*
  * routes, output, etc.
