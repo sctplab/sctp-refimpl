@@ -730,11 +730,14 @@ sctp6_abort(struct socket *so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
 sctp6_attach(struct socket *so, int proto, struct thread *p)
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 sctp6_attach(struct socket *so, int proto, uint32_t vrf_id)
 #else
-static int
+#if !defined(__Windows__)
+static
+#endif
+int
 sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 {
