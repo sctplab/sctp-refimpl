@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004, 2005, 2006 Michael Tuexen, tuexen@fh-muenster.de,
+ * Copyright (C) 2004-2007 Michael Tuexen, tuexen@fh-muenster.de
  *
  * All rights reserved.
  *
@@ -28,33 +28,20 @@
  * SUCH DAMAGE.
  */
 
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
-#include <sys/systm.h>
-#include <mach/mach_types.h>
-#endif
-
 #include <sys/sysctl.h>
 #include <netinet/in.h>
 #include <sys/protosw.h>
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 #include <netinet/ip.h>
 #include <sys/lock.h>
 #include <sys/domain.h>
-#else
-#include <sys/mbuf.h>
-#endif
-
 #include <net/route.h>
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 #include <sys/socketvar.h>
-#endif
 #include <netinet/in_pcb.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
 #include <netinet6/sctp6_var.h>
-
 #include <netinet/sctp.h>
 
 SYSCTL_DECL(_net_inet);
@@ -91,25 +78,36 @@ extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_outgoing_streams;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
+extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
+extern struct sysctl_oid sysctl__net_inet_sctp_cmt_pf;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran;
-extern struct sysctl_oid sysctl__net_inet_sctp_deadlock_detect;
 extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_asconf_auth_nochk;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
 extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
 extern struct sysctl_oid sysctl__net_inet_sctp_abc_l_var;
 extern struct sysctl_oid sysctl__net_inet_sctp_max_chained_mbufs;
-extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
 extern struct sysctl_oid sysctl__net_inet_sctp_do_sctp_drain;
 extern struct sysctl_oid sysctl__net_inet_sctp_hb_max_burst;
 extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
-extern struct sysctl_oid sysctl__net_inet_sctp_stats;
-extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
-#ifdef SCTP_DEBUG
+extern struct sysctl_oid sysctl__net_inet_sctp_min_residual;
+extern struct sysctl_oid sysctl__net_inet_sctp_max_retran_chunk;
+extern struct sysctl_oid sysctl__net_inet_sctp_logging;
+extern struct sysctl_oid sysctl__net_inet_sctp_default_cc_module;
+extern struct sysctl_oid sysctl__net_inet_sctp_default_frag_interleave;
+#if defined(SCTP_APPLE_MOBILITY_BASE)
+extern struct sysctl_oid sysctl__net_inet_sctp_mobility_base;
+#endif
+#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+extern struct sysctl_oid sysctl__net_inet_sctp_mobility_fasthandoff;
+#endif
+#if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
+extern struct sysctl_oid sysctl__net_inet_sctp_stats;
+extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
 extern struct sysctl_oid sysctl__net_inet_sctp_main_timer;
 
 extern struct domain inetdomain;
@@ -128,13 +126,10 @@ struct protosw sctp6_stream;
 
 struct protosw *old_pr4, *old_pr6;
 
-kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
-	
+kern_return_t 
+SCTP_start (kmod_info_t * ki, void * d)
+{
 	int err;
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
-	int s;
-	int funnel_state;
-#endif
 
 	old_pr4  = ip_protox [IPPROTO_SCTP];
 	old_pr6  = ip6_protox[IPPROTO_SCTP];
@@ -149,11 +144,7 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_dgram.pr_type          = SOCK_DGRAM;
 	sctp4_dgram.pr_domain        = &inetdomain;
 	sctp4_dgram.pr_protocol      = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_dgram.pr_flags         = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp4_dgram.pr_flags         = PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp4_dgram.pr_input         = sctp_input;
 	sctp4_dgram.pr_output        = 0;
 	sctp4_dgram.pr_ctlinput      = sctp_ctlinput;
@@ -161,28 +152,18 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_dgram.pr_ousrreq       = 0;
 	sctp4_dgram.pr_init          = sctp_init;
 	sctp4_dgram.pr_fasttimo      = 0;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_dgram.pr_slowtimo      = sctp_slowtimo;
-#else
-	sctp4_dgram.pr_slowtimo      = 0;
-#endif
 	sctp4_dgram.pr_drain         = sctp_drain;
 	sctp4_dgram.pr_sysctl        = 0;
 	sctp4_dgram.pr_usrreqs       = &sctp_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_dgram.pr_lock          = sctp_lock;
 	sctp4_dgram.pr_unlock        = sctp_unlock;
 	sctp4_dgram.pr_getlock       = sctp_getlock;
-#endif
 
 	sctp4_seqpacket.pr_type	     = SOCK_SEQPACKET;
 	sctp4_seqpacket.pr_domain    = &inetdomain;
 	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp4_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp4_seqpacket.pr_input     = sctp_input;
 	sctp4_seqpacket.pr_output    = 0;
 	sctp4_seqpacket.pr_ctlinput  = sctp_ctlinput;
@@ -194,20 +175,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_seqpacket.pr_drain     = sctp_drain;
 	sctp4_seqpacket.pr_sysctl    = 0;
 	sctp4_seqpacket.pr_usrreqs   = &sctp_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_seqpacket.pr_lock      = sctp_lock;
 	sctp4_seqpacket.pr_unlock    = sctp_unlock;
 	sctp4_seqpacket.pr_getlock   = sctp_getlock;
-#endif
 
 	sctp4_stream.pr_type         = SOCK_STREAM;
 	sctp4_stream.pr_domain       = &inetdomain;
 	sctp4_stream.pr_protocol     = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp4_stream.pr_input        = sctp_input;
 	sctp4_stream.pr_output       = 0;
 	sctp4_stream.pr_ctlinput     = sctp_ctlinput;
@@ -219,20 +194,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp4_stream.pr_drain        = sctp_drain;
 	sctp4_stream.pr_sysctl       = 0;
 	sctp4_stream.pr_usrreqs      = &sctp_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp4_stream.pr_lock         = sctp_lock;
 	sctp4_stream.pr_unlock       = sctp_unlock;
 	sctp4_stream.pr_getlock      = sctp_getlock;
-#endif
 
 	sctp6_dgram.pr_type          = SOCK_DGRAM;
 	sctp6_dgram.pr_domain        = &inet6domain;
 	sctp6_dgram.pr_protocol      = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_dgram.pr_flags         = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp6_dgram.pr_flags         = PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp6_dgram.pr_input         = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_dgram.pr_output        = 0;
 	sctp6_dgram.pr_ctlinput      = sctp6_ctlinput;
@@ -244,20 +213,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_dgram.pr_drain         = sctp_drain;
 	sctp6_dgram.pr_sysctl        = 0;
 	sctp6_dgram.pr_usrreqs       = &sctp6_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_dgram.pr_lock          = sctp_lock;
 	sctp6_dgram.pr_unlock        = sctp_unlock;
 	sctp6_dgram.pr_getlock       = sctp_getlock;
-#endif
 
 	sctp6_seqpacket.pr_type      = SOCK_SEQPACKET;
 	sctp6_seqpacket.pr_domain    = &inet6domain;
 	sctp6_seqpacket.pr_protocol  = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp6_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp6_seqpacket.pr_input     = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_seqpacket.pr_output    = 0;
 	sctp6_seqpacket.pr_ctlinput  = sctp6_ctlinput;
@@ -269,20 +232,14 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_seqpacket.pr_drain     = sctp_drain;
 	sctp6_seqpacket.pr_sysctl    = 0;
 	sctp6_seqpacket.pr_usrreqs   = &sctp6_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_seqpacket.pr_lock      = sctp_lock;
 	sctp6_seqpacket.pr_unlock    = sctp_unlock;
 	sctp6_seqpacket.pr_getlock   = sctp_getlock;
-#endif
 
 	sctp6_stream.pr_type         = SOCK_STREAM;
 	sctp6_stream.pr_domain       = &inet6domain;
 	sctp6_stream.pr_protocol     = IPPROTO_SCTP;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-#else
-	sctp6_seqpacket.pr_flags     = PR_ADDR_OPT|PR_WANTRCVD;
-#endif
 	sctp6_stream.pr_input        = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_stream.pr_output       = 0;
 	sctp6_stream.pr_ctlinput     = sctp6_ctlinput;
@@ -294,19 +251,12 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sctp6_stream.pr_drain        = sctp_drain;
 	sctp6_stream.pr_sysctl       = 0;
 	sctp6_stream.pr_usrreqs      = &sctp6_usrreqs;
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	sctp6_stream.pr_lock         = sctp_lock;
 	sctp6_stream.pr_unlock       = sctp_unlock;
 	sctp6_stream.pr_getlock      = sctp_getlock;
-#endif
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	lck_mtx_lock(inetdomain.dom_mtx);
 	lck_mtx_lock(inet6domain.dom_mtx);
-#else
-	funnel_state = thread_funnel_set(network_flock, TRUE);
-	s            = splnet();
-#endif
 
 	err  = net_add_proto(&sctp4_dgram,     &inetdomain);
 	err |= net_add_proto(&sctp4_seqpacket, &inetdomain);
@@ -316,13 +266,8 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	err |= net_add_proto(&sctp6_stream,    &inet6domain);
 
 	if (err) {
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 		lck_mtx_unlock(inet6domain.dom_mtx);
 		lck_mtx_unlock(inetdomain.dom_mtx);
-#else
-		splx(s);
-		thread_funnel_set(network_flock, funnel_state);
-#endif
 		printf("SCTP NKE: Not all protocol handlers could be installed.\n");
 		return KERN_FAILURE;
 	}
@@ -330,10 +275,8 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	ip_protox[IPPROTO_SCTP]  = &sctp4_dgram;
 	ip6_protox[IPPROTO_SCTP] = &sctp6_dgram;
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	lck_mtx_unlock(inet6domain.dom_mtx);
 	lck_mtx_unlock(inetdomain.dom_mtx);
-#endif
 	
 	sysctl_register_oid(&sysctl__net_inet_sctp);
 	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
@@ -365,70 +308,59 @@ kern_return_t SCTP_start (kmod_info_t * ki, void * d) {
 	sysctl_register_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_register_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_on_off);
+	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
+	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_pf);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran);
-	sysctl_register_oid(&sysctl__net_inet_sctp_deadlock_detect);
 	sysctl_register_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_register_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_register_oid(&sysctl__net_inet_sctp_abc_l_var);
 	sysctl_register_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
-	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_register_oid(&sysctl__net_inet_sctp_do_sctp_drain);
 	sysctl_register_oid(&sysctl__net_inet_sctp_hb_max_burst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_abort_at_limit);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
-	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
-	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
+	sysctl_register_oid(&sysctl__net_inet_sctp_min_residual);
+	sysctl_register_oid(&sysctl__net_inet_sctp_max_retran_chunk);
+	sysctl_register_oid(&sysctl__net_inet_sctp_logging);
+	sysctl_register_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_register_oid(&sysctl__net_inet_sctp_default_frag_interleave);
+#if defined(SCTP_APPLE_MOBILITY_BASE)
+	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_base);
+#endif
+#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
+#endif
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
+	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
+	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
 	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
-
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
-	splx(s);
-	thread_funnel_set(network_flock, funnel_state);
-#endif
 
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
 }
 
 
-kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
-
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
-	int s;
-	int funnel_state;
-#else
+kern_return_t 
+SCTP_stop (kmod_info_t * ki, void * d)
+{
 	struct inpcb *inp;
-#endif
 	int err;
 	
-#ifndef SCTP_APPLE_FINE_GRAINED_LOCKING
-	funnel_state = thread_funnel_set(network_flock, TRUE);
-	s = splnet();
-#endif
-
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
 		printf("SCTP NKE: Someone else holds the lock\n");
 		return KERN_FAILURE;
 	}
-#endif
 	if (!LIST_EMPTY(&sctppcbinfo.listhead)) {
 		printf("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
-#else
-		splx(s);
-		(void)thread_funnel_set(network_flock, funnel_state);
-#endif
 		return KERN_FAILURE;
 	}
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	if (!LIST_EMPTY(&sctppcbinfo.inplisthead)) {
 		printf("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
 		LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
@@ -437,7 +369,6 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		return KERN_FAILURE;
 	}
-#endif
 	sctp_stop_main_timer();
 
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
@@ -469,32 +400,42 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_on_off);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_pf);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_deadlock_detect);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_early_fast_retran_msec);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_abc_l_var);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_chained_mbufs);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_do_sctp_drain);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_hb_max_burst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_abort_at_limit);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_stats);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoclist);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_min_residual);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_retran_chunk);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_logging);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_frag_interleave);
+#if defined(SCTP_APPLE_MOBILITY_BASE)
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_base);
+#endif
+#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
+#endif
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_stats);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoclist);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	lck_mtx_lock(inetdomain.dom_mtx);
 	lck_mtx_lock(inet6domain.dom_mtx);
-#endif
+
 	ip_protox[IPPROTO_SCTP]  = old_pr4;
 	ip6_protox[IPPROTO_SCTP] = old_pr6;
 
@@ -508,15 +449,10 @@ kern_return_t SCTP_stop (kmod_info_t * ki, void * d) {
 	/* cleanup */
 	sctp_pcbinfo_cleanup();
 
-#ifdef SCTP_APPLE_FINE_GRAINED_LOCKING
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	sctp_finish();
 	lck_mtx_unlock(inet6domain.dom_mtx);
 	lck_mtx_unlock(inetdomain.dom_mtx);
-#else
-	splx(s);
-	thread_funnel_set(network_flock, funnel_state);
-#endif
 
 	if (err) {
 		printf("SCTP NKE: Not all protocol handlers could be removed.\n");
