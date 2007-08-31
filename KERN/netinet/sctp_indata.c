@@ -377,8 +377,10 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 	cntDel = stream_no = 0;
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	     (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) ||
 	     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
-		/* socket above is long gone */
+		/* socket above is long gone or going.. */
+	abandon:
 		asoc->fragmented_delivery_inprogress = 0;
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while(chk) {
@@ -451,12 +453,16 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				 * is corrupt, or there is a EOM already on
 				 * the mbuf chain.
 				 */
-				if ((stcb->asoc.control_pdapi == NULL)  || (stcb->asoc.control_pdapi->tail_mbuf == NULL)) {
-					panic("This should not happen control_pdapi NULL?");
+				if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					goto abandon;
+				} else {
+					if ((stcb->asoc.control_pdapi == NULL)  || (stcb->asoc.control_pdapi->tail_mbuf == NULL)) {
+						panic("This should not happen control_pdapi NULL?");
+					}
+					/* if we did not panic, it was a EOM */
+					panic("Bad chunking ??");
+					return;
 				}
-				/* if we did not panic, it was a EOM */
-				panic("Bad chunking ??");
-				return;
 			}
 			cntDel++;
 		}
