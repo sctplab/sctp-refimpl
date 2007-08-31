@@ -561,7 +561,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #ifdef SCTP_DEBUG
 		RANGECHK(sctp_debug_on, SCTPCTL_DEBUG_MIN, SCTPCTL_DEBUG_MAX);
 #endif
-#ifdef SCTP_DEBUG
+#if defined(__APPLE__)
 		RANGECHK(sctp_main_timer, SCTPCTL_MAIN_TIMER_MIN, SCTPCTL_MAIN_TIMER_MAX);
 #endif
 	}
