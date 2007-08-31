@@ -561,7 +561,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #ifdef SCTP_DEBUG
 		RANGECHK(sctp_debug_on, SCTPCTL_DEBUG_MIN, SCTPCTL_DEBUG_MAX);
 #endif
-#ifdef SCTP_DEBUG
+#if defined(__APPLE__)
 		RANGECHK(sctp_main_timer, SCTPCTL_MAIN_TIMER_MIN, SCTPCTL_MAIN_TIMER_MAX);
 #endif
 	}
@@ -740,7 +740,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, auth_disable, CTLTYPE_INT|CTLFLAG_RW,
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, nat_friendly, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_nat_friendly, 0, sysctl_sctp_check, "IU",
-	    SCTPCTL_NAT_FRIENDLY);
+	    SCTPCTL_NAT_FRIENDLY_DESC);
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, abc_l_var, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_L2_abc_variable, 0, sysctl_sctp_check, "IU",

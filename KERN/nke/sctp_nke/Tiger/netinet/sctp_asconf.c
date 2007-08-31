@@ -1403,7 +1403,7 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 		vrf_id = SCTP_DEFAULT_VRFID;
 	}
 
-	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+	ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
 	if (ifa == NULL) {
 		/* Invalid address */
 		return (-1);
@@ -2625,7 +2625,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			vrf_id = SCTP_DEFAULT_VRFID;
 		}
 
-		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
 		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
 			int status;
@@ -2924,10 +2924,10 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 		ifa = sctp_ifap;
 	} else 	if (type == SCTP_ADD_IP_ADDRESS) {
 		/* For an add the address MUST be on the system */
-		ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
+		ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
 	} else if (type == SCTP_DEL_IP_ADDRESS) {
 		/* For a delete we need to find it in the inp */
-		ifa = sctp_find_ifa_in_ep(inp, sa, 0);
+		ifa = sctp_find_ifa_in_ep(inp, sa, SCTP_ADDR_NOT_LOCKED);
 	} else {
 		ifa = NULL;
 	}
