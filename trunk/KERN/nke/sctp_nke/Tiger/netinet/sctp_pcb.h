@@ -613,7 +613,7 @@ void sctp_free_ifa(struct sctp_ifa *sctp_ifap);
 
 
 void sctp_del_addr_from_vrf(uint32_t vrfid, struct sockaddr *addr,
-			    uint32_t ifn_index);
+			    uint32_t ifn_index, const char *if_name);
 
 
 

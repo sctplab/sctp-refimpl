@@ -4394,7 +4394,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		if (stcb != NULL) {
 			struct sctp_ifa *ifa;
 			ifa = sctp_find_ifa_by_addr((struct sockaddr *)&sspp->sspp_addr, 
-						    stcb->asoc.vrf_id, 0);
+						    stcb->asoc.vrf_id, SCTP_ADDR_NOT_LOCKED);
 			if (ifa == NULL) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 				error = EINVAL;
