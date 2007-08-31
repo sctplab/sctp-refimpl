@@ -511,14 +511,18 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	if (cp->heartbeat.hb_info.addr_family == AF_INET &&
 	    cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in)) {
 		sin->sin_family = cp->heartbeat.hb_info.addr_family;
+#if !defined(__Windows__)
 		sin->sin_len = cp->heartbeat.hb_info.addr_len;
+#endif
 		sin->sin_port = stcb->rport;
 		memcpy(&sin->sin_addr, cp->heartbeat.hb_info.address,
 		    sizeof(sin->sin_addr));
 	} else if (cp->heartbeat.hb_info.addr_family == AF_INET6 &&
 	    cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in6)) {
 		sin6->sin6_family = cp->heartbeat.hb_info.addr_family;
+#if !defined(__Windows__)
 		sin6->sin6_len = cp->heartbeat.hb_info.addr_len;
+#endif
 		sin6->sin6_port = stcb->rport;
 		memcpy(&sin6->sin6_addr, cp->heartbeat.hb_info.address,
 		    sizeof(sin6->sin6_addr));
@@ -1912,14 +1916,18 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin = (struct sockaddr_in *)initack_src;
 		memset(sin, 0, sizeof(*sin));
 		sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 		sin->sin_addr.s_addr = cookie->laddress[0];
 	} else if (cookie->laddr_type == SCTP_IPV6_ADDRESS) {
 		/* source addr is IPv6 */
 		sin6 = (struct sockaddr_in6 *)initack_src;
 		memset(sin6, 0, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		sin6->sin6_scope_id = cookie->scope_id;
 		memcpy(&sin6->sin6_addr, cookie->laddress,
 		    sizeof(sin6->sin6_addr));
@@ -2055,7 +2063,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin = (struct sockaddr_in *)(localep_sa);
 		memset(lsin, 0, sizeof(*lsin));
 		lsin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		lsin->sin_len = sizeof(*lsin);
+#endif
 		lsin->sin_port = sh->dest_port;
 		lsin->sin_addr.s_addr = iph->ip_dst.s_addr;
 		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
@@ -2067,7 +2077,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin6 = (struct sockaddr_in6 *)(localep_sa);
 		memset(lsin6, 0, sizeof(*lsin6));
 		lsin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		lsin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		ip6 = mtod(m, struct ip6_hdr *);
 		lsin6->sin6_port = sh->dest_port;
 		lsin6->sin6_addr = ip6->ip6_dst;
@@ -2244,7 +2256,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (cookie->addr_type == SCTP_IPV6_ADDRESS) {
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6.sin6_len = sizeof(sin6);
+#endif
 		sin6.sin6_port = sh->src_port;
 		sin6.sin6_scope_id = cookie->scope_id;
 		memcpy(&sin6.sin6_addr.s6_addr, cookie->address,
@@ -2253,7 +2267,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	} else if (cookie->addr_type == SCTP_IPV4_ADDRESS) {
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin.sin_len = sizeof(sin);
+#endif
 		sin.sin_port = sh->src_port;
 		sin.sin_addr.s_addr = cookie->address[0];
 		to = (struct sockaddr *)&sin;

@@ -658,7 +658,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 
  * number of clusters as a base. This way high bandwidth environments will
  * not get impacted by the lower bandwidth sending a bunch of 1 byte chunks
  */
+#ifdef __Panda__
+#define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 10240
+#else
 #define SCTP_ASOC_MAX_CHUNKS_ON_QUEUE 512
+#endif
+
 
 /* The conversion from time to ticks and vice versa is done by rounding
  * upwards. This way we can test in the code the time to be positive and
