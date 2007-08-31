@@ -73,7 +73,9 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 		sin = (struct sockaddr_in *)sa;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 		sin->sin_port = 0;
 		sin->sin_addr.s_addr = iph->ip_src.s_addr;
 		return;
@@ -86,7 +88,9 @@ sctp_asconf_get_source_ip(struct mbuf *m, struct sockaddr *sa)
 		sin6 = (struct sockaddr_in6 *)sa;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		sin6->sin6_port = 0;
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6->sin6_addr = ip6->ip6_src;
@@ -224,7 +228,9 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 		sin->sin_port = stcb->rport;
 		sin->sin_addr.s_addr = v4addr->addr;
 		if (sin->sin_addr.s_addr == INADDR_ANY)
@@ -241,7 +247,9 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		sin6->sin6_port = stcb->rport;
 		memcpy((caddr_t)&sin6->sin6_addr, v6addr->addr,
 		    sizeof(struct in6_addr));
@@ -367,7 +375,9 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 		sin->sin_port = stcb->rport;
 		sin->sin_addr.s_addr = v4addr->addr;
 		if (sin->sin_addr.s_addr == INADDR_ANY)
@@ -385,7 +395,9 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		sin6->sin6_port = stcb->rport;
 		memcpy(&sin6->sin6_addr, v6addr->addr,
 		    sizeof(struct in6_addr));
@@ -499,7 +511,9 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 		sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 		sin->sin_addr.s_addr = v4addr->addr;
 		if (sin->sin_addr.s_addr == INADDR_ANY)
 			zero_address = 1;
@@ -515,7 +529,9 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy((caddr_t)&sin6->sin6_addr, v6addr->addr,
 		    sizeof(struct in6_addr));
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
@@ -636,10 +652,6 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			TAILQ_REMOVE(&stcb->asoc.asconf_ack_sent, ack, next);
 			if (ack->data != NULL) {
 				sctp_m_freem(ack->data);
-			}
-			if (ack->last_sent_to) {
-				sctp_free_remote_addr(ack->last_sent_to);
-				ack->last_sent_to = NULL;
 			}
 			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, ack);
 			ack = ack_next;
@@ -826,7 +838,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			from4 = (struct sockaddr_in *)&from_store;
 			bzero(from4, sizeof(*from4));
 			from4->sin_family = AF_INET;
+#if !defined(__Windows__)
 			from4->sin_len = sizeof(struct sockaddr_in);
+#endif
 			from4->sin_addr.s_addr = iph->ip_src.s_addr;
 			from4->sin_port = sh->src_port;
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
@@ -837,7 +851,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			from6 = (struct sockaddr_in6 *)&from_store;
 			bzero(from6, sizeof(*from6));
 			from6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 			from6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 			from6->sin6_addr = ip6->ip6_src;
 			from6->sin6_port = sh->src_port;
 #ifdef SCTP_EMBEDDED_V6_SCOPE
@@ -2552,11 +2568,15 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 	/* init the addresses */
 	bzero(&sin6, sizeof(sin6));
 	sin6.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 	sin6.sin6_len = sizeof(sin6);
+#endif
 	sin6.sin6_port = stcb->rport;
 
 	bzero(&sin, sizeof(sin));
+#if !defined(__Windows__)
 	sin.sin_len = sizeof(sin);
+#endif
 	sin.sin_family = AF_INET;
 	sin.sin_port = stcb->rport;
 
@@ -2893,10 +2913,12 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 	getmicrotime(&timenow);
 #endif
 
+#if !defined(__Windows__)
 	if (sa->sa_len == 0) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_ASCONF, EINVAL);
 		return (EINVAL);
 	}
+#endif
 
 	if (sctp_ifap) {
 		ifa = sctp_ifap;

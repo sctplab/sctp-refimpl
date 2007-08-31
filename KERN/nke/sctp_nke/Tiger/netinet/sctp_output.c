@@ -3458,7 +3458,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			ro = &iproute;
 			memset(&iproute, 0, sizeof(iproute));
+#if !defined(__Windows__)
 			memcpy(&ro->ro_dst, to, to->sa_len);
+#else
+			memcpy(&ro->ro_dst, to, sizeof(struct sockaddr_in));
+#endif
 		} else {
 			ro = (sctp_route_t *)&net->ro;
 		}
@@ -3713,7 +3717,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
 			ro = (sctp_route_t *)&ip6route;
+#if !defined(__Windows__)
 			memcpy(&ro->ro_dst, sin6, sin6->sin6_len);
+#else
+			memcpy(&ro->ro_dst, sin6, sizeof(struct sockaddr_in6));
+#endif
 		} else {
 			ro = (sctp_route_t *)&net->ro;
 		}
@@ -3741,7 +3749,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 */
 		bzero(&lsa6_tmp, sizeof(lsa6_tmp));
 		lsa6_tmp.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		lsa6_tmp.sin6_len = sizeof(lsa6_tmp);
+#endif
 		lsa6 = &lsa6_tmp;
 		if (net) {
 			if(net->ro._s_addr && net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED) {
@@ -3800,7 +3810,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 */
 		bzero(&lsa6_storage, sizeof(lsa6_storage));
 		lsa6_storage.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		lsa6_storage.sin6_len = sizeof(lsa6_storage);
+#endif
 #ifdef SCTP_KAME
 		if ((error = sa6_recoverscope(&lsa6_storage)) != 0) {
 #else
@@ -4553,9 +4565,13 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 	memset(&sin4, 0, sizeof(sin4));
 	memset(&sin6, 0, sizeof(sin6));
 	sin4.sin_family = AF_INET;
+#if !defined(__Windows__)
 	sin4.sin_len = sizeof(sin4);
+#endif
 	sin6.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 	sin6.sin6_len = sizeof(sin6);
+#endif
 
 	sa_touse = NULL;
 	/* First what about the src address of the pkt ? */
@@ -4801,7 +4817,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_route_t iproute;
 
 			sin->sin_family = AF_INET;
+#if !defined(__Windows__)
 			sin->sin_len = sizeof(struct sockaddr_in);
+#endif
 			sin->sin_port = sh->src_port;
 			sin->sin_addr = iph->ip_src;
 			/* lookup address */
@@ -4856,7 +4874,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
+#if !defined(__Windows__)
 			sin6->sin6_len = sizeof(struct sockaddr_in6);
+#endif
 			sin6->sin6_port = sh->src_port;
 			sin6->sin6_addr = ip6->ip6_src;
 			/* lookup address */
@@ -6083,7 +6103,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 			ca->sndlen += SCTP_BUF_LEN(m);
 			m = SCTP_BUF_NEXT(m);
 		}
-		ca->m = m;
+		ca->m = mat;
 	}
 	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator, NULL, 
 				     SCTP_PCB_ANY_FLAGS, SCTP_PCB_ANY_FEATURES,
@@ -8172,8 +8192,6 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb)
 	}
 	latest_ack->last_sent_to = net;
 
-	atomic_add_int(&latest_ack->last_sent_to->ref_count, 1);
-
 	TAILQ_FOREACH(ack, &stcb->asoc.asconf_ack_sent, next) {
 		if (ack->data == NULL) {
 			continue;
@@ -9919,7 +9937,11 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	/* Did our user request this one, put it in */
 	hb->heartbeat.hb_info.user_req = user_req;
 	hb->heartbeat.hb_info.addr_family = sin->sin_family;
+#if !defined(__Windows__)
 	hb->heartbeat.hb_info.addr_len = sin->sin_len;
+#else
+	hb->heartbeat.hb_info.addr_len = sizeof(struct sockaddr_in);
+#endif
 	if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
 		/*
 		 * we only take from the entropy pool if the address is not
@@ -10852,11 +10874,15 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 
 #ifdef SCTP_DEBUG
 		bzero(&lsa6, sizeof(lsa6));
+#if !defined(__Windows__)
 		lsa6.sin6_len = sizeof(lsa6);
+#endif
 		lsa6.sin6_family = AF_INET6;
 		lsa6.sin6_addr = out6->ip6_src;
 		bzero(&fsa6, sizeof(fsa6));
+#if !defined(__Windows__)
 		fsa6.sin6_len = sizeof(fsa6);
+#endif
 		fsa6.sin6_family = AF_INET6;
 		fsa6.sin6_addr = out6->ip6_dst;
 #endif
@@ -11355,6 +11381,7 @@ sctp_lower_sosend(struct socket *so,
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Send called addr:%p send length %d\n",
 		addr,
 		sndlen);
+#if !defined(__Windows__)
 	/*-
 	 * Pre-screen address, if one is given the sin-len
 	 * must be set correctly!
@@ -11372,6 +11399,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 	}
+#endif
 #ifdef __Panda__
 	if (i_control) {
 		control = SCTP_HEADER_TO_CHAIN(i_control);
@@ -12773,7 +12801,9 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 	     pfxrtr->pfr_next) {
 		memset(&gw6, 0, sizeof(struct sockaddr_in6));
 		gw6.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 		gw6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy(&gw6.sin6_addr, &pfxrtr->router->rtaddr, 
 		    sizeof(struct in6_addr));
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "prefix router is ");

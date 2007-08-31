@@ -4272,12 +4272,16 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 		struct sockaddr_in lsa, fsa;
 
 		bzero(&lsa, sizeof(lsa));
+#if !defined(__Windows__)
 		lsa.sin_len = sizeof(lsa);
+#endif
 		lsa.sin_family = AF_INET;
 		lsa.sin_addr = iph->ip_src;
 		lsa.sin_port = sh->src_port;
 		bzero(&fsa, sizeof(fsa));
+#if !defined(__Windows__)
 		fsa.sin_len = sizeof(fsa);
+#endif
 		fsa.sin_family = AF_INET;
 		fsa.sin_addr = iph->ip_dst;
 		fsa.sin_port = sh->dest_port;
@@ -4291,12 +4295,16 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 
 		ip6 = (struct ip6_hdr *)iph;
 		bzero(&lsa6, sizeof(lsa6));
+#if !defined(__Windows__)
 		lsa6.sin6_len = sizeof(lsa6);
+#endif
 		lsa6.sin6_family = AF_INET6;
 		lsa6.sin6_addr = ip6->ip6_src;
 		lsa6.sin6_port = sh->src_port;
 		bzero(&fsa6, sizeof(fsa6));
+#if !defined(__Windows__)
 		fsa6.sin6_len = sizeof(fsa6);
+#endif
 		fsa6.sin6_family = AF_INET6;
 		fsa6.sin6_addr = ip6->ip6_dst;
 		fsa6.sin6_port = sh->dest_port;
@@ -4675,7 +4683,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				SCTP_SOCKET_UNLOCK(so, 1);
-				return(0);
+				return (0);
 			}
 #endif
 			sctp_sorwakeup(inp, inp->sctp_socket);
@@ -4897,7 +4905,7 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 	if (holds_lock == 0) {
 		SCTP_INP_RUNLOCK(inp);
 	}
-	return(NULL);
+	return (NULL);
 }
 
 uint32_t
@@ -4906,7 +4914,7 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 	if (addr->sa_family == AF_INET) {
 		struct sockaddr_in *sin;
 		sin = (struct sockaddr_in *)addr;
-		return(sin->sin_addr.s_addr ^ (sin->sin_addr.s_addr >> 16));
+		return (sin->sin_addr.s_addr ^ (sin->sin_addr.s_addr >> 16));
 	}else if (addr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 		uint32_t hash_of_addr;
@@ -4946,7 +4954,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	if (vrf == NULL) {
 		if (holds_lock == 0)
 			SCTP_IPI_ADDR_UNLOCK();
-		return(NULL);
+		return (NULL);
 	}
 
 	hash_of_addr = sctp_get_ifa_hash_val(addr);
@@ -5572,12 +5580,20 @@ sctp_sorecvmsg(struct socket *so,
 		struct sockaddr *to;
 
 #ifdef INET
+#if !defined(__Windows__)
 		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
+#else
+		cp_len = sizeof(struct sockaddr_in);
+#endif
 		memcpy(from, &control->whoFrom->ro._l_addr, cp_len);
 		((struct sockaddr_in *)from)->sin_port = control->port_from;
 #else
 		/* No AF_INET use AF_INET6 */
+#if !defined(__Windows__)
 		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin6.sin6_len);
+#else
+		cp_len = sizeof(struct sockaddr_in6);
+#endif
 		memcpy(from, &control->whoFrom->ro._l_addr, cp_len);
 		((struct sockaddr_in6 *)from)->sin6_port = control->port_from;
 #endif
@@ -5593,7 +5609,9 @@ sctp_sorecvmsg(struct socket *so,
 			sin = (struct sockaddr_in *)to;
 			bzero(&sin6, sizeof(sin6));
 			sin6.sin6_family = AF_INET6;
+#if !defined(__Windows__)
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
 			sin6.sin6_addr.s6_addr16[2] = 0xffff;
 			bcopy(&sin->sin_addr,
 			      &sin6.sin6_addr.s6_addr16[3],
@@ -6103,7 +6121,7 @@ sctp_m_free(struct mbuf *m)
 			sctp_log_mb(m, SCTP_MBUF_IFREE);
 		}
 	}
-	return(m_free(m));
+	return (m_free(m));
 }
 
 void sctp_m_freem(struct mbuf *mb)
@@ -6126,7 +6144,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
 	if(ifa == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, EADDRNOTAVAIL);
-		return(EADDRNOTAVAIL);
+		return (EADDRNOTAVAIL);
 	}
 	/* Now that we have the ifa we must awaken the
 	 * iterator with this message.
@@ -6134,7 +6152,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (wi == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
-		return(ENOMEM);
+		return (ENOMEM);
 	}
 	/* Now incr the count and int wi structure */
 	SCTP_INCR_LADDR_COUNT();
@@ -6260,7 +6278,9 @@ sctp_soreceive(	struct socket *so,
 	if (psa) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
+#if !defined(__Windows__)
 		from->sa_len = 0;
+#endif
 	} else {
 		from = NULL;
 		fromlen = 0;
@@ -6281,7 +6301,11 @@ sctp_soreceive(	struct socket *so,
 	} 
 	if (psa) {
 		/* copy back the address info */
+#if !defined(__Windows__)
 		if (from && from->sa_len) {
+#else
+		if (from) {
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 			*psa = sodupsockaddr(from, M_NOWAIT);
 #else
@@ -6328,7 +6352,9 @@ int sctp_l_soreceive(struct socket *so,
 	if (name) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
+#if !defined(__Windows__)
 		from->sa_len = 0;
+#endif
 	} else {
 		from = NULL;
 		fromlen = 0;
@@ -6354,7 +6380,11 @@ int sctp_l_soreceive(struct socket *so,
 	} 
 	if (name) {
 		/* copy back the address info */
+#if !defined(__Windows__)
 		if (from && from->sa_len) {
+#else
+		if (from) {
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 			*name = sodupsockaddr(from, M_WAIT);
 #else
@@ -6422,7 +6452,7 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 #ifdef INVARIANTS
 		panic("flag incorrect in hashinit_flags");
 #else
-		return(NULL);
+		return (NULL);
 #endif
 	}
 	for (i = 0; i < hashsize; i++)
@@ -6472,7 +6502,7 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 		sa = (struct sockaddr *)((caddr_t)sa + incr);
 	}
  out_now:
-	return(added);
+	return (added);
 } 
 
 struct sctp_tcb *
@@ -6491,12 +6521,14 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 		if (sa->sa_family == AF_INET) {
 			(*num_v4) += 1;
 			incr = sizeof(struct sockaddr_in);
+#if !defined(__Windows__)
 			if(sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
 				*bad_addr = 1;
 				return (NULL);
 			}
+#endif
 		} else if (sa->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 
@@ -6510,12 +6542,14 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			}
 			(*num_v6) += 1;
 			incr = sizeof(struct sockaddr_in6);
+#if !defined(__Windows__)
 			if(sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
 				*bad_addr = 1;
 				return (NULL);
 			}
+#endif
 		} else {
 			*totaddr = i;
 			/* we are done */
@@ -6577,11 +6611,13 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 #if defined(INET6)
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
+#if !defined(__Windows__)
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 			/* can only bind v6 on PF_INET6 sockets */
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
@@ -6603,11 +6639,13 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	if (sa->sa_family == AF_INET) {
+#if !defined(__Windows__)
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 		    SCTP_IPV6_V6ONLY(inp)) {
 			/* can't bind v4 on PF_INET sockets */
@@ -6720,11 +6758,13 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 #if defined(INET6)
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
+#if !defined(__Windows__)
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 			/* can only bind v6 on PF_INET6 sockets */
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
@@ -6746,11 +6786,13 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	if (sa->sa_family == AF_INET) {
+#if !defined(__Windows__)
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
 			return;
 		}
+#endif
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 		    SCTP_IPV6_V6ONLY(inp)) {
 			/* can't bind v4 on PF_INET sockets */
@@ -6806,9 +6848,11 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 		ipv4_addr_legal = 1;
 	}
 
+	SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	if (vrf == NULL) {
 		/* no vrf, no addresses */
+		SCTP_IPI_ADDR_UNLOCK();
 		return (0);
 	}
 
@@ -6903,6 +6947,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 			count++;
 		}
 	}
+	SCTP_IPI_ADDR_UNLOCK();
 	return (count);
 }
 
