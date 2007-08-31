@@ -372,7 +372,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		atomic_add_int(&sctppcbinfo.ipi_count_ifns, 1);
 		new_ifn_af = 1;
 	}
-	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, SCTP_ADDR_LOCKED);
 	if (sctp_ifap) {
 		/* Hmm, it already exists? */
 		if ((sctp_ifap->ifn_p) &&
@@ -501,7 +501,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 			 */
 			SCTPDBG(SCTP_DEBUG_PCB1, "Lost and address change ???\n");
 			/* Opps, must decrement the count */
-			sctp_del_addr_from_vrf(vrf_id, addr, ifn_index);
+			sctp_del_addr_from_vrf(vrf_id, addr, ifn_index, if_name);
 			return(NULL);
 		}
 		SCTP_INCR_LADDR_COUNT();
@@ -529,7 +529,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 
 void
 sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
-		       uint32_t ifn_index)
+		       uint32_t ifn_index, const char *if_name)
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
@@ -541,8 +541,46 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		goto out_now;
 	}
 
-	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, 1);
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, SCTP_ADDR_LOCKED);
 	if (sctp_ifap) {
+		/* Validate the delete */
+		if (sctp_ifap->ifn_p) {
+			int valid=0;
+			/*-
+			 * The name has priority over the ifn_index
+			 * if its given. We do this especially for
+			 * panda who might recycle indexes fast.
+			 */
+			if(if_name) {
+				int len1, len2;
+				len1 = min(SCTP_IFNAMSIZ,strlen(if_name));
+				len2 = min(SCTP_IFNAMSIZ,strlen(sctp_ifap->ifn_p->ifn_name));
+				if(len1 && len2 && (len1 == len2)) {
+					/* we can compare them */
+					if (strncmp(if_name, sctp_ifap->ifn_p->ifn_name, len1) == 0) {
+						/* They match its a correct delete */
+						valid = 1;
+					}
+				}
+			}
+			if(!valid) {
+				/* last ditch check ifn_index */
+				if (ifn_index == sctp_ifap->ifn_p->ifn_index) {
+					valid = 1;
+				}
+			}
+			if (!valid) {
+#ifdef SCTP_DEBUG
+				SCTPDBG(SCTP_DEBUG_PCB1, "Deleting address:");
+				SCTPDBG_ADDR(SCTP_DEBUG_PCB1, addr);
+				SCTPDBG(SCTP_DEBUG_PCB1, "ifn:%d ifname:%s does not match addresses\n",
+					ifn_index, ((if_name == NULL) ? "NULL" : if_name));
+				SCTPDBG(SCTP_DEBUG_PCB1, "ifn:%d ifname:%s - ignoring delete\n",
+					sctp_ifap->ifn_p->ifn_index, sctp_ifap->ifn_p->ifn_name);
+#endif
+				return;
+			}
+		}
 		sctp_ifap->localifa_flags &= SCTP_ADDR_VALID;
 		sctp_ifap->localifa_flags |= SCTP_BEING_DELETED;
 		vrf->total_ifa_count--;
@@ -2773,7 +2811,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			 * sctp_ifap argument (Panda).
 			 */
 			ifa = sctp_find_ifa_by_addr((struct sockaddr *)&store_sa,
-						    vrf_id, 0);
+						    vrf_id, SCTP_ADDR_NOT_LOCKED);
 		}
 		if (ifa == NULL) {
 			/* Can't find an interface with that address */
@@ -3431,7 +3469,7 @@ sctp_is_address_on_local_host(struct sockaddr *addr, uint32_t vrf_id)
 	return (0);
 #else
 	struct sctp_ifa *sctp_ifa;
-	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, 0);
+	sctp_ifa = sctp_find_ifa_by_addr(addr, vrf_id, SCTP_ADDR_NOT_LOCKED);
 	if (sctp_ifa) {
 		return (1);
 	} else {

@@ -1054,6 +1054,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 
 #define SCTP_SO_NOT_LOCKED	0
 
 
+/*-
+ * For address locks, do we hold the lock?
+ */
+#define SCTP_ADDR_LOCKED 1
+#define SCTP_ADDR_NOT_LOCKED 0
+
 #define IN4_ISPRIVATE_ADDRESS(a) \
    ((((uint8_t *)&(a)->s_addr)[0] == 10) || \
     ((((uint8_t *)&(a)->s_addr)[0] == 172) && \
