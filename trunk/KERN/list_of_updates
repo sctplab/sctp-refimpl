@@ -35,3 +35,8 @@
 - Clean up old sysctl stuff and get rid of the old Open/Net
   BSD structures.
 - Add a function to watch the ranges in the sysctl sets.
+- When appending in the reassembly queue, validate that
+  the assoc has not gone to about to be freed. If so
+  (in the middle) abort out. Note this especially effects
+  MAC I think due to the lock/unlock they do (or with
+  LOCK testing in place).
