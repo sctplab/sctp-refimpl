@@ -120,6 +120,19 @@ document sctp_allep
 Show all SCTP endpoints
 end
 
+define sctp_allepflags
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+printf "%X ", $_inp
+printf "State %X\n", $_inp->sctp_flags
+set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allepflags
+Show all SCTP endpoints sctp_flags
+end
+
+
 define sctp_allepports
 set $_inp=sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )

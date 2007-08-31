@@ -29,3 +29,9 @@
   list
 - Add don't wake flag on both input and output when the
   socket is closing.
+- When deleting an address verify the interface is correct
+  before allowing the delete to process. This protects panda
+  and unnumbered.
+- Clean up old sysctl stuff and get rid of the old Open/Net
+  BSD structures.
+- Add a function to watch the ranges in the sysctl sets.
