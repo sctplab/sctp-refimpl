@@ -7092,6 +7092,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				net = TAILQ_FIRST(&asoc->nets);
 			}
 
+		/* JRI-TODO: CMT-MPI. Simply set the first destination
+		   (net) to be optimized for the next message to be
+		   pulled out of the outwheel. 
+		   1. peek at outwheel
+		   2. If large message, set net = highest_cwnd
+		   3. If small message, set net = lowest rtt
+		*/
 		} else {
 			net = asoc->primary_destination;
 			if (net == NULL) {
@@ -7100,12 +7107,24 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 		}
 		start_at = net;
+
 one_more_time:
 		for (; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 			net->window_probe = 0;
 			if (old_startat && (old_startat == net)) {
 				break;
 			}
+			
+			/* JRI: if dest is unreachable or unconfirmed, do not send data to it */
+			if((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			        continue;
+			}
+
+			/* JRI: if dest is in PF state, do not send data to it */
+			if(sctp_cmt_on_off && sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF)) {
+			        continue;
+			}
+
 			if ((sctp_cmt_on_off == 0) && (net->ref_count < 2)) {
 				/* nothing can be in queue for this guy */
 				continue;
@@ -7116,7 +7135,7 @@ one_more_time:
 				continue;
 			}
 			/*
-			 * @@@ JRI : this for loop we are in takes in
+			 * JRI : this for loop we are in takes in
 			 * each net, if its's got space in cwnd and
 			 * has data sent to it (when CMT is off) then it
 			 * calls sctp_fill_outqueue for the net. This gets
