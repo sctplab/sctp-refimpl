@@ -242,15 +242,15 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 						continue;
 				} else
 					continue;
-				memset((void *)&xladdr, 0, sizeof(union sctp_sockstore));
+				memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 				memcpy((void *)&xladdr.address, (const void *)&sctp_ifa->address, sizeof(union sctp_sockstore));
 				(void)SCTP_GETTIME_TIMEVAL(&xladdr.start_time);
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
 				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-				if (error)
+				if (error) {
 					return (error);
-				else {
+				} else {
 					SCTP_INP_INFO_RLOCK();
 					SCTP_INP_RLOCK(inp);
 				}
@@ -261,30 +261,29 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 			/* ignore if blacklisted at association level */
 			if (stcb && sctp_is_addr_restricted(stcb, laddr->ifa))
 				continue;
-			memset((void *)&xladdr, 0, sizeof(union sctp_sockstore));
+			memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 			memcpy((void *)&xladdr.address, (const void *)&laddr->ifa->address, sizeof(union sctp_sockstore));
 			xladdr.start_time = laddr->start_time;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-			if (error)
+			if (error) {
 				return (error);
-			else {
+			} else {
 				SCTP_INP_INFO_RLOCK();
 				SCTP_INP_RLOCK(inp);
 			}
 		}
 	}
-	memset((void *)&xladdr, 0, sizeof(union sctp_sockstore));
+	memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 	xladdr.last = 1;
 	SCTP_INP_RUNLOCK(inp);
 	SCTP_INP_INFO_RUNLOCK();
 	error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
 
-	if (error)
+	if (error) {
 		return (error);
-
-	else {
+	} else {
 		SCTP_INP_INFO_RLOCK();
 		SCTP_INP_RLOCK(inp);
 		return (0);
@@ -414,7 +413,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 			if (error) {
 				SCTP_INP_DECR_REF(inp);
-				atomic_add_int(&stcb->asoc.refcnt, -1);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 				return error;
 			}
 			SCTP_INP_INFO_RLOCK();
@@ -422,7 +421,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			error = copy_out_local_addresses(inp, stcb, req);
 			if (error) {
 				SCTP_INP_DECR_REF(inp);
-				atomic_add_int(&stcb->asoc.refcnt, -1);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 				return error;
 			}
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
@@ -444,13 +443,13 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
 				if (error) {
 					SCTP_INP_DECR_REF(inp);
-					atomic_add_int(&stcb->asoc.refcnt, -1);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 					return error;
 				}
 				SCTP_INP_INFO_RLOCK();
 				SCTP_INP_RLOCK(inp);
 			}
-			atomic_add_int(&stcb->asoc.refcnt, -1);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
 			memset((void *)&xraddr, 0, sizeof(struct xsctp_raddr));
 			xraddr.last = 1;
 			SCTP_INP_RUNLOCK(inp);
