@@ -7116,12 +7116,12 @@ one_more_time:
 			}
 			
 			/* JRI: if dest is unreachable or unconfirmed, do not send data to it */
-			if((mnet->dest_state & SCTP_ADDR_REACHABLE) || (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			if((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 			        continue;
 			}
 
 			/* JRI: if dest is in PF state, do not send data to it */
-			if(sctp_cmt_on_off && sctp_cmt_pf && (mnet->dest_state & SCTP_ADDR_PF)) {
+			if(sctp_cmt_on_off && sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF)) {
 			        continue;
 			}
 
