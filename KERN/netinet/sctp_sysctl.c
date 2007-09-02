@@ -360,8 +360,14 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.total_recvs            = inp->total_recvs;
 		xinpcb.total_nospaces         = inp->total_nospaces;
 		xinpcb.fragmentation_point    = inp->sctp_frag_point;
-		xinpcb.qlen                   = inp->sctp_socket->so_qlen;
-		xinpcb.maxqlen                = inp->sctp_socket->so_qlimit;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
+			xinpcb.qlen                   = 0;
+			xinpcb.maxqlen                = 0;
+		} else {
+			xinpcb.qlen                   = inp->sctp_socket->so_qlen;
+			xinpcb.maxqlen                = inp->sctp_socket->so_qlimit;
+		}
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
@@ -462,6 +468,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			SCTP_INP_INFO_RLOCK();
 			SCTP_INP_RLOCK(inp);
 		}
+		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
 		memset((void *)&xstcb, 0, sizeof(struct xsctp_tcb));
@@ -471,7 +478,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			return error;
 		}
 		SCTP_INP_INFO_RLOCK();
-		SCTP_INP_DECR_REF(inp);
 	}
 	SCTP_INP_INFO_RUNLOCK();
 
