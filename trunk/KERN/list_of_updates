@@ -41,3 +41,6 @@
   MAC I think due to the lock/unlock they do (or with
   LOCK testing in place).
 - Netstat patch to get rid of warnings.
+- Make sure that no data gets queued to inactive/unconfirmed 
+  destinations. This especially effect CMT but also makes a
+  impact on regular SCTP as well.
