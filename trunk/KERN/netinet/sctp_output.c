@@ -5063,28 +5063,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			initackm_out->msg.init.initial_tsn = htonl(itsn);
 			SCTP_TCB_LOCK(stcb);
 			atomic_add_int(&asoc->refcnt, -1);
-			asoc->my_vtag = vtag;
-			asoc->sending_seq = asoc->init_seq_number = itsn;
-			/*-
-			 * If we hit here, during the unlock we
-			 * sent out the INIT, which is. The section below
-			 * to do renumbering should not happen unless the INIT-ACK
-			 * also gets processed in the UNLOCK/LOCK window above. Which
-			 * if true means it took us a long time to get the lock or
-			 * we are on a real fast local host. Now if the renumber
-			 * happens, we are in the same place as the sctp_input.c comment
-			 * for case D.
-			 */
-			if (!TAILQ_EMPTY(&asoc->sent_queue)) {
-				struct sctp_tmit_chunk *chk;
-				struct sctp_data_chunk *dchkh;
-				SCTP_PRINTF("Case D look ahead, renumber needed\n");
-				TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
-					chk->rec.data.TSN_seq = atomic_fetchadd_int(&asoc->sending_seq, 1);
-					dchkh = mtod(chk->data, struct sctp_data_chunk *);
-					dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
-				}
-			}
 		} else {
 			vtag = sctp_select_a_tag(inp);
 			initackm_out->msg.init.initiate_tag = htonl(vtag);
