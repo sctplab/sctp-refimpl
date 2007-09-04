@@ -1253,12 +1253,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * to get into the OPEN state
 		 */
 		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
-#ifdef INVARIANTS
-			panic("Case D and non-match seq?");
-#else
-			SCTP_PRINTF("Case D, seq non-match %x vs %x? - repairing?\n",
-				    ntohl(initack_cp->init.initial_tsn),
-				    asoc->init_seq_number);
+			if(!TAILQ_EMPTY(&asoc->sent_queue) {
+			   SCTP_PRINTF("Case D, seq non-match %x vs %x? - repairing?\n",
+				       ntohl(initack_cp->init.initial_tsn),
+				       asoc->init_seq_number);
+			}
 			asoc->sending_seq = asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 			if (!TAILQ_EMPTY(&asoc->sent_queue)) {
 				/*- 
@@ -1277,9 +1276,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 					dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
 				}
 			}
-#endif
 		}
-
 		switch SCTP_GET_STATE(asoc) {
 			case SCTP_STATE_COOKIE_WAIT:
 			case SCTP_STATE_COOKIE_ECHOED:
