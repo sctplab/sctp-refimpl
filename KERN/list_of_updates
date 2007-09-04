@@ -45,7 +45,11 @@
   destinations. This especially effect CMT but also makes a
   impact on regular SCTP as well.
 - During init collision when we detect seq number out
-  of sync add the repair in the non-invarients case. Take
-  out the invarients case as well since this was debug code
-  and two random numbers CAN come up the same.
+  of sync we need to treat it like Case C and discard
+  the cookie (no invarient needed here).
 - Atomic access to the random store.
+- When we declare a vtag good, we need to shove it
+  into the time wait hash to prevent further use. When
+  a tag is put into the assoc hash, we need to remove it
+  from the twait hash (where it will surely be). This prevents
+  duplicate tag assignments.
