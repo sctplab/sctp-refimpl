@@ -44,3 +44,8 @@
 - Make sure that no data gets queued to inactive/unconfirmed 
   destinations. This especially effect CMT but also makes a
   impact on regular SCTP as well.
+- During init collision when we detect seq number out
+  of sync add the repair in the non-invarients case. Take
+  out the invarients case as well since this was debug code
+  and two random numbers CAN come up the same.
+- Atomic access to the random store.
