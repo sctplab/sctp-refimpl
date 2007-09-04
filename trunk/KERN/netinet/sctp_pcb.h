@@ -352,7 +352,7 @@ struct sctp_pcb {
 	int auto_close_time;
 	uint32_t initial_sequence_debug;
 	uint32_t adaptation_layer_indicator;
-	char store_at;
+	uint32_t store_at;
 	uint8_t max_burst;
 	char current_secret_number;
 	char last_secret_number;
