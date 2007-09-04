@@ -5052,14 +5052,15 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		initackm_out->msg.init.initiate_tag = htonl(asoc->my_vtag);
 		initackm_out->msg.init.initial_tsn = htonl(asoc->init_seq_number);
 	} else {
-		uint32_t vtag;
+		uint32_t vtag, itsn;
 		if (asoc) {
 			atomic_add_int(&asoc->refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
 			vtag = sctp_select_a_tag(inp);
 			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
-			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
+			itsn = sctp_select_initial_TSN(&inp->sctp_ep);
+			initackm_out->msg.init.initial_tsn = htonl(itsn);
 			SCTP_TCB_LOCK(stcb);
 			atomic_add_int(&asoc->refcnt, -1);
 		} else {
@@ -7116,7 +7117,7 @@ one_more_time:
 			}
 			
 			/* JRI: if dest is unreachable or unconfirmed, do not send data to it */
-			if((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 			        continue;
 			}
 
