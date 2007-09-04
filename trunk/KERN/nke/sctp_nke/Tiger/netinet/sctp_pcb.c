@@ -4015,6 +4015,8 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	    sctppcbinfo.hashasocmark)];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+	sctp_delete_from_timewait(stcb->asoc.my_vtag);
+
 	SCTP_INP_INFO_WUNLOCK();
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, SCTP_DO_SETSCOPE, SCTP_ALLOC_ASOC))) {
@@ -4126,9 +4128,33 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 	return (-2);
 }
 
+void
+sctp_delete_from_timewait(uint32_t tag)
+{
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block;
+	int found=0;
+	int i;
+
+	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
+	if (!SCTP_LIST_EMPTY(chain)) {
+		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+				if (twait_block->vtag_block[i].v_tag == tag) {
+					twait_block->vtag_block[i].tv_sec_at_expire = 0;
+					twait_block->vtag_block[i].v_tag = 0;
+					found = 1;
+					break;
+				}
+			}
+			if(found)
+				break;
+		}
+	}
+}
 
 void
-sctp_add_vtag_to_timewait(struct sctp_inpcb *inp, uint32_t tag, uint32_t time)
+sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -4498,7 +4524,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(inp, asoc->my_vtag, SCTP_TIME_WAIT);
+	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_TIME_WAIT);
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
@@ -6203,7 +6229,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
 	/* First is the vtag in use ? */
 
 	head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(tag,
-	    sctppcbinfo.hashasocmark)];
+							    sctppcbinfo.hashasocmark)];
 	if (head == NULL) {
 		goto check_restart;
 	}
@@ -6265,7 +6291,15 @@ check_time_wait:
 			}
 		}
 	}
-	/* Not found, ok to use the tag */
+	/*-
+	 * Not found, ok to use the tag, add it to the time wait hash
+	 * as well this will prevent two sucessive cookies from getting
+	 * the same tag or two inits sent quickly on multi-processors.
+	 * We only keep the tag for the life of a cookie and when we
+	 * add this tag to the assoc hash we need to purge it from
+	 * the t-wait hash.
+	 */
+	sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life));
 	SCTP_INP_INFO_WUNLOCK();
 	return (1);
 }
