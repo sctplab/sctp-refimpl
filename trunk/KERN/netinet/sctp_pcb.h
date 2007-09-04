@@ -679,8 +679,11 @@ sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
+
+void sctp_delete_from_timewait(uint32_t);
+
 void
-sctp_add_vtag_to_timewait(struct sctp_inpcb *, uint32_t, uint32_t);
+sctp_add_vtag_to_timewait(uint32_t, uint32_t);
 
 void sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
 

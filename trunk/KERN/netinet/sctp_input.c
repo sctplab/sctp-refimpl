@@ -1253,38 +1253,26 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * to get into the OPEN state
 		 */
 		if(ntohl(initack_cp->init.initial_tsn) != asoc->init_seq_number) {
-			if ((!TAILQ_EMPTY(&asoc->sent_queue)) ||
-			    (!TAILQ_EMPTY(&asoc->send_queue))){
-			   SCTP_PRINTF("Case D, seq non-match %x vs %x? - repairing?\n",
-				       ntohl(initack_cp->init.initial_tsn),
-				       asoc->init_seq_number);
-			}
-			asoc->sending_seq = asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
-			if ((!TAILQ_EMPTY(&asoc->sent_queue)) ||
-			    (!TAILQ_EMPTY(&asoc->send_queue))){
-				/*- 
-				 * If  we truely have outstanding data this may
-				 * cause all sorts of problems if the old numbers
-				 * are slightly bigger than these. Hopefully our
-				 * Cookie is being rejected in this scheme, thus
-				 * the data has to be retransmitted.
-				 */
-				struct sctp_tmit_chunk *chk;
-				struct sctp_data_chunk *dchkh;
-				SCTP_PRINTF("Case D, attempt renumber\n");
-				TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
-					chk->rec.data.TSN_seq = atomic_fetchadd_int(&asoc->sending_seq, 1);
-					dchkh = mtod(chk->data, struct sctp_data_chunk *);
-					dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
-				}
-				TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
-					chk->rec.data.TSN_seq = atomic_fetchadd_int(&asoc->sending_seq, 1);
-					dchkh = mtod(chk->data, struct sctp_data_chunk *);
-					dchkh->dp.tsn = htonl(chk->rec.data.TSN_seq);
-				}
-			}
+			/*-
+			 * Opps, this means that we somehow generated two vtag's
+			 * the same. I.e. we did:
+			 *  Us               Peer
+			 *   <---INIT(tag=a)------
+			 *   ----INIT-ACK(tag=t)--> 
+			 *   ----INIT(tag=t)------> *1
+			 *   <---INIT-ACK(tag=a)---
+                         *   <----CE(tag=t)------------- *2
+			 *
+			 * At point *1 we should be generating a different
+			 * tag t'. Which means we would throw away the CE and send
+			 * ours instead. Basically this is case C (throw away side).
+			 */
+			if (how_indx < sizeof(asoc->cookie_how))
+				asoc->cookie_how[how_indx] = 17;
+			return (NULL);
+
 		}
-		switch SCTP_GET_STATE(asoc) {
+ 		switch SCTP_GET_STATE(asoc) {
 			case SCTP_STATE_COOKIE_WAIT:
 			case SCTP_STATE_COOKIE_ECHOED:
 				/*
