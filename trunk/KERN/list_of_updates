@@ -53,3 +53,7 @@
   a tag is put into the assoc hash, we need to remove it
   from the twait hash (where it will surely be). This prevents
   duplicate tag assignments.
+- Move of decr ref count to better protect sysctl out of
+  data.
+- ltrace error corrections in sctp6_usrreq.c
+
