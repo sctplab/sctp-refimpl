@@ -2406,6 +2406,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	stcb->asoc.shut_guard_timer.ep = (void *)new_inp;
 	stcb->asoc.autoclose_timer.ep = (void *)new_inp;
 	stcb->asoc.delayed_event_timer.ep = (void *)new_inp;
+	stcb->asoc.delete_prim_timer.ep = (void *)new_inp;
 	/* now what about the nets? */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		net->pmtu_timer.ep = (void *)new_inp;
@@ -4150,6 +4151,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	SCTP_OS_TIMER_INIT(&asoc->shut_guard_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->autoclose_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->delayed_event_timer.timer);
+	SCTP_OS_TIMER_INIT(&asoc->delete_prim_timer.timer);
 
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 	/* now file the port under the hash as well */
@@ -4177,6 +4179,26 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		struct sctp_nets *lnet;
 
 		lnet = TAILQ_FIRST(&asoc->nets);
+		/* Mobility adaptation
+		   Ideally, if deleted destination is the primary, it becomes 
+		   a fast retransmission trigger by the subsequent SET PRIMARY. 
+		   (by micchie) 
+		 */
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_FASTHANDOFF)) {
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: primary dst is deleting\n");
+			if (asoc->deleted_primary != NULL) {
+				SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: deleted primary may be already stored\n");
+				goto leave;
+			}
+			asoc->deleted_primary = net;
+			atomic_add_int(&net->ref_count, 1);
+			sctp_mobility_feature_on(stcb->sctp_ep,
+						 SCTP_MOBILITY_PRIM_DELETED);
+			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED, 
+					 stcb->sctp_ep, stcb, NULL);
+		}
+leave:
 		/* Try to find a confirmed primary */
 		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet, 0);
 	}
@@ -4468,6 +4490,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	asoc->shut_guard_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 	asoc->delayed_event_timer.self = NULL;
+	/* Mobility adaptation */
+	(void)SCTP_OS_TIMER_STOP(&asoc->delete_prim_timer.timer);
+	asoc->delete_prim_timer.self = NULL;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		net->fr_timer.self = NULL;

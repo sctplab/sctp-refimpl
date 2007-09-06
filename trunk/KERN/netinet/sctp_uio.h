@@ -837,6 +837,7 @@ struct sctpstat {
 	uint32_t  sctps_timostrmrst;         /* Number of stream reset timers that fired */
 	uint32_t  sctps_timoearlyfr;         /* Number of early FR timers that fired */
 	uint32_t  sctps_timoasconf;          /* Number of times an asconf timer fired */
+	uint32_t  sctps_timodelprim;	     /* Number of times a prim_deleted timer fired */
 	uint32_t  sctps_timoautoclose;       /* Number of times auto close timer fired */
 	uint32_t  sctps_timoassockill;       /* Number of asoc free timers expired */
 	uint32_t  sctps_timoinpkill;         /* Number of inp free timers expired */
