@@ -57,3 +57,5 @@
   data.
 - ltrace error corrections in sctp6_usrreq.c
 - Add hook for interface up/down.
+- Make sysctl() exported structures independent of processor
+  architecture.
