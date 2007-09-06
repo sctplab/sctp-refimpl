@@ -3471,7 +3471,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 
 		/* call the routine to select the src address */
 		if (net) {
-			if (net->ro._s_addr && (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {
+			if (net->ro._s_addr && (net->ro._s_addr->localifa_flags & (SCTP_BEING_DELETED|SCTP_ADDR_IFA_UNUSEABLE))) {
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
@@ -3754,7 +3754,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		lsa6 = &lsa6_tmp;
 		if (net) {
-			if(net->ro._s_addr && net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED) {
+			if(net->ro._s_addr && (net->ro._s_addr->localifa_flags & (SCTP_BEING_DELETED|SCTP_ADDR_IFA_UNUSEABLE))) {
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
