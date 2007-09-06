@@ -46,8 +46,8 @@ endif
 endif
 endif
 
-PROGSRCS= prtcwndlog.c gdbdump_to_bin.c cntcwndlog.c \
-parse_log.c to_pcap.c hexdump dump_apple_log
+PROGSRCS= dump_apple_log.c prtcwndlog.c gdbdump_to_bin.c cntcwndlog.c \
+parse_log.c to_pcap.c hexdump.c 
 
 OBJSRCS=hashWalk.c primelist.c stdintest.c
 

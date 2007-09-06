@@ -489,7 +489,7 @@ s,@install_sh@,/home/rrs/sctpCVS/APPS/tsctp/install-sh,;t t
 s,@STRIP@,,;t t
 s,@ac_ct_STRIP@,,;t t
 s,@INSTALL_STRIP_PROGRAM@,${SHELL} $(install_sh) -c -s,;t t
-s,@AWK@,nawk,;t t
+s,@AWK@,gawk,;t t
 s,@SET_MAKE@,,;t t
 s,@CC@,gcc,;t t
 s,@CFLAGS@,-g -O2 -Wall -ansi -pedantic,;t t
