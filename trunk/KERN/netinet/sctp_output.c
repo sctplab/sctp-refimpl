@@ -2445,6 +2445,10 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
+		if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+			/* address is being deleted */
+			continue;
+		}
 		sifa = sctp_is_ifa_addr_preferred(laddr->ifa, dest_is_loop,
 						  dest_is_priv, fam);
 		if (sifa == NULL)
@@ -2470,6 +2474,10 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
+			continue;
+		}
+		if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+			/* address is being deleted */
 			continue;
 		}
 		sifa = sctp_is_ifa_addr_acceptable(laddr->ifa, dest_is_loop,
@@ -2583,6 +2591,10 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 			/* address has been removed */
 			continue;
 		}
+		if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+			/* address is being deleted */
+			continue;
+		}
 		sifa = sctp_is_ifa_addr_preferred(laddr->ifa, dest_is_loop, dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
@@ -2594,7 +2606,6 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 		stcb->asoc.last_used_address = laddr;
 		atomic_add_int(&sifa->refcount, 1);
 		return (sifa);
-
 	}
 	if (start_at_beginning == 0) {
 		stcb->asoc.last_used_address = NULL;
@@ -2613,6 +2624,10 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 	     laddr = LIST_NEXT(laddr, sctp_nxt_addr)) {
 		if (laddr->ifa == NULL) {
 			/* address has been removed */
+			continue;
+		}
+		if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+			/* address is being deleted */
 			continue;
 		}
 		sifa = sctp_is_ifa_addr_acceptable(laddr->ifa, dest_is_loop,
@@ -6528,6 +6543,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* No chunk memory */
 	out_gu:
 		if(send_lock_up) {
+                        /*sa_ignore NO_NULL_CHK*/
 			SCTP_TCB_SEND_UNLOCK(stcb);
 			send_lock_up = 0;
 		}
@@ -9393,6 +9409,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			a_chk->data = NULL;
 		}
 		sctp_free_a_chunk(stcb, a_chk);
+                /*sa_ignore NO_NULL_CHK*/
 		if (stcb->asoc.delayed_ack) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
 			    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_6 );
@@ -10116,6 +10133,7 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
 
+        /*sa_ignore NO_NULL_CHK*/
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (asoc->peer_supports_pktdrop == 0) {

@@ -59,3 +59,6 @@
 - Add hook for interface up/down.
 - Make sysctl() exported structures independent of processor
   architecture.
+- Fix route and src addr cache clearing for delete address case
+- Make sure address marked SCTP_DEL_IP_ADDRESS is never selected
+  as src addr
