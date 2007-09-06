@@ -3475,6 +3475,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
+				if(ro->ro_rt) {
+					RTFREE(ro->ro_rt);
+					ro->ro_rt = NULL;
+				}
 			}
 			if (net->src_addr_selected == 0) {
 				if (out_of_asoc_ok) {
@@ -3758,6 +3762,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
+				if(ro->ro_rt) {
+					RTFREE(ro->ro_rt);
+					ro->ro_rt = NULL;
+				}
 			}
 			if (net->src_addr_selected == 0) {
 				if (out_of_asoc_ok) {
