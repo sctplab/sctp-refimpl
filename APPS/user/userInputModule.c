@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.106 2007-07-14 19:27:39 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.107 2007-09-06 17:39:17 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1503,7 +1503,7 @@ sctpInput(void *arg, messageEnvolope *msg)
 					SCTPPrintAnAddress(msg->to);
 				}
 				((char *)msg->data)[msg->siz] = 0;
-				printf("PPID:%d strm:%d seq:%d %d:'%s'\n",
+				printf("PPID:%d strm:%d seq:%d %d:'%.10s'\n",
 				       msg->protocolId,
 				       msg->streamNo,
 				       msg->streamSeq,
@@ -1523,7 +1523,7 @@ sctpInput(void *arg, messageEnvolope *msg)
 				       msg->streamNo,
 				       msg->streamSeq,
 				       msg->siz);
-				printArry((uint8_t *)msg->data,msg->siz);
+				printArry((uint8_t *)msg->data, (msg->siz > 32) ? 32 : msg->siz);
 				msg->data = NULL;
 				disped = 1;
 			}
@@ -4523,7 +4523,7 @@ cmd_rftp(char *argv[], int argc)
 static int
 cmd_closefd(char *argv[], int argc)
 {
-  int fd;
+  int fd, ret;
   if(argc != 1){
     printf("Missing fd closefd must have a int arg\n");	
     return(-1);
@@ -4533,7 +4533,9 @@ cmd_closefd(char *argv[], int argc)
   if(fd == adap->fd){
     printf("Sorry can't close the main listening fd:%d\n",fd);
   }else{
-    close(fd);
+    ret = close(fd);
+    printf("close(fd:%d) returns %d errno:%d\n",
+	   fd, ret, errno);
   }
   return(0);
 }
@@ -4784,8 +4786,8 @@ static int
 cmd_send(char *argv[], int argc)
 {
     int fd = adap->fd;
-    int ret;
-
+    int ret, len, i,  at;
+    char buffer[200];
     if (argc < 1) {
 	printf("send: expected at least 1 argument\n");
 	return -1;
@@ -4799,7 +4801,34 @@ cmd_send(char *argv[], int argc)
 	       "before sending\n");
 	return -1;
     }
-    ret = sctpSEND(fd, defStream, argv[0], strlen(argv[0]), SCTP_getAddr(NULL),
+    at = len = 0;
+    for(i=0;i<argc;i++) {
+	    if(argv[i][0] == '^') {
+		    int val;
+		    char *stop=NULL;
+		    val= strtol(&argv[i][1], &stop , 0);
+		    buffer[at] = val;
+		    at++;
+		    len++;
+		    if(stop != NULL) {
+			    int llen;
+			    llen = strlen(stop);
+			    memcpy(&buffer[at], stop, llen);
+			    len += llen;
+			    at += llen;
+			    printf("Added %d bytes to end\n", llen);
+		    }
+		    buffer[at] = 0;
+		    at++;
+		    len++;
+		    
+	    } else {
+		    len += strlen(argv[i]);
+		    memcpy(&buffer[at], argv[i], strlen(argv[i]));
+		    at += strlen(argv[i]);
+	    }
+    }
+    ret = sctpSEND(fd, defStream, buffer, len, SCTP_getAddr(NULL),
 		   sendOptions, payload, 0);
     return 0;
 }
