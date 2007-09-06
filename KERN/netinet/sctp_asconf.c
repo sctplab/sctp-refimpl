@@ -2183,8 +2183,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				sctp_rtentry_t *rt;
 
 				/* delete this address if cached */
-				if (net->ro._s_addr && 
-				    (net->ro._s_addr->ifa == ifa)) {
+				if (net->ro._s_addr == ifa) {
 					sctp_free_ifa(net->ro._s_addr);
 					net->ro._s_addr = NULL;
 					net->src_addr_selected = 0;
