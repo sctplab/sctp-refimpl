@@ -56,4 +56,4 @@
 - Move of decr ref count to better protect sysctl out of
   data.
 - ltrace error corrections in sctp6_usrreq.c
-
+- Add hook for interface up/down.
