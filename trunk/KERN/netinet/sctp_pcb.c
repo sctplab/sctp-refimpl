@@ -494,12 +494,16 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 			}
 		} else {
 			if (sctp_ifap->ifn_p) {
-				/* The first IFN gets the address, duplicates
-				 * are ignored.
+				/* The last IFN gets the address, old ones
+				 * are deleted.
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-					sctp_delete_ifn(sctp_ifnp, 1);
+					sctp_free_ifn(sctp_ifap->ifn_p);
+					if(sctp_ifap->ifn_p->refcount == 1)
+						sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+					sctp_ifap->ifn_p = sctp_ifnp;
+					atomic_add_int(&sctp_ifap->ifn_p->refcount, 1);
 				}
  				goto exit_stage_left;
 			}
