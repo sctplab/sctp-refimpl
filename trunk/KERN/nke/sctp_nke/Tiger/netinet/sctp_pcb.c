@@ -5369,7 +5369,8 @@ sctp_pcb_init()
 	 * the sctp_init() funciton.
 	 */
 	int i;
-
+	struct timeval tv;
+	
 	if (sctp_pcb_initialized != 0) {
 		/* error I was called twice */
 		return;
@@ -5377,7 +5378,9 @@ sctp_pcb_init()
 	sctp_pcb_initialized = 1;
 
 	bzero(&sctpstat, sizeof(struct sctpstat));
-	(void)SCTP_GETTIME_TIMEVAL(&sctpstat.sctps_discontinuitytime);
+	(void)SCTP_GETTIME_TIMEVAL(&tv);
+	sctpstat.sctps_discontinuitytime.tv_sec = (uint32_t)tv.tv_sec;
+	sctpstat.sctps_discontinuitytime.tv_usec = (uint32_t)tv.tv_usec;
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&sctppcbinfo.listhead);
 #if defined(__APPLE__)
