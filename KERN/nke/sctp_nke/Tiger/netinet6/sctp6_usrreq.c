@@ -942,11 +942,12 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 
 			sin6_p = (struct sockaddr_in6 *)addr;
 
-			if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr))
+			if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr)) {
 				/* can't bind v4-mapped addrs either! */
 				/* NOTE: we don't support SIIT */
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 				return EINVAL;
+            }
 		}
 	}
 #if defined(__NetBSD__) || defined(__OpenBSD__)
