@@ -308,6 +308,106 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 	sctp_free_ifn(sctp_ifnp);
 }
 
+void
+sctp_mark_ifa_addr_down(uint32_t vrf_id, struct sockaddr *addr, const char *if_name, uint32_t ifn_index)
+{
+	struct sctp_vrf *vrf;
+	struct sctp_ifa *sctp_ifap = NULL;
+	SCTP_IPI_ADDR_LOCK();
+	vrf = sctp_find_vrf(vrf_id);
+	if (vrf == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Can't find vrf_id:%d\n", vrf_id);
+		goto out;
+
+	}
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, SCTP_ADDR_LOCKED);
+	if(sctp_ifap == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Can't find sctp_ifap for address\n");
+		goto out;
+	}	
+	if (sctp_ifap->ifn_p == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "IFA has no IFN - can't mark unuseable\n");
+		goto out;
+	}
+	if (if_name) {
+		int len1, len2;
+		len1 = strlen(if_name);
+		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
+		if(len1 != len2) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFN of ifa names different lenght %d vs %d - ignored\n",
+				len1, len2);
+			goto out;
+		}
+		if(strncmp(if_name, sctp_ifap->ifn_p->ifn_name, len1) != 0) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFN %s of IFA not the same as %s\n",
+				sctp_ifap->ifn_p->ifn_name,
+				if_name);
+			goto out;
+		}
+	} else {
+		if (sctp_ifap->ifn_p->ifn_index != ifn_index) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFA owned by ifn_index:%d down command for ifn_index:%d - ignored\n",
+				sctp_ifap->ifn_p->ifn_index, ifn_index);
+			goto out;
+		}
+	}
+	
+	sctp_ifap->localifa_flags &= (~SCTP_ADDR_VALID);
+	sctp_ifap->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
+ out:
+	SCTP_IPI_ADDR_UNLOCK();
+}
+
+void
+sctp_mark_ifa_addr_up(uint32_t vrf_id, struct sockaddr *addr, const char *if_name, uint32_t ifn_index)
+{
+	struct sctp_vrf *vrf;
+	struct sctp_ifa *sctp_ifap = NULL;
+	SCTP_IPI_ADDR_LOCK();
+	vrf = sctp_find_vrf(vrf_id);
+	if (vrf == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Can't find vrf_id:%d\n", vrf_id);
+		goto out;
+
+	}
+	sctp_ifap = sctp_find_ifa_by_addr(addr, vrf->vrf_id, SCTP_ADDR_LOCKED);
+	if(sctp_ifap == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "Can't find sctp_ifap for address\n");
+		goto out;
+	}	
+	if (sctp_ifap->ifn_p == NULL) {
+		SCTPDBG(SCTP_DEBUG_PCB1, "IFA has no IFN - can't mark unuseable\n");
+		goto out;
+	}
+	if (if_name) {
+		int len1, len2;
+		len1 = strlen(if_name);
+		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
+		if(len1 != len2) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFN of ifa names different lenght %d vs %d - ignored\n",
+				len1, len2);
+			goto out;
+		}
+		if(strncmp(if_name, sctp_ifap->ifn_p->ifn_name, len1) != 0) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFN %s of IFA not the same as %s\n",
+				sctp_ifap->ifn_p->ifn_name,
+				if_name);
+			goto out;
+		}
+	} else {
+		if (sctp_ifap->ifn_p->ifn_index != ifn_index) {
+			SCTPDBG(SCTP_DEBUG_PCB1, "IFA owned by ifn_index:%d down command for ifn_index:%d - ignored\n",
+				sctp_ifap->ifn_p->ifn_index, ifn_index);
+			goto out;
+		}
+	}
+	
+	sctp_ifap->localifa_flags &= (~SCTP_ADDR_IFA_UNUSEABLE);
+	sctp_ifap->localifa_flags |= SCTP_ADDR_VALID;
+ out:
+	SCTP_IPI_ADDR_UNLOCK();
+}
+
 
 struct sctp_ifa *
 sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
