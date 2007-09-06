@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.26 2007/08/27 05:19:47 rrs Ex
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
-#include <sys/time.h>
 #include <netinet/in.h>
 
 typedef uint32_t sctp_assoc_t;
@@ -750,6 +749,11 @@ struct sctp_cwnd_log_req {
 	struct sctp_cwnd_log log[0];
 };
 
+struct sctp_timeval {
+	uint32_t tv_sec;
+	uint32_t tv_usec;
+};
+
 struct sctpstat {
 	/* MIB according to RFC 3873 */
 	uint32_t  sctps_currestab;           /* sctpStats  1   (Gauge32) */
@@ -895,7 +899,7 @@ struct sctpstat {
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
 
-	struct timeval sctps_discontinuitytime; /* sctpStats 18 (TimeStamp) */
+	struct sctp_timeval sctps_discontinuitytime; /* sctpStats 18 (TimeStamp) */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
@@ -935,17 +939,17 @@ struct xsctp_inpcb {
 };
 
 struct xsctp_tcb {
-	union sctp_sockstore primary_addr; /* sctpAssocEntry 5/6 */
+	union sctp_sockstore primary_addr;      /* sctpAssocEntry 5/6 */
 	uint32_t last;
-	uint32_t heartbeat_interval;       /* sctpAssocEntry 7   */
-	uint32_t state;                    /* sctpAssocEntry 8   */
-	uint32_t in_streams;               /* sctpAssocEntry 9   */
-	uint32_t out_streams;              /* sctpAssocEntry 10  */
-	uint32_t max_nr_retrans;           /* sctpAssocEntry 11  */
-	uint32_t primary_process;          /* sctpAssocEntry 12  */
-	uint32_t T1_expireries;            /* sctpAssocEntry 13  */
-	uint32_t T2_expireries;            /* sctpAssocEntry 14  */
-	uint32_t retransmitted_tsns;       /* sctpAssocEntry 15  */
+	uint32_t heartbeat_interval;            /* sctpAssocEntry 7   */
+	uint32_t state;                         /* sctpAssocEntry 8   */
+	uint32_t in_streams;                    /* sctpAssocEntry 9   */
+	uint32_t out_streams;                   /* sctpAssocEntry 10  */
+	uint32_t max_nr_retrans;                /* sctpAssocEntry 11  */
+	uint32_t primary_process;               /* sctpAssocEntry 12  */
+	uint32_t T1_expireries;                 /* sctpAssocEntry 13  */
+	uint32_t T2_expireries;                 /* sctpAssocEntry 14  */
+	uint32_t retransmitted_tsns;            /* sctpAssocEntry 15  */
 	uint32_t total_sends;
 	uint32_t total_recvs;
 	uint32_t local_tag;
@@ -956,16 +960,16 @@ struct xsctp_tcb {
 	uint32_t cumulative_tsn_ack;
 	uint32_t mtu;
 	uint32_t refcnt;
-	uint16_t local_port;               /* sctpAssocEntry 3   */
-	uint16_t remote_port;              /* sctpAssocEntry 4   */
-	struct timeval start_time;         /* sctpAssocEntry 16  */
-	struct timeval discontinuity_time; /* sctpAssocEntry 17  */
+	uint16_t local_port;                    /* sctpAssocEntry 3   */
+	uint16_t remote_port;                   /* sctpAssocEntry 4   */
+	struct sctp_timeval start_time;         /* sctpAssocEntry 16  */
+	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
 };
 
 struct xsctp_laddr {
 	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
 	uint32_t last;
-	struct timeval start_time;        /* sctpAssocLocalAddrEntry 3   */
+	struct sctp_timeval start_time;  /* sctpAssocLocalAddrEntry 3   */
 };
 
 struct xsctp_raddr {
@@ -980,8 +984,8 @@ struct xsctp_raddr {
 	uint32_t mtu;                      /*                            */
 	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
 	uint8_t confirmed;                 /*                            */
-	uint8_t heartbeat_enabled;          /* sctpAssocLocalRemEntry 4   */
-	struct timeval start_time;         /* sctpAssocLocalRemEntry 8   */
+	uint8_t heartbeat_enabled;         /* sctpAssocLocalRemEntry 4   */
+	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
 };
 
 /*

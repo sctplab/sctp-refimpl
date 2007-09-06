@@ -244,7 +244,6 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 					continue;
 				memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 				memcpy((void *)&xladdr.address, (const void *)&sctp_ifa->address, sizeof(union sctp_sockstore));
-				(void)SCTP_GETTIME_TIMEVAL(&xladdr.start_time);
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
 				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
@@ -263,7 +262,8 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 				continue;
 			memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 			memcpy((void *)&xladdr.address, (const void *)&laddr->ifa->address, sizeof(union sctp_sockstore));
-			xladdr.start_time = laddr->start_time;
+			xladdr.start_time.tv_sec = (uint32_t)laddr->start_time.tv_sec;
+			xladdr.start_time.tv_usec = (uint32_t)laddr->start_time.tv_usec;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
 			error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
@@ -401,9 +401,10 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.T1_expireries = stcb->asoc.timoinit + stcb->asoc.timocookie;
 			xstcb.T2_expireries = stcb->asoc.timoshutdown + stcb->asoc.timoshutdownack;
 			xstcb.retransmitted_tsns = stcb->asoc.marked_retrans;
-			xstcb.start_time = stcb->asoc.start_time;
-			xstcb.discontinuity_time = stcb->asoc.discontinuity_time;
-
+			xstcb.start_time.tv_sec = (uint32_t)stcb->asoc.start_time.tv_sec;
+			xstcb.start_time.tv_usec = (uint32_t)stcb->asoc.start_time.tv_usec;
+			xstcb.discontinuity_time.tv_sec = (uint32_t)stcb->asoc.discontinuity_time.tv_sec;
+			xstcb.discontinuity_time.tv_usec = (uint32_t)stcb->asoc.discontinuity_time.tv_usec;
 			xstcb.total_sends = stcb->total_sends;
 			xstcb.total_recvs = stcb->total_recvs;
 			xstcb.local_tag = stcb->asoc.my_vtag;
@@ -443,7 +444,8 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.cwnd = net->cwnd;
 				xraddr.flight_size = net->flight_size;
 				xraddr.mtu = net->mtu;
-				xraddr.start_time = net->start_time;
+				xraddr.start_time.tv_sec = (uint32_t)net->start_time.tv_sec;
+				xraddr.start_time.tv_usec = (uint32_t)net->start_time.tv_usec;
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
