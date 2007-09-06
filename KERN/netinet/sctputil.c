@@ -1798,6 +1798,15 @@ sctp_timeout_handler(void *t)
 #endif
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_ASCONF_TMR, SCTP_SO_NOT_LOCKED);
 		break;
+	case SCTP_TIMER_TYPE_PRIM_DELETED:
+		if ((stcb == NULL) || (inp == NULL)) {
+			break;
+		}
+		if (sctp_delete_prim_timer(inp, stcb, net)) {
+			goto out_decr;
+		}
+		SCTP_STAT_INCR(sctps_timodelprim);
+		break;
 
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		if ((stcb == NULL) || (inp == NULL)) {
@@ -2203,6 +2212,13 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		tmr = &stcb->asoc.asconf_timer;
 		break;
+	case SCTP_TIMER_TYPE_PRIM_DELETED:
+		if ((stcb == NULL) || (net != NULL)) {
+			return;
+		}
+		to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+		tmr = &stcb->asoc.delete_prim_timer;
+		break;
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		if (stcb == NULL) {
 			return;
@@ -2382,6 +2398,12 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			return;
 		}
 		tmr = &stcb->asoc.asconf_timer;
+		break;
+	case SCTP_TIMER_TYPE_PRIM_DELETED:
+		if (stcb == NULL) {
+			return;
+		}
+		tmr = &stcb->asoc.delete_prim_timer;
 		break;
 	case SCTP_TIMER_TYPE_AUTOCLOSE:
 		if (stcb == NULL) {

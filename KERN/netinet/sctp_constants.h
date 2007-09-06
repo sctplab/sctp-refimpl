@@ -595,8 +595,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 
 #define SCTP_TIMER_TYPE_ADDR_WQ         19
 #define SCTP_TIMER_TYPE_ZERO_COPY       20
 #define SCTP_TIMER_TYPE_ZCOPY_SENDQ     21
+#define SCTP_TIMER_TYPE_PRIM_DELETED    22
 /* add new timers here - and increment LAST */
-#define SCTP_TIMER_TYPE_LAST            22
+#define SCTP_TIMER_TYPE_LAST            23
 
 #define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
 					 ((t) < SCTP_TIMER_TYPE_LAST))

@@ -79,6 +79,13 @@ extern void
 sctp_check_address_list(struct sctp_tcb *, struct mbuf *, int, int,
     struct sockaddr *, uint16_t, uint16_t, uint16_t, uint16_t);
 
+extern void
+sctp_assoc_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
+#if defined(__FreeBSD__) || defined(__APPLE__)
+extern void
+sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
+#endif
+
 #endif				/* _KERNEL */
 
 #endif				/* !_NETINET_SCTP_ASCONF_H_ */

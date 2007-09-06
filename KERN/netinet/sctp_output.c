@@ -7174,6 +7174,17 @@ one_more_time:
 	}
 skip_the_fill_from_streams:
 	*cwnd_full = cwnd_full_ind;
+
+	/* Mobility adaptation */
+	if (sctp_is_mobility_feature_on(inp, SCTP_MOBILITY_BASE)) {
+		TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
+			if (chk->whoTo != asoc->primary_destination) {
+				sctp_free_remote_addr(chk->whoTo);
+				chk->whoTo = asoc->primary_destination;
+				atomic_add_int(&asoc->primary_destination->ref_count, 1);
+			}
+		}
+	}
 	/* now service each destination and send out what we can for it */
 	/* Nothing to send? */
 	if ((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&

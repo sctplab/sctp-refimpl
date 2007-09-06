@@ -42,6 +42,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.26 2007/08/27 05:19:46 rrs
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_asconf.h>
+#include <netinet/sctp_timer.h>
 
 /*
  * debug flags:
@@ -572,6 +573,43 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 		if (response_required) {
 			m_reply = sctp_asconf_success_response(aph->correlation_id);
 		}
+		/* Mobility adaptation.
+		   Ideally, when the reception of SET PRIMARY with DELETE IP 
+		   ADDRESS of the previous primary destination, unacknowledged 
+		   DATA are retransmitted immediately to the new primary 
+		   destination for seamless handover.  
+		   If the destination is UNCONFIRMED and marked to REQ_PRIM, 
+		   The retransmission occur when reception of the 
+		   HEARTBEAT-ACK.  (See sctp_handle_heartbeat_ack in 
+		   sctp_input.c) (by micchie)
+		 */
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_FASTHANDOFF) &&
+		    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			    			SCTP_MOBILITY_PRIM_DELETED)) {
+			sctp_assoc_immediate_retrans(stcb,
+					stcb->asoc.primary_destination);
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "process_asconf_set_primary: unacknowledged data will be retransmitted\n"); 
+		}
+		/* Mobility adaptation.
+		   When change of the primary destination, it is better that 
+		   all subsequent new DATA containing already queued DATA are 
+		   transmitted to the new primary destination. (by micchie) 
+		 */
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+				SCTP_MOBILITY_BASE) &&
+		    (stcb->asoc.primary_destination->dest_state & 
+		     		SCTP_ADDR_UNCONFIRMED) == 0) {
+			struct sctp_tmit_chunk *chk;
+
+			TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
+				if (chk->whoTo == stcb->asoc.primary_destination)
+					continue;
+				sctp_free_remote_addr(chk->whoTo);
+				chk->whoTo = stcb->asoc.primary_destination;
+				atomic_add_int(&stcb->asoc.primary_destination->ref_count, 1);
+			}
+		}
 	} else {
 		/* couldn't set the requested primary address! */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
@@ -979,27 +1017,67 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 	}
 }
 
+void
+sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
+{
+	if (dstnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: specified destination is UNCONFIRMED\n");
+		return;
+	}
+	if (stcb->asoc.deleted_primary == NULL) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: Funny, old primary is not stored\n");
+		return;
+	}
+
+	sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, 
+			NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
+
+	if (!TAILQ_EMPTY(&stcb->asoc.sent_queue)) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: we have chunks to retransmit\n");
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "Deleted primary is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &stcb->asoc.deleted_primary->ro._l_addr.sa);
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "Current Primary is ");
+		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &stcb->asoc.primary_destination->ro._l_addr.sa);
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "Stopping send timer and calling t3rxt_timer\n");
+		sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, stcb, 
+				stcb->asoc.deleted_primary, 
+				SCTP_FROM_SCTP_TIMER+SCTP_LOC_8);
+		(void) sctp_t3rxt_timer(stcb->sctp_ep, stcb, 
+					stcb->asoc.deleted_primary);
+		sctp_mobility_feature_on(stcb->sctp_ep, 
+					 SCTP_MOBILITY_DO_FASTHANDOFF);
+	}
+	sctp_delete_prim_timer(stcb->sctp_ep, stcb, stcb->asoc.deleted_primary);
+
+	return;
+}
+
 #if defined(__FreeBSD__) || defined(__APPLE__)
 static int
 sctp_asconf_queue_mgmt(struct sctp_tcb *, struct sctp_ifa *, uint16_t);
 
-static void
+void
 sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_tmit_chunk *chk;
+	int	cnt = 0; /* debug */
 
-	SCTPDBG(SCTP_DEBUG_ASCONF2, "net_immediate_retrans()\n");
-	SCTPDBG(SCTP_DEBUG_ASCONF2, "RTO is %d\n", net->RTO);
+	SCTPDBG(SCTP_DEBUG_ASCONF1, "net_immediate_retrans:\n");
+	SCTPDBG(SCTP_DEBUG_ASCONF1, "RTO is %d\n", net->RTO);
 	sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, stcb, net,
 	    SCTP_FROM_SCTP_TIMER+SCTP_LOC_5);
 	stcb->asoc.cc_functions.sctp_set_initial_cc_param(stcb, net);
 	net->error_count = 0;
 	TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
 		if (chk->whoTo == net) {
-			chk->sent = SCTP_DATAGRAM_RESEND;
-			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+			if (chk->sent < SCTP_DATAGRAM_RESEND) {
+				chk->sent = SCTP_DATAGRAM_RESEND;
+				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+				cnt++;
+			}
 		}
 	}
+	SCTPDBG(SCTP_DEBUG_ASCONF1, "%d chunks are marked to RESEND, retran_cnt is %d\n", cnt, stcb->asoc.sent_queue_retran_cnt);
 }
 
 static void

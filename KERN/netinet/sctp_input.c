@@ -556,6 +556,29 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 				TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 				TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 			}
+			/* Mobility adaptation */
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+						SCTP_MOBILITY_FASTHANDOFF) &&
+		    	    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			    			SCTP_MOBILITY_PRIM_DELETED)) {
+				sctp_assoc_immediate_retrans(stcb,
+						stcb->asoc.primary_destination);
+				SCTPDBG(SCTP_DEBUG_ASCONF2, "handle_hb_ack: unacknowledged data will be retransmitted\n");
+			}
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+							SCTP_MOBILITY_BASE)) {
+				struct sctp_tmit_chunk *chk;
+
+				TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
+					if (chk->whoTo == 
+					    stcb->asoc.primary_destination) 
+						continue;
+					sctp_free_remote_addr(chk->whoTo);
+					chk->whoTo = 
+						stcb->asoc.primary_destination;
+					atomic_add_int(&stcb->asoc.primary_destination->ref_count, 1);
+				}
+			}
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 		    stcb, 0, (void *)r_net, SCTP_SO_NOT_LOCKED);
