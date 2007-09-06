@@ -2036,8 +2036,8 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		 * unsupported socket type (RAW, etc)- in case we missed it
 		 * in protosw
 		 */
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		return (EOPNOTSUPP);
 	}
 	if(sctp_default_frag_interleave == SCTP_FRAG_LEVEL_1) {
@@ -2054,8 +2054,8 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
 		SCTP_PRINTF("Out of SCTP-INPCB->hashinit - no resources\n");
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
+		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
 		return (ENOBUFS);
 	}
 #ifdef SCTP_MVRF
@@ -2063,9 +2063,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	SCTP_MALLOC(inp->m_vrf_ids, uint32_t *,
 		    (sizeof(uint32_t) * inp->vrf_size), SCTP_M_MVRF);
 	if (inp->m_vrf_ids == NULL) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		return (ENOBUFS);
 	}
 	inp->m_vrf_ids[0] = vrf_id;
