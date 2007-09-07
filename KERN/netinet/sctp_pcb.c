@@ -2860,20 +2860,22 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		*/
 		if (sctp_mobility_base == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 
 		*/
 		if (sctp_mobility_fasthandoff == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_FASTHANDOFF);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 	} else {
 		/*

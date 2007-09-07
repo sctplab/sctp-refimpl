@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.58 2007/08/27 05:19:47 rrs 
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_timer.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -557,27 +558,26 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 				TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 			}
 			/* Mobility adaptation */
-			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-						SCTP_MOBILITY_FASTHANDOFF) &&
+			if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
+					       	SCTP_MOBILITY_BASE) ||
 		    	    sctp_is_mobility_feature_on(stcb->sctp_ep,
-			    			SCTP_MOBILITY_PRIM_DELETED)) {
-				sctp_assoc_immediate_retrans(stcb,
-						stcb->asoc.primary_destination);
-				SCTPDBG(SCTP_DEBUG_ASCONF2, "handle_hb_ack: unacknowledged data will be retransmitted\n");
-			}
-			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-							SCTP_MOBILITY_BASE)) {
-				struct sctp_tmit_chunk *chk;
+				    		SCTP_MOBILITY_FASTHANDOFF)) &&
+		    	    sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_PRIM_DELETED)) {
 
-				TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-					if (chk->whoTo == 
-					    stcb->asoc.primary_destination) 
-						continue;
-					sctp_free_remote_addr(chk->whoTo);
-					chk->whoTo = 
-						stcb->asoc.primary_destination;
-					atomic_add_int(&stcb->asoc.primary_destination->ref_count, 1);
+				sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
+				if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+						SCTP_MOBILITY_FASTHANDOFF)) {
+					sctp_assoc_immediate_retrans(stcb, 
+						stcb->asoc.primary_destination);
 				}
+				if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_BASE)) {
+					sctp_move_chunks_from_deleted_prim(stcb,
+						stcb->asoc.primary_destination);
+				}
+				sctp_delete_prim_timer(stcb->sctp_ep, stcb,
+						stcb->asoc.deleted_primary);
 			}
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
@@ -5149,12 +5149,9 @@ trigger_send:
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
-	    /* For retransmission to new primary destination (by micchie) */
-	    sctp_is_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF) ||
 	    ((un_sent) &&
 	     (stcb->asoc.peers_rwnd > 0 ||
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
-		sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");

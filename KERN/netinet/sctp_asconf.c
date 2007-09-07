@@ -581,34 +581,33 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 		   If the destination is UNCONFIRMED and marked to REQ_PRIM, 
 		   The retransmission occur when reception of the 
 		   HEARTBEAT-ACK.  (See sctp_handle_heartbeat_ack in 
-		   sctp_input.c) (by micchie)
+		   sctp_input.c) 
+		   Also, when change of the primary destination, it is better 
+		   that all subsequent new DATA containing already queued DATA 
+		   are transmitted to the new primary destination. (by micchie) 
 		 */
-		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
-						SCTP_MOBILITY_FASTHANDOFF) &&
+		if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
+				       	SCTP_MOBILITY_BASE) ||
 		    sctp_is_mobility_feature_on(stcb->sctp_ep,
-			    			SCTP_MOBILITY_PRIM_DELETED)) {
-			sctp_assoc_immediate_retrans(stcb,
-					stcb->asoc.primary_destination);
-			SCTPDBG(SCTP_DEBUG_ASCONF1, "process_asconf_set_primary: unacknowledged data will be retransmitted\n"); 
-		}
-		/* Mobility adaptation.
-		   When change of the primary destination, it is better that 
-		   all subsequent new DATA containing already queued DATA are 
-		   transmitted to the new primary destination. (by micchie) 
-		 */
-		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-				SCTP_MOBILITY_BASE) &&
+			    		SCTP_MOBILITY_FASTHANDOFF)) &&
+		    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			   		 SCTP_MOBILITY_PRIM_DELETED) && 
 		    (stcb->asoc.primary_destination->dest_state & 
-		     		SCTP_ADDR_UNCONFIRMED) == 0) {
-			struct sctp_tmit_chunk *chk;
+		     SCTP_ADDR_UNCONFIRMED) == 0) {
 
-			TAILQ_FOREACH(chk, &stcb->asoc.send_queue, sctp_next) {
-				if (chk->whoTo == stcb->asoc.primary_destination)
-					continue;
-				sctp_free_remote_addr(chk->whoTo);
-				chk->whoTo = stcb->asoc.primary_destination;
-				atomic_add_int(&stcb->asoc.primary_destination->ref_count, 1);
+			sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+					SCTP_MOBILITY_FASTHANDOFF)) {
+				sctp_assoc_immediate_retrans(stcb, 
+						stcb->asoc.primary_destination);
 			}
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+					SCTP_MOBILITY_BASE)) {
+				sctp_move_chunks_from_deleted_prim(stcb,
+						stcb->asoc.primary_destination);
+			}
+			sctp_delete_prim_timer(stcb->sctp_ep, stcb,
+						stcb->asoc.deleted_primary);
 		}
 	} else {
 		/* couldn't set the requested primary address! */
@@ -1018,8 +1017,57 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 }
 
 void
+sctp_move_chunks_from_deleted_prim(struct sctp_tcb *stcb, struct sctp_nets *dst)
+{
+	struct sctp_association *asoc;
+	struct sctp_stream_out *outs;
+	struct sctp_tmit_chunk *chk;
+	struct sctp_stream_queue_pending *sp;
+
+	if (dst->dest_state & SCTP_ADDR_UNCONFIRMED) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "move_chunks_from_deleted_prim: specified destination is UNCONFIRMED\n");
+		return;
+	}
+	if (stcb->asoc.deleted_primary == NULL) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "move_chunks_from_deleted_prim: Funny, old primary is not stored\n");
+		return;
+	}
+
+	asoc = &stcb->asoc;
+
+	/*
+	 * now through all the streams checking for chunks sent to our bad
+	 * network.
+	 */
+	TAILQ_FOREACH(outs, &asoc->out_wheel, next_spoke) {
+		/* now clean up any chunks here */
+		TAILQ_FOREACH(sp, &outs->outqueue, next) {
+			if (sp->net == asoc->deleted_primary) {
+				sctp_free_remote_addr(sp->net);
+				sp->net = dst;
+				atomic_add_int(&dst->ref_count, 1);
+			}
+		}
+	}
+	/* Now check the pending queue */
+	TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
+		if (chk->whoTo == asoc->deleted_primary) {
+			sctp_free_remote_addr(chk->whoTo);
+			chk->whoTo = dst;
+			atomic_add_int(&dst->ref_count, 1);
+		}
+	}
+
+}
+
+extern int cur_oerr;
+
+void
 sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
 {
+	int error;
+	struct sctp_tmit_chunk *chk; // for debug
+
 	if (dstnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: specified destination is UNCONFIRMED\n");
 		return;
@@ -1029,11 +1077,7 @@ sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
 		return;
 	}
 
-	sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, 
-			NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
-
 	if (!TAILQ_EMPTY(&stcb->asoc.sent_queue)) {
-		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: we have chunks to retransmit\n");
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "Deleted primary is ");
 		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &stcb->asoc.deleted_primary->ro._l_addr.sa);
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "Current Primary is ");
@@ -1042,13 +1086,41 @@ sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
 		sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, stcb, 
 				stcb->asoc.deleted_primary, 
 				SCTP_FROM_SCTP_TIMER+SCTP_LOC_8);
-		(void) sctp_t3rxt_timer(stcb->sctp_ep, stcb, 
+		stcb->asoc.num_send_timers_up--;
+		if (stcb->asoc.num_send_timers_up < 0) {
+			stcb->asoc.num_send_timers_up = 0;
+		}
+		SCTP_TCB_LOCK_ASSERT(stcb);
+		cur_oerr = stcb->asoc.overall_error_count;
+		error = sctp_t3rxt_timer(stcb->sctp_ep, stcb, 
 					stcb->asoc.deleted_primary);
-		sctp_mobility_feature_on(stcb->sctp_ep, 
-					 SCTP_MOBILITY_DO_FASTHANDOFF);
+		if (error) {
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "t3rxt_timer error\n");
+			SCTP_INP_DECR_REF(stcb->sctp_ep);
+			return;
+		}
+		SCTP_TCB_LOCK_ASSERT(stcb);
+#ifdef SCTP_AUDITING_ENABLED
+		sctp_auditing(4, stcb->sctp_ep, stcb->asoc.deleted_primary);
+#endif
+		/* Debug code */
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: calling chunk_output, retran_cnt is %d\n", stcb->asoc.sent_queue_retran_cnt);
+		TAILQ_FOREACH(chk, &stcb->asoc.sent_queue, sctp_next) {
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "assoc_immediate_retrans: chk->whoTo is ");
+			SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &chk->whoTo->ro._l_addr.sa);
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "state is %d\n", chk->sent);
+		}
+		/* end Debug code */
+		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
+		if ((stcb->asoc.num_send_timers_up == 0) && 
+		    (stcb->asoc.sent_queue_cnt > 0)) {
+			struct sctp_tmit_chunk *chk;
+			
+			chk = TAILQ_FIRST(&stcb->asoc.sent_queue);
+			sctp_timer_start(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep, 
+					 stcb, chk->whoTo);
+		}
 	}
-	sctp_delete_prim_timer(stcb->sctp_ep, stcb, stcb->asoc.deleted_primary);
-
 	return;
 }
 
