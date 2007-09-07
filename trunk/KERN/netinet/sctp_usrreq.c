@@ -267,6 +267,7 @@ sctp_notify(struct sctp_inpcb *inp,
 
 #endif
 	/* protection */
+	int reason;
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (sh == NULL) || (to == NULL)) {
 		return;
@@ -282,7 +283,7 @@ sctp_notify(struct sctp_inpcb *inp,
 	    (error == ECONNREFUSED) ||	/* Host refused the connection, (not
 					 * an abort?) */
 	    (error == ENOPROTOOPT)	/* SCTP is not present on host */
-	    ) {
+		) {
 		/*
 		 * Hmm reachablity problems we must examine closely. If its
 		 * not reachable, we may have lost a network. Or if there is
@@ -315,12 +316,10 @@ sctp_notify(struct sctp_inpcb *inp,
 				}
 				net->error_count = net->failure_threshold + 1;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
-				    stcb, SCTP_FAILED_THRESHOLD,
-				    (void *)net, SCTP_SO_NOT_LOCKED);
+						stcb, SCTP_FAILED_THRESHOLD,
+						(void *)net, SCTP_SO_NOT_LOCKED);
 			}
-			if (stcb) {
-				SCTP_TCB_UNLOCK(stcb);
-			}
+			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/*
 			 * Here the peer is either playing tricks on us,
@@ -330,28 +329,39 @@ sctp_notify(struct sctp_inpcb *inp,
 			 * either case treat it like a OOTB abort with no
 			 * TCB
 			 */
-			sctp_abort_notification(stcb, SCTP_PEER_FAULTY, SCTP_SO_NOT_LOCKED);
+			if (error == ECONNREFUSED) {
+				if(SCTP_GET_STATE(&stcb->asoc) != SCTP_STATE_COOKIE_WAIT) {
+					SCTP_PRINTF("ICMP got connection-refused on assoc not in front state\n");
+					SCTP_TCB_UNLOCK(stcb);
+					return;
+				} else {
+					SCTP_PRINTF("ICMP got connection-refused\n");
+					reason = SCTP_ICMP_REFUSED;
+					goto do_abort;
+				}
+			} else {
+				reason = SCTP_PEER_FAULTY;
+			do_abort:
+				sctp_abort_notification(stcb, reason, SCTP_SO_NOT_LOCKED);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			so = SCTP_INP_SO(inp);
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			SCTP_TCB_UNLOCK(stcb);
-			SCTP_SOCKET_LOCK(so, 1);
-			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				so = SCTP_INP_SO(inp);
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_SOCKET_LOCK(so, 1);
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 #endif
-			(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			SCTP_SOCKET_UNLOCK(so, 1);
-			/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
+				SCTP_SOCKET_UNLOCK(so, 1);
+				/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
 #endif
-			/* no need to unlock here, since the TCB is gone */
+				/* no need to unlock here, since the TCB is gone */
+			}
 		}
 	} else {
 		/* Send all others to the app */
-		if (stcb) {
-			SCTP_TCB_UNLOCK(stcb);
-		}
-
+		SCTP_TCB_UNLOCK(stcb);
 		if (inp->sctp_socket) {
 #ifdef SCTP_LOCK_LOGGING
 			if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
