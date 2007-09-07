@@ -12054,6 +12054,16 @@ sctp_lower_sosend(struct socket *so,
 		error = EMSGSIZE;
 		goto out_unlocked;
 	}
+	if ((uio == NULL) && user_marks_eor) {
+		/*-
+		 * We do not support eeor mode for
+		 * sending with mbuf chains (like sendfile).
+		 */
+		SCTP_LTRACE_ERR_RET(NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+		error = EINVAL;
+		goto out_unlocked;
+	}
+
 	if (user_marks_eor) {
 		local_add_more = sctp_add_more_threshold;
 	} else {
