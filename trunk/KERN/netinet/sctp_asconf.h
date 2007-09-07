@@ -80,6 +80,8 @@ sctp_check_address_list(struct sctp_tcb *, struct mbuf *, int, int,
     struct sockaddr *, uint16_t, uint16_t, uint16_t, uint16_t);
 
 extern void
+sctp_move_chunks_from_deleted_prim(struct sctp_tcb *, struct sctp_nets *);
+extern void
 sctp_assoc_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 #if defined(__FreeBSD__) || defined(__APPLE__)
 extern void

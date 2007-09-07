@@ -478,8 +478,7 @@ struct sctp_error_unrecognized_chunk {
  */
 #define SCTP_MOBILITY_BASE		0x00000001
 #define SCTP_MOBILITY_FASTHANDOFF	0x00000002
-#define SCTP_MOBILITY_DO_FASTHANDOFF	0x00000004
-#define SCTP_MOBILITY_PRIM_DELETED	0x00000008
+#define SCTP_MOBILITY_PRIM_DELETED	0x00000004
 
 
 #define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
