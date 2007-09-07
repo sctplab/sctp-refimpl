@@ -449,6 +449,115 @@ out:
 }
 
 
+static void
+sctp6_notify(struct sctp_inpcb *inp,
+    struct icmp6_hdr *icmph,
+    struct sctphdr *sh,
+    struct sockaddr *to,
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net)
+{
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+	struct socket *so;
+
+#endif
+	/* protection */
+	int reason;
+
+
+	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
+	    (sh == NULL) || (to == NULL)) {
+		if(stcb)
+			SCTP_TCB_UNLOCK(stcb);
+		return;
+	}
+	/* First job is to verify the vtag matches what I would send */
+	if (ntohl(sh->v_tag) != (stcb->asoc.peer_vtag)) {
+		SCTP_TCB_UNLOCK(stcb);
+		return;
+	}
+	if (icmph->icmp6_type != ICMP_UNREACH) {
+		/* We only care about unreachable */
+		SCTP_TCB_UNLOCK(stcb);
+		return;
+	}
+	if ((icmph->icmp6_code == ICMP_UNREACH_NET) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_HOST) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_NET_UNKNOWN) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_HOST_UNKNOWN) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_ISOLATED) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_NET_PROHIB) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_HOST_PROHIB) ||
+	    (icmph->icmp6_code == ICMP_UNREACH_FILTER_PROHIB)) {
+
+		/*
+		 * Hmm reachablity problems we must examine closely. If its
+		 * not reachable, we may have lost a network. Or if there is
+		 * NO protocol at the other end named SCTP. well we consider
+		 * it a OOTB abort.
+		 */
+		if (net->dest_state & SCTP_ADDR_REACHABLE) {
+			/* Ok that destination is NOT reachable */
+			SCTP_PRINTF("ICMP (thresh %d/%d) takes interface %p down\n",
+				    net->error_count,
+				    net->failure_threshold,
+				    net);
+			
+			net->dest_state &= ~SCTP_ADDR_REACHABLE;
+			net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+			/*
+			 * JRS 5/14/07 - If a destination is unreachable, the PF bit
+			 *  is turned off.  This allows an unambiguous use of the PF bit
+			 *  for destinations that are reachable but potentially failed.
+			 *  If the destination is set to the unreachable state, also set
+			 *  the destination to the PF state.
+			 */
+			/* Add debug message here if destination is not in PF state. */
+			/* Stop any running T3 timers here? */
+			if (sctp_cmt_on_off && sctp_cmt_pf) {
+				net->dest_state &= ~SCTP_ADDR_PF;
+				SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
+					net);
+			}
+			net->error_count = net->failure_threshold + 1;
+			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
+					stcb, SCTP_FAILED_THRESHOLD,
+					(void *)net, SCTP_SO_NOT_LOCKED);
+		}
+		SCTP_TCB_UNLOCK(stcb);
+	} else  if ((icmph->icmp6_code == ICMP_UNREACH_PROTOCOL) ||
+		    (icmph->icmp6_code == ICMP_UNREACH_PORT)) {
+		/*
+		 * Here the peer is either playing tricks on us,
+		 * including an address that belongs to someone who
+		 * does not support SCTP OR was a userland
+		 * implementation that shutdown and now is dead. In
+		 * either case treat it like a OOTB abort with no
+		 * TCB
+		 */
+		reason = SCTP_PEER_FAULTY;
+		sctp_abort_notification(stcb, reason, SCTP_SO_NOT_LOCKED);
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		so = SCTP_INP_SO(inp);
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SCTP_SOCKET_LOCK(so, 1);
+		SCTP_TCB_LOCK(stcb);
+		atomic_subtract_int(&stcb->asoc.refcnt, 1);
+#endif
+		(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_2);
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		SCTP_SOCKET_UNLOCK(so, 1);
+		/* SCTP_TCB_UNLOCK(stcb); MT: I think this is not needed.*/
+#endif
+		/* no need to unlock here, since the TCB is gone */
+	} else {
+		SCTP_TCB_UNLOCK(stcb);
+	}
+}
+
+
+
 #if !defined(__Panda__)
 void
 sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
@@ -459,7 +568,6 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
-	int cm;
 
 #if defined(__FreeBSD__) || defined(__NetBSD__) || defined(__APPLE__) || defined(__Windows__)
 	vrf_id = SCTP_DEFAULT_VRFID;
@@ -534,12 +642,7 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 				    net);
 				/* inp's ref-count reduced && stcb unlocked */
 			} else {
-				if (cmd == PRC_HOSTDEAD) {
-					cm = EHOSTUNREACH;
-				} else {
-					cm = inet6ctlerrmap[cmd];
-				}
-				sctp_notify(inp, cm, &sh,
+				sctp6_notify(inp, ip6cp->ip6c_icmp6, &sh,
 				    (struct sockaddr *)&final,
 				    stcb, net);
 				/* inp's ref-count reduced && stcb unlocked */
