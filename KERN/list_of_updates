@@ -62,7 +62,5 @@
 - Fix route and src addr cache clearing for delete address case
 - Make sure address marked SCTP_DEL_IP_ADDRESS is never selected
   as src addr
-- in icmp handling, the tcb must be set to proceed. no null
-  checks needed.
-- in icmp handling, if we are not in a front state and get
-  connection refused, then ignore it with a warning.
+- in icmp handling fixed so we actually look at the icmp codes
+  to figure out what to do.
