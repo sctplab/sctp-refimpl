@@ -64,3 +64,9 @@
   as src addr
 - in icmp handling fixed so we actually look at the icmp codes
   to figure out what to do.
+- Modified mobility code. 
+  Reception of DELETE IP ADDRESS for a primary destination and 
+  SET PRIMARY for a new primary destination is used for 
+  retransmission trigger to the new primary destination.  
+  Also, in this case, destination of chunks in send_queue are 
+  changed to the new primary destination.  
