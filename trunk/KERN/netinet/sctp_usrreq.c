@@ -456,6 +456,8 @@ sctp_ctlinput(cmd, sa, vip)
 				} else {
 					cm = inetctlerrmap[cmd];
 				}
+				printf("Translate cmd:%d to cm:%d\n",
+				       cmd, cm);
 				sctp_notify(inp, cm, sh,
 				    (struct sockaddr *)&to, stcb,
 				    net);
