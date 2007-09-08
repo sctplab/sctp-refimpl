@@ -18,7 +18,7 @@
 - Fix raddr leak in recent add-ip code change for bundled
   asconfs (even when non-bundled asconfs are received)
 - Make sure ipi_addr lock is held when walking global addr
-  list
+  list. Need to change this lock type to a rwlock().
 - Add don't wake flag on both input and output when the
   socket is closing.
 - When deleting an address verify the interface is correct
@@ -42,18 +42,18 @@
 - Atomic access to the random store.
 - When we declare a vtag good, we need to shove it
   into the time wait hash to prevent further use. When
-  a tag is put into the assoc hash, we need to remove it
+  the tag is put into the assoc hash, we need to remove it
   from the twait hash (where it will surely be). This prevents
   duplicate tag assignments.
-- Move of decr ref count to better protect sysctl out of
+- Move decr-ref count to better protect sysctl out of
   data.
 - ltrace error corrections in sctp6_usrreq.c
-- Add hook for interface up/down.
+- Add hook for interface up/down to be sent to us.
 - Make sysctl() exported structures independent of processor
   architecture.
-- Fix route and src addr cache clearing for delete address case
+- Fix route and src addr cache clearing for delete address case.
 - Make sure address marked SCTP_DEL_IP_ADDRESS is never selected
-  as src addr
+  as src addr.
 - in icmp handling fixed so we actually look at the icmp codes
   to figure out what to do.
 - Modified mobility code. 
@@ -62,3 +62,6 @@
   retransmission trigger to the new primary destination.  
   Also, in this case, destination of chunks in send_queue are 
   changed to the new primary destination.  
+- Fix so that we disallow sending by mbuf to ever have EEOR
+  mode set upon it.
+
