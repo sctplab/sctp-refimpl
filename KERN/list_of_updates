@@ -1,11 +1,3 @@
-- Locking compatiability changes. This involves adding
-  additional flags to many function calls. The flags only
-  get used in BSD when we compile with lock testing. These
-  flags allow apple to escape the "giant" lock it holds on
-  the socket and have more fine-grained locking in the NKE.
-  It also allows us to test (with witness) the locking used
-  by apple via a compile switch.
-********************************Above patch 18***************
 - send call has a reference to uio->uio_resid in
   the recent send code, but uio may be NULL on sendfile
   calls. Change to use sndlen variable.
