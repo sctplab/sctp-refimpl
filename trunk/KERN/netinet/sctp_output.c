@@ -5603,8 +5603,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	}
 	if ((stcb->asoc.stream_locked) &&  
 	    (stcb->asoc.stream_locked_on  != srcv->sinfo_stream)) {
-		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EAGAIN);
-		error = EAGAIN;
+		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+		error = EINVAL;
 		goto out_now;
 	}
 	strm = &stcb->asoc.strmout[srcv->sinfo_stream];
@@ -12142,8 +12142,8 @@ sctp_lower_sosend(struct socket *so,
 		if ((asoc->stream_locked) &&  
 		    (asoc->stream_locked_on  != srcv->sinfo_stream)) {
 			SCTP_TCB_SEND_UNLOCK(stcb);
-			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EAGAIN);
-			error = EAGAIN;
+			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+			error = EINVAL;
 			goto out;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
