@@ -5,3 +5,4 @@
   SS_INCOMP bit set on so_state.
 - fix a comment to be non c++ style.
 **********patch 20 above here****************
+- Removed debug code and C++ style comments.
