@@ -3,5 +3,5 @@
 - Fix a LOR on Mac OS X: Do not hold an stcb lock when
   calling soisconnected for a socket which has the
   SS_INCOMP bit set on so_state.
-
+- fix a comment to be non c++ style.
 
