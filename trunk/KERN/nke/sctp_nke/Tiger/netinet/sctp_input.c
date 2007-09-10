@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.58 2007/08/27 05:19:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.60 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.58 2007/08/27 05:19:47 rrs 
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_timer.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -555,6 +556,28 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 				 */
 				TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 				TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
+			}
+			/* Mobility adaptation */
+			if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
+					       	SCTP_MOBILITY_BASE) ||
+		    	    sctp_is_mobility_feature_on(stcb->sctp_ep,
+				    		SCTP_MOBILITY_FASTHANDOFF)) &&
+		    	    sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_PRIM_DELETED)) {
+
+				sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
+				if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+						SCTP_MOBILITY_FASTHANDOFF)) {
+					sctp_assoc_immediate_retrans(stcb, 
+						stcb->asoc.primary_destination);
+				}
+				if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_BASE)) {
+					sctp_move_chunks_from_deleted_prim(stcb,
+						stcb->asoc.primary_destination);
+				}
+				sctp_delete_prim_timer(stcb->sctp_ep, stcb,
+						stcb->asoc.deleted_primary);
 			}
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
@@ -2516,11 +2539,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
 			SCTP_SOCKET_LOCK(so, 1);
-			SCTP_TCB_LOCK((*stcb));
-			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 #endif
 			soisconnected(so);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+			SCTP_TCB_LOCK((*stcb));
+			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 			return (m);
@@ -5126,12 +5149,9 @@ trigger_send:
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
-	    /* For retransmission to new primary destination (by micchie) */
-	    sctp_is_mobility_feature_on(inp, SCTP_MOBILITY_DO_FASTHANDOFF) ||
 	    ((un_sent) &&
 	     (stcb->asoc.peers_rwnd > 0 ||
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
-		sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "Calling chunk OUTPUT\n");
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 		SCTPDBG(SCTP_DEBUG_INPUT3, "chunk OUTPUT returns\n");
