@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.24 2007/08/27 05:19:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_structs.h,v 1.25 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -584,12 +584,15 @@ struct sctp_association {
 	struct sctp_timer shut_guard_timer;	/* shutdown guard */
 	struct sctp_timer autoclose_timer;	/* automatic close timer */
 	struct sctp_timer delayed_event_timer;	/* timer for delayed events */
+	struct sctp_timer delete_prim_timer;	/* deleting primary dst */
 
 	/* list of restricted local addresses */
 	struct sctpladdr sctp_restricted_addrs;
 
 	/* last local address pending deletion (waiting for an address add) */
 	struct sctp_ifa *asconf_addr_del_pending;
+	/* Deleted primary destination (used to stop timer) */
+	struct sctp_nets *deleted_primary;
 
 	struct sctpnetlisthead nets;		/* remote address list */
 

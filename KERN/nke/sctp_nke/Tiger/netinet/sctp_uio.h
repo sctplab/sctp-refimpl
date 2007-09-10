@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.26 2007/08/27 05:19:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.27 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -837,6 +837,7 @@ struct sctpstat {
 	uint32_t  sctps_timostrmrst;         /* Number of stream reset timers that fired */
 	uint32_t  sctps_timoearlyfr;         /* Number of early FR timers that fired */
 	uint32_t  sctps_timoasconf;          /* Number of times an asconf timer fired */
+	uint32_t  sctps_timodelprim;	     /* Number of times a prim_deleted timer fired */
 	uint32_t  sctps_timoautoclose;       /* Number of times auto close timer fired */
 	uint32_t  sctps_timoassockill;       /* Number of asoc free timers expired */
 	uint32_t  sctps_timoinpkill;         /* Number of inp free timers expired */

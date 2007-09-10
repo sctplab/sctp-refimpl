@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.29 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -475,11 +475,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 
 #define SCTP_NOTIFY_DATAGRAM_SENT	0x0002
 #define SCTP_FAILED_THRESHOLD		0x0004
 #define SCTP_HEARTBEAT_SUCCESS		0x0008
-#define SCTP_RESPONSE_TO_USER_REQ	0x000f
-#define SCTP_INTERNAL_ERROR		0x0010
-#define SCTP_SHUTDOWN_GUARD_EXPIRES	0x0020
-#define SCTP_RECEIVED_SACK		0x0040
-#define SCTP_PEER_FAULTY		0x0080
+#define SCTP_RESPONSE_TO_USER_REQ	0x0010
+#define SCTP_INTERNAL_ERROR		0x0020
+#define SCTP_SHUTDOWN_GUARD_EXPIRES	0x0040
+#define SCTP_RECEIVED_SACK		0x0080
+#define SCTP_PEER_FAULTY		0x0100
+#define SCTP_ICMP_REFUSED		0x0200
 
 /* bits for TOS field */
 #define SCTP_ECT0_BIT		0x02
@@ -595,8 +596,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.27 2007/08/27 05:19:46 
 #define SCTP_TIMER_TYPE_ADDR_WQ         19
 #define SCTP_TIMER_TYPE_ZERO_COPY       20
 #define SCTP_TIMER_TYPE_ZCOPY_SENDQ     21
+#define SCTP_TIMER_TYPE_PRIM_DELETED    22
 /* add new timers here - and increment LAST */
-#define SCTP_TIMER_TYPE_LAST            22
+#define SCTP_TIMER_TYPE_LAST            23
 
 #define SCTP_IS_TIMER_TYPE_VALID(t)	(((t) > SCTP_TIMER_TYPE_NONE) && \
 					 ((t) < SCTP_TIMER_TYPE_LAST))

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.18 2007/08/27 05:19:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.19 2007/09/08 17:48:46 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -416,7 +416,7 @@ void sctp_finish(void);
 void sctp_pcbinfo_cleanup(void);
 
 int sctp_shutdown __P((struct socket *));
-void sctp_notify __P((struct sctp_inpcb *, int, struct sctphdr *,
+void sctp_notify __P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
 		struct sockaddr *, struct sctp_tcb *,
 		struct sctp_nets *));
 

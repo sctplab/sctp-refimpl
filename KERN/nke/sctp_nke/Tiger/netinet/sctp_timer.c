@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.27 2007/08/24 00:53:52 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.29 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -1372,6 +1372,24 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 		asconf->sent = SCTP_DATAGRAM_RESEND;
 	}
+	return (0);
+}
+
+/* Mobility adaptation */
+int
+sctp_delete_prim_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
+		  struct sctp_nets *net)
+{
+	if (stcb->asoc.deleted_primary == NULL) {
+		SCTPDBG(SCTP_DEBUG_ASCONF1, "delete_prim_timer: deleted_primary is not stored...\n");
+		sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
+		return (0);
+	}
+	SCTPDBG(SCTP_DEBUG_ASCONF1, "delete_prim_timer: finished to keep deleted primary ");
+	SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &stcb->asoc.deleted_primary->ro._l_addr.sa);
+	sctp_free_remote_addr(stcb->asoc.deleted_primary);
+	stcb->asoc.deleted_primary = NULL;
+	sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 	return (0);
 }
 

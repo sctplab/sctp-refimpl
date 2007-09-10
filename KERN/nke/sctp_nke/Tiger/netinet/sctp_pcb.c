@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.54 2007/08/27 05:19:47 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.56 2007/09/08 17:48:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -494,12 +494,16 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 			}
 		} else {
 			if (sctp_ifap->ifn_p) {
-				/* The first IFN gets the address, duplicates
-				 * are ignored.
+				/* The last IFN gets the address, old ones
+				 * are deleted.
 				 */
 				if (new_ifn_af) {
 					/* Remove the created one that we don't want */
-					sctp_delete_ifn(sctp_ifnp, 1);
+					sctp_free_ifn(sctp_ifap->ifn_p);
+					if(sctp_ifap->ifn_p->refcount == 1)
+						sctp_delete_ifn(sctp_ifap->ifn_p, 1);
+					sctp_ifap->ifn_p = sctp_ifnp;
+					atomic_add_int(&sctp_ifap->ifn_p->refcount, 1);
 				}
  				goto exit_stage_left;
 			}
@@ -2402,6 +2406,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	stcb->asoc.shut_guard_timer.ep = (void *)new_inp;
 	stcb->asoc.autoclose_timer.ep = (void *)new_inp;
 	stcb->asoc.delayed_event_timer.ep = (void *)new_inp;
+	stcb->asoc.delete_prim_timer.ep = (void *)new_inp;
 	/* now what about the nets? */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		net->pmtu_timer.ep = (void *)new_inp;
@@ -2855,20 +2860,22 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		*/
 		if (sctp_mobility_base == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 
 		*/
 		if (sctp_mobility_fasthandoff == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 		else {
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_FASTHANDOFF);
-			sctp_mobility_feature_off(inp, SCTP_MOBILITY_DO_FASTHANDOFF);
+			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
 	} else {
 		/*
@@ -4146,6 +4153,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	SCTP_OS_TIMER_INIT(&asoc->shut_guard_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->autoclose_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->delayed_event_timer.timer);
+	SCTP_OS_TIMER_INIT(&asoc->delete_prim_timer.timer);
 
 	LIST_INSERT_HEAD(&inp->sctp_asoc_list, stcb, sctp_tcblist);
 	/* now file the port under the hash as well */
@@ -4173,6 +4181,26 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		struct sctp_nets *lnet;
 
 		lnet = TAILQ_FIRST(&asoc->nets);
+		/* Mobility adaptation
+		   Ideally, if deleted destination is the primary, it becomes 
+		   a fast retransmission trigger by the subsequent SET PRIMARY. 
+		   (by micchie) 
+		 */
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+						SCTP_MOBILITY_FASTHANDOFF)) {
+			SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: primary dst is deleting\n");
+			if (asoc->deleted_primary != NULL) {
+				SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: deleted primary may be already stored\n");
+				goto leave;
+			}
+			asoc->deleted_primary = net;
+			atomic_add_int(&net->ref_count, 1);
+			sctp_mobility_feature_on(stcb->sctp_ep,
+						 SCTP_MOBILITY_PRIM_DELETED);
+			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED, 
+					 stcb->sctp_ep, stcb, NULL);
+		}
+leave:
 		/* Try to find a confirmed primary */
 		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet, 0);
 	}
@@ -4464,6 +4492,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	asoc->shut_guard_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 	asoc->delayed_event_timer.self = NULL;
+	/* Mobility adaptation */
+	(void)SCTP_OS_TIMER_STOP(&asoc->delete_prim_timer.timer);
+	asoc->delete_prim_timer.self = NULL;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		net->fr_timer.self = NULL;
