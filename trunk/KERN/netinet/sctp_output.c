@@ -10123,7 +10123,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
 
-        /*sa_ignore NO_NULL_CHK*/
+        if (!stcb) {
+            return;
+        }
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (asoc->peer_supports_pktdrop == 0) {
