@@ -1376,7 +1376,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 }
 
 /* Mobility adaptation */
-int
+void
 sctp_delete_prim_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		  struct sctp_nets *net)
 {
