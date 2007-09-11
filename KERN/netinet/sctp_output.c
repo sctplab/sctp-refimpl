@@ -12738,7 +12738,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 #ifdef __Panda__
 	/* 
-	 * Handle the EAGAIN cases to reattach the pak header
+	 * Handle the EAGAIN/ENOMEM cases to reattach the pak header
 	 * to particle when pak is passed in, so that caller 
 	 * can try again with this pak
 	 *
@@ -12747,7 +12747,7 @@ sctp_lower_sosend(struct socket *so,
 	 * pool
 	 */
 	if (top) {
-		if (error == EAGAIN)  {
+		if ((error == EAGAIN) || (error == ENOMEM))  {
 			SCTP_ATTACH_CHAIN(i_pak, top, sndlen);    
 			top = NULL;
 		} else {
