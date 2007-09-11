@@ -75,5 +75,13 @@ extern void in6_sin6_2_sin(struct sockaddr_in *, struct sockaddr_in6 *sin6);
 extern void in6_sin6_2_sin_in_sock(struct sockaddr *nam);
 #endif
 
+extern void sctp6_notify(struct sctp_inpcb *inp,
+    struct icmp6_hdr *icmph,
+    struct sctphdr *sh,
+    struct sockaddr *to,
+    struct sctp_tcb *stcb,
+    struct sctp_nets *net);
+
+
 #endif				/* _KERNEL */
 #endif

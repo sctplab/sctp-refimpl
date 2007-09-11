@@ -297,7 +297,11 @@ sctp_notify(struct sctp_inpcb *inp,
 	    (icmph->icmp_code == ICMP_UNREACH_ISOLATED) ||
 	    (icmph->icmp_code == ICMP_UNREACH_NET_PROHIB) ||
 	    (icmph->icmp_code == ICMP_UNREACH_HOST_PROHIB) ||
+#ifdef __Panda__
+	    (icmph->icmp_code == ICMP_UNREACH_ADMIN)) {
+#else
 	    (icmph->icmp_code == ICMP_UNREACH_FILTER_PROHIB)) {
+#endif
 
 		/*
 		 * Hmm reachablity problems we must examine closely. If its
