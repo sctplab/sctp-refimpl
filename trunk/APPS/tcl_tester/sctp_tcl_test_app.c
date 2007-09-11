@@ -581,6 +581,9 @@ sctp_msg_recv(char *rbuf, int *in_len, struct sctp_sndrcvinfo *sinfo_in,  int fl
 	it = find_the_msg(sinfo_in, flags);
 	if(it == NULL) {
 		it = (struct msg_of *)malloc(sizeof(struct msg_of));
+                if (it == NULL) {
+                    return (NULL);
+                }
 		memset(it, 0, sizeof(struct msg_of));
 		if (flags & MSG_NOTIFICATION) {
 			it->notification = 1;
