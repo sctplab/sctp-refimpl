@@ -12493,6 +12493,15 @@ sctp_lower_sosend(struct socket *so,
 		/* We send in a 0, since we do NOT have any locks */
 		error = sctp_msg_append(stcb, net, top, srcv, 0);
 		top = NULL;
+		if (srcv->sinfo_flags & SCTP_EOF) {
+			/*
+			 * This should only happen for Panda for the mbuf
+			 * send case, which does NOT yet support EEOR mode.
+			 * Thus, we can just set this flag to do the proper
+			 * EOF handling.
+			 */
+			got_all_of_the_send = 1;
+		}
 	}
 	if (error) {
 		goto out;
