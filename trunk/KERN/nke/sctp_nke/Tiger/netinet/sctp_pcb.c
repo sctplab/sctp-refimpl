@@ -5409,6 +5409,9 @@ sctp_pcb_init()
 	sctp_pcb_initialized = 1;
 
 	bzero(&sctpstat, sizeof(struct sctpstat));
+#if defined(SCTP_LOCAL_TRACE_BUF)
+	bzero(&sctp_log, sizeof(struct sctp_log));
+#endif
 	(void)SCTP_GETTIME_TIMEVAL(&tv);
 	sctpstat.sctps_discontinuitytime.tv_sec = (uint32_t)tv.tv_sec;
 	sctpstat.sctps_discontinuitytime.tv_usec = (uint32_t)tv.tv_usec;
@@ -6593,6 +6596,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		}
 		asoc->last_revoke_count = cnt;
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
+                /*sa_ignore NO_NULL_CHK*/
 		sctp_send_sack(stcb);
 		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_DRAIN, SCTP_SO_NOT_LOCKED);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);

@@ -5603,8 +5603,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	}
 	if ((stcb->asoc.stream_locked) &&  
 	    (stcb->asoc.stream_locked_on  != srcv->sinfo_stream)) {
-		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EAGAIN);
-		error = EAGAIN;
+		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+		error = EINVAL;
 		goto out_now;
 	}
 	strm = &stcb->asoc.strmout[srcv->sinfo_stream];
@@ -7958,7 +7958,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
-	chk->flags = 0;
+	chk->flags = CHUNK_FLAGS_FRAGMENT_OK;
 	chk->asoc = &stcb->asoc;
 	chk->data = cookie;
 	chk->whoTo = chk->asoc->primary_destination;
@@ -10123,7 +10123,9 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
 
-        /*sa_ignore NO_NULL_CHK*/
+        if (!stcb) {
+            return;
+        }
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (asoc->peer_supports_pktdrop == 0) {
@@ -12142,8 +12144,8 @@ sctp_lower_sosend(struct socket *so,
 		if ((asoc->stream_locked) &&  
 		    (asoc->stream_locked_on  != srcv->sinfo_stream)) {
 			SCTP_TCB_SEND_UNLOCK(stcb);
-			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EAGAIN);
-			error = EAGAIN;
+			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+			error = EINVAL;
 			goto out;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
@@ -12491,6 +12493,15 @@ sctp_lower_sosend(struct socket *so,
 		/* We send in a 0, since we do NOT have any locks */
 		error = sctp_msg_append(stcb, net, top, srcv, 0);
 		top = NULL;
+		if (srcv->sinfo_flags & SCTP_EOF) {
+			/*
+			 * This should only happen for Panda for the mbuf
+			 * send case, which does NOT yet support EEOR mode.
+			 * Thus, we can just set this flag to do the proper
+			 * EOF handling.
+			 */
+			got_all_of_the_send = 1;
+		}
 	}
 	if (error) {
 		goto out;
@@ -12727,7 +12738,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 #ifdef __Panda__
 	/* 
-	 * Handle the EAGAIN cases to reattach the pak header
+	 * Handle the EAGAIN/ENOMEM cases to reattach the pak header
 	 * to particle when pak is passed in, so that caller 
 	 * can try again with this pak
 	 *
@@ -12736,7 +12747,7 @@ sctp_lower_sosend(struct socket *so,
 	 * pool
 	 */
 	if (top) {
-		if (error == EAGAIN)  {
+		if ((error == EAGAIN) || (error == ENOMEM))  {
 			SCTP_ATTACH_CHAIN(i_pak, top, sndlen);    
 			top = NULL;
 		} else {
