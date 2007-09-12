@@ -94,7 +94,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_abort_at_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_data_order;
 extern struct sysctl_oid sysctl__net_inet_sctp_min_residual;
 extern struct sysctl_oid sysctl__net_inet_sctp_max_retran_chunk;
-extern struct sysctl_oid sysctl__net_inet_sctp_logging;
+extern struct sysctl_oid sysctl__net_inet_sctp_log_level;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_cc_module;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_frag_interleave;
 #if defined(SCTP_APPLE_MOBILITY_BASE)
@@ -102,6 +102,9 @@ extern struct sysctl_oid sysctl__net_inet_sctp_mobility_base;
 #endif
 #if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 extern struct sysctl_oid sysctl__net_inet_sctp_mobility_fasthandoff;
+#endif
+#if defined(SCTP_LOCAL_TRACE_BUF)
+extern struct sysctl_oid sysctl__net_inet_sctp_log;
 #endif
 #if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
@@ -324,7 +327,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_register_oid(&sysctl__net_inet_sctp_min_residual);
 	sysctl_register_oid(&sysctl__net_inet_sctp_max_retran_chunk);
-	sysctl_register_oid(&sysctl__net_inet_sctp_logging);
+	sysctl_register_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_cc_module);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
@@ -332,6 +335,9 @@ SCTP_start (kmod_info_t * ki, void * d)
 #endif
 #if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
+#endif
+#if defined(SCTP_LOCAL_TRACE_BUF)
+	sysctl_register_oid(&sysctl__net_inet_sctp_log);
 #endif
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
@@ -416,7 +422,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_data_order);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_min_residual);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_retran_chunk);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_logging);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_cc_module);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
@@ -424,6 +430,9 @@ SCTP_stop (kmod_info_t * ki, void * d)
 #endif
 #if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
+#endif
+#if defined(SCTP_LOCAL_TRACE_BUF)
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_log);
 #endif
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);

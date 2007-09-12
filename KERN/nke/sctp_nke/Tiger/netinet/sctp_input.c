@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.60 2007/09/08 17:48:45 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.61 2007/09/10 17:06:25 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3160,6 +3160,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 	}
 	asoc->ctrl_queue_cnt--;
 	sctp_free_a_chunk(stcb, chk);
+        /*sa_ignore NO_NULL_CHK*/
 	stcb->asoc.str_reset = NULL;
 }
 
