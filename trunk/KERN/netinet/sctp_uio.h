@@ -989,6 +989,21 @@ struct xsctp_raddr {
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
 };
 
+#define SCTP_MAX_LOGGING_SIZE 30000
+#define SCTP_TRACE_PARAMS 6
+
+struct sctp_log_entry {
+	u_int64_t timestamp;
+	const char *descr;
+	uint32_t subsys;
+	uint32_t params[SCTP_TRACE_PARAMS];
+};
+
+struct sctp_log {
+	struct sctp_log_entry entry[SCTP_MAX_LOGGING_SIZE];
+	uint32_t index;
+};
+
 /*
  * Kernel defined for sctp_send
  */
