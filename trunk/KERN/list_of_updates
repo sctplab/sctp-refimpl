@@ -5,3 +5,6 @@
 - sctp6_notify function made visible instead of
   static (this is needed for Panda).
 **********above is patch 22 **********************
+- DF bit was on for COOKIE-ECHO chunks. This is
+  incorrect and should be OFF letting IP fragment
+  large cookie-echos.
