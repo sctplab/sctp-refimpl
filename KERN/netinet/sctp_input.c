@@ -1979,13 +1979,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 
-	sctp_check_address_list(stcb, m,
-	    initack_offset + sizeof(struct sctp_init_ack_chunk),
-	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
-	    initack_src, cookie->local_scope, cookie->site_scope,
-	    cookie->ipv4_scope, cookie->loopback_scope);
-
-
 	/* set up to notify upper layer */
 	*notification = SCTP_NOTIFY_ASSOC_UP;
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -2035,14 +2028,26 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb, NULL);
 	}
-	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
 	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered, sctp_align_unsafe_makecopy);
 	}
+	/* respond with a COOKIE-ACK */
 	sctp_send_cookie_ack(stcb);
+
+	/*
+	 * check the address lists for any ASCONFs that need to be sent
+	 * AFTER the cookie-ack is sent
+	 */
+	sctp_check_address_list(stcb, m,
+	    initack_offset + sizeof(struct sctp_init_ack_chunk),
+	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
+	    initack_src, cookie->local_scope, cookie->site_scope,
+	    cookie->ipv4_scope, cookie->loopback_scope);
+
+
 	return (stcb);
 }
 
@@ -2639,7 +2644,8 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 					 stcb->sctp_ep, stcb,
 					 stcb->asoc.primary_destination);
 #else
-			sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+			sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+					 SCTP_ADDR_NOT_LOCKED);
 #endif
 		}
 	}

@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.9 2007/09/08 17:48:45 rrs 
  */
 extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 
-extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *, int *);
+extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *, int *, int);
 
 extern void
 sctp_handle_asconf(struct mbuf *, unsigned int, struct sctp_asconf_chunk *,
