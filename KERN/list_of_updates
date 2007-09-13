@@ -1,1 +1,2 @@
 - Get rid of unsused constants for sysctl variables.
+- Fix panic from mutex unlock on freed lock when ASCONF-ACK aborts an assoc
