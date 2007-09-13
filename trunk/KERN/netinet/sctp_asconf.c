@@ -1722,7 +1722,7 @@ sctp_asconf_ack_clear(struct sctp_tcb *stcb)
 void
 sctp_handle_asconf_ack(struct mbuf *m, int offset,
 		       struct sctp_asconf_ack_chunk *cp, struct sctp_tcb *stcb,
-		       struct sctp_nets *net)
+		       struct sctp_nets *net, int *abort_no_unlock)
 {
 	struct sctp_association *asoc;
 	uint32_t serial_num;
@@ -1762,6 +1762,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "handle_asconf_ack: got unexpected next serial number! Aborting asoc!\n");
 		sctp_abort_an_association(stcb->sctp_ep, stcb,
 		    SCTP_CAUSE_ILLEGAL_ASCONF_ACK, NULL, SCTP_SO_NOT_LOCKED);
+		*abort_no_unlock = 1;
 		return;
 	}
 	if (serial_num != asoc->asconf_seq_out) {
