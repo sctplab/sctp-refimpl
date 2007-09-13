@@ -1908,7 +1908,7 @@ sctp_handle_asconf_ack(struct mbuf *m, int offset,
 				 stcb, net);
 #else
 		/* we have more params, so send out more */
-		sctp_send_asconf(stcb, net);
+		sctp_send_asconf(stcb, net, SCTP_ADDR_NOT_LOCKED);
 #endif
 	}
 }
@@ -1950,7 +1950,7 @@ sctp_is_scopeid_in_nets(struct sctp_tcb *stcb, struct sockaddr *sa)
  */
 static void
 sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		     struct sctp_ifa *ifa, uint16_t type)
+		     struct sctp_ifa *ifa, uint16_t type, int addr_locked)
 {
 	int status;
 
@@ -2055,7 +2055,8 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp,
 				    stcb, stcb->asoc.primary_destination);
 #else
-				sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+				sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+						 addr_locked);
 #endif
 			}
 		}
@@ -2297,7 +2298,8 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * If we have queued params in the open state, send out an ASCONF.
 	 */
 	if (num_queued > 0) {
-		sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+		sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+				 SCTP_ADDR_NOT_LOCKED);
 	}
 }
 
@@ -2347,7 +2349,8 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 					 stcb->sctp_ep, stcb,
 					 stcb->asoc.primary_destination);
 #else
-			sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+			sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+					 SCTP_ADDR_NOT_LOCKED);
 #endif
 		}
 	} else {
@@ -2383,7 +2386,8 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 							 stcb->sctp_ep, stcb,
 							 stcb->asoc.primary_destination);
 #else
-					sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+					sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+							 SCTP_ADDR_NOT_LOCKED);
 #endif
 				}
 			} 
@@ -2392,7 +2396,7 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 }
 
 static struct sockaddr *
-sctp_find_valid_localaddr(struct sctp_tcb *stcb)
+sctp_find_valid_localaddr(struct sctp_tcb *stcb, int addr_locked)
 {
 	struct sctp_vrf *vrf = NULL;
 	struct sctp_ifn *sctp_ifn;
@@ -2403,10 +2407,12 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 
 	getmicrotime(&timenow);
 #endif
-	SCTP_IPI_ADDR_LOCK();
+	if (addr_locked == SCTP_ADDR_NOT_LOCKED)
+		SCTP_IPI_ADDR_LOCK();
 	vrf = sctp_find_vrf(stcb->asoc.vrf_id);
 	if (vrf == NULL) {
-		SCTP_IPI_ADDR_UNLOCK();
+		if (addr_locked == SCTP_ADDR_NOT_LOCKED)
+			SCTP_IPI_ADDR_UNLOCK();
 		return (NULL);
 	}
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
@@ -2432,7 +2438,8 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 				if (sctp_is_addr_restricted(stcb,sctp_ifa))
 					continue;
 				/* found a valid local v4 address to use */
-				SCTP_IPI_ADDR_UNLOCK();
+				if (addr_locked == SCTP_ADDR_NOT_LOCKED)
+					SCTP_IPI_ADDR_UNLOCK();
 				return (&sctp_ifa->address.sa);
 			} else if (sctp_ifa->address.sa.sa_family == AF_INET6 &&
 			    stcb->asoc.ipv6_addr_legal) {
@@ -2455,13 +2462,15 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb)
 					continue;
 
 				/* found a valid local v6 address to use */
-				SCTP_IPI_ADDR_UNLOCK();
+				if (addr_locked == SCTP_ADDR_NOT_LOCKED)
+					SCTP_IPI_ADDR_UNLOCK();
 				return (&sctp_ifa->address.sa);
 			}
 		}
 	}
 	/* no valid addresses found */
-	SCTP_IPI_ADDR_UNLOCK();
+	if (addr_locked == SCTP_ADDR_NOT_LOCKED)
+		SCTP_IPI_ADDR_UNLOCK();
 	return (NULL);
 }
 
@@ -2490,7 +2499,7 @@ sctp_find_valid_localaddr_ep(struct sctp_tcb *stcb)
  * returns NULL on error (no mbuf, no ASCONF params queued, etc).
  */
 struct mbuf *
-sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
+sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen, int addr_locked)
 {
 	struct mbuf *m_asconf, *m_asconf_chk;
 	struct sctp_asconf_addr *aa;
@@ -2615,7 +2624,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen)
 		caddr_t addr_ptr;
 
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)
-			found_addr = sctp_find_valid_localaddr(stcb);
+			found_addr = sctp_find_valid_localaddr(stcb,
+							       addr_locked);
 		else
 			found_addr = sctp_find_valid_localaddr_ep(stcb);
 
@@ -2780,7 +2790,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 							 stcb->sctp_ep, stcb,
 							 stcb->asoc.primary_destination);
 #else
-					sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+					sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+							 SCTP_ADDR_NOT_LOCKED);
 #endif
 				}
 			}
@@ -2942,7 +2953,7 @@ sctp_check_address_list_ep(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 		    &laddr->ifa->address.sa)) {
 			/* try to add it */
 			sctp_addr_mgmt_assoc(stcb->sctp_ep, stcb, laddr->ifa,
-			    SCTP_ADD_IP_ADDRESS);
+			    SCTP_ADD_IP_ADDRESS, SCTP_ADDR_NOT_LOCKED);
 		}
 	}
 }
@@ -2990,7 +3001,8 @@ sctp_check_address_list_all(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			    &sctp_ifa->address.sa)) {
 				/* try to add it */
 				sctp_addr_mgmt_assoc(stcb->sctp_ep, stcb,
-				    sctp_ifa, SCTP_ADD_IP_ADDRESS);
+				    sctp_ifa, SCTP_ADD_IP_ADDRESS,
+				    SCTP_ADDR_LOCKED);
 			}
 		} /* end foreach ifa */
 	} /* end foreach ifn */
