@@ -1139,6 +1139,14 @@ print_event_error_out(struct sctp_cwnd_log *log)
 	       (int)log->x.misc.log3);
 }
 
+static void
+print_event_rtt(struct sctp_cwnd_log *log) 
+{
+	printf("%s rtt:%d\n",
+	       ts,
+	       log->x.misc.log2);
+}
+
 void
 do_print_of_log(struct sctp_cwnd_log *log) 
 {
@@ -1217,6 +1225,9 @@ do_print_of_log(struct sctp_cwnd_log *log)
 		break;
 	case SCTP_LOG_ERROR_RET:
 		print_event_error_out(log);
+		break;
+	case SCTP_LOG_EVENT_RTT:
+		print_event_rtt(log);
 		break;
 	default:
 		break;
