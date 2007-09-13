@@ -6983,7 +6983,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 #if defined(SCTP_LOCAL_TRACE_BUF)
 
 void
-sctp_log_trace(uint32_t subsys, const char *str, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f)
+sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_t b, uint32_t c, uint32_t d, uint32_t e, uint32_t f)
 {	
 	uint32_t saveindex, newindex;
 
@@ -7000,7 +7000,6 @@ sctp_log_trace(uint32_t subsys, const char *str, uint32_t a, uint32_t b, uint32_
 	}
 	sctp_log.entry[saveindex].timestamp = SCTP_GET_CYCLECOUNT;
 	sctp_log.entry[saveindex].subsys = subsys;
-	sctp_log.entry[saveindex].descr = str;
 	sctp_log.entry[saveindex].params[0] = a;
 	sctp_log.entry[saveindex].params[1] = b;
 	sctp_log.entry[saveindex].params[2] = c;
