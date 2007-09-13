@@ -1,8 +1,1 @@
-- DF bit was on for COOKIE-ECHO chunks. This is
-  incorrect and should be OFF letting IP fragment
-  large cookie-echos.
-- Rename sysctl variable logging to log_level.
-- Fix description of sysctl variable stats.
-- Add sysctl variable log to make sctp_log readable via sysctl mechanism.
-- Removed debug code
-*********above here patch 23*********************
+-
