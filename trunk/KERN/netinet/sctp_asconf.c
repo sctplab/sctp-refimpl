@@ -1246,12 +1246,13 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 		sctp_del_local_addr_restricted(stcb, addr);
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
-		if (sctp_is_mobility_feature_on(stcb->sctp_ep, SCTP_MOBILITY_BASE)) {
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+						SCTP_MOBILITY_BASE)) {
 			sctp_path_check_and_react(stcb, addr);
 			return;
 		}
 #endif /* __FreeBSD__ __APPLE__ */
-		/* clear any cached, topologically incorrect source addresses */
+		/* clear any cached/topologically incorrect source addresses */
 		sctp_asconf_nets_cleanup(stcb, addr->ifn_p);
 	}
 	/* else, leave it on the list */
@@ -1350,6 +1351,7 @@ sctp_asconf_queue_mgmt(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 	} else {
 		/* invalid family! */
 		SCTP_FREE(aa, SCTP_M_ASC_ADDR);
+		sctp_free_ifa(ifa);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
@@ -1453,7 +1455,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 			net->error_count = 0;
 		}
 		stcb->asoc.overall_error_count = 0;
-		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		if (sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
 			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 				       stcb->asoc.overall_error_count,
 				       0,
@@ -1469,17 +1471,17 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 	return (status);
 }
 
-/*
- * add an asconf add/delete IP address parameter to the queue by addr.
- * type = SCTP_ADD_IP_ADDRESS, SCTP_DEL_IP_ADDRESS, SCTP_SET_PRIM_ADDR.
+/*-
+ * add an asconf delete IP address parameter to the queue by sockaddr and
+ * possibly with no sctp_ifa available.  This is only called by the routine
+ * that checks the addresses in an INIT-ACK against the current address list.
  * returns 0 if completed, non-zero if not completed.
- * NOTE: if adding, but delete already scheduled (and not yet sent out),
- * simply remove from queue.  Same for deleting an address already scheduled
- * for add.  If a duplicate operation is found, ignore the new one.
+ * NOTE: if an add is already scheduled (and not yet sent out), simply
+ * remove it from queue.  If a duplicate operation is found, ignore the
+ * new one.
  */
 static int
-sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
-			 uint16_t type)
+sctp_asconf_queue_sa_delete(struct sctp_tcb *stcb, struct sockaddr *sa)
 {
 	struct sctp_ifa *ifa;
 	struct sctp_asconf_addr *aa, *aa_next;
@@ -1500,27 +1502,14 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 		if (sctp_asconf_addr_match(aa, sa) == 0)
 			continue;
 		/* is the request already in queue (sent or not) */
-		if (aa->ap.aph.ph.param_type == type) {
+		if (aa->ap.aph.ph.param_type == SCTP_DEL_IP_ADDRESS) {
 			return (-1);
 		}
 		/* is the negative request already in queue, and not sent */
 		if (aa->sent == 1)
 			continue;
-		if (type == SCTP_ADD_IP_ADDRESS &&
-		    aa->ap.aph.ph.param_type == SCTP_DEL_IP_ADDRESS) {
-			/* add requested, delete already queued */
-
-			/* delete the existing entry in the queue */
-			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
-			sctp_free_ifa(aa->ifa);
-			/* free the entry */
-			SCTP_FREE(aa, SCTP_M_ASC_ADDR);
-			return (-1);
-		} else if (type == SCTP_DEL_IP_ADDRESS &&
-			   aa->ap.aph.ph.param_type == SCTP_ADD_IP_ADDRESS) {
-			/* delete requested, add already queued */
-
-			/* delete the existing entry in the queue */
+		if (aa->ap.aph.ph.param_type == SCTP_ADD_IP_ADDRESS) {
+			/* add already queued, so remove existing entry */
 			TAILQ_REMOVE(&stcb->asoc.asconf_queue, aa, next);
 			sctp_del_local_addr_restricted(stcb, aa->ifa);
 			/* free the entry */
@@ -1528,31 +1517,30 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 			return (-1);
 		}
 	} /* for each aa */
+
+	/* find any existing ifa-- NOTE ifa CAN be allowed to be NULL */
 	if (stcb) {
 		vrf_id = stcb->asoc.vrf_id;
 	} else {
 		vrf_id = SCTP_DEFAULT_VRFID;
 	}
-
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
-	if (ifa == NULL) {
-		/* Invalid address */
-		return (-1);
-	}
+
 	/* adding new request to the queue */
 	SCTP_MALLOC(aa, struct sctp_asconf_addr *, sizeof(*aa),
 		    SCTP_M_ASC_ADDR);
 	if (aa == NULL) {
 		/* didn't get memory */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
-			"asconf_queue_add_sa: failed to get memory!\n");
+			"sctp_asconf_queue_sa_delete: failed to get memory!\n");
 		return (-1);
 	}
 	/* fill in asconf address parameter fields */
 	/* top level elements are "networked" during send */
-	aa->ap.aph.ph.param_type = type;
+	aa->ap.aph.ph.param_type = SCTP_DEL_IP_ADDRESS;
 	aa->ifa = ifa;
-	atomic_add_int(&ifa->refcount, 1);
+	if (ifa)
+		atomic_add_int(&ifa->refcount, 1);
 	/* correlation_id filled in during send routine later... */
 	if (sa->sa_family == AF_INET6) {
 		/* IPv6 address */
@@ -1576,21 +1564,14 @@ sctp_asconf_queue_add_sa(struct sctp_tcb *stcb, struct sockaddr *sa,
 	} else {
 		/* invalid family! */
 		SCTP_FREE(aa, SCTP_M_ASC_ADDR);
+		if (ifa)
+			sctp_free_ifa(ifa);
 		return (-1);
 	}
 	aa->sent = 0;		/* clear sent flag */
 
-	/*
-	 * if we are deleting an address it should go out last otherwise,
-	 * add it to front of the pending queue
-	 */
-	if (type == SCTP_ADD_IP_ADDRESS) {
-		/* add goes to the front of the queue */
-		TAILQ_INSERT_HEAD(&stcb->asoc.asconf_queue, aa, next);
-	} else {
-		/* delete and set primary goes to the back of the queue */
-		TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
-	}
+	/* delete goes to the back of the queue */
+	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 
 	return (0);
 }
@@ -1704,7 +1685,8 @@ sctp_asconf_process_param_ack(struct sctp_tcb *stcb,
 
 	/* remove the param and free it */
 	TAILQ_REMOVE(&stcb->asoc.asconf_queue, aparam, next);
-	sctp_free_ifa(aparam->ifa);
+	if (aparam->ifa)
+		sctp_free_ifa(aparam->ifa);
 	SCTP_FREE(aparam, SCTP_M_ASC_ADDR);
 }
 
@@ -2334,10 +2316,23 @@ sctp_asconf_iterator_end(void *ptr, uint32_t val)
 int32_t
 sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 {
-	/* NOTE: we currently don't check the validity of the address! */
+ 	uint32_t vrf_id;
+	struct sctp_ifa *ifa;
+
+	/* find the ifa for the desired set primary */
+	if (stcb) {
+		vrf_id = stcb->asoc.vrf_id;
+	} else {
+		vrf_id = SCTP_DEFAULT_VRFID;
+	}
+	ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
+	if (ifa == NULL) {
+		/* Invalid address */
+		return (-1);
+	}
 
 	/* queue an ASCONF:SET_PRIM_ADDR to be sent */
-	if (!sctp_asconf_queue_add_sa(stcb, sa, SCTP_SET_PRIM_ADDR)) {
+	if (!sctp_asconf_queue_add(stcb, ifa, SCTP_SET_PRIM_ADDR)) {
 		/* set primary queuing succeeded */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"set_primary_ip_address_sa: queued on tcb=%p, ",
@@ -2435,7 +2430,7 @@ sctp_find_valid_localaddr(struct sctp_tcb *stcb, int addr_locked)
 				    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr))
 					continue;
 
-				if (sctp_is_addr_restricted(stcb,sctp_ifa))
+				if (sctp_is_addr_restricted(stcb, sctp_ifa))
 					continue;
 				/* found a valid local v4 address to use */
 				if (addr_locked == SCTP_ADDR_NOT_LOCKED)
@@ -2765,8 +2760,8 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 		} else {
 			vrf_id = SCTP_DEFAULT_VRFID;
 		}
-
-		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
+		sctp_ifa = sctp_find_ifa_by_addr(sa, vrf_id,
+						 SCTP_ADDR_NOT_LOCKED);
 		if (sctp_ifa == NULL) {
 			/* address doesn't exist anymore */
 			int status;
@@ -2776,8 +2771,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 			    SCTP_PCB_FLAGS_DO_ASCONF)) &&
 			    stcb->asoc.peer_supports_asconf) {
 				/* queue an ASCONF DEL_IP_ADDRESS */
-				status = sctp_asconf_queue_add_sa(stcb, sa,
-				    SCTP_DEL_IP_ADDRESS);
+		 		status = sctp_asconf_queue_sa_delete(stcb, sa);
 				/*
 				 * if queued ok, and in correct state, send
 				 * out the ASCONF.
