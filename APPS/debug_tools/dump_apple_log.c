@@ -19,7 +19,7 @@ main(int argc, char **argv)
 	}
 
 	for (i = 0; i < SCTP_MAX_LOGGING_SIZE; i++) {
-		printf("%d %llu SCTP:%d[%d]:%x-%x-%x-%x\n",
+		printf("%d %ju SCTP:%d[%d]:%x-%x-%x-%x\n",
 		       i,
 		       log.entry[i].timestamp,
 		       log.entry[i].params[0],
