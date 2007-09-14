@@ -3,3 +3,6 @@
 - Fix panic from addr lock recursion when ASCONFs are queued in the front states
 - ASCONFs "queued" in the front states should really be bundled after the
   COOKIE-ACK, not in front of it
+- Fix issue with addresses deleted in the front states from being sent with
+  ASCONF(DELETE)-- replaced sctp_asconf_queue_add_sa() with delete specific
+  function 
