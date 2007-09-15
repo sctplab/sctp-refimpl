@@ -1,10 +1,1 @@
-- Get rid of unsused constants for sysctl variables.
-- Fix panic from mutex unlock on freed lock when ASCONF-ACK aborts an assoc
-- Fix panic from addr lock recursion when ASCONFs are queued in the front states
-- ASCONFs "queued" in the front states should really be bundled after the
-  COOKIE-ACK, not in front of it
-- Fix issue with addresses deleted in the front states from being sent with
-  ASCONF(DELETE)-- replaced sctp_asconf_queue_add_sa() with delete specific
-  function 
-- Comment change in sctp.h the drafts are now RFC's
-*********patch 24*****************************
+- 
