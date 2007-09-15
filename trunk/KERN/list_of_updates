@@ -7,4 +7,4 @@
   ASCONF(DELETE)-- replaced sctp_asconf_queue_add_sa() with delete specific
   function 
 - Comment change in sctp.h the drafts are now RFC's
-
+*********patch 24*****************************
