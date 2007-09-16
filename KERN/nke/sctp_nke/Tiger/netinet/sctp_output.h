@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.11 2007/09/08 11:35:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.12 2007/09/15 19:07:42 rrs Exp $");
 #endif
 
 #ifndef __sctp_output_h__
@@ -114,7 +114,7 @@ void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 void sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
 				 uint32_t);
 
-void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *);
+void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *, int addr_locked);
 
 void sctp_send_asconf_ack(struct sctp_tcb *);
 

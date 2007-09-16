@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.55 2007/09/13 14:43:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.56 2007/09/15 19:07:42 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -8159,7 +8159,7 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 }
 
 void
-sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
+sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net, int addr_locked)
 {
 	/*
 	 * formulate and queue an ASCONF to the peer.
@@ -8172,7 +8172,7 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	/* compose an ASCONF chunk, maximum length is PMTU */
-	m_asconf = sctp_compose_asconf(stcb, &len);
+	m_asconf = sctp_compose_asconf(stcb, &len, addr_locked);
 	if (m_asconf == NULL) {
 		return;
 	}

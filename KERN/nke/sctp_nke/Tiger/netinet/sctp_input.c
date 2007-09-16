@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.62 2007/09/13 10:36:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.63 2007/09/15 19:07:42 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1979,13 +1979,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 
-	sctp_check_address_list(stcb, m,
-	    initack_offset + sizeof(struct sctp_init_ack_chunk),
-	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
-	    initack_src, cookie->local_scope, cookie->site_scope,
-	    cookie->ipv4_scope, cookie->loopback_scope);
-
-
 	/* set up to notify upper layer */
 	*notification = SCTP_NOTIFY_ASSOC_UP;
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
@@ -2035,14 +2028,26 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE)) {
 		sctp_timer_start(SCTP_TIMER_TYPE_AUTOCLOSE, inp, stcb, NULL);
 	}
-	/* respond with a COOKIE-ACK */
 	/* calculate the RTT */
 	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
 						  &cookie->time_entered, sctp_align_unsafe_makecopy);
 	}
+	/* respond with a COOKIE-ACK */
 	sctp_send_cookie_ack(stcb);
+
+	/*
+	 * check the address lists for any ASCONFs that need to be sent
+	 * AFTER the cookie-ack is sent
+	 */
+	sctp_check_address_list(stcb, m,
+	    initack_offset + sizeof(struct sctp_init_ack_chunk),
+	    initack_limit - (initack_offset + sizeof(struct sctp_init_ack_chunk)),
+	    initack_src, cookie->local_scope, cookie->site_scope,
+	    cookie->ipv4_scope, cookie->loopback_scope);
+
+
 	return (stcb);
 }
 
@@ -2639,7 +2644,8 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 					 stcb->sctp_ep, stcb,
 					 stcb->asoc.primary_destination);
 #else
-			sctp_send_asconf(stcb, stcb->asoc.primary_destination);
+			sctp_send_asconf(stcb, stcb->asoc.primary_destination,
+					 SCTP_ADDR_NOT_LOCKED);
 #endif
 		}
 	}
@@ -4384,7 +4390,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			} else if (inp->sctp_socket->so_qlimit) {
 				/* we are accepting so check limits like TCP */
-				if (inp->sctp_socket->so_qlen >
+				if (inp->sctp_socket->so_qlen >=
 				    inp->sctp_socket->so_qlimit) {
 					/* no space */
 					struct mbuf *oper;
@@ -4617,7 +4623,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_asconf_ack(m, *offset,
-						       (struct sctp_asconf_ack_chunk *)ch, stcb, *netp);
+						       (struct sctp_asconf_ack_chunk *)ch, stcb, *netp, &abort_no_unlock);
+				if (abort_no_unlock)
+					return (NULL);
 			}
 			break;
 		case SCTP_FORWARD_CUM_TSN:
