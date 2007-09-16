@@ -1,3 +1,7 @@
 - Fix of by one error in the second argument of listen for
   1-to-1 style socket. 
 *********************patch 25 above****************
+- The address lock is changed to a rwlock. This
+  also involves macro changes to have a RLOCK and a WLOCK
+  and placing the correct version within the code.
+- The INFO lock is changed to a rwlock.
