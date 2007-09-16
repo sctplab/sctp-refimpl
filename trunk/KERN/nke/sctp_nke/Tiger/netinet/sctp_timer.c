@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.30 2007/09/13 10:36:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.31 2007/09/15 19:07:42 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -1304,7 +1304,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* is this a first send, or a retransmission? */
 	if (stcb->asoc.asconf_sent == 0) {
 		/* compose a new ASCONF chunk and send it */
-		sctp_send_asconf(stcb, net);
+		sctp_send_asconf(stcb, net, SCTP_ADDR_NOT_LOCKED);
 	} else {
 		/*
 		 * Retransmission of the existing ASCONF is needed
