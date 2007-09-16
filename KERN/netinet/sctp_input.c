@@ -4390,7 +4390,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			} else if (inp->sctp_socket->so_qlimit) {
 				/* we are accepting so check limits like TCP */
-				if (inp->sctp_socket->so_qlen >
+				if (inp->sctp_socket->so_qlen >=
 				    inp->sctp_socket->so_qlimit) {
 					/* no space */
 					struct mbuf *oper;
