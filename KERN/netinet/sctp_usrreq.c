@@ -1592,7 +1592,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	uint32_t id;
 #endif
 
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ADDR_RLOCK();
 #ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL report duplicate addresses if they appear
@@ -1609,7 +1609,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	size = sctp_fill_up_addresses_vrf(inp, stcb, limit, sas,
 					  inp->def_vrf_id);    
 #endif
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ADDR_RUNLOCK();
 	return (size);
 }
 
@@ -1675,7 +1675,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	int id;
 #endif
 
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ADDR_RLOCK();
 #ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL count duplicate addresses if they appear
@@ -1689,7 +1689,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	/* count addresses for the endpoint's default VRF */
 	cnt = sctp_count_max_addresses_vrf(inp, inp->def_vrf_id);
 #endif
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ADDR_RUNLOCK();
 	return (cnt);
 }
 
