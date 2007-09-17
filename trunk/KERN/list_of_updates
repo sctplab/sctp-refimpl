@@ -4,3 +4,4 @@
 - The INFO lock is changed to a rwlock.
 - When sctp_shutdown() is called on Mac OS X, the socket lock is held.
   So call sctp_chunk_output with SCTP_SO_LOCKED and not SCTP_SO_NOT_LOCKED.
+- Add SCTP_IPI_ADDR_[RW]LOCK and SCTP_IPI_ADDR_[RW]UNLOCK for Mac OS X.
