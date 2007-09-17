@@ -2,3 +2,5 @@
   also involves macro changes to have a RLOCK and a WLOCK
   and placing the correct version within the code.
 - The INFO lock is changed to a rwlock.
+- When sctp_shutdown() is called on Mac OS X, the socket lock is held.
+  So call sctp_chunk_output with SCTP_SO_LOCKED and not SCTP_SO_NOT_LOCKED.
