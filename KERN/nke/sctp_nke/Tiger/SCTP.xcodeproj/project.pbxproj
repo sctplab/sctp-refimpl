@@ -636,7 +636,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 4.1.0;
+				MODULE_VERSION = 5.0.0;
 				OTHER_CFLAGS = "$(inherited)";
 				PRODUCT_NAME = SCTP;
 				WRAPPER_EXTENSION = kext;
