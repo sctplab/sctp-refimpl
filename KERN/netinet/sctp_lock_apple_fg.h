@@ -65,9 +65,13 @@
 	sctppcbinfo.ipi_addr_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_ADDR_DESTROY() \
 	lck_mtx_free(sctppcbinfo.ipi_addr_mtx, SCTP_MTX_GRP)
-#define SCTP_IPI_ADDR_LOCK() \
+#define SCTP_IPI_ADDR_RLOCK() \
 	lck_mtx_lock(sctppcbinfo.ipi_addr_mtx)
-#define SCTP_IPI_ADDR_UNLOCK() \
+#define SCTP_IPI_ADDR_RUNLOCK() \
+	lck_mtx_unlock(sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_WLOCK() \
+	lck_mtx_lock(sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_WUNLOCK() \
 	lck_mtx_unlock(sctppcbinfo.ipi_addr_mtx)
 
 
