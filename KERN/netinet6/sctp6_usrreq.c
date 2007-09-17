@@ -115,10 +115,10 @@ in6_sin_2_v4mapsin6(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 	sin6->sin6_addr.s6_addr32[2] = IPV6_ADDR_INT32_SMP;
 	sin6->sin6_addr.s6_addr32[3] = sin->sin_addr.s_addr;
 #else
-	*(u_int32_t *)&sin6->sin6_addr.s6_addr[0] = 0;
-	*(u_int32_t *)&sin6->sin6_addr.s6_addr[4] = 0;
-	*(u_int32_t *)&sin6->sin6_addr.s6_addr[8] = IPV6_ADDR_INT32_SMP;
-	*(u_int32_t *)&sin6->sin6_addr.s6_addr[12] = sin->sin_addr.s_addr;
+	*(uint32_t *)&sin6->sin6_addr.s6_addr[0] = 0;
+	*(uint32_t *)&sin6->sin6_addr.s6_addr[4] = 0;
+	*(uint32_t *)&sin6->sin6_addr.s6_addr[8] = IPV6_ADDR_INT32_SMP;
+	*(uint32_t *)&sin6->sin6_addr.s6_addr[12] = sin->sin_addr.s_addr;
 #endif
 }
 
