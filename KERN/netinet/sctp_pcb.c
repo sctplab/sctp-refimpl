@@ -637,8 +637,8 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 {
 	struct sctp_vrf *vrf;
 	struct sctp_ifa *sctp_ifap = NULL;
-	SCTP_IPI_ADDR_WLOCK();
 
+	SCTP_IPI_ADDR_WLOCK();
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
 		SCTP_PRINTF("Can't find vrf_id:%d\n", vrf_id);
@@ -667,7 +667,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 					}
 				}
 			}
-			if(!valid) {
+			if (!valid) {
 				/* last ditch check ifn_index */
 				if (ifn_index == sctp_ifap->ifn_p->ifn_index) {
 					valid = 1;
@@ -682,6 +682,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 				SCTPDBG(SCTP_DEBUG_PCB1, "ifn:%d ifname:%s - ignoring delete\n",
 					sctp_ifap->ifn_p->ifn_index, sctp_ifap->ifn_p->ifn_name);
 #endif
+				SCTP_IPI_ADDR_WUNLOCK();
 				return;
 			}
 		}
@@ -738,9 +739,9 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 			 * Gak, what can we do? We have lost an address
 			 * change can you say HOSED?
 			 */
-			SCTPDBG(SCTP_DEBUG_PCB1, "Lost and address change ???\n");
+			SCTPDBG(SCTP_DEBUG_PCB1, "Lost an address change?\n");
 
-			/* Opps, must decrement the count */
+			/* Oops, must decrement the count */
 			sctp_free_ifa(sctp_ifap);
 			return;
 		}
