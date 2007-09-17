@@ -276,17 +276,23 @@
 /* address list locks */
 #define SCTP_IPI_ADDR_INIT() \
 	(void)pthread_mutex_init(&sctppcbinfo.ipi_addr_mtx, NULL)
-
 #define SCTP_IPI_ADDR_DESTROY() \
 	(void)pthread_mutex_destroy(&sctppcbinfo.ipi_addr_mtx)
 
-#define SCTP_IPI_ADDR_LOCK() 						\
+#define SCTP_IPI_ADDR_RLOCK() 						\
 	do { 								\
 		(void)pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);	\
 	} while (0)
-
-#define SCTP_IPI_ADDR_UNLOCK() \
+#define SCTP_IPI_ADDR_RUNLOCK() \
 	(void)pthread_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
+
+#define SCTP_IPI_ADDR_WLOCK() 						\
+	do { 								\
+		(void)pthread_mutex_lock(&sctppcbinfo.ipi_addr_mtx);	\
+	} while (0)
+#define SCTP_IPI_ADDR_WUNLOCK() \
+	(void)pthread_mutex_unlock(&sctppcbinfo.ipi_addr_mtx)
+
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
