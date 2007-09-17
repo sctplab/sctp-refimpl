@@ -193,10 +193,10 @@ struct sctp_epinfo {
 	sctp_zone_t ipi_zone_asconf_ack;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
-	struct mtx ipi_ep_mtx;
+	struct rwlock ipi_ep_mtx;
 	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
-	struct mtx ipi_addr_mtx;
+	struct rwlock ipi_addr_mtx;
 	struct mtx ipi_pktlog_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;

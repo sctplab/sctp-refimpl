@@ -1276,7 +1276,7 @@ sctp_shutdown(struct socket *so)
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 				    stcb->asoc.primary_destination);
-				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
+				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_LOCKED);
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1592,7 +1592,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	uint32_t id;
 #endif
 
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ADDR_RLOCK();
 #ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL report duplicate addresses if they appear
@@ -1609,7 +1609,7 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 	size = sctp_fill_up_addresses_vrf(inp, stcb, limit, sas,
 					  inp->def_vrf_id);    
 #endif
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ADDR_RUNLOCK();
 	return (size);
 }
 
@@ -1675,7 +1675,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	int id;
 #endif
 
-	SCTP_IPI_ADDR_LOCK();
+	SCTP_IPI_ADDR_RLOCK();
 #ifdef SCTP_MVRF
 /*
  * FIX ME: ?? this WILL count duplicate addresses if they appear
@@ -1689,7 +1689,7 @@ sctp_count_max_addresses(struct sctp_inpcb *inp)
 	/* count addresses for the endpoint's default VRF */
 	cnt = sctp_count_max_addresses_vrf(inp, inp->def_vrf_id);
 #endif
-	SCTP_IPI_ADDR_UNLOCK();
+	SCTP_IPI_ADDR_RUNLOCK();
 	return (cnt);
 }
 
