@@ -1573,6 +1573,7 @@ sctp_asconf_queue_sa_delete(struct sctp_tcb *stcb, struct sockaddr *sa)
 	/* delete goes to the back of the queue */
 	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 
+	/* sa_ignore MEMLEAK {memory is put on the tailq} */
 	return (0);
 }
 
@@ -2320,11 +2321,7 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	struct sctp_ifa *ifa;
 
 	/* find the ifa for the desired set primary */
-	if (stcb) {
-		vrf_id = stcb->asoc.vrf_id;
-	} else {
-		vrf_id = SCTP_DEFAULT_VRFID;
-	}
+	vrf_id = stcb->asoc.vrf_id;
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
 	if (ifa == NULL) {
 		/* Invalid address */
