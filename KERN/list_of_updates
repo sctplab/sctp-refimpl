@@ -1,9 +1,1 @@
-- The address lock is changed to a rwlock. This
-  also involves macro changes to have a RLOCK and a WLOCK
-  and placing the correct version within the code.
-- The INFO lock is changed to a rwlock.
-- When sctp_shutdown() is called on Mac OS X, the socket lock is held.
-  So call sctp_chunk_output with SCTP_SO_LOCKED and not SCTP_SO_NOT_LOCKED.
-- Add SCTP_IPI_ADDR_[RW]LOCK and SCTP_IPI_ADDR_[RW]UNLOCK for Mac OS X.
-- u_int64_t -> uint64_t
-- add missing addr unlock for error return path
+-
