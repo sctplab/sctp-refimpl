@@ -5160,6 +5160,12 @@ sctp_sorecvmsg(struct socket *so,
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
 	}
+
+        if (from && fromlen <= 0) {
+   	    SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
+	    return (EINVAL);
+        }
+
 	if (msg_flags) {
 		in_flags = *msg_flags;
 		if(in_flags & MSG_PEEK) 
@@ -5610,7 +5616,7 @@ sctp_sorecvmsg(struct socket *so,
 
 #ifdef INET
 #if !defined(__Windows__)
-		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
+		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sin.sin_len);
 #else
 		cp_len = sizeof(struct sockaddr_in);
 #endif
@@ -5619,7 +5625,7 @@ sctp_sorecvmsg(struct socket *so,
 #else
 		/* No AF_INET use AF_INET6 */
 #if !defined(__Windows__)
-		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin6.sin6_len);
+		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sin6.sin6_len);
 #else
 		cp_len = sizeof(struct sockaddr_in6);
 #endif
