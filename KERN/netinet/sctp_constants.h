@@ -763,7 +763,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.30 2007/09/13 14:43:54 
 #define SCTP_DEBUG_PCB1		0x00100000
 #define SCTP_DEBUG_PCB2		0x00200000	/* unused */
 #define SCTP_DEBUG_PCB3		0x00400000
-#define SCTP_DEBUG_PCB4		0x00800000	/* unused */
+#define SCTP_DEBUG_PCB4		0x00800000
 #define SCTP_DEBUG_INDATA1	0x01000000
 #define SCTP_DEBUG_INDATA2	0x02000000	/* unused */
 #define SCTP_DEBUG_INDATA3	0x04000000	/* unused */
