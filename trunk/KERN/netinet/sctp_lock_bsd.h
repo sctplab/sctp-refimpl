@@ -84,54 +84,116 @@ extern int sctp_logoff_stuff;
 #define SCTP_STATLOG_UNLOCK()
 #define SCTP_STATLOG_DESTROY()
 
+#if __FreeBSD_version <= 602000
+#define SCTP_INP_INFO_LOCK_DESTROY() do { \
+        if(mtx_owned(sctppcbinfo.ipi_ep_mtx)) { \
+             mtx_unlock(&sctppcbinfo.ipi_ep_mtx); \
+        } \
+        mtx_destroy(sctppcbinfo.ipi_ep_mtx); \
+      }  while (0) 
+#else
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
         if(rw_wowned(sctppcbinfo.ipi_ep_mtx)) { \
              rw_wunlock(&sctppcbinfo.ipi_ep_mtx); \
         } \
         rw_destroy(sctppcbinfo.ipi_ep_mtx); \
       }  while (0) 
+#endif
 
+#if __FreeBSD_version <= 602000
+#define SCTP_INP_INFO_LOCK_INIT() \
+        mtx_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info","inp_info",MTX_DEF);
+#else
 #define SCTP_INP_INFO_LOCK_INIT() \
         rw_init(&sctppcbinfo.ipi_ep_mtx, "sctp-info");
+#endif
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_INP_INFO_RLOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
+} while (0)
+#else
 #define SCTP_INP_INFO_RLOCK()	do { 					\
              rw_rlock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
+#endif
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_INP_INFO_WLOCK()	do { 					\
+            mtx_lock(&sctppcbinfo.ipi_ep_mtx);                         \
+} while (0)
+#else
 #define SCTP_INP_INFO_WLOCK()	do { 					\
             rw_wlock(&sctppcbinfo.ipi_ep_mtx);                         \
 } while (0)
+#endif
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
+#define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_ep_mtx)
+#else
 #define SCTP_INP_INFO_RUNLOCK()		rw_runlock(&sctppcbinfo.ipi_ep_mtx)
 #define SCTP_INP_INFO_WUNLOCK()		rw_wunlock(&sctppcbinfo.ipi_ep_mtx)
+#endif
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_IPI_ADDR_INIT() \
+        mtx_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr","sctp_addr",MTX_DEF)
+#else
 #define SCTP_IPI_ADDR_INIT() \
         rw_init(&sctppcbinfo.ipi_addr_mtx, "sctp-addr")
+#endif
 
+#if __FreeBSD_version <= 602000
+#define SCTP_IPI_ADDR_DESTROY() do  { \
+        if(mtx_owned(sctppcbinfo.ipi_addr_mtx)) { \
+             mtx_unlock(&sctppcbinfo.ipi_addr_mtx); \
+        } \
+	mtx_destroy(&sctppcbinfo.ipi_addr_mtx) \
+      }  while (0) 
+#else
 #define SCTP_IPI_ADDR_DESTROY() do  { \
         if(rw_wowned(sctppcbinfo.ipi_addr_mtx)) { \
              rw_wunlock(&sctppcbinfo.ipi_addr_mtx); \
         } \
 	rw_destroy(&sctppcbinfo.ipi_addr_mtx) \
       }  while (0) 
+#endif
 
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_IPI_ADDR_RLOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
+} while (0)
+#else
 #define SCTP_IPI_ADDR_RLOCK()	do { 					\
              rw_rlock(&sctppcbinfo.ipi_addr_mtx);                         \
 } while (0)
+#endif
 
+#if __FreeBSD_version <= 602000
+#define SCTP_IPI_ADDR_WLOCK()	do { 					\
+             mtx_lock(&sctppcbinfo.ipi_addr_mtx);                         \
+} while (0)
+#else
 #define SCTP_IPI_ADDR_WLOCK()	do { 					\
              rw_wlock(&sctppcbinfo.ipi_addr_mtx);                         \
 } while (0)
+#endif
 
 
+#if __FreeBSD_version <= 602000
+#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
+#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&sctppcbinfo.ipi_addr_mtx)
+#else
 #define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&sctppcbinfo.ipi_addr_mtx)
 #define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&sctppcbinfo.ipi_addr_mtx)
+#endif
 
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \

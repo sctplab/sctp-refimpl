@@ -335,7 +335,11 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 		sctp_clog.x.lock.inp_lock = SCTP_LOCK_UNKNOWN;
 		sctp_clog.x.lock.create_lock = SCTP_LOCK_UNKNOWN;
 	}
+#if (defined(__FreeBSD__) && __FreeBSD_version <= 602000)
+	sctp_clog.x.lock.info_lock = mtx_owned(&sctppcbinfo.ipi_ep_mtx);
+#else
 	sctp_clog.x.lock.info_lock = rw_wowned(&sctppcbinfo.ipi_ep_mtx);
+#endif
 	if (inp->sctp_socket) {
 		sctp_clog.x.lock.sock_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
 		sctp_clog.x.lock.sockrcvbuf_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
