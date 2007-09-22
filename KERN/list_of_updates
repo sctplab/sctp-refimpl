@@ -1,1 +1,3 @@
--
+- Change rwlock macros for FreeBSD 6.x.  
+  rwlock cannot be used in FreeBSD 6.x.
+
