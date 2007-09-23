@@ -4718,7 +4718,7 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 void
 sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *init_pkt, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_init_chunk *init_chk, uint32_t vrf_id)
+    struct sctp_init_chunk *init_chk, uint32_t vrf_id, int hold_inp_lock)
 {
 	struct sctp_association *asoc;
 	struct mbuf *m, *m_at, *m_tmp, *m_cookie, *op_err, *mp_last;
@@ -5077,6 +5077,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		initackm_out->msg.init.initial_tsn = htonl(asoc->init_seq_number);
 	} else {
 		uint32_t vtag, itsn;
+		if(hold_inp_lock) {
+			SCTP_INP_RUNLOCK(inp);
+		}
 		if (asoc) {
 			atomic_add_int(&asoc->refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
@@ -5092,6 +5095,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
 			initackm_out->msg.init.initial_tsn = htonl(sctp_select_initial_TSN(&inp->sctp_ep));
+		}
+		if(hold_inp_lock) {
+			SCTP_INP_RLOCK(inp);
 		}
 	}
 	/* save away my tag to */
