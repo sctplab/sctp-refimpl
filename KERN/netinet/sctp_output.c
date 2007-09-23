@@ -10635,7 +10635,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	int iphlen_out, len;
 
 #if defined(SCTP_PANIC_ON_ABORT)
-	printf("Abort, vtag:%x no tcb\n");
+	printf("Abort, vtag:%x no tcb\n", vtag);
 #endif
 	/* don't respond to ABORT with ABORT */
 	if (sctp_is_there_an_abort_here(m, iphlen, &vtag)) {
