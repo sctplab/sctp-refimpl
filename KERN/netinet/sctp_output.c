@@ -9586,9 +9586,6 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
 	struct sctp_auth_chunk *auth = NULL;
 	struct sctphdr *shdr;
 
-#if defined(SCTP_PANIC_ON_ABORT)
-	panic("abort stcb called");
-#endif
 #if defined(__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -10634,9 +10631,6 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	struct ip6_hdr *ip6, *ip6_out;
 	int iphlen_out, len;
 
-#if defined(SCTP_PANIC_ON_ABORT)
-	printf("Abort, vtag:%x no tcb\n", vtag);
-#endif
 	/* don't respond to ABORT with ABORT */
 	if (sctp_is_there_an_abort_here(m, iphlen, &vtag)) {
 		if (err_cause)
