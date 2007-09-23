@@ -1,3 +1,5 @@
+- Fixed problem of mobility code which is caused by remaining parameters in the 
+  deleted primary destination.
 - Add a missing lock. When a peer sends an INIT, and while we
   are processing it to send a INIT-ACK the socket is closed,
   we did not hold a lock to keep the socket from going away.

@@ -4257,6 +4257,8 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 			}
 			asoc->deleted_primary = net;
 			atomic_add_int(&net->ref_count, 1);
+			memset(&net->lastsa, 0, sizeof(net->lastsa));
+			memset(&net->lastsv, 0, sizeof(net->lastsv));
 			sctp_mobility_feature_on(stcb->sctp_ep,
 						 SCTP_MOBILITY_PRIM_DELETED);
 			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED, 

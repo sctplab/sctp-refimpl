@@ -511,6 +511,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	struct sockaddr_in6 *sin6;
 	struct sctp_nets *r_net;
 	struct timeval tv;
+	int req_prim = 0;
 
 	if (ntohs(cp->ch.chunk_length) != sizeof(struct sctp_heartbeat_chunk)) {
 		/* Invalid length */
@@ -568,28 +569,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 				TAILQ_REMOVE(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 				TAILQ_INSERT_HEAD(&stcb->asoc.nets, stcb->asoc.primary_destination, sctp_next);
 			}
-			/* Mobility adaptation */
-			if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
-					       	SCTP_MOBILITY_BASE) ||
-		    	    sctp_is_mobility_feature_on(stcb->sctp_ep,
-				    		SCTP_MOBILITY_FASTHANDOFF)) &&
-		    	    sctp_is_mobility_feature_on(stcb->sctp_ep, 
-						SCTP_MOBILITY_PRIM_DELETED)) {
-
-				sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
-				if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-						SCTP_MOBILITY_FASTHANDOFF)) {
-					sctp_assoc_immediate_retrans(stcb, 
-						stcb->asoc.primary_destination);
-				}
-				if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
-						SCTP_MOBILITY_BASE)) {
-					sctp_move_chunks_from_deleted_prim(stcb,
-						stcb->asoc.primary_destination);
-				}
-				sctp_delete_prim_timer(stcb->sctp_ep, stcb,
-						stcb->asoc.deleted_primary);
-			}
+			req_prim = 1;
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 		    stcb, 0, (void *)r_net, SCTP_SO_NOT_LOCKED);
@@ -628,6 +608,30 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	}
 	/* Now lets do a RTO with this */
 	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy);
+	/* Mobility adaptation */
+	if (req_prim) {
+		if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
+				       	SCTP_MOBILITY_BASE) ||
+	    	    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			    		SCTP_MOBILITY_FASTHANDOFF)) &&
+	    	    sctp_is_mobility_feature_on(stcb->sctp_ep, 
+					SCTP_MOBILITY_PRIM_DELETED)) {
+
+			sctp_timer_stop(SCTP_TIMER_TYPE_PRIM_DELETED, stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_TIMER+SCTP_LOC_7);
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep,
+					SCTP_MOBILITY_FASTHANDOFF)) {
+				sctp_assoc_immediate_retrans(stcb, 
+					stcb->asoc.primary_destination);
+			}
+			if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+					SCTP_MOBILITY_BASE)) {
+				sctp_move_chunks_from_deleted_prim(stcb,
+					stcb->asoc.primary_destination);
+			}
+			sctp_delete_prim_timer(stcb->sctp_ep, stcb,
+					stcb->asoc.deleted_primary);
+		}
+	}
 }
 
 static void
