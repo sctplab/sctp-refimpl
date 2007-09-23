@@ -652,6 +652,8 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	sctp_abort_notification(stcb, 0, SCTP_SO_NOT_LOCKED);
 	/* free the tcb */
 #if defined(SCTP_PANIC_ON_ABORT)
+	printf("stcb:%p state:%d rport:%d net:%p\n",
+	       stcb, stcb->asoc.state, stcb->rport, net);
 	panic("Received an ABORT");
 #endif
 	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
