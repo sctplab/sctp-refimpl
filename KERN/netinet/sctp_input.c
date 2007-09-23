@@ -91,6 +91,12 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_init: handling INIT tcb:%p\n",
 		stcb);
+	if( stcb == NULL ) {
+		SCTP_INP_RLOCK(inp);
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			goto outnow;
+		}
+	}
 	op_err = NULL;
 	init = &cp->init;
 	/* First are we accepting? */
@@ -106,7 +112,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_init_chunk)) {
 		/* Invalid length */
@@ -115,7 +121,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 	/* validate parameters */
 	if (init->initiate_tag == 0) {
@@ -125,7 +131,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 	if (ntohl(init->a_rwnd) < SCTP_MIN_RWND) {
 		/* invalid parameter... send abort */
@@ -134,7 +140,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 	if (init->num_inbound_streams == 0) {
 		/* protocol error... send abort */
@@ -143,7 +149,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 	if (init->num_outbound_streams == 0) {
 		/* protocol error... send abort */
@@ -152,7 +158,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 				       vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 
 	init_limit = offset + ntohs(cp->ch.chunk_length);
@@ -162,12 +168,16 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		sctp_abort_association(inp, stcb, m, iphlen, sh, NULL, vrf_id);
 		if (stcb)
 			*abort_no_unlock = 1;
-		return;
+		goto outnow;
 	}
 
 	/* send an INIT-ACK w/cookie */
 	SCTPDBG(SCTP_DEBUG_INPUT3, "sctp_handle_init: sending INIT-ACK\n");
 	sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp, vrf_id);
+ outnow:
+	if( stcb == NULL ) {
+		SCTP_INP_RUNLOCK(inp);
+	}
 }
 
 /*

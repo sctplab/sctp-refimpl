@@ -5097,7 +5097,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	stc.my_vtag = initackm_out->msg.init.initiate_tag;
 
 	/* set up some of the credits. */
-	initackm_out->msg.init.a_rwnd = htonl(max(SCTP_SB_LIMIT_RCV(inp->sctp_socket), SCTP_MINIMAL_RWND));
+	if (inp->sctp_socket == NULL) {
+		/* memory problem */
+		sctp_m_freem(m);
+		return;
+	} else {
+		initackm_out->msg.init.a_rwnd = htonl(max(SCTP_SB_LIMIT_RCV(inp->sctp_socket), SCTP_MINIMAL_RWND));
+	}
 	/* set what I want */
 	his_limit = ntohs(init_chk->init.num_inbound_streams);
 	/* choose what I want */
