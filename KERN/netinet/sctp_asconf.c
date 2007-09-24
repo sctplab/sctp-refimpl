@@ -1058,7 +1058,6 @@ sctp_move_chunks_from_deleted_prim(struct sctp_tcb *stcb, struct sctp_nets *dst)
 
 }
 
-extern int cur_oerr;
 
 void
 sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
@@ -1085,7 +1084,6 @@ sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
 			stcb->asoc.num_send_timers_up = 0;
 		}
 		SCTP_TCB_LOCK_ASSERT(stcb);
-		cur_oerr = stcb->asoc.overall_error_count;
 		error = sctp_t3rxt_timer(stcb->sctp_ep, stcb, 
 					stcb->asoc.deleted_primary);
 		if (error) {
@@ -1128,8 +1126,15 @@ sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+				sctp_flight_size_decrease(chk);
+				sctp_total_flight_decrease(stcb, chk);
+				net->marked_retrans++;
+				stcb->asoc.marked_retrans++;
 			}
 		}
+	}
+	if (net->marked_retrans) {
+		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
 	}
 }
 
@@ -1247,7 +1252,9 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-						SCTP_MOBILITY_BASE)) {
+						SCTP_MOBILITY_BASE) ||
+		    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			    			SCTP_MOBILITY_FASTHANDOFF)) {
 			sctp_path_check_and_react(stcb, addr);
 			return;
 		}
