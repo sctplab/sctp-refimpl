@@ -654,7 +654,11 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #if defined(SCTP_PANIC_ON_ABORT)
 	printf("stcb:%p state:%d rport:%d net:%p\n",
 	       stcb, stcb->asoc.state, stcb->rport, net);
-	panic("Received an ABORT");
+	if(!(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
+		panic("Received an ABORT");
+	} else {
+		printf("No panic its in state %x closed\n", stcb->asoc.state);
+	}
 #endif
 	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
