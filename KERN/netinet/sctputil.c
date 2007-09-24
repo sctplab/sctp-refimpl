@@ -4076,7 +4076,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			/* break to abort land */
 			break;
 		}
-		printf("OOTB sees:%d\n", ch->chunk_type);
 		switch (ch->chunk_type) {
 		case SCTP_PACKET_DROPPED:
 			/* we don't respond to pkt-dropped */
@@ -4100,7 +4099,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	printf("Send an abort\n");
 	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 
