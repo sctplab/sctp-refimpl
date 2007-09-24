@@ -1553,7 +1553,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 			else
 				SCTP_STAT_INCR_COUNTER32(sctps_collisionestab);
-			SCTP_STAT_INCR_COUNTER32(sctps_activeestab);
 			SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		} else if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 			SCTP_STAT_INCR_COUNTER32(sctps_restartestab);
@@ -1564,7 +1563,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
-
 		}
 		sctp_stop_all_cookie_timers(stcb);
 		sctp_toss_old_cookies(stcb, asoc);
