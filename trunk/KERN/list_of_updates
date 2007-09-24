@@ -1,3 +1,5 @@
+- Bug fix managing congestion parameter on immediate 
+  retransmittion by handover event
 - Fixed problem of mobility code which is caused by remaining parameters in the 
   deleted primary destination.
 - Add a missing lock. When a peer sends an INIT, and while we
