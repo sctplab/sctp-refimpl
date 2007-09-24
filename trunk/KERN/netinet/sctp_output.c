@@ -11682,6 +11682,9 @@ sctp_lower_sosend(struct socket *so,
 			}
 			/* get an asoc/stcb struct */
 			vrf_id = inp->def_vrf_id;
+			if (create_lock_applied == 0) {
+				panic("Error, should hold create lock and I don't?");
+			}
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
 #ifndef __Panda__
 					       p
