@@ -11400,7 +11400,10 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 		splx(s);
 #endif
-		goto out_unlocked;
+        if (i_pak) {
+            SCTP_RELEASE_PKT(i_pak);
+        }
+        return (error);
 	}
 	if ((uio == NULL) && (i_pak == NULL)) {
 		SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
@@ -12771,7 +12774,13 @@ sctp_lower_sosend(struct socket *so,
 			(void)SCTP_RELEASE_HEADER(i_pak);
 		}
 	} else {
-		(void)SCTP_RELEASE_HEADER(i_pak);
+        /* This is to handle cases when top has
+         * been reset to NULL but pak might not
+         * be freed
+         */
+        if (i_pak) {
+    		(void)SCTP_RELEASE_HEADER(i_pak);
+        }
 	}
 #endif
 	if (top){ 
