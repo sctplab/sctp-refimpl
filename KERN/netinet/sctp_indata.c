@@ -2333,7 +2333,12 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		}
 		slide_end = lgap >> 3;
 		if (slide_end < slide_from) {
+#ifdef INVARIANTS
 			panic("impossible slide");
+#else
+			printf("impossible slide?\n");
+			return;
+#endif
 		}
 		distance = (slide_end - slide_from) + 1;
 		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
