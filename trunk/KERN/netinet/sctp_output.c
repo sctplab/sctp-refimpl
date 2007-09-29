@@ -11685,9 +11685,11 @@ sctp_lower_sosend(struct socket *so,
 			}
 			/* get an asoc/stcb struct */
 			vrf_id = inp->def_vrf_id;
+#ifdef INVARIANTS
 			if (create_lock_applied == 0) {
 				panic("Error, should hold create lock and I don't?");
 			}
+#endif
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
 #ifndef __Panda__
 					       p
@@ -11838,11 +11840,16 @@ sctp_lower_sosend(struct socket *so,
 		}
 	}
 	/* Keep the stcb from being freed under our feet */
-	if (free_cnt_applied)
+	if (free_cnt_applied) {
+#ifdef INVARIANTS
 		panic("refcnt already incremented");
-	atomic_add_int(&stcb->asoc.refcnt, 1);
-	free_cnt_applied = 1;
-
+#else
+		printf("refcnt:1 already incremented?\n");
+#endif
+	} else {
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		free_cnt_applied = 1;
+	}
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_OUTPUT, ECONNRESET);
 		error = ECONNRESET;

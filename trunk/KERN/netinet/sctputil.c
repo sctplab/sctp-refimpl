@@ -5524,10 +5524,16 @@ sctp_sorecvmsg(struct socket *so,
 			 * lock and the sender uses the tcb_lock to increment,
 			 * we need to use the atomic add to the refcnt
 			 */
-			if (freecnt_applied)
+			if (freecnt_applied) {
+#ifdef INVARIANTS
 				panic("refcnt already incremented"); 
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			freecnt_applied = 1;
+#else
+				printf("refcnt already incremented?\n"); 
+#endif
+			} else {
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				freecnt_applied = 1;
+			}
 			/*
 			 * Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
@@ -6481,8 +6487,15 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 	LIST_HEAD(generic, generic) *hashtbl;
 	int i;
 
-	if (elements <= 0)
+
+	if (elements <= 0) {
+#ifdef INVARIANTS
 		panic("hashinit: bad elements");
+#else
+		printf("hashinit: bad elements?");
+		elements = 1;
+#endif
+	}
 	for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
 		continue;
 	hashsize >>= 1;
