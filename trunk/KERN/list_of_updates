@@ -8,3 +8,10 @@
   Add protection for this case.
 - Change rwlock macros for FreeBSD 6.x.  
   rwlock cannot be used in FreeBSD 6.x.
+- Fix so that arwnd is alway uses the minimal rwnd if the user
+  has set the socket buffer smaller.
+- Fixes so a cookie-echo ootb will NOT cause an abort to
+  be sent.
+
+
+  
