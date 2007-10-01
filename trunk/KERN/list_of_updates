@@ -1,18 +1,3 @@
-- Bug fix managing congestion parameter on immediate 
-  retransmittion by handover event
-- Fixed problem of mobility code which is caused by remaining 
-  parameters in the deleted primary destination.
-- Add a missing lock. When a peer sends an INIT, and while we
-  are processing it to send a INIT-ACK the socket is closed,
-  we did not hold a lock to keep the socket from going away.
-  Add protection for this case.
-- Fix so that arwnd is alway uses the minimal rwnd if the user
-  has set the socket buffer smaller.
-- Fixes so a cookie-echo ootb will NOT cause an abort to
-  be sent.
-- Examined all panics and unless there was no recover, moved
-  any that were not already to INVARANTS.
-- Change rwlock macros for FreeBSD 6.x.  
-  rwlock cannot be used in FreeBSD 6.x.
+-
 
   
