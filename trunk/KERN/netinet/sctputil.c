@@ -5282,6 +5282,8 @@ sctp_sorecvmsg(struct socket *so,
 			} else {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
 				error = ENOTCONN;
+				/* indicate EOF */
+				error = 0;
 			}
 			goto out;
 		}
