@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.64 2007/10/01 03:22:29 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.65 2007/10/04 09:29:33 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5281,7 +5281,6 @@ sctp_sorecvmsg(struct socket *so,
 					so->so_error = 0;
 			} else {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
-				error = ENOTCONN;
 				/* indicate EOF */
 				error = 0;
 			}
