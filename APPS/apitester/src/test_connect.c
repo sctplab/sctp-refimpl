@@ -147,9 +147,9 @@ DEFINE_APITEST(connect, self_non_listen)
 	 *  reception of the INIT-ACK or the COOKIE-ACK
 	 */
 	if (n < 0)
-		return NULL;
+		return strerror(errno);
 	else
-		return "connect was successful";
+		return NULL;
 
 
 }
