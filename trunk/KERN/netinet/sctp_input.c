@@ -4396,10 +4396,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			 * closed. We opened and bound.. and are now no
 			 * longer listening.
 			 */
-			if ((stcb) && ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED) ||
-				       (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT))) {
-				goto process_cookie_anyway;
-			} else if (inp->sctp_socket->so_qlimit == 0) {
+			if (inp->sctp_socket->so_qlimit == 0) {
 				if ((stcb) && (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 					/*
 					 * special case, is this a retran'd
