@@ -174,7 +174,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	/* send an INIT-ACK w/cookie */
 	SCTPDBG(SCTP_DEBUG_INPUT3, "sctp_handle_init: sending INIT-ACK\n");
 	sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp, vrf_id,
-			       SCTP_HOLDS_LOCK);
+			       ((stcb != NULL) ? SCTP_HOLDS_LOCK : SCTP_NOT_LOCKED));
  outnow:
 	if( stcb == NULL ) {
 		SCTP_INP_RUNLOCK(inp);
