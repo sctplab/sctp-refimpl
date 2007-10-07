@@ -5078,6 +5078,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	} else {
 		uint32_t vtag, itsn;
 		if(hold_inp_lock) {
+			SCTP_INP_INCR_REF(inp);
 			SCTP_INP_RUNLOCK(inp);
 		}
 		if (asoc) {
@@ -5098,6 +5099,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		if(hold_inp_lock) {
 			SCTP_INP_RLOCK(inp);
+			SCTP_INP_DECR_REF(inp);
 		}
 	}
 	/* save away my tag to */
