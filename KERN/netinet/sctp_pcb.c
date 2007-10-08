@@ -3394,6 +3394,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 			}
 			asoc->sctp_ep->last_abort_code = SCTP_FROM_SCTP_PCB+SCTP_LOC_7;
+#if defined(SCTP_PANIC_ON_ABORT)
+			panic("inpcb_free does an abort");
+#endif
 			sctp_send_abort_tcb(asoc, op_err, SCTP_SO_LOCKED);
 			SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 		} else if (asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
