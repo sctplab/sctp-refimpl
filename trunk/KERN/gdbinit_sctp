@@ -144,6 +144,22 @@ document sctp_allepports
 Show all SCTP endpoint port numbers
 end
 
+define sctp_findepports
+set $_inp=sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+   if ( $arg0 == $_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport )
+	print $_inp
+        set $_inp=0
+   else
+     set $_inp=$_inp->sctp_list.le_next
+   end
+end
+end
+document sctp_findepports
+find an SCTP endpoint by port number
+end
+
+
 define sctp_allreadq
  set $_inp=sctppcbinfo.listhead.lh_first
  while ( $_inp != 0 )
