@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.61 2007/09/13 14:43:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.65 2007/10/04 09:29:33 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -335,7 +335,11 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 		sctp_clog.x.lock.inp_lock = SCTP_LOCK_UNKNOWN;
 		sctp_clog.x.lock.create_lock = SCTP_LOCK_UNKNOWN;
 	}
+#if (defined(__FreeBSD__) && __FreeBSD_version <= 602000)
+	sctp_clog.x.lock.info_lock = mtx_owned(&sctppcbinfo.ipi_ep_mtx);
+#else
 	sctp_clog.x.lock.info_lock = rw_wowned(&sctppcbinfo.ipi_ep_mtx);
+#endif
 	if (inp->sctp_socket) {
 		sctp_clog.x.lock.sock_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
 		sctp_clog.x.lock.sockrcvbuf_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
@@ -4016,6 +4020,9 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0)
 		sctp_abort_notification(stcb, error, so_locked);
 	/* notify the peer */
+#if defined(SCTP_PANIC_ON_ABORT)
+	panic("aborting an association");
+#endif
 	sctp_send_abort_tcb(stcb, op_err, so_locked);
 	SCTP_STAT_INCR_COUNTER32(sctps_aborted);
 	if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) ||
@@ -4073,6 +4080,9 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			break;
 		}
 		switch (ch->chunk_type) {
+		case SCTP_COOKIE_ECHO:
+			/* We hit here only if the assoc is being freed */
+			return;
 		case SCTP_PACKET_DROPPED:
 			/* we don't respond to pkt-dropped */
 			return;
@@ -4991,8 +5001,8 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	hash_head = &vrf->vrf_addr_hash[(hash_of_addr & vrf->vrf_addr_hashmark)];
 	if (hash_head == NULL) {
 		SCTP_PRINTF("hash_of_addr:%x mask:%x table:%x - ",
-			    hash_of_addr, vrf->vrf_addr_hashmark,
-			    hash_of_addr & vrf->vrf_addr_hashmark);
+			    hash_of_addr, (uint32_t)vrf->vrf_addr_hashmark,
+			    (uint32_t)(hash_of_addr & vrf->vrf_addr_hashmark));
 		sctp_print_address(addr);
 		SCTP_PRINTF("No such bucket for address\n");
 		if (holds_lock == 0)
@@ -5160,6 +5170,12 @@ sctp_sorecvmsg(struct socket *so,
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
 	}
+
+        if (from && fromlen <= 0) {
+   	    SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
+	    return (EINVAL);
+        }
+
 	if (msg_flags) {
 		in_flags = *msg_flags;
 		if(in_flags & MSG_PEEK) 
@@ -5268,7 +5284,8 @@ sctp_sorecvmsg(struct socket *so,
 					so->so_error = 0;
 			} else {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
-				error = ENOTCONN;
+				/* indicate EOF */
+				error = 0;
 			}
 			goto out;
 		}
@@ -5511,10 +5528,16 @@ sctp_sorecvmsg(struct socket *so,
 			 * lock and the sender uses the tcb_lock to increment,
 			 * we need to use the atomic add to the refcnt
 			 */
-			if (freecnt_applied)
+			if (freecnt_applied) {
+#ifdef INVARIANTS
 				panic("refcnt already incremented"); 
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			freecnt_applied = 1;
+#else
+				printf("refcnt already incremented?\n"); 
+#endif
+			} else {
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				freecnt_applied = 1;
+			}
 			/*
 			 * Setup to remember how much we have not yet told
 			 * the peer our rwnd has opened up. Note we grab
@@ -5610,7 +5633,7 @@ sctp_sorecvmsg(struct socket *so,
 
 #ifdef INET
 #if !defined(__Windows__)
-		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin.sin_len);
+		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sin.sin_len);
 #else
 		cp_len = sizeof(struct sockaddr_in);
 #endif
@@ -5619,7 +5642,7 @@ sctp_sorecvmsg(struct socket *so,
 #else
 		/* No AF_INET use AF_INET6 */
 #if !defined(__Windows__)
-		cp_len = min(fromlen, control->whoFrom->ro._l_addr.sin6.sin6_len);
+		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sin6.sin6_len);
 #else
 		cp_len = sizeof(struct sockaddr_in6);
 #endif
@@ -6468,8 +6491,15 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 	LIST_HEAD(generic, generic) *hashtbl;
 	int i;
 
-	if (elements <= 0)
+
+	if (elements <= 0) {
+#ifdef INVARIANTS
 		panic("hashinit: bad elements");
+#else
+		printf("hashinit: bad elements?");
+		elements = 1;
+#endif
+	}
 	for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
 		continue;
 	hashsize >>= 1;
