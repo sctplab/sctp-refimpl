@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.12 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.13 2007/10/01 03:22:28 rrs Exp $");
 #endif
 
 #ifndef __sctp_output_h__
@@ -87,7 +87,7 @@ void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
 void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
     struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *,
-    uint32_t);
+    uint32_t, int);
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,

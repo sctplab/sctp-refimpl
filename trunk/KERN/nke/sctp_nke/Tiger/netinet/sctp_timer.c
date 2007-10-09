@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.31 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.32 2007/10/01 03:22:28 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -280,6 +280,9 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			*ippp = htonl(SCTP_FROM_SCTP_TIMER+SCTP_LOC_1);
 		}
 		inp->last_abort_code = SCTP_FROM_SCTP_TIMER+SCTP_LOC_1;
+		printf("Aborting association threshold:%d overall error count:%d\n", 
+		       threshold, 
+		       stcb->asoc.overall_error_count);
 		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper, SCTP_SO_NOT_LOCKED);
 		return (1);
 	}

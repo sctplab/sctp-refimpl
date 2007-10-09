@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.32 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.34 2007/10/01 03:22:28 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -1058,7 +1058,6 @@ sctp_move_chunks_from_deleted_prim(struct sctp_tcb *stcb, struct sctp_nets *dst)
 
 }
 
-extern int cur_oerr;
 
 void
 sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
@@ -1085,7 +1084,6 @@ sctp_assoc_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *dstnet)
 			stcb->asoc.num_send_timers_up = 0;
 		}
 		SCTP_TCB_LOCK_ASSERT(stcb);
-		cur_oerr = stcb->asoc.overall_error_count;
 		error = sctp_t3rxt_timer(stcb->sctp_ep, stcb, 
 					stcb->asoc.deleted_primary);
 		if (error) {
@@ -1128,8 +1126,15 @@ sctp_net_immediate_retrans(struct sctp_tcb *stcb, struct sctp_nets *net)
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
 				chk->sent = SCTP_DATAGRAM_RESEND;
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+				sctp_flight_size_decrease(chk);
+				sctp_total_flight_decrease(stcb, chk);
+				net->marked_retrans++;
+				stcb->asoc.marked_retrans++;
 			}
 		}
+	}
+	if (net->marked_retrans) {
+		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_NOT_LOCKED);
 	}
 }
 
@@ -1247,7 +1252,9 @@ sctp_asconf_addr_mgmt_ack(struct sctp_tcb *stcb, struct sctp_ifa *addr,
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
-						SCTP_MOBILITY_BASE)) {
+						SCTP_MOBILITY_BASE) ||
+		    sctp_is_mobility_feature_on(stcb->sctp_ep,
+			    			SCTP_MOBILITY_FASTHANDOFF)) {
 			sctp_path_check_and_react(stcb, addr);
 			return;
 		}
@@ -1573,6 +1580,7 @@ sctp_asconf_queue_sa_delete(struct sctp_tcb *stcb, struct sockaddr *sa)
 	/* delete goes to the back of the queue */
 	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 
+	/* sa_ignore MEMLEAK {memory is put on the tailq} */
 	return (0);
 }
 
@@ -2320,11 +2328,7 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 	struct sctp_ifa *ifa;
 
 	/* find the ifa for the desired set primary */
-	if (stcb) {
-		vrf_id = stcb->asoc.vrf_id;
-	} else {
-		vrf_id = SCTP_DEFAULT_VRFID;
-	}
+	vrf_id = stcb->asoc.vrf_id;
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, SCTP_ADDR_NOT_LOCKED);
 	if (ifa == NULL) {
 		/* Invalid address */

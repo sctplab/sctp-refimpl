@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.30 2007/09/08 17:48:45 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.31 2007/09/18 15:16:38 rrs Exp $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -193,10 +193,18 @@ struct sctp_epinfo {
 	sctp_zone_t ipi_zone_asconf_ack;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
+#if __FreeBSD_version <= 602000
+	struct mtx ipi_ep_mtx;
+#else
 	struct rwlock ipi_ep_mtx;
+#endif
 	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
+#if __FreeBSD_version <= 602000
+	struct mtx ipi_addr_mtx;
+#else
 	struct rwlock ipi_addr_mtx;
+#endif
 	struct mtx ipi_pktlog_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;

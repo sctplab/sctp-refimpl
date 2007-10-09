@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.30 2007/09/13 14:43:54 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.32 2007/10/01 03:22:28 rrs Exp $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -763,7 +763,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.30 2007/09/13 14:43:54 
 #define SCTP_DEBUG_PCB1		0x00100000
 #define SCTP_DEBUG_PCB2		0x00200000	/* unused */
 #define SCTP_DEBUG_PCB3		0x00400000
-#define SCTP_DEBUG_PCB4		0x00800000	/* unused */
+#define SCTP_DEBUG_PCB4		0x00800000
 #define SCTP_DEBUG_INDATA1	0x01000000
 #define SCTP_DEBUG_INDATA2	0x02000000	/* unused */
 #define SCTP_DEBUG_INDATA3	0x04000000	/* unused */
@@ -1050,6 +1050,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.30 2007/09/13 14:43:54 
 #define SCTP_SO_LOCKED		1
 #define SCTP_SO_NOT_LOCKED	0
 
+
+#define SCTP_HOLDS_LOCK 1
+#define SCTP_NOT_LOCKED 0
 
 /*-
  * For address locks, do we hold the lock?

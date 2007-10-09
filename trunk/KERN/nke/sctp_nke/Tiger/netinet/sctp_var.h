@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.19 2007/09/08 17:48:46 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.20 2007/10/01 03:22:29 rrs Exp $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -63,9 +63,11 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 #define sctp_is_mobility_feature_on(inp, feature) (inp->sctp_mobility_features & feature)
 #define sctp_is_mobility_feature_off(inp, feature) ((inp->sctp_mobility_features & feature) == 0)
 
-#define	sctp_sbspace(asoc, sb) ((long) (((sb)->sb_hiwat > (asoc)->sb_cc) ? ((sb)->sb_hiwat - (asoc)->sb_cc) : 0))
+#define sctp_maxspace(sb) (max((sb)->sb_hiwat,SCTP_MINIMAL_RWND))
 
-#define	sctp_sbspace_failedmsgs(sb) ((long) (((sb)->sb_hiwat > (sb)->sb_cc) ? ((sb)->sb_hiwat - (sb)->sb_cc) : 0))
+#define	sctp_sbspace(asoc, sb) ((long) (sctp_maxspace(sb) > (asoc)->sb_cc) ? (sctp_maxspace(sb) - (asoc)->sb_cc) : 0)
+
+#define	sctp_sbspace_failedmsgs(sb) ((long) ((sctp_maxspace(sb) > (sb)->sb_cc) ? (sctp_maxspace(sb) - (sb)->sb_cc) : 0))
 
 #define sctp_sbspace_sub(a,b) ((a > b) ? (a - b) : 0)
 
