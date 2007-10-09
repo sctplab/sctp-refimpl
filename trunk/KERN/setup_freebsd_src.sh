@@ -14,15 +14,12 @@ if test ! -d $srcTree/dev
     echo "I cant see the dev directory there sorry"
     exit
 fi
-echo "Will you be using 7.0 Current or FreeBSD 6.2 or 6.1 or 6.0 (7 or 62 or 61 or 60)?"
+echo "Will you be using FreeBSD 6.2 or 6.1 or 6.0 (62 or 61 or 60)?"
 read ans
 if test $ans = 7
 then
-echo "I will use 7.0 then, if unsure hit ctl-c else return"
-read ans
-BSD_PREPARE=freebsd_prepare
-BSD_PATH=freebsd7
-BSD_VER=700000
+echo "Don't use this tool for 7.0 and beyond - its in the tree do ./compare_srcs and copy"
+exit 
 elif test $ans = 60
 then
 echo "I will use 6.0 then, if unsure hit ctl-c else return"
