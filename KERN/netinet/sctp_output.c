@@ -9454,6 +9454,13 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		sack->ch.chunk_flags |= (asoc->cmt_dac_pkts_rcvd << 6);
 		asoc->cmt_dac_pkts_rcvd = 0;
 	}
+#ifdef SCTP_ASOCLOG_OF_TSNS
+	stcb->asoc.cumack_logsnt[stcb->asoc.cumack_log_atsnt] = asoc->cumulative_tsn;
+	stcb->asoc.cumack_log_atsnt++;
+	if (stcb->asoc.cumack_log_atsnt >= SCTP_TSN_LOG_SIZE) {
+		stcb->asoc.cumack_log_atsnt = 0;
+	}
+#endif
 	sack->sack.cum_tsn_ack = htonl(asoc->cumulative_tsn);
 	sack->sack.a_rwnd = htonl(asoc->my_rwnd);
 	asoc->my_last_reported_rwnd = asoc->my_rwnd;
