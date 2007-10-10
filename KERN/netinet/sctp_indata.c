@@ -1571,9 +1571,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		    asoc->highest_tsn_inside_map, MAX_TSN)) {
 
 			/* Nope not in the valid range dump it */
-			SCTPDBG(SCTP_DEBUG_INDATA1, "My rwnd overrun1:tsn:%x rwnd %x sbspace:%x\n",
-				tsn, asoc->my_rwnd,
-				sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv));
 			sctp_set_rwnd(stcb, asoc);
 			if ((asoc->cnt_on_all_streams +
 			    asoc->cnt_on_reasm_queue +
