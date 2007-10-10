@@ -2782,6 +2782,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	    (stcb->asoc.mapping_array[0] != 0xff)){
 		if ((stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq) ||
 		    (stcb->asoc.delayed_ack == 0) ||
+		    (stcb->asoc.numduptsns) ||
 		    (stcb->asoc.send_sack == 1)){
 			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
