@@ -531,9 +531,8 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		sctp_ifnp->ifn_index = ifn_index;
 		sctp_ifnp->ifn_p = ifn;
 		sctp_ifnp->ifn_type = ifn_type;
-		sctp_ifnp->refcount = 1;
+		sctp_ifnp->refcount = 0;
 		sctp_ifnp->vrf = vrf;
-
 		atomic_add_int(&vrf->refcount, 1);
 		sctp_ifnp->ifn_mtu = SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, addr->sa_family);
 		if (if_name != NULL) {
