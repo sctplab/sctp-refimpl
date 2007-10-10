@@ -65,7 +65,7 @@ __P((struct socket *, int, struct mbuf *, struct mbuf *,
 
 #define sctp_maxspace(sb) (max((sb)->sb_hiwat,SCTP_MINIMAL_RWND))
 
-#define	sctp_sbspace(asoc, sb) ((long) (sctp_maxspace(sb) > (asoc)->sb_cc) ? (sctp_maxspace(sb) - (asoc)->sb_cc) : 0)
+#define	sctp_sbspace(asoc, sb) ((long) ((sctp_maxspace(sb) > (asoc)->sb_cc) ? (sctp_maxspace(sb) - (asoc)->sb_cc) : 0))
 
 #define	sctp_sbspace_failedmsgs(sb) ((long) ((sctp_maxspace(sb) > (sb)->sb_cc) ? (sctp_maxspace(sb) - (sb)->sb_cc) : 0))
 
