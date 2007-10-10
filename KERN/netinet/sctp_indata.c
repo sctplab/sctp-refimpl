@@ -1476,6 +1476,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			asoc->dup_tsns[asoc->numduptsns] = tsn;
 			asoc->numduptsns++;
 		}
+		asoc->send_sack = 1;
 		return (0);
 	}
 	/* Calculate the number of TSN's between the base and this TSN */
