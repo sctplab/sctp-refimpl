@@ -7,5 +7,6 @@
 - Fix a bug that caused the receiver to sometimes NOT send
   a SACK when a duplicate TSN arrived. Without this fix
   it was possible for the association to fall down if the
-  peer had no more data to send.
+- Deleted primary destination is also stored when SCTP_MOBILITY_BASE.
+  (Previously, it is stored when only SCTP_MOBILITY_FASTHANDOFF)
 
