@@ -4252,7 +4252,9 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 		   (by micchie) 
 		 */
 		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
-						SCTP_MOBILITY_FASTHANDOFF)) {
+						SCTP_MOBILITY_BASE) ||
+		    sctp_is_mobility_feature_on(stcb->sctp_ep, 
+			    			SCTP_MOBILITY_FASTHANDOFF)) {
 			SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: primary dst is deleting\n");
 			if (asoc->deleted_primary != NULL) {
 				SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: deleted primary may be already stored\n");
