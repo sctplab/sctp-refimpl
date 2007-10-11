@@ -4247,6 +4247,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
+				SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4262,6 +4263,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			}
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
+			SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
@@ -4928,6 +4930,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
+				SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 				sctp_stop_timers_for_shutdown(stcb);
 				sctp_send_shutdown(stcb,
 						   stcb->asoc.primary_destination);
@@ -4944,6 +4947,7 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			}
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
+			SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
 
