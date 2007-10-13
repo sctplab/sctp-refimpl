@@ -743,6 +743,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT) &&
 		    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT)) {
 			SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_RECEIVED);
+			SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 			/* notify upper layer that peer has initiated a shutdown */
 			sctp_ulp_notify(SCTP_NOTIFY_PEER_SHUTDOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 
@@ -775,7 +776,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 		}
 		SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
-
+		SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 		sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, 
 				SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
 		/* start SHUTDOWN timer */
