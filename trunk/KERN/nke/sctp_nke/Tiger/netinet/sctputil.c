@@ -944,6 +944,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->tsn_in_wrapped = 0;
 	asoc->tsn_out_wrapped = 0;
 	asoc->cumack_log_at = 0;
+	asoc->cumack_log_atsnt = 0;
 #endif
 #ifdef SCTP_FS_SPEC_LOG
 	asoc->fs_index = 0;
