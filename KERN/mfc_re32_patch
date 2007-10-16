@@ -1,0 +1,20 @@
+- fix sctp_ifn initial refcount issue (prevents deletion)
+- fix a bug during cookie collision that prevented an
+  association from coming up in a specific restart case.
+- Fix it so the shutdown-pending flag gets removed (this is
+  more for correctness then needed) when we enter shutdown-sent
+  or shutdown-ack-sent states.
+- Fix a bug that caused the receiver to sometimes NOT send
+  a SACK when a duplicate TSN arrived. Without this fix
+  it was possible for the association to fall down if the
+- Deleted primary destination is also stored when SCTP_MOBILITY_BASE.
+  (Previously, it is stored when only SCTP_MOBILITY_FASTHANDOFF)
+- Fix a locking issue where we might call send_initiate_ack() and
+  incorrectly state the lock held/not held. Also fix it so that
+  when we release the lock the inp cannot be deleted on us.
+- Add the debug option that can cause the stack to panic instead
+  of aborting an assoc. This does not and should never show up
+  in options but is useful for debugging unexpected aborts.
+- Add cumack_log sent to track sending cumack information for
+  the debug case where we are running a special log per assoc.
+- Added extra () aroudn sctp_sbspace macro to avoid compile warnings.
