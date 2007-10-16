@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.58 2007/10/01 03:22:28 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.59 2007/10/12 06:03:45 kevlo Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -12200,7 +12200,7 @@ sctp_lower_sosend(struct socket *so,
 				asoc->stream_locked = 0;
 			} else {
 				/* Just got locked to this guy in
-				 * case of an interupt.
+				 * case of an interrupt.
 				 */
 				strm->last_msg_incomplete = 1;
 				asoc->stream_locked = 1;

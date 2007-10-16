@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.65 2007/10/04 09:29:33 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.66 2007/10/12 06:03:45 kevlo Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5850,7 +5850,7 @@ sctp_sorecvmsg(struct socket *so,
 			done_with_control:
 				if (TAILQ_NEXT(control, next) == NULL) {
 					/* If we don't have a next we need a
-					 * lock, if there is a next interupt
+					 * lock, if there is a next interrupt
 					 * is filling ahead of us and we don't
 					 * need a lock to remove this guy
 					 * (which is the head of the queue).
