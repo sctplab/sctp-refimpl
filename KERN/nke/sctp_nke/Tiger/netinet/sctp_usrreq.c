@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.48 2007/10/01 03:22:29 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.49 2007/10/16 14:05:51 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2697,6 +2697,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		 * land.
 		 */
 		sstat->sstat_state = stcb->asoc.state;
+		sstat->sstat_assoc_id = sctp_get_associd(stcb);
 		sstat->sstat_rwnd = stcb->asoc.peers_rwnd;
 		sstat->sstat_unackdata = stcb->asoc.sent_queue_cnt;
 		/*
