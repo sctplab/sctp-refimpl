@@ -950,7 +950,12 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		SCTP_TCB_LOCK(stcb);
 		if (stcb->rport != rport) {
 			/* remote port does not match. */
-			SCTP_TCB_UNLOCK(stcb);
+			SCTP_TCB_UNLOCK(stcb);	
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			SCTP_TCB_UNLOCK(stcb);	
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
@@ -1097,9 +1102,14 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				goto null_return;
 			}
 			SCTP_TCB_LOCK(stcb);
+
 			if (stcb->rport != rport) {
 				/* remote port does not match. */
 				SCTP_TCB_UNLOCK(stcb);
+				goto null_return;
+			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_TCB_UNLOCK(stcb);	
 				goto null_return;
 			}
 			/* now look at the list of remote addresses */
@@ -1181,8 +1191,12 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				/* remote port does not match */
 				continue;
 			}
-			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 #ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
@@ -1303,6 +1317,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				continue;
 			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				continue;
+			}
 			if(want_lock) {
 				SCTP_TCB_LOCK(stcb);
 			}
@@ -1323,6 +1340,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			continue;
+		}
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			continue;
 		}
 		if(want_lock) {
@@ -1774,6 +1794,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
