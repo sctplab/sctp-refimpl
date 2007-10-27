@@ -4110,8 +4110,8 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
 	printf("first chunk that causes abort %d\n", first_chk);
-	if(first_chk == 2)
-		panic("its an init-ack");
+	if(first_chk == 0xa)
+		panic("its an cookie-echo");
 	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 
