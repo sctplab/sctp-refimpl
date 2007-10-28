@@ -702,6 +702,8 @@ int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
 void sctp_delete_from_timewait(uint32_t);
 
+int sctp_is_in_timewait(uint32_t tag);
+
 void
 sctp_add_vtag_to_timewait(uint32_t, uint32_t);
 
