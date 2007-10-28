@@ -4439,7 +4439,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].v_tag = 0;
 					if (set == 0) {
 						/* Reuse it for my new tag */
-						twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + SCTP_TIME_WAIT;
+						twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 						twait_block->vtag_block[0].v_tag = tag;
 						set = 1;
 					}
@@ -4463,8 +4463,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 		}
 		memset(twait_block, 0, sizeof(struct sctp_tagblock));
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
-		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec +
-		    SCTP_TIME_WAIT;
+		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 		twait_block->vtag_block[0].v_tag = tag;
 	}
 }

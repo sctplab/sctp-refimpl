@@ -926,6 +926,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 			asoc->my_vtag = override_tag;
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
+			panic("Huh is_in_timewait fails");
 			return (ENOMEM);
 		}
 
