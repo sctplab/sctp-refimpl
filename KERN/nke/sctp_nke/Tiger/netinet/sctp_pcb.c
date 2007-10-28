@@ -950,7 +950,12 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		SCTP_TCB_LOCK(stcb);
 		if (stcb->rport != rport) {
 			/* remote port does not match. */
-			SCTP_TCB_UNLOCK(stcb);
+			SCTP_TCB_UNLOCK(stcb);	
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+			SCTP_TCB_UNLOCK(stcb);	
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
@@ -1097,9 +1102,14 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				goto null_return;
 			}
 			SCTP_TCB_LOCK(stcb);
+
 			if (stcb->rport != rport) {
 				/* remote port does not match. */
 				SCTP_TCB_UNLOCK(stcb);
+				goto null_return;
+			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_TCB_UNLOCK(stcb);	
 				goto null_return;
 			}
 			/* now look at the list of remote addresses */
@@ -1181,8 +1191,12 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				/* remote port does not match */
 				continue;
 			}
-			/* now look at the list of remote addresses */
 			SCTP_TCB_LOCK(stcb);
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			/* now look at the list of remote addresses */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 #ifdef INVARIANTS
 				if (net == (TAILQ_NEXT(net, sctp_next))) {
@@ -1303,6 +1317,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 				SCTP_INP_RUNLOCK(stcb->sctp_ep);
 				continue;
 			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+				continue;
+			}
 			if(want_lock) {
 				SCTP_TCB_LOCK(stcb);
 			}
@@ -1323,6 +1340,9 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_INP_RLOCK(stcb->sctp_ep);
 		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 			SCTP_INP_RUNLOCK(stcb->sctp_ep);
+			continue;
+		}
+		if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 			continue;
 		}
 		if(want_lock) {
@@ -1774,6 +1794,10 @@ sctp_findassoc_by_vtag(struct sockaddr *from, uint32_t vtag,
 				 * we could remove this if vtags are unique
 				 * across the system.
 				 */
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
@@ -4056,11 +4080,13 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (sctppcbinfo.ipi_count_asoc >= SCTP_MAX_NUM_OF_ASOC) {
 		/* Hit max assoc, sorry no more */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
+		printf("aloc fail 1\n");
 		*error = ENOBUFS;
 		return (NULL);
 	}
 	if( firstaddr == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+		printf("aloc fail 2\n");
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4074,6 +4100,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 */
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+		printf("aloc fail 3\n");
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4095,6 +4122,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			/* Invalid address */
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+			printf("aloc fail 4\n");
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -4109,6 +4137,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 			*error = EINVAL;
+			printf("aloc fail 5\n");
 			return (NULL);
 		}
 		rport = sin6->sin6_port;
@@ -4117,6 +4146,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
+		printf("aloc fail 6\n");
 		return (NULL);
 	}
 	SCTP_INP_RUNLOCK(inp);
@@ -4136,6 +4166,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		    ))) {
 			/* bind error, probably perm */
 			*error = err;
+			printf("aloc fail 7\n");
 			return (NULL);
 		}
 	}
@@ -4144,6 +4175,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		/* out of memory? */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		*error = ENOMEM;
+		printf("aloc fail 8\n");
 		return (NULL);
 	}
 	SCTP_INCR_ASOC_COUNT();
@@ -4162,6 +4194,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 		*error = err;
+		printf("aloc fail 9\n");
 		return (NULL);
 	}
 	/* and the port */
@@ -4178,6 +4211,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
+		printf("aloc fail 10\n");
 		return (NULL);
 	}
 	SCTP_TCB_LOCK(stcb);
@@ -4208,6 +4242,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		*error = ENOBUFS;
+		printf("aloc fail 11\n");
 		return (NULL);
 	}
 	/* Init all the timers */
@@ -4350,6 +4385,31 @@ sctp_delete_from_timewait(uint32_t tag)
 	}
 }
 
+int
+sctp_is_in_timewait(uint32_t tag)
+{
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block;
+	int found=0;
+	int i;
+
+	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
+	if (!SCTP_LIST_EMPTY(chain)) {
+		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+				if (twait_block->vtag_block[i].v_tag == tag) {
+					found = 1;
+					break;
+				}
+			}
+			if(found)
+				break;
+		}
+	}
+	return(found);
+}
+
+
 void
 sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 {
@@ -4379,7 +4439,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].v_tag = 0;
 					if (set == 0) {
 						/* Reuse it for my new tag */
-						twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + SCTP_TIME_WAIT;
+						twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 						twait_block->vtag_block[0].v_tag = tag;
 						set = 1;
 					}
@@ -4403,8 +4463,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 		}
 		memset(twait_block, 0, sizeof(struct sctp_tagblock));
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
-		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec +
-		    SCTP_TIME_WAIT;
+		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 		twait_block->vtag_block[0].v_tag = tag;
 	}
 }
