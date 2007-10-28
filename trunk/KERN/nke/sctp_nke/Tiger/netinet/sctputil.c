@@ -918,10 +918,15 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	if (override_tag) {
 		struct timeval now;
 		(void)SCTP_GETTIME_TIMEVAL(&now);
-		if (sctp_is_vtag_good(m, override_tag, &now)) {
+		if (sctp_is_in_timewait(override_tag)) {
+			/* It must be in the time-wait hash, we put
+			 * it there when we aloc one. If not the
+			 * peer is playing games.
+			 */
 			asoc->my_vtag = override_tag;
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
+			panic("Huh is_in_timewait fails");
 			return (ENOMEM);
 		}
 
@@ -4057,6 +4062,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
+	int first_chk=0;
 
 	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
@@ -4074,6 +4080,8 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	}
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 	    sizeof(*ch), (uint8_t *) & chunk_buf);
+	if(ch)
+	   first_chk = ch->chunk_type;
 	while (ch != NULL) {
 		chk_length = ntohs(ch->chunk_length);
 		if (chk_length < sizeof(*ch)) {
@@ -4106,6 +4114,9 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
+	printf("first chunk that causes abort %d\n", first_chk);
+	if(first_chk == 0xa)
+		panic("its an cookie-echo");
 	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 
