@@ -4436,8 +4436,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
-					    ((long)twait_block->vtag_block[i].tv_sec_at_expire >
-				    now.tv_sec)) {
+					    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
@@ -6547,7 +6546,7 @@ check_time_wait:
 				if (twait_block->vtag_block[i].v_tag == 0) {
 					/* not used */
 					continue;
-				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire >
+				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire  <
 				    now->tv_sec) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
