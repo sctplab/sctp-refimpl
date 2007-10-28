@@ -4368,7 +4368,7 @@ sctp_delete_from_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
-	printf("Delete vtag %x from hash\n", tag);
+/*	printf("Delete vtag %x from hash\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4394,7 +4394,7 @@ sctp_is_in_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
-	printf("Is vtag %x in t-wait?\n", tag);
+/*	printf("Is vtag %x in t-wait?\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4408,7 +4408,7 @@ sctp_is_in_timewait(uint32_t tag)
 				break;
 		}
 	}
-	printf("The answer is %d\n",found);
+/*	printf("The answer is %d\n",found);*/
 	return(found);
 }
 
@@ -4423,7 +4423,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-	printf("Adding vtag %x to timewait for %d seconds\n", tag, time);
+/*	printf("Adding vtag %x to timewait for %d seconds\n", tag, time);*/
 	set = 0;
 	if (!SCTP_LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
