@@ -4385,6 +4385,31 @@ sctp_delete_from_timewait(uint32_t tag)
 	}
 }
 
+int
+sctp_is_in_timewait(uint32_t tag)
+{
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block;
+	int found=0;
+	int i;
+
+	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
+	if (!SCTP_LIST_EMPTY(chain)) {
+		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+				if (twait_block->vtag_block[i].v_tag == tag) {
+					found = 1;
+					break;
+				}
+			}
+			if(found)
+				break;
+		}
+	}
+	return(found);
+}
+
+
 void
 sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 {

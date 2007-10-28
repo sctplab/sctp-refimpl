@@ -918,7 +918,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	if (override_tag) {
 		struct timeval now;
 		(void)SCTP_GETTIME_TIMEVAL(&now);
-		if (sctp_is_vtag_good(m, override_tag, &now)) {
+		if (sctp_is_in_timewait(uint32_t tag)) {
+			/* It must be in the time-wait hash, we put
+			 * it there when we aloc one. If not the
+			 * peer is playing games.
+			 */
 			asoc->my_vtag = override_tag;
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
