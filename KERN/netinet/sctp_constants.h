@@ -1024,9 +1024,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.33 2007/10/16 14:05:51 
  */
 
 /*
- * Number of seconds of time wait, 
+ * Number of seconds of time wait for a vtag.
  */
-#define SCTP_TIME_WAIT 120
+#define SCTP_TIME_WAIT 60
 
 /* This time wait is the same as the default cookie life 
  * since we now enter a tag in every time we send a cookie.
