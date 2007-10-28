@@ -918,7 +918,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	if (override_tag) {
 		struct timeval now;
 		(void)SCTP_GETTIME_TIMEVAL(&now);
-		if (sctp_is_in_timewait(uint32_t tag)) {
+		if (sctp_is_in_timewait(override_tag)) {
 			/* It must be in the time-wait hash, we put
 			 * it there when we aloc one. If not the
 			 * peer is playing games.
