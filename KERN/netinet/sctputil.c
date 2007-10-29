@@ -4062,7 +4062,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
-	int first_chk=0;
 
 	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
@@ -4080,8 +4079,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	}
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 	    sizeof(*ch), (uint8_t *) & chunk_buf);
-	if(ch)
-	   first_chk = ch->chunk_type;
 	while (ch != NULL) {
 		chk_length = ntohs(ch->chunk_length);
 		if (chk_length < sizeof(*ch)) {
@@ -4114,9 +4111,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	printf("first chunk that causes abort %d\n", first_chk);
-	if(first_chk == 0xa)
-		panic("its an cookie-echo");
 	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 

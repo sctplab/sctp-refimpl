@@ -4080,13 +4080,11 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (sctppcbinfo.ipi_count_asoc >= SCTP_MAX_NUM_OF_ASOC) {
 		/* Hit max assoc, sorry no more */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
-		printf("aloc fail 1\n");
 		*error = ENOBUFS;
 		return (NULL);
 	}
 	if( firstaddr == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
-		printf("aloc fail 2\n");
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4100,7 +4098,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 */
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
-		printf("aloc fail 3\n");
 		*error = EINVAL;
 		return (NULL);
 	}
@@ -4122,7 +4119,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			/* Invalid address */
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
-			printf("aloc fail 4\n");
 			*error = EINVAL;
 			return (NULL);
 		}
@@ -4137,7 +4133,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 			*error = EINVAL;
-			printf("aloc fail 5\n");
 			return (NULL);
 		}
 		rport = sin6->sin6_port;
@@ -4146,7 +4141,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
-		printf("aloc fail 6\n");
 		return (NULL);
 	}
 	SCTP_INP_RUNLOCK(inp);
@@ -4166,7 +4160,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		    ))) {
 			/* bind error, probably perm */
 			*error = err;
-			printf("aloc fail 7\n");
 			return (NULL);
 		}
 	}
@@ -4175,7 +4168,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		/* out of memory? */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		*error = ENOMEM;
-		printf("aloc fail 8\n");
 		return (NULL);
 	}
 	SCTP_INCR_ASOC_COUNT();
@@ -4194,7 +4186,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asoc, stcb);
 		SCTP_DECR_ASOC_COUNT();
 		*error = err;
-		printf("aloc fail 9\n");
 		return (NULL);
 	}
 	/* and the port */
@@ -4211,7 +4202,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		*error = EINVAL;
-		printf("aloc fail 10\n");
 		return (NULL);
 	}
 	SCTP_TCB_LOCK(stcb);
@@ -4242,7 +4232,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		*error = ENOBUFS;
-		printf("aloc fail 11\n");
 		return (NULL);
 	}
 	/* Init all the timers */
@@ -4368,7 +4357,6 @@ sctp_delete_from_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
-/*	printf("Delete vtag %x from hash\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4394,7 +4382,6 @@ sctp_is_in_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
-/*	printf("Is vtag %x in t-wait?\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4408,7 +4395,6 @@ sctp_is_in_timewait(uint32_t tag)
 				break;
 		}
 	}
-/*	printf("The answer is %d\n",found);*/
 	return(found);
 }
 
@@ -4423,7 +4409,6 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-/*	printf("Adding vtag %x to timewait for %d seconds\n", tag, time);*/
 	set = 0;
 	if (!SCTP_LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
