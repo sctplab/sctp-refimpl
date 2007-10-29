@@ -4368,6 +4368,7 @@ sctp_delete_from_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
+/*	printf("Delete vtag %x from hash\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4393,6 +4394,7 @@ sctp_is_in_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
+/*	printf("Is vtag %x in t-wait?\n", tag);*/
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4406,6 +4408,7 @@ sctp_is_in_timewait(uint32_t tag)
 				break;
 		}
 	}
+/*	printf("The answer is %d\n",found);*/
 	return(found);
 }
 
@@ -4420,6 +4423,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &sctppcbinfo.vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
+/*	printf("Adding vtag %x to timewait for %d seconds\n", tag, time);*/
 	set = 0;
 	if (!SCTP_LIST_EMPTY(chain)) {
 		/* Block(s) present, lets find space, and expire on the fly */
@@ -4432,8 +4436,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].v_tag = tag;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
-					    ((long)twait_block->vtag_block[i].tv_sec_at_expire >
-				    now.tv_sec)) {
+					    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
@@ -6476,7 +6479,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 }
 
 int
-sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now)
+sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now, int save_in_twait)
 {
 	/*
 	 * This function serves two purposes. It will see if a TAG can be
@@ -6543,7 +6546,7 @@ check_time_wait:
 				if (twait_block->vtag_block[i].v_tag == 0) {
 					/* not used */
 					continue;
-				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire >
+				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire  <
 				    now->tv_sec) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
@@ -6565,7 +6568,8 @@ check_time_wait:
 	 * add this tag to the assoc hash we need to purge it from
 	 * the t-wait hash.
 	 */
-	sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life));
+	if (save_in_twait)
+		sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life));
 	SCTP_INP_INFO_WUNLOCK();
 	return (1);
 }
