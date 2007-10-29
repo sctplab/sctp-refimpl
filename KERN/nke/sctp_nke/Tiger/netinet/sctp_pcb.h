@@ -738,7 +738,7 @@ int
 sctp_set_primary_addr(struct sctp_tcb *, struct sockaddr *,
     struct sctp_nets *);
 
-int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *);
+int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *, int);
 
 /* void sctp_drain(void); */
 

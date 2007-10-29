@@ -850,7 +850,7 @@ sctp_select_initial_TSN(struct sctp_pcb *inp)
 }
 
 uint32_t
-sctp_select_a_tag(struct sctp_inpcb *inp)
+sctp_select_a_tag(struct sctp_inpcb *inp, int save_in_twait)
 {
 	u_long x, not_done;
 	struct timeval now;
@@ -863,7 +863,7 @@ sctp_select_a_tag(struct sctp_inpcb *inp)
 			/* we never use 0 */
 			continue;
 		}
-		if (sctp_is_vtag_good(inp, x, &now)) {
+		if (sctp_is_vtag_good(inp, x, &now, save_in_twait)) {
 			not_done = 0;
 		}
 	}
@@ -931,11 +931,11 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 		}
 
 	} else {
-		asoc->my_vtag = sctp_select_a_tag(m);
+		asoc->my_vtag = sctp_select_a_tag(m, 1);
 	}
 	/* Get the nonce tags */
-	asoc->my_vtag_nonce = sctp_select_a_tag(m);
-	asoc->peer_vtag_nonce = sctp_select_a_tag(m);
+	asoc->my_vtag_nonce = sctp_select_a_tag(m, 0);
+	asoc->peer_vtag_nonce = sctp_select_a_tag(m, 0);
 	asoc->vrf_id = vrf_id;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
