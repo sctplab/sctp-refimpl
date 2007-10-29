@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.14 2007/09/08 17:48:45 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.15 2007/10/20 23:23:21 julian Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -151,12 +151,12 @@ sctp_startup_iterator(void)
 {
 #if defined(__FreeBSD__)
 	int ret;
-	ret = kthread_create(sctp_iterator_thread,
-			     (void *)NULL , 
-			     &sctppcbinfo.thread_proc,
-			     RFPROC, 
-			     SCTP_KTHREAD_PAGES, 
-			     SCTP_KTRHEAD_NAME);
+	ret = kproc_create(sctp_iterator_thread,
+			   (void *)NULL,
+			   &sctppcbinfo.thread_proc,
+			   RFPROC,
+			   SCTP_KTHREAD_PAGES, 
+			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
 	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread,
 						 (void *)NULL);
