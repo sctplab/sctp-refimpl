@@ -4476,7 +4476,7 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
+		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			SCTP_PRINTF("%p: extend size = %d\n", m,
 				    SCTP_BUF_EXTEND_SIZE(m));
@@ -5158,7 +5158,7 @@ sctp_sorecvmsg(struct socket *so,
 	int out_flags = 0, in_flags=0;
 	int block_allowed = 1;
 	uint32_t freed_so_far = 0;
-	int copied_so_far = 0;
+	uint32_t copied_so_far = 0;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif
