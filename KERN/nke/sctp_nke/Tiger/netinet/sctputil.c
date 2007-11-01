@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.67 2007/10/16 14:05:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.68 2007/10/30 14:09:24 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4062,7 +4062,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
-	int first_chk=0;
 
 	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
@@ -4080,8 +4079,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	}
 	ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 	    sizeof(*ch), (uint8_t *) & chunk_buf);
-	if(ch)
-	   first_chk = ch->chunk_type;
 	while (ch != NULL) {
 		chk_length = ntohs(ch->chunk_length);
 		if (chk_length < sizeof(*ch)) {
@@ -4114,9 +4111,6 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	printf("first chunk that causes abort %d\n", first_chk);
-	if(first_chk == 0xa)
-		panic("its an cookie-echo");
 	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
 }
 
@@ -4482,7 +4476,7 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
+		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			SCTP_PRINTF("%p: extend size = %d\n", m,
 				    SCTP_BUF_EXTEND_SIZE(m));
@@ -5164,7 +5158,7 @@ sctp_sorecvmsg(struct socket *so,
 	int out_flags = 0, in_flags=0;
 	int block_allowed = 1;
 	uint32_t freed_so_far = 0;
-	int copied_so_far = 0;
+	uint32_t copied_so_far = 0;
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	int s;
 #endif

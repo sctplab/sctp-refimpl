@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.60 2007/10/16 14:05:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.61 2007/10/30 14:09:23 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3938,7 +3938,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 #if !defined(__Panda__)
 			else if (ifp) {
-#if (defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || defined(__APPLE__)
+#if ((defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || \
+     (defined(__APPLE__) && (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)))
+
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #elif defined(__Windows__)
 #define ND_IFINFO(ifp)	(ifp)
