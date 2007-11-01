@@ -151,7 +151,11 @@ sctp_startup_iterator(void)
 {
 #if defined(__FreeBSD__)
 	int ret;
+#if __FreeBSD_version <= 602000
+	ret = kthread_create(sctp_iterator_thread,
+#else
 	ret = kproc_create(sctp_iterator_thread,
+#endif
 			   (void *)NULL,
 			   &sctppcbinfo.thread_proc,
 			   RFPROC,
