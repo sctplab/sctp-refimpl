@@ -188,14 +188,14 @@ sctp_lock(struct socket *so, int refcount, int lr)
 			       LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
-		panic("sctp_lock: so=%x NO PCB!\n", so);
+		panic("sctp_lock: so=%p NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
 			       LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
 	}
 
 	if (so->so_usecount < 0)
-		panic("sctp_lock: so=%x so_pcb=%x ref=%x\n",
+		panic("sctp_lock: so=%p so_pcb=%p ref=%x\n",
 		    so, so->so_pcb, so->so_usecount);
 
 	if (refcount)
@@ -230,10 +230,10 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		so->so_usecount--;
 
 	if (so->so_usecount < 0)
-		panic("sctp_unlock: so=%x usecount=%x\n", so, so->so_usecount);
+		panic("sctp_unlock: so=%p usecount=%x\n", so, so->so_usecount);
 
 	if (so->so_pcb == NULL) {
-		panic("sctp_unlock: so=%x NO PCB!\n", so);
+		panic("sctp_unlock: so=%p NO PCB!\n", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx,
 			       LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
@@ -258,11 +258,11 @@ sctp_getlock(struct socket *so, int locktype)
 	*/
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
-			panic("sctp_getlock: so=%x usecount=%x\n",
+			panic("sctp_getlock: so=%p usecount=%x\n",
 			      so, so->so_usecount);
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 	} else {
-		panic("sctp_getlock: so=%x NULL so_pcb\n", so);
+		panic("sctp_getlock: so=%p NULL so_pcb\n", so);
 		return (so->so_proto->pr_domain->dom_mtx);
 	}
 }
