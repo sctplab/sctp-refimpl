@@ -1820,7 +1820,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		/* memory problem? */
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"process_cookie_new: no room for another TCB!\n");
-		printf("failed to alloc an assoc\n");
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
@@ -1848,7 +1847,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		 * association.
 		 */
 		atomic_add_int(&stcb->asoc.refcnt, 1);
-		printf("invalid address send abort\n");
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 				       sh, op_err, vrf_id);
@@ -2481,7 +2479,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 				/* Too many sockets */
 				SCTPDBG(SCTP_DEBUG_INPUT1, "process_cookie_new: no room for another socket!\n");
-				printf("no room for another socket\n");
 				op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
 				sctp_abort_association(*inp_p, NULL, m, iphlen,
 						       sh, op_err, vrf_id);
@@ -4419,7 +4416,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						phdr->param_length =
 							htons(sizeof(struct sctp_paramhdr));
 					}
-					printf("queue limit\n");
 					sctp_abort_association(inp, stcb, m,
 					                       iphlen, sh, oper, vrf_id);
 				}
@@ -5190,7 +5186,7 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %d\n", m, SCTP_BUF_LEN(m));
+		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 	}  
