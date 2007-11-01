@@ -2259,7 +2259,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	/* LOCK init's */
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(sctppcbinfo.mtx_grp, sctppcbinfo.mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
-		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%x\n", so);
+		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%p\n", so);
 #ifdef SCTP_MVRF
 		SCTP_FREE(inp->m_vrf_ids, SCTP_M_MVRF);
 #endif
@@ -3587,7 +3587,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #if defined(__APPLE__)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
 	if (in_pcb_checkstate(&inp->ip_inp.inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
-		panic("sctp_inpcb_free inp = %x couldn't set to STOPUSING\n", inp);
+		panic("sctp_inpcb_free inp = %p couldn't set to STOPUSING\n", inp);
 	inp->ip_inp.inp.inp_socket->so_flags |= SOF_PCBCLEARING;
 #endif
 	LIST_REMOVE(inp, sctp_list);
