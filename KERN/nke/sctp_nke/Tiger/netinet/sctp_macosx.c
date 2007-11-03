@@ -323,12 +323,12 @@ void *sctp_calloutq_mtx;
 #endif
 #endif
 
-
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 
 /*
  * here we hack in a fix for Apple's m_copym for the case where the first
  * mbuf in the chain is a M_PKTHDR and the length is zero.
- * NOTE: this is possibly fixed in Leopard
+ * NOTE: this is fixed in Leopard
  */
 static void
 sctp_pkthdr_fix(struct mbuf *m)
@@ -465,11 +465,12 @@ nospace:
 /*	MCFail++;*/
 	return (0);
 }
-
+#endif
 
 /*
  * here we fix up Apple's m_prepend() and m_prepend_2().
  * See FreeBSD uipc_mbuf.c, version 1.170.
+ * This is still needed for Leopard.
  */
 struct mbuf *
 sctp_m_prepend(struct mbuf *m, int len, int how)
