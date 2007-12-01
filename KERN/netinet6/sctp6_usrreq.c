@@ -766,9 +766,9 @@ SYSCTL_PROC(_net_inet6_sctp6, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif
 
 /* This is the same as the sctp_abort() could be made common */
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 static void
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 #else
 static int
@@ -784,7 +784,7 @@ sctp6_abort(struct socket *so)
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 		return;
 #else
 		return EINVAL;
@@ -827,7 +827,7 @@ sctp6_abort(struct socket *so)
 #if defined(__NetBSD__) || defined(__OpenBSD__)
 	splx(s);
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 	return;
 #else
 	return (0);
@@ -840,11 +840,11 @@ sctp6_attach(struct socket *so, int proto, struct thread *p)
 #elif defined(__Panda__)
 int
 sctp6_attach(struct socket *so, int proto, uint32_t vrf_id)
+#elif defined(__Windows__)
+static int
+sctp6_attach(struct socket *so, int proto, PKTHREAD p)
 #else
-#if !defined(__Windows__)
-static
-#endif
-int
+static int
 sctp6_attach(struct socket *so, int proto, struct proc *p)
 #endif
 {
@@ -930,9 +930,13 @@ sctp6_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 static int
 sctp6_bind(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 sctp6_bind(struct socket *so, struct sockaddr *addr, void * p)
+{
+#elif defined(__Windows__)
+static int
+sctp6_bind(struct socket *so, struct sockaddr *addr, PKTHREAD p)
 {
 #else
 static int
@@ -1067,7 +1071,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 
 static void
 sctp6_close(struct socket *so)
@@ -1078,7 +1082,7 @@ sctp6_close(struct socket *so)
 /* This could be made common with sctp_detach() since they are identical */
 #else
 
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !defined(__Panda__)
 static
 #endif
 int
@@ -1089,7 +1093,7 @@ sctp6_detach(struct socket *so)
 
 #endif
 
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !defined(__Panda__)
 static 
 #endif
 int
@@ -1253,9 +1257,13 @@ sctp6_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 static int
 sctp6_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 sctp6_connect(struct socket *so, struct sockaddr *addr, void *p)
+{
+#elif defined(__Windows__)
+static int
+sctp6_connect(struct socket *so, struct sockaddr *addr, PKTHREAD p)
 {
 #else
 static int
@@ -1835,7 +1843,7 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 	return error;
 }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 struct pr_usrreqs sctp6_usrreqs = {
 #if __FreeBSD_version >= 600000
 	.pru_abort = sctp6_abort,
@@ -1867,24 +1875,39 @@ struct pr_usrreqs sctp6_usrreqs = {
 	sctp6_bind,
 	sctp6_connect,
 	pru_connect2_notsupp,
+#if defined(__Windows__)
+	NULL,
+	NULL,
+#else
 	in6_control,
 	sctp6_detach,
+#endif
 	sctp6_disconnect,
 	sctp_listen,
 	sctp6_getpeeraddr,
 	NULL,
 	pru_rcvoob_notsupp,
+#if defined(__Windows__)
+	NULL,
+#else
 	sctp6_send,
+#endif
 	pru_sense_null,
 	sctp_shutdown,
 	sctp6_in6getaddr,
 	sctp_sosend,
 	sctp_soreceive,
-	sopoll
+#if !defined(__Windows__)
+ 	sopoll
+#else
+	sopoll_generic,
+	NULL,
+	sctp6_close
+#endif
 #endif
 };
 
-#elif !(defined(__Panda__) || defined(__Windows__))
+#elif !defined(__Panda__)
 int
 sctp6_usrreq(so, req, m, nam, control, p)
 	struct socket *so;

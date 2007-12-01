@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.8 2007/09/13 10:36:43 rrs E
 
 #if defined(_KERNEL)
 
-#if defined(__FreeBSD__) || (__APPLE__)
+#if defined(__FreeBSD__) || (__APPLE__) || defined(__Windows__)
 SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
 

@@ -615,7 +615,7 @@ sctp_abort(struct socket *so)
 #endif
 }
 
-#if defined(__Panda__) || defined(__Windows__)
+#if defined(__Panda__)
 int
 #else
 static int
@@ -624,6 +624,8 @@ static int
 sctp_attach(struct socket *so, int proto, struct thread *p)
 #elif defined(__Panda__)
 sctp_attach(struct socket *so, int proto, uint32_t vrf_id)
+#elif defined(__Windows__)
+sctp_attach(struct socket *so, int proto, PKTHREAD p)
 #else
 sctp_attach(struct socket *so, int proto, struct proc *p)
 #endif
@@ -717,10 +719,13 @@ sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 sctp_bind(struct socket *so, struct sockaddr *addr) {
 	void *p = NULL;
+#elif defined(__Windows__)
+static int
+sctp_bind(struct socket *so, struct sockaddr *addr, PKTHREAD p) {
 #else
 static int
 sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
@@ -764,7 +769,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 void
 sctp_close(struct socket *so)
 {
@@ -1819,6 +1824,8 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id, 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			       (struct thread *)p
+#elif defined(__Windows__)
+			       (PKTHREAD)p
 #else
 			       (struct proc *)p
 #endif
@@ -1904,7 +1911,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	} \
       } 
 
-#if defined(__Panda__) || defined(__Windows__)
+#if defined(__Panda__)
 int
 #else
 static int
@@ -3005,7 +3012,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	return (error);
 }
 
-#if defined(__Panda__) || defined(__Windows__)
+#if defined(__Panda__)
 int
 #else
 static int
@@ -4545,7 +4552,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 }
 
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 int
 sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 {
@@ -4563,12 +4570,16 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	if (sopt->sopt_level != IPPROTO_SCTP) {
 		/* wrong proto level... send back up to IP */
+#if defined(__Windows__)
+		error = ENOPROTOOPT;
+#else
 #ifdef INET6
 		if (INP_CHECK_SOCKAF(so, AF_INET6))
 			error = ip6_ctloutput(so, sopt);
 		else
 #endif				/* INET6 */
 			error = ip_ctloutput(so, sopt);
+#endif
 		return (error);
 	}
 	optsize = sopt->sopt_valsize;
@@ -4584,7 +4595,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 			goto out;
 		}
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 500000) || defined(__Windows__)
 	p = (void *)sopt->sopt_td;
 #else
 	p = (void *)sopt->sopt_p;
@@ -4717,11 +4728,15 @@ sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
-#elif defined(__Panda__) || defined(__Windows__)
+#elif defined(__Panda__)
 int
 sctp_connect(struct socket *so, struct sockaddr *addr)
 {
 	void *p = NULL;
+#elif defined(__Windows__)
+static int
+sctp_connect(struct socket *so, struct sockaddr *addr, PKTHREAD p)
+{
 #else
 static int
 sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
@@ -4893,6 +4908,8 @@ sctp_listen(struct socket *so, int backlog, struct thread *p)
 #else
 sctp_listen(struct socket *so, struct thread *p)
 #endif
+#elif defined(__Windows__)
+sctp_listen(struct socket *so, int backlog, PKTHREAD p)
 #else
 sctp_listen(struct socket *so, struct proc *p)
 #endif
@@ -4960,7 +4977,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		}
 		SOCK_LOCK(so);
 	} else {
-#if defined(__FreeBSD__) && __FreeBSD_version > 700000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 700000) || defined(__Windows__)
 		if(backlog != 0) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_LISTENING;
 		} else {
@@ -4969,8 +4986,8 @@ sctp_listen(struct socket *so, struct proc *p)
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
-#if __FreeBSD_version >= 700000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
+#if __FreeBSD_version >= 700000 || defined(__Windows__)
 	/* It appears for 7.0 and on, we must always call this. */
 	solisten_proto(so, backlog);
 #else
@@ -4983,7 +5000,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
 	}
-#if __FreeBSD_version >= 700000
+#if __FreeBSD_version >= 700000 || defined(__Windows__)
 	if (backlog == 0) {
 		/* turning off listen */
 		so->so_options &= ~SO_ACCEPTCONN;
@@ -5410,7 +5427,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	return (0);
 }
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 struct pr_usrreqs sctp_usrreqs = {
 #if __FreeBSD_version >= 600000
 	.pru_abort = sctp_abort,
@@ -5442,23 +5459,38 @@ struct pr_usrreqs sctp_usrreqs = {
 	sctp_bind,
 	sctp_connect,
 	pru_connect2_notsupp,
+#if defined(__Windows__)
+	NULL,
+	NULL,
+#else
 	in_control,
 	sctp_detach,
+#endif
 	sctp_disconnect,
 	sctp_listen,
 	sctp_peeraddr,
 	NULL,
 	pru_rcvoob_notsupp,
+#if defined(__Windows__)
+	NULL,
+#else
 	sctp_sendm,
+#endif
 	pru_sense_null,
 	sctp_shutdown,
 	sctp_ingetaddr,
 	sctp_sosend,
 	sctp_soreceive,
+#if defined(__Windows__)
+	sopoll_generic,
+	NULL,
+	sctp_close
+#else
 	sopoll
 #endif
+#endif
 };
-#elif !(defined(__Panda__) || defined(__Windows__))
+#elif !defined(__Panda__)
 #if defined(__NetBSD__)
 int
 sctp_usrreq(so, req, m, nam, control, p)

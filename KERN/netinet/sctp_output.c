@@ -9111,6 +9111,8 @@ sctp_output (inp, m, addr, control, p, flags)
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	struct thread *p;
+#elif defined(__Windows__)
+	PKTHREAD p;
 #else
 	struct proc *p;
 #endif
@@ -11277,6 +11279,8 @@ sctp_sosend(struct socket *so,
     int flags,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
+#elif defined(__Windows__)
+    PKTHREAD p
 #else
     struct proc *p
 #endif
@@ -11361,6 +11365,8 @@ sctp_lower_sosend(struct socket *so,
     ,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
+#elif defined(__Windows__)
+    PKTHREAD p
 #else
     struct proc *p
 #endif
