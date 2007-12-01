@@ -45,7 +45,12 @@
 #include <sys/queue.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
+#include <sys/domain.h>
+#include <sys/poll.h>
+#include <sys/protosw.h>
+#include <sys/socketvar.h>
 #include <sys/socket.h>
+#include <sys/uio.h>
 #include <sys/sysctl.h>
 
 #include <net/if.h>
@@ -55,53 +60,11 @@
 #include <netinet6/in6.h>
 
 
-struct iovec {
-	void	*iov_base;	/* Base address. */
-	size_t	iov_len;	/* Length. */
-};
-
-enum uio_rw { UIO_READ, UIO_WRITE };
-
-/* Segment flag values. */
-enum uio_seg {
-	UIO_USERSPACE,		/* from user data space */
-	UIO_SYSSPACE,		/* from system space */
-	UIO_NOCOPY		/* don't copy, already in object */
-};
-
-struct uio {
-	PNDIS_BUFFER uio_buffer;
-	unsigned int uio_buffer_offset;
-	struct	iovec *uio_iov;
-	int	uio_iovcnt;
-	uint64_t uio_offset;
-	int	uio_resid;
-	enum	uio_seg uio_segflg;
-	enum	uio_rw uio_rw;
-	struct	thread *uio_td;
-};
-
-int uiomove(void *, unsigned int, struct uio *);
-
 struct proc {
 	uint8_t dummy;
 };
 
 #define SCTP_PROCESS_STRUCT struct proc *
-
-
-#if _WIN32_WINNT < 0x0600
-#define cmsghdr		_WSACMSGHDR
-#define CMSG_ALIGN	WSA_CMSGHDR_ALIGN
-#define CMSGDATA_ALIGN	WSA_CMSGDATA_ALIGN
-#define CMSG_DATA	WSA_CMSG_DATA
-#define CMSG_SPACE	WSA_CMSG_SPACE
-#define CMSG_LEN	WSA_CMSG_LEN
-#else
-#define CMSG_ALIGN	WSA_CMSGHDR_ALIGN
-#define CMSG_DATA	WSA_CMSG_DATA
-#endif
-
 
 #define SCTP_PACKED
 #define SCTP_UNUSED
@@ -296,7 +259,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 /* return the base ext data pointer */
 #define SCTP_BUF_EXTEND_BASE(m)		(caddr_t)(m->m_ext.ext_buf)
  /* return the refcnt of the data pointer */
-#define SCTP_BUF_EXTEND_REFCNT(m)	(m->m_ext.ext_buf->ref_cnt)
+#define SCTP_BUF_EXTEND_REFCNT(m)	(m->m_ext.ref_cnt)
 /* return any buffer related flags, this is
  * used beyond logging for apple only.
  */
@@ -344,7 +307,6 @@ in_broadcast(struct in_addr in, struct ifnet *ifp)
 /*
  * timers
  */
-#define	hz	1000
 
 typedef void (*sctp_timeout_t)(void *);
 
@@ -368,6 +330,7 @@ __inline void
 SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *arg)
 {
 	LARGE_INTEGER ExpireTime;
+	BOOLEAN blnDequeued = FALSE;
 
 	if (tmr->initialized == FALSE) {
 		tmr->func = func;
@@ -377,41 +340,46 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 		KeInitializeTimer(&tmr->tmr);
 		tmr->initialized = TRUE;
 	}
+
+	DbgPrint("SCTP_OS_TIMER_START: Try to acquire spin lock,tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
+	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
+	DbgPrint("blnDequeued=%d\n", blnDequeued);
+
 	tmr->ticks = ticks;
-	if (tmr->active == FALSE) {
-		if (tmr->pending == TRUE) {
-			KeCancelTimer(&tmr->tmr);
-		}
-		KeQuerySystemTime(&ExpireTime);
-		ExpireTime.QuadPart += (LONGLONG)(100 * 10000)*ticks;
-		KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
-		tmr->pending = TRUE;
-	}
+	//KeQuerySystemTime(&ExpireTime);
+	ExpireTime.QuadPart = -(LONGLONG)(100 * 10000)*ticks;
+	KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
+	DbgPrint("SCTP_OS_TIMER_START: release spin lock,tmr=%p\n", tmr);
 }
 
 __inline void
 SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
+	BOOLEAN blnCanceled = FALSE;
+	BOOLEAN blnDequeued = FALSE;
+	DbgPrint("SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
-	if (tmr->active == FALSE && tmr->pending == TRUE) {
-		KeCancelTimer(&tmr->tmr);
-	}
-	tmr->pending = FALSE;
+	blnCanceled = KeCancelTimer(&tmr->tmr);
+	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
+	DbgPrint("blnCanceled=%d,blnDequeued=%d\n", blnCanceled, blnDequeued);
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
+	DbgPrint("SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
 }
 
 #define SCTP_OS_TIMER_PENDING(tmr)	FALSE
 #define SCTP_OS_TIMER_ACTIVE(tmr)	TRUE
 #define SCTP_OS_TIMER_DEACTIVATE(tmr)
 
-
-#define SCTP_CMP_TIMER(x, y, cmp) \
-	(((x)->tv_sec == (y)->tv_sec) ? \
-	    ((x)->tv_usec cmp (y)->tv_usec) : \
-	    ((x)->tv_sec cmp (y)->tv_sec))
+__inline uint64_t
+sctp_get_tick_count(void)
+{
+	LARGE_INTEGER tickCount;
+	KeQueryTickCount(&tickCount);
+	return tickCount.QuadPart;
+}
 
 struct inpcb {
 	struct route	inp_route;
@@ -480,17 +448,25 @@ struct inpcb {
 
 /* is the endpoint v6only? */
 #define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+/* is the socket non-blocking? */
+#define SCTP_SO_IS_NBIO(so)	((so)->so_state & SS_NBIO)
+#define SCTP_SET_SO_NBIO(so)	((so)->so_state |= SS_NBIO)
+#define SCTP_CLEAR_SO_NBIO(so)	((so)->so_state &= ~SS_NBIO)
+/* get the socket type */
+#define SCTP_SO_TYPE(so)	((so)->so_type)
+/* reserve sb space for a socket */
+#define SCTP_SORESERVE(so, send, recv)	soreserve(so, send, recv)
+/* wakeup a socket */
+#define SCTP_SOWAKEUP(so)	KeSetEvent(&(so)->so_waitEvent, 0, FALSE)
+/* clear the socket buffer state */
+#define SCTP_SB_CLEAR(sb) do { \
+	(sb).sb_cc = 0; \
+	(sb).sb_mb = NULL; \
+	(sb).sb_mbcnt = 0; \
+} while (0)
 
-#define	MSG_OOB		0x0f00
-#define	MSG_PEEK	0x1000
-#define	MSG_DONTROUTE	0x2000
-#define	MSG_EOR		0x4000
-#define	MSG_WAITALL	0x8000
-#define	MSG_DONTWAIT	0x0001
-#define	MSG_EOF		0x0002
-#define	MSG_NBIO	0x0004
-#define	MSG_COMPAT	0x0008
-#define	MSG_NOTIFICATION 0x000f
+#define SCTP_SB_LIMIT_RCV(so)	so->so_rcv.sb_hiwat
+#define SCTP_SB_LIMIT_SND(so)	so->so_snd.sb_hiwat
 
 /*
  * routes, output, etc.

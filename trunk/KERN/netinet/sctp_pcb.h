@@ -644,6 +644,9 @@ struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct sctp_ifa *,struct thread *);
+#elif defined(__Windows__)
+int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
+		    struct sctp_ifa *,PKTHREAD);
 #else
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct sctp_ifa *, struct proc *);
@@ -691,6 +694,10 @@ void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
     int, int *, uint32_t, uint32_t, struct thread *);
+#elif defined(__Windows__)
+struct sctp_tcb *
+sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
+    int, int *, uint32_t, uint32_t, PKTHREAD);
 #else
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,

@@ -1,2 +1,3 @@
+- Changes for new Socket Layer (for Windows)
 Fix a bug in sctp_calc_rwnd() which resulted in wrong rwnd predictions.
 - 
