@@ -3938,10 +3938,10 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 #if !defined(__Panda__)
 			else if (ifp) {
-#if ((defined(SCTP_BASE_FREEBSD) &&  __FreeBSD_version < 500000) || \
-     (defined(__APPLE__) && (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)))
-
+#if defined(__APPLE__)
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
+#endif			  
 #elif defined(__Windows__)
 #define ND_IFINFO(ifp)	(ifp)
 #define linkmtu		if_mtu
@@ -9111,6 +9111,8 @@ sctp_output (inp, m, addr, control, p, flags)
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	struct thread *p;
+#elif defined(__Windows__)
+	PKTHREAD p;
 #else
 	struct proc *p;
 #endif
@@ -11277,6 +11279,8 @@ sctp_sosend(struct socket *so,
     int flags,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
+#elif defined(__Windows__)
+    PKTHREAD p
 #else
     struct proc *p
 #endif
@@ -11361,6 +11365,8 @@ sctp_lower_sosend(struct socket *so,
     ,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
+#elif defined(__Windows__)
+    PKTHREAD p
 #else
     struct proc *p
 #endif
