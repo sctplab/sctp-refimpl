@@ -11401,7 +11401,7 @@ sctp_lower_sosend(struct socket *so,
 	int hold_tcblock = 0;
 	int non_blocking = 0;
 	int temp_flags = 0;
-	uint32_t local_add_more;
+	uint32_t local_add_more, local_soresv=0;
 
 	error = 0;
 	net = NULL;
@@ -11844,7 +11844,7 @@ sctp_lower_sosend(struct socket *so,
 	/* would we block? */
 	if (non_blocking) {
 		if ((SCTP_SB_LIMIT_SND(so) <
-		     (sndlen + stcb->asoc.total_output_queue_size)) ||
+		     (sndlen + stcb->asoc.total_output_queue_size+stcb->asoc.sb_send_resv)) ||
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EWOULDBLOCK);
@@ -11857,6 +11857,8 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 	}
+	atomic_add_int(&stcb->asoc.sb_send_resv, sndlen);
+	local_soresv = sndlen;
 	/* Keep the stcb from being freed under our feet */
 	if (free_cnt_applied) {
 #ifdef INVARIANTS
@@ -12759,7 +12761,10 @@ sctp_lower_sosend(struct socket *so,
 #endif
  out_unlocked:
 
-
+	if (local_soresv && stcb) {
+	  atomic_subtract_int(&stcb->asoc.sb_send_resv, sndlen);
+	  local_soresv = 0;
+	}
 	if (create_lock_applied) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
 		create_lock_applied = 0;
