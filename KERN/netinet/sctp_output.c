@@ -11860,7 +11860,7 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 		newval = oldval+sndlen;
-		if(atomic_cmpset_int(&stcb->asoc.sb_send_resv, oldval, newval)) {
+		if(!atomic_cmpset_int(&stcb->asoc.sb_send_resv, oldval, newval)) {
 		  goto retry;
 		}
 	} else {
