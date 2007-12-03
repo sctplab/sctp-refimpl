@@ -24,6 +24,28 @@ options KTR_ENTRIES=65536
 Note the number must be a power of 2, see man ktr(9) for
 more info.
 
+For MAC/OS and for where you don't want to include
+KTR as an option, there is another choice as well.
+You can add the following to opt_sctp.h in your
+build directory:
+
+#define SCTP_LOCAL_TRACE_BUF 1
+
+When using the local trace buffer the constant
+SCTP_MAX_LOGGING_SIZE is tweaked to increase the
+trace buffer size. It is in sctp_uio.h
+and defaults to 30,000 entries.
+
+If you use this option then you don't use
+the ktr functions to pull the buffer, instead use 
+dump_apple_log
+to pull out the buffer and then channel that output
+into 
+prtcwdlog -l - 
+
+as discussed below. The trace points are all the same
+so read on to find out about them.
+
 Once you have this built in the kernel, you are set
 to do most of the logging. SCTP has these in the kernel
 by default. But if you want to do debug tracing you will
@@ -119,6 +141,7 @@ gdbdump_to_bin.c
 to_pcap.c
 parse_log.c
 prtcwndlog.c
+dump_apple_log.c (dumps out ktrdump for local trace buf)
 
 Note for panda pprtcwndlog is built into the ltracing
 system, all you need to do is display the ltrace point and

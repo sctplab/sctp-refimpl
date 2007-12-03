@@ -710,14 +710,16 @@ print_event_misc(struct sctp_cwnd_log *log)
 			       log->x.misc.log4);
 		}
 	} else if (log->from == SCTP_STRMOUT_LOG_ASSIGN) {
-		printf("%s Stream seq Assigned stcb:%x sp:%x strm:%d seq:%d\n", ts, 
+	  printf("%s Stream seq Assigned stcb:%x len:%x strm:%d seq:%d\n",
+			   ts, 
 		       log->x.misc.log1,
 		       log->x.misc.log2,
 		       (log->x.misc.log3 >> 16),
 		       (log->x.misc.log3 & 0x0000ffff)
 			);
 	} else if (log->from == SCTP_STRMOUT_LOG_SEND) {
-		printf("%s Stream seq Send stcb:%x sp:%x strm:%d seq:%d tsn:%x\n", ts, 
+	  printf("%s Stream seq Send stcb:%x len:%x strm:%d seq:%d tsn:%x\n",
+			   ts, 
 		       log->x.misc.log1,
 		       log->x.misc.log2,
 		       (log->x.misc.log3 >> 16),
