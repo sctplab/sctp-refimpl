@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.68 2007/10/30 14:09:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.69 2007/11/10 00:47:14 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -915,6 +915,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #else
 	asoc->default_flowlabel = 0;
 #endif
+	asoc->sb_send_resv = 0;
 	if (override_tag) {
 		struct timeval now;
 		(void)SCTP_GETTIME_TIMEVAL(&now);
