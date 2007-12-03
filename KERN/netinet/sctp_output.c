@@ -12229,11 +12229,11 @@ sctp_lower_sosend(struct socket *so,
 	  atomic_add_int(&asoc->stream_queue_cnt, 1);
 	  if ((srcv->sinfo_flags & SCTP_UNORDERED) == 0) {
 		sp->strseq = strm->next_sequence_sent;
-#ifdef SCTP_LOG_SENDING_STR
-		sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
-					   (uintptr_t)stcb, (uintptr_t)sp, 
-					   (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
-#endif
+		if(sctp_logging_level & SCTP_LOG_AT_SEND_2_SCTP) {
+		  sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
+						 (uintptr_t)stcb, (uintptr_t)sp, 
+						 (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
+		}
 		strm->next_sequence_sent++;
 	  } else {
 		SCTP_STAT_INCR(sctps_sends_with_unord);
