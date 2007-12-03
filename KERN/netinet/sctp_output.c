@@ -11843,8 +11843,11 @@ sctp_lower_sosend(struct socket *so,
 
 	/* would we block? */
 	if (non_blocking) {
+	    uint32_t oldval, newval;
+	retry:
+	    oldval = stcb->asoc.sb_send_resv;
 		if ((SCTP_SB_LIMIT_SND(so) <
-		     (sndlen + stcb->asoc.total_output_queue_size+stcb->asoc.sb_send_resv)) ||
+		     (sndlen + stcb->asoc.total_output_queue_size+oldval)) ||
 		    (stcb->asoc.chunks_on_out_queue >
 		     sctp_max_chunks_on_queue)) {
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EWOULDBLOCK);
@@ -11856,8 +11859,13 @@ sctp_lower_sosend(struct socket *so,
 			atomic_add_int(&stcb->sctp_ep->total_nospaces, 1);
 			goto out_unlocked;
 		}
+		newval = oldval+sndlen;
+		if(atomic_cmpset_int(&stcb->asoc.sb_send_resv, oldval, newval)) {
+		  goto retry;
+		}
+	} else {
+	  atomic_add_int(&stcb->asoc.sb_send_resv, sndlen);
 	}
-	atomic_add_int(&stcb->asoc.sb_send_resv, sndlen);
 	local_soresv = sndlen;
 	/* Keep the stcb from being freed under our feet */
 	if (free_cnt_applied) {
