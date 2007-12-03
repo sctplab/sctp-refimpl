@@ -130,6 +130,9 @@ void sctp_fix_ecn_echo(struct sctp_association *);
 int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, struct thread *, int);
+#elif defined(__Windows__)
+sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
+    struct mbuf *, PKTHREAD, int);
 #else
 int
 sctp_output(struct sctp_inpcb *,
@@ -239,6 +242,8 @@ sctp_sosend(struct socket *so,
     int flags,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
+#elif defined(__Windows__)
+    PKTHREAD p
 #else
     struct proc *p
 #endif

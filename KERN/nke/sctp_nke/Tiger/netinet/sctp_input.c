@@ -1810,6 +1810,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			       ntohl(initack_cp->init.initiate_tag), vrf_id,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			       (struct thread *)NULL
+#elif defined(__Windows__)
+			       (PKTHREAD)NULL
 #else
 			       (struct proc *)NULL
 #endif

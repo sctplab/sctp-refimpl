@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.21 2007/10/16 14:05:51 rrs Ex
 
 #if defined(_KERNEL)
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 extern struct pr_usrreqs sctp_usrreqs;
 
 #elif defined(__NetBSD__)
@@ -387,7 +387,7 @@ struct sctp_tcb;
 struct sctphdr;
 
 
-#if defined(__FreeBSD__) && __FreeBSD_version > 690000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
 void sctp_close(struct socket *so);
 #else
 int sctp_detach(struct socket *so);
@@ -454,6 +454,8 @@ int sctp_listen(struct socket *, int, struct thread *);
 #else
 int sctp_listen(struct socket *, struct thread *);
 #endif
+#elif defined(__Windows__)
+int sctp_listen(struct socket *, int, PKTHREAD);
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif
