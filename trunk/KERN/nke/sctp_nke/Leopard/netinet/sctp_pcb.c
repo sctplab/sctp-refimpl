@@ -2569,6 +2569,9 @@ int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		struct sctp_ifa *sctp_ifap, struct thread *p)
+#elif defined(__Windows__)
+sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
+		struct sctp_ifa *sctp_ifap, PKTHREAD p)
 #else
 sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		struct sctp_ifa *sctp_ifap, struct proc *p)
@@ -4059,6 +4062,8 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		int for_a_init, int *error, uint32_t override_tag, uint32_t vrf_id,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		struct thread *p
+#elif defined(__Windows__)
+		PKTHREAD p
 #else
 		struct proc *p
 #endif
