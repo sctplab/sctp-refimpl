@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.61 2007/10/30 14:09:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.63 2007/12/04 14:47:39 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -11385,7 +11385,7 @@ sctp_lower_sosend(struct socket *so,
   int free_cnt_applied = 0;
   int un_sent = 0;
   int now_filled = 0;
-  int inqueue_bytes = 0;
+  unsigned int inqueue_bytes = 0;
   struct sctp_block_entry be;
   struct sctp_inpcb *inp;
   struct sctp_tcb *stcb = NULL;
