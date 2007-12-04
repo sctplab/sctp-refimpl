@@ -532,6 +532,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LAST_PACKET_TRACING            0x01000000
 #define SCTP_THRESHOLD_LOGGING              0x02000000
 #define SCTP_LOG_AT_SEND_2_SCTP             0x04000000
+#define SCTP_LOG_AT_SEND_2_OUTQ             0x08000000
 
 
 #if defined(__Windows__)

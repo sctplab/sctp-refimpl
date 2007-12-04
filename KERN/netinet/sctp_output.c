@@ -6727,13 +6727,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 #else
 	chk->rec.data.TSN_seq = asoc->sending_seq++;
 #endif
-#ifdef SCTP_LOG_SENDING_STR
-	sctp_misc_ints(SCTP_STRMOUT_LOG_SEND,
-		       (uintptr_t)stcb, (uintptr_t)sp, 
-		       (uint32_t)((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq), 
-		       chk->rec.data.TSN_seq);
-#endif
-
+	if(sctp_logging_level & SCTP_LOG_AT_SEND_2_OUTQ) {
+	  sctp_misc_ints(SCTP_STRMOUT_LOG_SEND,
+					 (uintptr_t)stcb, sp->length, 
+					 (uint32_t)((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq), 
+					 chk->rec.data.TSN_seq);
+	}
 	dchkh = mtod(chk->data, struct sctp_data_chunk *);
 	/*
 	 * Put the rest of the things in place now. Size was done
@@ -11386,6 +11385,7 @@ sctp_lower_sosend(struct socket *so,
   int free_cnt_applied = 0;
   int un_sent = 0;
   int now_filled = 0;
+  int inqueue_bytes = 0;
   struct sctp_block_entry be;
   struct sctp_inpcb *inp;
   struct sctp_tcb *stcb = NULL;
@@ -11843,7 +11843,6 @@ sctp_lower_sosend(struct socket *so,
 
   /* would we block? */
   if (non_blocking) {
-	int inqueue_bytes = 0;
 	if (hold_tcblock == 0) {
 	  SCTP_TCB_LOCK(stcb);
 	  hold_tcblock = 1;
@@ -12070,8 +12069,14 @@ sctp_lower_sosend(struct socket *so,
 	goto out_unlocked;
   }
   /* Calculate the maximum we can send */
-  if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
-	max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
+  inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+  if(SCTP_SB_LIMIT_SND(so) > inqueue_bytes) {
+	if (non_blocking) {
+	  /* we already checked for non-blocking above. */
+	  max_len = sndlen;
+	} else {
+	  max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
+	}
   } else {
 	max_len = 0;
   }
@@ -12121,13 +12126,17 @@ sctp_lower_sosend(struct socket *so,
 	local_add_more = sndlen;
   }
   len = 0;
-  if (((max_len < local_add_more) && 
+  if (non_blocking == 0) {
+	goto skip_preblock;
+  }
+  if (((max_len <= local_add_more) && 
 	   (SCTP_SB_LIMIT_SND(so) > local_add_more)) ||
-	  ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) > sctp_max_chunks_on_queue)) {
+	  ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) > sctp_max_chunks_on_queue))/*if*/ {
 	/* No room right no ! */
 	SOCKBUF_LOCK(&so->so_snd);
-	while ((SCTP_SB_LIMIT_SND(so) < (stcb->asoc.total_output_queue_size+sctp_add_more_threshold)) ||
-		   ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) > sctp_max_chunks_on_queue)) {
+	inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+	while ((SCTP_SB_LIMIT_SND(so) < (inqueue_bytes+sctp_add_more_threshold)) ||
+		   ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) > sctp_max_chunks_on_queue /*while*/)) {
 
 	  if(sctp_logging_level & SCTP_BLK_LOGGING_ENABLE) {
 		sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
@@ -12157,6 +12166,7 @@ sctp_lower_sosend(struct socket *so,
 	  if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		goto out_unlocked;
 	  }
+	  inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
 	}
 	if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size) {
 	  max_len = SCTP_SB_LIMIT_SND(so) -  stcb->asoc.total_output_queue_size;
@@ -12165,6 +12175,8 @@ sctp_lower_sosend(struct socket *so,
 	}
 	SOCKBUF_UNLOCK(&so->so_snd);
   }
+
+ skip_preblock:
   if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 	goto out_unlocked;
   }
@@ -12231,7 +12243,7 @@ sctp_lower_sosend(struct socket *so,
 		sp->strseq = strm->next_sequence_sent;
 		if(sctp_logging_level & SCTP_LOG_AT_SEND_2_SCTP) {
 		  sctp_misc_ints(SCTP_STRMOUT_LOG_ASSIGN,
-						 (uintptr_t)stcb, (uintptr_t)sp, 
+						 (uintptr_t)stcb, sp->length, 
 						 (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
 		}
 		strm->next_sequence_sent++;
@@ -12344,8 +12356,9 @@ sctp_lower_sosend(struct socket *so,
 		  hold_tcblock = 1;
 		}
 		sctp_prune_prsctp(stcb, asoc, srcv, sndlen);
+		inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
 		if(SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
-		  max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
+		  max_len = SCTP_SB_LIMIT_SND(so) - inqueue_bytes;
 		else
 		  max_len = 0;
 		if(max_len > 0) {
