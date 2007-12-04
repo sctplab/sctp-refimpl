@@ -165,7 +165,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sctp4_seqpacket.pr_type	     = SOCK_SEQPACKET;
 	sctp4_seqpacket.pr_domain    = &inetdomain;
 	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
-	sctp4_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
+	sctp4_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_seqpacket.pr_input     = sctp_input;
 	sctp4_seqpacket.pr_output    = 0;
 	sctp4_seqpacket.pr_ctlinput  = sctp_ctlinput;
@@ -203,7 +203,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sctp6_dgram.pr_type          = SOCK_DGRAM;
 	sctp6_dgram.pr_domain        = &inet6domain;
 	sctp6_dgram.pr_protocol      = IPPROTO_SCTP;
-	sctp6_dgram.pr_flags         = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
+	sctp6_dgram.pr_flags         = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_dgram.pr_input         = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_dgram.pr_output        = 0;
 	sctp6_dgram.pr_ctlinput      = sctp6_ctlinput;
@@ -222,7 +222,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sctp6_seqpacket.pr_type      = SOCK_SEQPACKET;
 	sctp6_seqpacket.pr_domain    = &inet6domain;
 	sctp6_seqpacket.pr_protocol  = IPPROTO_SCTP;
-	sctp6_seqpacket.pr_flags     = PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
+	sctp6_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_seqpacket.pr_input     = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_seqpacket.pr_output    = 0;
 	sctp6_seqpacket.pr_ctlinput  = sctp6_ctlinput;
