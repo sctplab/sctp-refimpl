@@ -579,7 +579,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 		if (re->state == RSP_NO_ASSOCIATION) { 
-			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses))) < 0) {
+			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, NULL))) < 0) {
 				printf("connectx to this re:%x one fails %d\n",(u_int)re, ret);
 				re->state = RSP_ASSOCIATION_FAILED;
 			} else {
@@ -610,7 +610,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 		dlist_reset(scp->enrpList);
 		while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 			if (re->state == RSP_ASSOCIATION_FAILED) {
-				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses)) < 0) {
+				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, NULL)) < 0) {
 					re->state = RSP_ASSOCIATION_FAILED;
 				} else {
 					re->state = RSP_START_ASSOCIATION;
