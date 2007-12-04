@@ -27,17 +27,17 @@ int main(int argc, char **argv) {
   struct sockaddr_in to;
   char *buffer;
   unsigned int size;
-  int non_blocking = 1;
+  int non_blocking = 0;
   int i;
-
-  while((i= getopt(argc,argv,"nb")) != EOF) {
+  int port = PORT;
+  
+  while((i= getopt(argc,argv,"np")) != EOF) {
 	switch(i) {
-	case 'b':
+	case 'n':
 	  non_blocking = 1;
 	  break;
-	case 'n':
-	  non_blocking = 0;
-	  break;
+	case 'p':
+	  port = atoi(optarg);
 	default:
 	  break;
 	}
@@ -48,8 +48,8 @@ int main(int argc, char **argv) {
   memset((void *)&to, 0, sizeof(struct sockaddr_in));
   to.sin_len         = sizeof(struct sockaddr_in);
   to.sin_family      = AF_INET;
-  to.sin_port        = htons(PORT);
-  to.sin_addr.s_addr = inet_addr(ADDR);
+  to.sin_port        = htons(port);
+  to.sin_addr.s_addr = inet_addr(argv[optind]);
 
   if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 	perror("socket");
