@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.68 2007/10/30 14:09:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.69 2007/11/10 00:47:14 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -915,6 +915,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #else
 	asoc->default_flowlabel = 0;
 #endif
+	asoc->sb_send_resv = 0;
 	if (override_tag) {
 		struct timeval now;
 		(void)SCTP_GETTIME_TIMEVAL(&now);
@@ -3434,6 +3435,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		}		
 #endif
 		socantsendmore(stcb->sctp_socket);
+		socantrcvmore(stcb->sctp_socket);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -5177,11 +5179,6 @@ sctp_sorecvmsg(struct socket *so,
 		return (EINVAL);
 	}
 
-        if (from && fromlen <= 0) {
-   	    SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
-	    return (EINVAL);
-        }
-
 	if (msg_flags) {
 		in_flags = *msg_flags;
 		if(in_flags & MSG_PEEK) 
@@ -5281,21 +5278,23 @@ sctp_sorecvmsg(struct socket *so,
 #if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
 	if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
 #else
-		if (so->so_state & SS_CANTRCVMORE)
+    if (so->so_state & SS_CANTRCVMORE)
 #endif
 		{
 			if (so->so_error) {
 				error = so->so_error;
 				if ((in_flags & MSG_PEEK) == 0)
 					so->so_error = 0;
+				goto out;
 			} else {
+			  if (so->so_rcv.sb_cc == 0) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
 				/* indicate EOF */
 				error = 0;
+				goto out;
+			  }
 			}
-			goto out;
 		}
-
 	if ((so->so_rcv.sb_cc <= held_length) && block_allowed) {
 		/* we need to wait for data */
 		if ( (so->so_rcv.sb_cc == 0) && 

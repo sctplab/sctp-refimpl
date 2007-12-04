@@ -130,16 +130,26 @@ extern LARGE_INTEGER zero_timeout;
 	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
 } while (0)
 
-#define SCTP_IPI_ADDR_LOCK() do { \
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_LOCK: %s[%d]\n", __FILE__, __LINE__); \
+#define SCTP_IPI_ADDR_RLOCK() do { \
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_RLOCK: %s[%d]\n", __FILE__, __LINE__); \
 	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_addr_lock); \
 } while (0)
 
-#define SCTP_IPI_ADDR_UNLOCK() do { \
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_UNLOCK: %s[%d]\n", __FILE__, __LINE__); \
+#define SCTP_IPI_ADDR_WLOCK() do { \
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_WLOCK: %s[%d]\n", __FILE__, __LINE__); \
+	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+} while (0)
+
+#define SCTP_IPI_ADDR_RUNLOCK() do { \
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_RUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
 	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
 } while (0)
 
+
+#define SCTP_IPI_ADDR_WUNLOCK() do { \
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_WUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
+	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+} while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ITERATOR_WQ_INIT: %s[%d]\n", __FILE__, __LINE__); \

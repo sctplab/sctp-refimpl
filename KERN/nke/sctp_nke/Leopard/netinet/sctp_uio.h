@@ -1026,6 +1026,8 @@ sctp_lower_sosend(struct socket *so,
 #if !defined(__Panda__)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
+#elif defined(__Windows__)
+    , PKTHREAD p
 #else
     ,struct proc *p
 #endif
