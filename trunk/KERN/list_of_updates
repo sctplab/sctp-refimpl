@@ -1,8 +1,1 @@
-- Changes for new Socket Layer (for Windows)
-- Fix so that when we send non-blocking we resv the
-  amount we are going to send so we don't end up
-  doing a partial send.
-- rcv msg args with a NULL/NULL for to/tolen will return an error incorrectly
-  for the 1-2-1 model.
-- we were not doing 0 len return correctly and not setting cantrcv more
-  correctly.
+- optimize the initialization of the SB max variables.
