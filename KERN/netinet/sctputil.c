@@ -6017,11 +6017,14 @@ sctp_sorecvmsg(struct socket *so,
 #ifdef INVARIANTS
 			  panic ("Impossible data==NULL length !=0");
 #endif
+			  out_flags |= MSG_EOR;
+			  out_flags |= MSG_TRUNC;
 			  SCTP_PRINTF("Length:%d data is NULL orig_len:%d taken:%d?\n",
 						  control->length,
 						  control->origlen,
 						  control->taken_out
 						  );
+			  control->length = 0;
 			  SCTP_INP_READ_UNLOCK(inp);
 			  goto done_with_control;
 			}
