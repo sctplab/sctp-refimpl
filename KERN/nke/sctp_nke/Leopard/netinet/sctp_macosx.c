@@ -124,7 +124,11 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int fd = uap->s;
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
-
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+	/* workaround sonewconn() issue where qlimits are checked.
+	   i.e. sonewconn() can only be done on listening sockets */
+	int old_qlimit;
+#endif
 	/* AUDIT_ARG(fd, uap->s); */
 	error = fp_getfsock(p, fd, &fp, &head);
 	if (error) {
@@ -176,7 +180,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
+	old_qlimit = head->so_qlimit;	/* work around sonewconn() needing listen */
+	head->so_qlimit = 1;
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+	head->so_qlimit = old_qlimit;
 	if (so == NULL) {
 #if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
 		goto release_fd;
