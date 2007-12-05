@@ -4563,6 +4563,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		/* Everything got collapsed out?? */
 		return;
 	}
+	control->origlen = control->length;
 	if(end) {
 		control->end_added = 1;
 	}
@@ -4694,6 +4695,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	}
 	atomic_add_int(&control->length, len);
+	atomic_add_int(&control->origlen, len);
 	if (end) {
 		/* message is complete */
 		if (stcb && (control == stcb->asoc.control_pdapi)) {
@@ -5514,7 +5516,7 @@ sctp_sorecvmsg(struct socket *so,
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
-	control->some_taken = 1;
+	control->some_taken++;
 	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -5767,6 +5769,7 @@ sctp_sorecvmsg(struct socket *so,
 						   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 					}
 					embuf = m;
+					control->taken_out += cp_len;
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					freed_so_far += MSIZE;
@@ -5812,6 +5815,7 @@ sctp_sorecvmsg(struct socket *so,
 					    stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
+					control->taken_out += cp_len;
 					copied_so_far += cp_len;
 					embuf = m;
 					freed_so_far += cp_len;
@@ -6010,7 +6014,16 @@ sctp_sorecvmsg(struct socket *so,
 			SCTP_INP_READ_LOCK(inp);
 			if ((control->length > 0) && (control->data == NULL)) {
 				/* big trouble.. we have the lock and its corrupt? */
-				panic ("Impossible data==NULL length !=0");
+#ifdef INVARIANTS
+			  panic ("Impossible data==NULL length !=0");
+#endif
+			  SCTP_PRINTF("Length:%d data is NULL orig_len:%d taken:%d?\n",
+						  control->length,
+						  control->origlen,
+						  control->taken_out
+						  );
+			  SCTP_INP_READ_UNLOCK(inp);
+			  goto done_with_control;
 			}
 			SCTP_INP_READ_UNLOCK(inp);
 			/* We will fall around to get more data */
