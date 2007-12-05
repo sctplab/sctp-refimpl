@@ -87,6 +87,13 @@ extern struct fileops socketops;
 
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#define CONFIG_MACF_SOCKET_SUBSET 1
+#include <sys/vnode_internal.h>
+#if CONFIG_MACF_SOCKET_SUBSET
+#include <security/mac_framework.h>
+#endif /* MAC_SOCKET_SUBSET */
+#endif
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
@@ -129,6 +136,10 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		error = EBADF;
 		goto out;
 	}
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
+	if ((error = mac_socket_check_accept(kauth_cred_get(), head)) != 0)
+		goto out;
+#endif /* MAC_SOCKET_SUBSET */
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
@@ -136,9 +147,14 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
+
 	fflag = fp->f_flag;
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 	proc_fdlock(p);
 	error = falloc_locked(p, &fp, &newfd, 1);
+#else
+	error = falloc(p, &fp, &newfd, vfs_context_current());
+#endif
 	if (error) {
 		/*
 		 * Probably ran out of file descriptors. Put the
@@ -147,29 +163,68 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		 * have a chance at it.
 		 */
 		/* SCTP will NOT put the connection back onto queue */
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 		proc_fdunlock(p);
+#endif
 		socket_lock(head, 0);
 		goto out;
 	}
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 	*fdflags(p, newfd) &= ~UF_RESERVED;
+#endif
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
 
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+	if (so == NULL) {
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+		goto release_fd;
+#else
+		goto out;
+#endif
+	}
 	socket_unlock(head, 0);
+
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
+	/*
+	 * Pass the pre-accepted socket to the MAC framework. This is
+	 * cheaper than allocating a file descriptor for the socket,
+	 * calling the protocol accept callback, and possibly freeing
+	 * the file descriptor should the MAC check fails.
+	 */
+	if ((error = mac_socket_check_accepted(kauth_cred_get(), so)) != 0) {
+		so->so_state &= ~(SS_NOFDREF | SS_COMP);
+		so->so_head = NULL;
+		soclose(so);
+		/* Drop reference on listening socket */
+		socket_lock(head, 0);
+		goto out;
+	}
+#endif /* MAC_SOCKET_SUBSET */
+
 	fp->f_type = DTYPE_SOCKET;
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
+#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
+#endif
 	socket_lock(head, 0);
 	/* sctp_get_peeloff() returns a new locked socket */
         so->so_state &= ~SS_COMP;
         so->so_state &= ~SS_NOFDREF;
         so->so_head = NULL;
 	socket_unlock(so, 1);
+
+#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+release_fd:
+	proc_fdlock(p);
+	procfdtbl_releasefd(p, newfd, NULL);
+	fp_drop(p, newfd, fp, 1);
+	proc_fdunlock(p);
+#endif
 out:
 	file_drop(fd);
 	return (error);
