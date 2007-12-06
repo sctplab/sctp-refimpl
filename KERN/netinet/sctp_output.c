@@ -6422,11 +6422,12 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
   sp = TAILQ_FIRST(&strq->outqueue);
   if (sp == NULL) {
 	*locked = 0;
-	SCTP_TCB_SEND_LOCK(stcb);
-	send_lock_up = 1;
+	if(send_lock_up == 0) {
+	  SCTP_TCB_SEND_LOCK(stcb);
+	  send_lock_up = 1;
+	}
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp) {
-	  SCTP_TCB_SEND_UNLOCK(stcb);
 	  goto one_more_time;
 	}
 	if (strq->last_msg_incomplete) {
