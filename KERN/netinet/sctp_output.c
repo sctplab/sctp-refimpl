@@ -6438,6 +6438,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	to_move = 0;
 	goto out_of;
   }
+  if ((sp->sender_all_done == 0) && (send_lock_up == 0)) {
+	SCTP_TCB_SEND_LOCK(stcb);
+	send_lock_up = 1;
+  }
+
   if ((sp->msg_is_complete)  && (sp->length == 0)) {
 	if(sp->sender_all_done) {
 	  /* We are doing differed cleanup. Last
@@ -6453,7 +6458,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 					sp->put_last_out,
 					send_lock_up);
 	  }
-	  if(TAILQ_NEXT(sp, next) == NULL) {
+	  if ((TAILQ_NEXT(sp, next) == NULL) && (send_lock_up  == 0)) {
 		SCTP_TCB_SEND_LOCK(stcb);
 		send_lock_up = 1;
 	  }
@@ -6469,10 +6474,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  /* we can't be locked to it */
 	  *locked = 0;
 	  stcb->asoc.locked_on_sending = NULL;
-	  if(send_lock_up) {
-		SCTP_TCB_SEND_UNLOCK(stcb);
-		send_lock_up = 0;
-	  }
 	  /* back to get the next msg */
 	  goto one_more_time;
 	} else {
@@ -6493,10 +6494,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  to_move = 0;
 	  goto out_of;
 	}
-  }
-  if ((sp->sender_all_done == 0) && (send_lock_up == 0)) {
-	SCTP_TCB_SEND_LOCK(stcb);
-	send_lock_up = 1;
   }
   some_taken = sp->some_taken;
   if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
