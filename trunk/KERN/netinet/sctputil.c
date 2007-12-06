@@ -2864,7 +2864,7 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 		SCTP_LTRACE_ERR_RET_PKT(m, NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
 		return (ENOBUFS);
 	}
-	if (padlen >= M_TRAILINGSPACE(m)) {
+	if (padlen <= M_TRAILINGSPACE(m)) {
 		/*
 		 * The easy way. We hope the majority of the time we hit
 		 * here :)
@@ -2889,7 +2889,7 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 	}
 	/* zero out the pad */
 	for (i = 0; i < padlen; i++) {
-		*dp = (i+1);
+		*dp = 0;
 		dp++;
 	}
 	return (0);
