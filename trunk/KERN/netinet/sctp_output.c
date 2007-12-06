@@ -6494,6 +6494,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  goto out_of;
 	}
   }
+  if ((sp->sender_all_done == 0) && (send_lock_up == 0)) {
+	SCTP_TCB_SEND_LOCK(stcb);
+	send_lock_up = 1;
+  }
   some_taken = sp->some_taken;
   if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 	sp->msg_is_complete = 1;
