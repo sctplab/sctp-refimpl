@@ -6437,8 +6437,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  strq->last_msg_incomplete = 0;
 	}
 	to_move = 0;
-	SCTP_TCB_SEND_UNLOCK(stcb);
-	send_lock_up = 0;
+	if(send_lock_up) {
+	  SCTP_TCB_SEND_UNLOCK(stcb);
+	  send_lock_up = 0;
+	}
 	goto out_of;
   }
 
@@ -6473,8 +6475,10 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  /* we can't be locked to it */
 	  *locked = 0;
 	  stcb->asoc.locked_on_sending = NULL;
-	  SCTP_TCB_SEND_UNLOCK(stcb);
-	  send_lock_up = 0;
+	  if (send_lock_up) {
+		SCTP_TCB_SEND_UNLOCK(stcb);
+		send_lock_up = 0;
+	  }
 	  /* back to get the next msg */
 	  goto one_more_time;
 	} else {
