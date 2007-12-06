@@ -6587,7 +6587,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if (to_move >= length) {
 		/* we think we can steal the whole thing */
-   	    if(send_lock_up == 0) {
+   	    if ((sp->sender_all_done == 0) && (send_lock_up == 0)) {
 		  SCTP_TCB_SEND_LOCK(stcb);
 		  send_lock_up = 1;
 		}
