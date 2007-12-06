@@ -3,3 +3,6 @@
   outqueue.
 - If a mbuf alloc fails during moving to outqueue the
   reassembly of the old mbuf chain was incorrect.
+- some_taken becomes a counter in sctputil.c instead of a set to 1.
+- Fix a panic to be only under invarients and have a proper recovery.
+- msg_flags needed to be set.to the value collected not or'd.
