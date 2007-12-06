@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.64 2007/12/04 20:20:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.65 2007/12/06 00:22:55 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6463,6 +6463,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				if(sp->data) {
 					sctp_m_freem(sp->data);
 					sp->data = NULL;
+					sp->tail_mbuf = NULL;
 				}
 				sctp_free_a_strmoq(stcb, sp);
 
@@ -6492,6 +6493,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			*giveup = 1;
 			return (0);
 		}
+	}
+
+	if ((send_lock_up == 0) && (sp->sender_all_done == 0)) {
+	  SCTP_TCB_SEND_LOCK(stcb);
+	  send_lock_up = 1;
 	}
 	some_taken = sp->some_taken;
 	if(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
@@ -6557,7 +6563,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 
 	/* If we reach here, we can copy out a chunk */
-        sctp_alloc_a_chunk(stcb, chk);
+	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		/* No chunk memory */
 	out_gu:
@@ -6578,10 +6584,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	/* clear out the chunk before setting up */
 	memset(chk, 0, sizeof(*chk));
 	chk->rec.data.rcv_flags = rcv_flags;
-	if ((send_lock_up == 0) && (sp->msg_is_complete == 0)) {
-	  SCTP_TCB_SEND_LOCK(stcb);
-	  send_lock_up = 1;
-	}
 	if (SCTP_BUF_IS_EXTENDED(sp->data)) {
 		chk->copy_by_ref = 1;
 	} else {

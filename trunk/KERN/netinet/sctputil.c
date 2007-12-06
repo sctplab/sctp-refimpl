@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.70 2007/12/04 14:41:48 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.71 2007/12/06 00:22:55 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4563,7 +4563,6 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		/* Everything got collapsed out?? */
 		return;
 	}
-	control->origlen = control->length;
 	if(end) {
 		control->end_added = 1;
 	}
@@ -4695,7 +4694,6 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = tail;
 	}
 	atomic_add_int(&control->length, len);
-	atomic_add_int(&control->origlen, len);
 	if (end) {
 		/* message is complete */
 		if (stcb && (control == stcb->asoc.control_pdapi)) {
@@ -5769,7 +5767,6 @@ sctp_sorecvmsg(struct socket *so,
 						   control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBRESULT, 0);
 					}
 					embuf = m;
-					control->taken_out += cp_len;
 					copied_so_far += cp_len;
 					freed_so_far += cp_len;
 					freed_so_far += MSIZE;
@@ -5815,7 +5812,6 @@ sctp_sorecvmsg(struct socket *so,
 					    stcb) {
 						atomic_subtract_int(&stcb->asoc.sb_cc, cp_len);
 					}
-					control->taken_out += cp_len;
 					copied_so_far += cp_len;
 					embuf = m;
 					freed_so_far += cp_len;
@@ -6019,11 +6015,6 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 			  out_flags |= MSG_EOR;
 			  out_flags |= MSG_TRUNC;
-			  SCTP_PRINTF("Length:%d data is NULL orig_len:%d taken:%d?\n",
-						  control->length,
-						  control->origlen,
-						  control->taken_out
-						  );
 			  control->length = 0;
 			  SCTP_INP_READ_UNLOCK(inp);
 			  goto done_with_control;
@@ -6121,7 +6112,7 @@ sctp_sorecvmsg(struct socket *so,
 	}
 
 	if (msg_flags)
-		*msg_flags |= out_flags;
+		*msg_flags = out_flags;
  out:
 	if (((out_flags & MSG_EOR) == 0) && 
 	    ((in_flags & MSG_PEEK) == 0) &&
