@@ -6871,7 +6871,6 @@ sctp_select_a_stream(struct sctp_tcb *stcb, struct sctp_association *asoc)
 
 }
 
-TCB_SEND_LOCK
 
 static void
 sctp_fill_outqueue(struct sctp_tcb *stcb,
