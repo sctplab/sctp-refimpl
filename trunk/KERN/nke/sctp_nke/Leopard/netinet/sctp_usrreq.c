@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.50 2007/10/30 14:09:24 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.51 2007/12/04 20:20:42 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -4981,7 +4981,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		}
 		SOCK_LOCK(so);
 	} else {
-#if (defined(__FreeBSD__) && __FreeBSD_version > 700000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 700000) || defined(__Windows__)
 		if(backlog != 0) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_LISTENING;
 		} else {
