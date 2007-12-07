@@ -4981,7 +4981,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		}
 		SOCK_LOCK(so);
 	} else {
-#if (defined(__FreeBSD__) && __FreeBSD_version > 700000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 700000) || defined(__Windows__)
 		if(backlog != 0) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_LISTENING;
 		} else {

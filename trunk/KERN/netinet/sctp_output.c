@@ -6569,12 +6569,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
   sctp_alloc_a_chunk(stcb, chk);
   if (chk == NULL) {
 	/* No chunk memory */
-  out_gu:
-	if(send_lock_up) {
-	  /*sa_ignore NO_NULL_CHK*/
-	  SCTP_TCB_SEND_UNLOCK(stcb);
-	  send_lock_up = 0;
-	}
 	*giveup = 1;
 	to_move = 0;
 	goto out_of;
@@ -6612,7 +6606,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  sp->some_taken = some_taken;
 	  sctp_free_a_chunk(stcb, chk);
 	  *bail = 1;
-	  goto out_gu;
+	  to_move = 0;
+	  goto out_of;
 	}
 	/* Pull off the data */
 	m_adj(sp->data, to_move);
@@ -6699,7 +6694,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	  chk->data = NULL;
 	  *bail = 1;
 	  sctp_free_a_chunk(stcb, chk);
-	  goto out_gu;
+	  to_move = 0;
+	  goto out_of;
 	} else {
 	  SCTP_BUF_LEN(m) = 0;
 	  SCTP_BUF_NEXT(m) = chk->data;
@@ -6717,7 +6713,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	sctp_free_a_chunk(stcb, chk);
 #endif
 	*bail = 1;
-	goto out_gu;
+	to_move = 0;
+	goto out_of;
   }
   sctp_snd_sb_alloc(stcb, sizeof(struct sctp_data_chunk));
   chk->book_size = chk->send_size = (to_move +
@@ -12426,6 +12423,7 @@ sctp_lower_sosend(struct socket *so,
 	  }
 	  if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 		  (stcb->asoc.total_flight > 0) &&
+		  (stcb->asoc.stream_queue_cnt < SCTP_MAX_DATA_BUNDLING) &&
 		  (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))
 		  ) {
 
@@ -12718,6 +12716,7 @@ sctp_lower_sosend(struct socket *so,
   }
   if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	  (stcb->asoc.total_flight > 0) &&
+	  (stcb->asoc.stream_queue_cnt < SCTP_MAX_DATA_BUNDLING) &&
 	  (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) 
 	  ) {
 	/*-
