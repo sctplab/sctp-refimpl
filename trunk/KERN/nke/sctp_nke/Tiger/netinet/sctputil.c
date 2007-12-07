@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.69 2007/11/10 00:47:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.71 2007/12/06 00:22:55 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2864,7 +2864,7 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 		SCTP_LTRACE_ERR_RET_PKT(m, NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
 		return (ENOBUFS);
 	}
-	if (M_TRAILINGSPACE(m)) {
+	if (padlen <= M_TRAILINGSPACE(m)) {
 		/*
 		 * The easy way. We hope the majority of the time we hit
 		 * here :)
@@ -2882,8 +2882,8 @@ sctp_add_pad_tombuf(struct mbuf *m, int padlen)
 			return (ENOSPC);
 		}
 		/* setup and insert in middle */
-		SCTP_BUF_NEXT(tmp) = SCTP_BUF_NEXT(m);
 		SCTP_BUF_LEN(tmp) = padlen;
+		SCTP_BUF_NEXT(tmp) = NULL;
 		SCTP_BUF_NEXT(m) = tmp;
 		dp = mtod(tmp, uint8_t *);
 	}
@@ -5514,7 +5514,7 @@ sctp_sorecvmsg(struct socket *so,
 	 * If we reach here, control has a some data for us to read off.
 	 * Note that stcb COULD be NULL.
 	 */
-	control->some_taken = 1;
+	control->some_taken++;
 	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
@@ -6010,7 +6010,14 @@ sctp_sorecvmsg(struct socket *so,
 			SCTP_INP_READ_LOCK(inp);
 			if ((control->length > 0) && (control->data == NULL)) {
 				/* big trouble.. we have the lock and its corrupt? */
-				panic ("Impossible data==NULL length !=0");
+#ifdef INVARIANTS
+			  panic ("Impossible data==NULL length !=0");
+#endif
+			  out_flags |= MSG_EOR;
+			  out_flags |= MSG_TRUNC;
+			  control->length = 0;
+			  SCTP_INP_READ_UNLOCK(inp);
+			  goto done_with_control;
 			}
 			SCTP_INP_READ_UNLOCK(inp);
 			/* We will fall around to get more data */
@@ -6105,7 +6112,7 @@ sctp_sorecvmsg(struct socket *so,
 	}
 
 	if (msg_flags)
-		*msg_flags |= out_flags;
+		*msg_flags = out_flags;
  out:
 	if (((out_flags & MSG_EOR) == 0) && 
 	    ((in_flags & MSG_PEEK) == 0) &&
