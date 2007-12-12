@@ -624,12 +624,12 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	 */
 	pool_nm_len = ph->ph.param_length - sizeof(struct rsp_paramhdr);
 
-	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,ph->pool_handle, pool_nm_len, NULL);
+	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache, ph->pool_handle, pool_nm_len, NULL);
 	if(pool == NULL) {
 		/* new entry - point 2*/
 		new_ent = 1;
 		printf("Building the pool for %s\n", ph->pool_handle);
-		pool = build_a_pool (scp, ph->pool_handle, pool_nm_len, (uint32_t)sp->policy_type);
+		pool = build_a_pool (scp, (char *)ph->pool_handle, pool_nm_len, (uint32_t)sp->policy_type);
 		if(pool == NULL)
 			return;
 	}
@@ -1024,7 +1024,8 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		 * send to a name) then we must wake the sleeper's
 		 * afterwards.
 		 */
-		asap_handle_name_resolution_response(scp, enrp, buf, sz, sinfo);
+	  asap_handle_name_resolution_response(scp, enrp, (uint8_t *)buf,
+										   sz, sinfo);
 		break;
 	case ASAP_ENDPOINT_KEEP_ALIVE:
 		/* its a keep-alive, we must declare
