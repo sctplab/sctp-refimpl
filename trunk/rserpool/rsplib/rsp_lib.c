@@ -580,15 +580,10 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 		if (re->state == RSP_NO_ASSOCIATION) { 
 			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, &re->asocid))) < 0) {
-				printf("connectx to this re:%x one fails %d\n",(u_int)re, ret);
-				re->state = RSP_ASSOCIATION_FAILED;
+			  printf("connectx to this re:%x one fails %d\n",(u_int)re, ret);
+			  re->state = RSP_ASSOCIATION_FAILED;
 			} else {
-				re->state = RSP_START_ASSOCIATION;
-				/* try to get assoc id */
-				re->asocid = get_asocid(scp->sd, re->addrList);
-				printf("Setting asoc id:%x for this guy%x\n",
-				       (u_int)re->asocid,
-				       (u_int)re);
+			  re->state = RSP_START_ASSOCIATION;
 			}
 			cnt++;
 		} else if (re->state == RSP_ASSOCIATION_UP) {
@@ -610,14 +605,12 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 		dlist_reset(scp->enrpList);
 		while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 			if (re->state == RSP_ASSOCIATION_FAILED) {
-				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, &re->asocid)) < 0) {
-					re->state = RSP_ASSOCIATION_FAILED;
-				} else {
-					re->state = RSP_START_ASSOCIATION;
-					/* try to get assoc id */
-					re->asocid = get_asocid(scp->sd, re->addrList);
-				}
-				cnt++;
+			  if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, &re->asocid)) < 0) {
+				re->state = RSP_ASSOCIATION_FAILED;
+			  } else {
+				re->state = RSP_START_ASSOCIATION;
+			  }
+			  cnt++;
 			}
 			if(cnt >= ENRP_MAX_SERVER_HUNTS)
 				/* As far as we will go */
