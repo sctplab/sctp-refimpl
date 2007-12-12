@@ -579,7 +579,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 	dlist_reset(scp->enrpList);
 	while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 		if (re->state == RSP_NO_ASSOCIATION) { 
-			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, NULL))) < 0) {
+			if(((ret = sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, &re->asocid))) < 0) {
 				printf("connectx to this re:%x one fails %d\n",(u_int)re, ret);
 				re->state = RSP_ASSOCIATION_FAILED;
 			} else {
@@ -610,7 +610,7 @@ rsp_start_enrp_server_hunt(struct rsp_enrp_scope *scp)
 		dlist_reset(scp->enrpList);
 		while((re = (struct rsp_enrp_entry *)dlist_get(scp->enrpList)) != NULL) {
 			if (re->state == RSP_ASSOCIATION_FAILED) {
-				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, NULL)) < 0) {
+				if((sctp_connectx(scp->sd, re->addrList, re->number_of_addresses, &re->asocid)) < 0) {
 					re->state = RSP_ASSOCIATION_FAILED;
 				} else {
 					re->state = RSP_START_ASSOCIATION;
@@ -889,10 +889,10 @@ rsp_socket(int domain, int type,  int protocol, uint32_t op_scope)
 	sdata->useThisSd = 0 ;
 	rsp_pcbinfo.rsp_number_sd++;
 	if( (ret = HashedTbl_enterKeyed(rsp_pcbinfo.sd_pool , 	/* table */
-					sdata->sd, 		/* key-int */
-					(void*)sdata , 		/* dataum */
-					(void *)&sdata->sd, 	/* keyp */
-					sizeof(sdata->sd))) ) {	/* size of key */
+									sdata->sd, 		        /* key-int */
+									(void*)sdata , 		    /* dataum */
+									(void *)&sdata->sd, 	/* keyp */
+									sizeof(sdata->sd))) ) {	/* size of key */
 		fprintf(stderr, "Failed to enter into hash table error:%d\n", ret);
 		goto error_out;
 	}
@@ -919,61 +919,61 @@ rsp_close(int sockfd)
 int 
 rsp_connect(int sockfd, const char *name, size_t namelen)
 {
-	/* lookup a name, if you have
-	 * already pre-loaded the cache, your
-	 * done. If not, do the pre-load. 
-	 *
-	 */
-	struct rsp_pool *pool;
-	struct rsp_socket *sd;
-	struct rsp_enrp_scope *scp;
+  /* lookup a name, if you have
+   * already pre-loaded the cache, your
+   * done. If not, do the pre-load. 
+   *
+   */
+  struct rsp_pool *pool;
+  struct rsp_socket *sd;
+  struct rsp_enrp_scope *scp;
 
-	/* steps:
-	 *
-	 * 1) see if we have a hs, if not start blocking
-	 *    server hunt procedures.
-	 * 2) once we have a hs, lookup the name -> cache
-	 * 3) If cache hit, request update and return.
-	 * 4) If cache miss, request update and return.
-	 *
-	 */
+  /* steps:
+   *
+   * 1) see if we have a hs, if not start blocking
+   *    server hunt procedures.
+   * 2) once we have a hs, lookup the name -> cache
+   * 3) If cache hit, request non-blocking update.
+   * 4) If cache miss, request blocking update.
+   *
+   */
 
-	if (rsp_inited == 0) {
-	out:
-		errno = EINVAL;
-		return (-1);
-	}
+  if (rsp_inited == 0) {
+  out:
+	errno = EINVAL;
+	return (-1);
+  }
 	
-	sd = rsp_find_socket_with_sd(sockfd);
-	if(sd == NULL) {
-		goto out;
-	}
-	scp = sd->scp;
+  sd = rsp_find_socket_with_sd(sockfd);
+  if(sd == NULL) {
+	goto out;
+  }
+  scp = sd->scp;
 
-	/* now we have a socket, lets look for the name */
-	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache , name, namelen, NULL);
-	if ((pool == NULL) ||
-	    (pool->state == RSP_POOL_STATE_REQUESTED) ||
-	    (pool->state == RSP_POOL_STATE_NOTFOUND)
-		) {
-		/* we need to get the name first */
-		rsp_enrp_make_name_request(sd, pool, name, namelen);
-	} else if ((pool->auto_update == 0) &&
-		   (pool->state != RSP_POOL_STATE_TIMEDOUT)){
-		/* check to see if its aged and needs update */
-		struct timeval now;
-		gettimeofday(&now, NULL);
-		if ((now.tv_sec - pool->received.tv_sec) >= (sd->timers[RSP_T7_ENRPOUTDATE]/1000)) {
-			pool->state = RSP_POOL_STATE_TIMEDOUT;
-			rsp_enrp_make_name_request(sd, pool, name, namelen);
-		}
+  /* now we have a socket, lets look for the name */
+  pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache , name, namelen, NULL);
+  if ((pool == NULL) ||
+	  (pool->state == RSP_POOL_STATE_REQUESTED) ||
+	  (pool->state == RSP_POOL_STATE_NOTFOUND)
+	  ) {
+	/* we need to get the name first */
+	rsp_enrp_make_name_request(sd, pool, name, namelen, 0);
+  } else if ((pool->auto_update == 0) &&
+			 (pool->state != RSP_POOL_STATE_TIMEDOUT)){
+	/* check to see if its aged and needs update */
+	struct timeval now;
+	gettimeofday(&now, NULL);
+	if ((now.tv_sec - pool->received.tv_sec) >= (sd->timers[RSP_T7_ENRPOUTDATE]/1000)) {
+	  pool->state = RSP_POOL_STATE_TIMEDOUT;
+	  rsp_enrp_make_name_request(sd, pool, name, namelen, MSG_DONTWAIT);
 	}
-	/* If we wanted to pre-setup an assoc, we would do it
-	 * here. Right now I don't want to and I think its ok
-	 * just to get the caceh sync'd.. the first send will
-	 * implictly setup the assoc getting a piggyback CE+Data.
-	 */
-	return (0);
+  }
+  /* If we wanted to pre-setup an assoc, we would do it
+   * here. Right now I don't want to and I think its ok
+   * just to get the caceh sync'd.. the first send will
+   * implictly setup the assoc getting a piggyback CE+Data.
+   */
+  return (0);
 }
 
 int 
@@ -998,15 +998,46 @@ rsp_deregister(int sockfd)
 	return (0);
 }
 
-struct rsp_info_found *
+int
 rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
 {
-	if (rsp_inited == 0) {
-		errno = EINVAL;
-		return (NULL);
-	}
+  struct rsp_socket *sd;
+  struct rsp_pool *pool;
+  struct rsp_enrp_scope *scp;
+  
+  
+  if (rsp_inited == 0) {
+	errno = EINVAL;
+	return (-1);
+  }
+  if (name == NULL) {
+	errno = EINVAL;
+	return (-1);
+  }
+  
+  sd = rsp_find_socket_with_sd(sockfd);
+  if(sd == NULL) {
+	errno = EFAULT;
+	goto out;
+  }
+  scp = sd->scp;
 
-	return (NULL);
+  pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+  if (pool == NULL) {
+	rsp_enrp_make_name_request(sd, pool, name, namelen, 0);
+	pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+	if (pool == NULL) {
+	  goto no_entries;
+	}
+  }
+  if (pool->state == RSP_POOL_STATE_NOTFOUND) {
+  no_entries:
+	return (0);
+  } else {
+	return(pool->refcnt);
+  }
+ out:
+  return (-1);
 }
 
 int 

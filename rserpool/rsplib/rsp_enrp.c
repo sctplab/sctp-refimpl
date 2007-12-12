@@ -1065,9 +1065,11 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 
 int
 rsp_enrp_make_name_request(struct rsp_socket *sd,
-			   struct rsp_pool *pool,
-			   const char *name,
-			   int namelen)
+						   struct rsp_pool *pool,
+						   const char *name,
+						   int32_t namelen,
+						   uint32_t flags
+						   )
 
 {
 	int len;
@@ -1148,8 +1150,10 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	 * thread has gotten my response and thus we
 	 * would be done.
 	 */
-	while(pool->state == RSP_POOL_STATE_REQUESTED) {
+	if((flags & MSG_DONTWAIT) == 0) {
+	  while(pool->state == RSP_POOL_STATE_REQUESTED) {
 		rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+	  }
 	}
 	free(req->req);
 	req->req = NULL;
