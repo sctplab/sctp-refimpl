@@ -836,7 +836,9 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
 #elif defined(__Windows__)
 void sysctl_setup(void)
 {
+#ifdef SCTP_DEBUG
 	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", "Configure debug output", &sctp_debug_on, sizeof(sctp_debug_on));
+#endif
 }
 
 #endif

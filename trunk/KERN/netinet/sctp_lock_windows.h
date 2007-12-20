@@ -96,7 +96,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_LOCK_DESTROY: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_ep_lock); \
 } while (0)
 
 #define SCTP_INP_INFO_RLOCK() do { \
@@ -127,7 +126,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_IPI_ADDR_DESTROY() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_DESTROY: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
 } while (0)
 
 #define SCTP_IPI_ADDR_RLOCK() do { \
@@ -158,7 +156,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ITERATOR_WQ_DESTROY: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_iterator_wq_lock); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK() do { \
@@ -185,7 +182,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_INP_READ_DESTROY(_inp) do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_READ_DESTROY: inp=%p %s[%d]\n", (_inp), __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&(_inp)->inp_rdata_lock); \
 } while (0)
 
 #define SCTP_INP_READ_LOCK(_inp) do { \
@@ -206,7 +202,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_INP_LOCK_DESTROY(_inp) do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_LOCK_DESTROY: inp=%p %s[%d]\n", (_inp), __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&(_inp)->inp_lock); \
 } while (0)
 
 #ifdef SCTP_LOCK_LOGGING
@@ -263,7 +258,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ASOC_CREATE_LOCK_DESTROY: inp=%p %s[%d]\n", (_inp), __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&(_inp)->inp_create_lock); \
 } while (0)
 
 #ifdef SCTP_LOCK_LOGGING
@@ -299,7 +293,6 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_TCB_LOCK_DESTROY(_tcb) do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_TCB_LOCK_DESTROY: tcb=%p %s[%d]\n", (_tcb), __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&(_tcb)->tcb_lock); \
 } while (0)
 
 #ifdef SCTP_LOCK_LOGGING
@@ -350,7 +343,6 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 
 #define SCTP_TCB_SEND_LOCK_DESTROY(_tcb) do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_TCB_SEND_LOCK_DESTROY: tcb=%p %s[%d]\n", (_tcb), __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&(_tcb)->tcb_send_lock); \
 } while (0) 
 
 #define SCTP_TCB_SEND_LOCK(_tcb) do { \
@@ -406,7 +398,6 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 
 #define SCTP_ITERATOR_LOCK_DESTROY() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ITERATOR_LOCK_DESTROY: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.it_lock); \
 } while (0)
 
 
