@@ -48,8 +48,8 @@
 #include <sys/domain.h>
 #include <sys/poll.h>
 #include <sys/protosw.h>
-#include <sys/socketvar.h>
 #include <sys/socket.h>
+#include <sys/socketvar.h>
 #include <sys/uio.h>
 #include <sys/sysctl.h>
 
@@ -57,6 +57,7 @@
 #include <net/route.h>
 
 #include <netinet/in.h>
+#include <netinet/sctp_constants.h>
 #include <netinet6/in6.h>
 
 
@@ -102,7 +103,11 @@ sctpdebug(uint32_t level, char *format, ...)
 	} while (0); \
 }
 #else
-#define SCTPDBG(level, params...)
+#define SCTPDBG sctpdebug
+__inline void
+sctpdebug(uint32_t level, char *format, ...)
+{
+}
 #define SCTPDBG_ADDR(level, addr)
 #define SCTPDBG_PKT(level, iph, sh)
 #endif
@@ -332,6 +337,7 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 	LARGE_INTEGER ExpireTime;
 	BOOLEAN blnDequeued = FALSE;
 
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - enter\n");
 	if (tmr->initialized == FALSE) {
 		tmr->func = func;
 		tmr->arg = arg;
@@ -341,32 +347,41 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 		tmr->initialized = TRUE;
 	}
 
-	DbgPrint("SCTP_OS_TIMER_START: Try to acquire spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: Try to acquire spin lock, tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
 	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	DbgPrint("blnDequeued=%d\n", blnDequeued);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
 
 	tmr->ticks = ticks;
-	//KeQuerySystemTime(&ExpireTime);
 	ExpireTime.QuadPart = -(LONGLONG)(100 * 10000)*ticks;
 	KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	DbgPrint("SCTP_OS_TIMER_START: release spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: release spin lock, tmr=%p\n", tmr);
+
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - leave\n");
 }
 
 __inline void
 SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
 	BOOLEAN blnCanceled = FALSE;
 	BOOLEAN blnDequeued = FALSE;
-	DbgPrint("SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
+
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - enter\n");
+
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
+
 	blnCanceled = KeCancelTimer(&tmr->tmr);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: KeCancelTimer=%d, tmr=%p\n", blnCanceled, tmr);
 	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	DbgPrint("blnCanceled=%d,blnDequeued=%d\n", blnCanceled, blnDequeued);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
+
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	DbgPrint("SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
+
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - leave\n");
 }
 
 #define SCTP_OS_TIMER_PENDING(tmr)	FALSE
