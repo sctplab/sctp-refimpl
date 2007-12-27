@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: util.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: skaliann $
+ * $Id: util.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
  *
  **/
 
@@ -283,7 +283,7 @@ sendBufferToPoolElement(char *offset, size_t bufSize, PoolElement *pe) {/* , int
     /*
      * init pe
      */
-    *pe = poolElementNew(pelement->peIdentifier);
+    *pe = poolElementNew(ntohl(pelement->peIdentifier));
     if (*pe) {
         (*pe)->peRegistrationLife      = ntohl(pelement->registrationLife);
         (*pe)->peHomeRegistrarServer   = ntohl(pelement->homeEnrpServerIdentifier);
@@ -1068,6 +1068,10 @@ ssize_t sctp_sendx(int                           sd,
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.27  2007/12/05 23:13:06  volkmer
  * refactored enterservicingmode to util.c
  *

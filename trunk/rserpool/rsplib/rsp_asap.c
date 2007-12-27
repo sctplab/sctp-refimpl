@@ -36,7 +36,7 @@ rsp_read_rest(struct rsp_socket *sdata, void *msg, int len,
 		/* while there is more */
 		fromlen = sizeof(struct pe_address);
 		ret = sctp_recvmsg(sdata->sd, &mnew[len], (llen-len),
-				   (struct sockaddr *)&sa, &fromlen, 
+				   (struct sockaddr *)&sa, (socklen_t *)&fromlen, 
 				   &lsinfo, &flags);
 		if(ret < 0) {
 			/* an error */

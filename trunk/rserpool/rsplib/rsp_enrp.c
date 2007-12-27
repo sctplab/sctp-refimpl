@@ -83,6 +83,7 @@ get_next_parameter (uint8_t *buf,
 	return(ph);
 }
 
+
 struct sockaddr *
 asap_pull_and_alloc_an_address(struct sockaddr **loc, 
 			       int ttype, 
@@ -586,6 +587,7 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	struct rsp_timer_entry *tme;
 	uint16_t this_param;
 	uint8_t regType;
+	uint8_t overall_sp = 1;
 
 	/* at all times our pointer must be less than limit */
 	limit = (buf + sz);
@@ -611,7 +613,9 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	} else {
 		/* reselect */
 		regType = RSP_POLICY_ROUND_ROBIN;
-		at = bu;
+		
+		/* the Overall Selection Policy is an optional parameter */
+	    overall_sp = 0;
 	}
 
 	/* Now we must:
@@ -644,7 +648,13 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 		pes->state |= RSP_PE_STATE_BEING_DEL;
 	}
 	/* From here on down we have a pool, we are to point 3. */
-	pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
+	if (overall_sp) {
+	    pe = (struct rsp_pool_element *)get_next_parameter(at, limit, &at, &this_param);
+	} else {
+		/* Since the Overall Selection Policy parameter was not sent, 
+		 * sp points to the next parameter which is pe */
+		pe = (struct rsp_pool_element *)sp;
+	}
 	while (pe != NULL) {
 		if (this_param !=  RSP_PARAM_POOL_ELEMENT) {
 			fprintf(stderr,"Wanted PE-Handle found type:%d - corrupt/malformed msg??\n",

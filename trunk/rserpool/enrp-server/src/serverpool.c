@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: serverpool.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: skaliann $
+ * $Id: serverpool.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
  *
  **/
 #include <stdlib.h>
@@ -203,8 +203,7 @@ serverPoolGetHandleResponse(ServerPool pool, int *count, uint32 *peIds) {
     }
 
     policy = pool->spPolicy;
-
-    if (policy->pId != POLICY_ROUND_ROBIN) {
+    if (policy && policy->pId != POLICY_ROUND_ROBIN) {
         logDebug("unsupported policy");
         
         return -1;
@@ -214,14 +213,17 @@ serverPoolGetHandleResponse(ServerPool pool, int *count, uint32 *peIds) {
     *count = 0;
     memset(peIds, 0, sizeof(uint32) * 5);
     pe = pool->spPeList;
+    poolElementPrint(pe);
     
     for (; *count < 5; (*count)++) {
         peIds[*count] = pe->peIdentifier;
         
-        if (pe->serverNext != NULL)
+        if (pe->serverNext != NULL) {
             pe = pe->serverNext;
-        else
+        } else {
+        	++(*count);
             break;
+        }
     }
     
     /* TODO:
@@ -321,6 +323,10 @@ serverPoolListRemovePool(char *poolHandle) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.15  2007/12/02 22:07:18  volkmer
  * added method to get handle response information
  *

@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: asap.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: skaliann $
+ * $Id: asap.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
  *
  **/
  
@@ -483,6 +483,7 @@ initAsapHandleResolutionResponse(struct asapHandleResolutionResponse *msg, int a
 int
 sendAsapHandleResolutionResponse(int acceptUpdatesFlag, sctp_assoc_t assocId, ServerPool pool) {
 	struct asapHandleResolutionResponse *msg;
+	struct paramPoolHandle *pHandle;
 	char buf[BUFFER_SIZE];
 	int length = 0;
     int i = 0;
@@ -508,6 +509,10 @@ sendAsapHandleResolutionResponse(int acceptUpdatesFlag, sctp_assoc_t assocId, Se
         return -1;
     }
 
+    pHandle = (struct paramPoolHandle *) offset;
+    length = initParamPoolHandle(pHandle, pool->spHandle);
+    offset += length;
+    
     for (i = 0; i < count; i++) {
         pe = serverPoolGetPoolElementById(pool, peIds[i]);
         
@@ -835,6 +840,10 @@ handleAsapError(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.15  2007/12/03 23:44:26  volkmer
  * fixed bug in handleasapderegestrationadded pe removing stuff to sendasapendpointkeepaliveadded handleasapendpointkeepaliveack, unsure what exactly needs to be done thereadded handleasapendpoint unreachable
  *
