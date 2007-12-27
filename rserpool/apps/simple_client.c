@@ -83,7 +83,7 @@ main(int argc, char **argv)
 		printf("Can't init socket error:%d\n", errno);
 		return(-1);
 	}
-	sprintf(buffer, "Hello\n");
+	sprintf(buffer, "Hello.Echo Me\n");
 	len = strlen(buffer) + 1;
 	ret = rsp_sendmsg(sd, buffer, len, NULL, 0, name, strlen(name), NULL, 0); 
 	printf("rsp_sendmsg returns %d errno:%d\n", ret, errno);

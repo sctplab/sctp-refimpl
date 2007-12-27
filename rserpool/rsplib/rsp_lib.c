@@ -1135,7 +1135,7 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 	pool->lastUsed = pe;
 	/* Ok, we can send to our peer or new peer */
 	ret = 0;
-	if(pe->protocol_type != IPPROTO_SCTP) {
+	if(pe->protocol_type != RSP_PARAM_SCTP_TRANSPORT) {
 		return(sendto(sdata->sd, msg, len, flags, pe->addrList, pe->addrList[0].sa_len));
 	}
 	if(sinfo) {

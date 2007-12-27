@@ -22,7 +22,7 @@ int rsp_register(int sockfd, const char *name, size_t namelen, uint32_t policy, 
 int rsp_deregister(int sockfd);
 
 
-struct rsp_info_found *
+int 
 rsp_getPoolInfo(int sockfd, char *name, size_t namelen);
 
 

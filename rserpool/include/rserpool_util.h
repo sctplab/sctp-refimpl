@@ -17,7 +17,8 @@ int
 rsp_enrp_make_name_request(struct rsp_socket *sd,
 			   struct rsp_pool *pool,
 			   const char *name,
-			   int namelen);
+			   int namelen,
+			   uint32_t flags);
 
 struct rsp_pool_ele *
 rsp_server_select(struct rsp_pool *pool);

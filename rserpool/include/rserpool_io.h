@@ -18,19 +18,21 @@ struct rsp_paramhdr {
 
 
 #define RSP_PARAM_RSVD                  0x0000
-#define RSP_PARAM_IPV4_ADDR		0x0001
+#define RSP_PARAM_IPV4_ADDR		        0x0001
 #define RSP_PARAM_IPV6_ADDR             0x0002
-#define RSP_PARAM_SCTP_TRANSPORT        0x0003
-#define RSP_PARAM_TCP_TRANSPORT         0x0004
-#define RSP_PARAM_UDP_TRANSPORT         0x0005
-#define RSP_PARAM_SELECT_POLICY         0x0006
-#define RSP_PARAM_POOL_HANDLE           0x0007
-#define RSP_PARAM_POOL_ELEMENT          0x0008
-#define RSP_PARAM_SERVER_INFO           0x0009
-#define RSP_PARAM_OPERATION_ERROR       0x000a
-#define RSP_PARAM_COOKIE                0x000b
-#define RSP_PARAM_PE_IDENTIFIER         0x000c
-#define RSP_PARAM_PE_CHECKSUM           0x000d
+#define RSP_PARAM_DCCP_TRANSPORT        0x0003
+#define RSP_PARAM_SCTP_TRANSPORT        0x0004
+#define RSP_PARAM_TCP_TRANSPORT         0x0005
+#define RSP_PARAM_UDP_TRANSPORT         0x0006
+#define RSP_PARAM_UDPLITE_TRANSPORT     0x0007
+#define RSP_PARAM_SELECT_POLICY         0x0008
+#define RSP_PARAM_POOL_HANDLE           0x0009
+#define RSP_PARAM_POOL_ELEMENT          0x000a
+#define RSP_PARAM_SERVER_INFO           0x000b
+#define RSP_PARAM_OPERATION_ERROR       0x000c
+#define RSP_PARAM_COOKIE                0x000d
+#define RSP_PARAM_PE_IDENTIFIER         0x000e
+#define RSP_PARAM_PE_CHECKSUM           0x000f
 
 /* align to 32-bit sizes */
 #define RSP_SIZE32(x)	((((x)+3) >> 2) << 2)
