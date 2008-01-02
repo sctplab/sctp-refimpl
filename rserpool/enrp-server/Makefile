@@ -38,10 +38,10 @@ pkglibdir = $(libdir)/registrar
 pkgincludedir = $(includedir)/registrar
 top_builddir = .
 
-ACLOCAL = ${SHELL} /home/rrs/Rserpool/enrp-server/missing --run aclocal-1.6
-AUTOCONF = ${SHELL} /home/rrs/Rserpool/enrp-server/missing --run autoconf
-AUTOMAKE = ${SHELL} /home/rrs/Rserpool/enrp-server/missing --run automake-1.6
-AUTOHEADER = ${SHELL} /home/rrs/Rserpool/enrp-server/missing --run autoheader
+ACLOCAL = ${SHELL} /home/rrs/sctpCVS/rserpool/enrp-server/missing --run aclocal-1.6
+AUTOCONF = ${SHELL} /home/rrs/sctpCVS/rserpool/enrp-server/missing --run autoconf
+AUTOMAKE = ${SHELL} /home/rrs/sctpCVS/rserpool/enrp-server/missing --run automake-1.6
+AUTOHEADER = ${SHELL} /home/rrs/sctpCVS/rserpool/enrp-server/missing --run autoheader
 
 am__cd = CDPATH="$${ZSH_VERSION+.}$(PATH_SEPARATOR)" && cd
 INSTALL = /usr/bin/install -c
@@ -65,7 +65,7 @@ host_triplet = i386-unknown-freebsd7.0
 EXEEXT = 
 OBJEXT = o
 PATH_SEPARATOR = :
-AMTAR = ${SHELL} /home/rrs/Rserpool/enrp-server/missing --run tar
+AMTAR = ${SHELL} /home/rrs/sctpCVS/rserpool/enrp-server/missing --run tar
 AWK = gawk
 CC = gcc
 DEPDIR = .deps
@@ -75,7 +75,7 @@ STRIP =
 VERSION = 0.1
 am__include = include
 am__quote = 
-install_sh = /home/rrs/Rserpool/enrp-server/install-sh
+install_sh = /home/rrs/sctpCVS/rserpool/enrp-server/install-sh
 SUBDIRS = src
 
 EXTRA_DIST = bootstrap
