@@ -4,4 +4,11 @@ configure
 server
 config.log
 config.status
+config.guess
+config.sub
+depcomp
+install-sh
+missing
+mkinstalldirs
 aclocal.m4
+.dirstamp
