@@ -1,4 +1,4 @@
 SUBDIRS = src
 
-EXTRA_DIST = bootstrap
+EXTRA_DIST = bootstrap.sh
 
