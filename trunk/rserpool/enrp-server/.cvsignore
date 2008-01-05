@@ -12,3 +12,4 @@ missing
 mkinstalldirs
 aclocal.m4
 .dirstamp
+autom4te.cache
