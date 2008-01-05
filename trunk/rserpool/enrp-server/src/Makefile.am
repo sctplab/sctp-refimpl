@@ -1,6 +1,6 @@
-bin_PROGRAMS = ../main
-___main_LDADD =
-___main_SOURCES = \
+bin_PROGRAMS = ../server
+___server_LDADD =
+___server_SOURCES = \
 		debug.c            debug.h \
 		util.c             util.h \
 		checksum.c         checksum.h \

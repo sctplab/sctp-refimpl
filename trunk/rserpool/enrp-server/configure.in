@@ -1,5 +1,5 @@
 AC_INIT(src/main.c)
-AM_INIT_AUTOMAKE(registrar, 0.1)
+AM_INIT_AUTOMAKE(enrp-server, 0.1)
 
 AC_PROG_CC
 
