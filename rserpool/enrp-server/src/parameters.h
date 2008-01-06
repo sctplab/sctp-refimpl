@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: parameters.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: parameters.h,v 1.2 2008-01-06 20:47:43 volkmer Exp $
  *
  **/
 #ifndef PARAMETERS_H
@@ -76,7 +76,7 @@
 #define POLICY_PRIORITY_LEAST_USED          0x40000003
 #define POLICY_RANDOMIZED_LEAST_USED        0x40000004
 
-#define ERROR_UNRECOGNIZED_ERROR                0x0
+#define ERROR_UNSPECIFIED_ERROR                 0x0
 #define ERROR_UNRECOGNIZED_PARAMETER            0x1
 #define ERROR_UNRECOGNIZED_MESSAGE              0x2
 #define ERROR_INVALID_VALUES                    0x3
@@ -86,7 +86,7 @@
 #define ERROR_INCONSISTENT_TRANSPORT_TYPE       0x7
 #define ERROR_INCONSISTENT_DATA_CONTROL_CONFIG  0x8
 #define ERROR_UNKNOWN_POOLHANDLE                0x9
-
+#define ERROR_SECURITY_CONSIDERATIONS           0xa
 
 struct paramHeader {
     uint16 type;
@@ -233,6 +233,10 @@ initErrorCause(struct errorCause *cause, uint16 causeCode);
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.10  2007/12/02 22:07:56  volkmer
  * fixed dccp service code missing
  *

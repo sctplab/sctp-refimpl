@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: enrp.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: enrp.c,v 1.2 2008-01-06 20:47:43 volkmer Exp $
  *
  **/
 
@@ -65,9 +65,9 @@ initEnrpPresence(struct enrpPresence *msg, uint32 receiverId, int replyReqBit) {
 }
 
 size_t
-initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId) {
+initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId, int ownChildsOnlyBit) {
     msg->hdr.type = ENRP_LIST_REQUEST;
-    msg->hdr.flags = 0;
+    msg->hdr.flags = (ownChildsOnlyBit > 0) ? 0x01 : 0x00;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -149,6 +149,16 @@ initEnrpTakeoverServer(struct enrpTakeoverServer *msg, uint32 receiverId, uint32
     return 16;
 }
 
+size_t
+initEnrpError(struct enrpError *msg, uint32 receiverId) {
+    msg->hdr.type = ENRP_ERROR;
+    msg->hdr.flags = 0;
+    msg->hdr.length = htons(12);
+    msg->senderServerId = htonl(ownId);
+    msg->receiverServerId = htonl(receiverId);
+    return 12;
+}
+
 int
 handleEnrpMsg(void *buf, ssize_t len, sctp_assoc_t assocId) {
     logDebug("not implemented yet");
@@ -200,9 +210,6 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
         logDebug("discarding own presence message");
         return -1;
     }
-
-    logDebug("got enrp presence msg");
-    logDebug("assocId: %d", assocId);
 
     if (length != len) {
         logDebug("buffer lentgh does not match packet length");
@@ -294,7 +301,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
         enterServicingMode();
 
         sendEnrpPresence(mentorServerId, 1, 1, newAssocId);
-        sendEnrpListRequest(mentorServerId, newAssocId);
+        sendEnrpListRequest(mentorServerId, newAssocId, 0);
         sendEnrpHandleTableRequest(mentorServerId, 0, newAssocId);
 
         return 1;
@@ -1027,7 +1034,7 @@ sendEnrpPresence(uint32 receiverId, int replyBit, int sendInfo, sctp_assoc_t ass
 }
 
 int
-sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId) {
+sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBit) {
     struct enrpListRequest *msg;
     char buf[BUFFER_SIZE];
     size_t msgLen;
@@ -1035,7 +1042,7 @@ sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId) {
 
     memset(buf, 0, sizeof(buf));
     msg = (struct enrpListRequest *) buf;
-    msgLen = initEnrpListRequest(msg, receiverId);
+    msgLen = initEnrpListRequest(msg, receiverId, ownChildsOnlyBit);
 
     printBuf(buf, msgLen, "enrp list request send buffer");
 
@@ -1275,6 +1282,57 @@ sendEnrpTakeoverServer(uint32 receiverId, uint32 targetId, sctp_assoc_t assocId)
 }
 
 int
+sendEnrpError(uint32 receiverId, sctp_assoc_t assocId, int causeId, char *paramBuf, size_t bufLen) {
+    struct enrpError *msg;
+    struct errorCause *cause;
+    char buf[BUFFER_SIZE];
+    char *offset;
+    size_t msgLen;
+    int ret;
+    int length;
+    
+/*    switch(causeId) {
+        case ERROR_UNSPECIFIED_ERROR:
+        case ERROR_UNRECOGNIZED_PARAMETER:
+        case ERROR_UNRECOGNIZED_MESSAGE:
+        case ERROR_INVALID_VALUES:
+        case ERROR_NONUINIQUE_PE_IDENTIFIER:
+        case ERROR_INCONSISTENT_POOLING_POLICY:
+        case ERROR_LACK_OF_RESOURCES:
+        case ERROR_INCONSISTENT_TRANSPORT_TYPE:
+        case ERROR_INCONSISTENT_DATA_CONTROL_CONFIG:
+        case ERROR_UNKNOWN_POOLHANDLE:
+        case ERROR_SECURITY_CONSIDERATIONS:
+        default:
+            logDebug("unrecognized error cause id: %d, aborting", causeId);
+            return -1;
+    }
+*/
+    msg = (struct enrpError *) buf;
+    msgLen = initEnrpError(msg, receiverId);
+    offset = buf + msgLen;
+    cause = (struct errorCause *) offset;
+    
+    length = initErrorCause(cause, ERROR_UNSPECIFIED_ERROR);
+
+    if (length != -1) {
+        offset += length;
+
+        logDebug("added error cause %d to send buffer", cause->causeCode);
+    }
+
+    msgLen = offset - buf;
+    msg->hdr.length = htons(msgLen);
+
+    printBuf(buf, msgLen, "enrp error server send buffer");
+
+    ret = sendEnrpMsg(buf, msgLen, assocId, 0);
+    logDebug("sent enrp error message");
+
+    return (ret == (int)msgLen) ? 1 : -1;
+}
+
+int
 createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sctp_assoc_t *assocId) {
     RegistrarServer server;
     int ret;
@@ -1324,6 +1382,10 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.33  2007/12/06 01:52:15  volkmer
  * moved peliftimeexpirytimeoutcallback
  *
