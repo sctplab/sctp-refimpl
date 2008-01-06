@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: enrp.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: enrp.h,v 1.2 2008-01-06 20:47:43 volkmer Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -165,7 +165,7 @@ size_t
 initEnrpHandleUpdate(struct enrpHandleUpdate *msg, uint32 receiverId, uint16 updateAction);
 
 size_t
-initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId);
+initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId, int ownChildsOnlyBit);
 
 size_t
 initEnrpListResponse(struct enrpListResponse *msg, uint32 receiverId,int rejectBit);
@@ -178,6 +178,9 @@ initEnrpInitTakeoverAck(struct enrpInitTakeoverAck *msg, uint32 receiverId, uint
 
 size_t
 initEnrpTakeoverServer(struct enrpTakeoverServer *msg, uint32 receiverId, uint32 targetId);
+
+size_t
+initEnrpError(struct enrpError *msg, uint32 receiverId);
 
 /*
  *  Message sending function prototypes
@@ -202,7 +205,7 @@ int
 sendEnrpHandleUpdate(ServerPool pool, PoolElement element, uint16 handleAction);
 
 int
-sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId);
+sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBit);
 
 int
 sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId);
@@ -217,7 +220,7 @@ int
 sendEnrpTakeoverServer(uint32 receiverId, uint32 targetId, sctp_assoc_t assocId);
 
 int
-sendEnrpError(uint32 receiverId, sctp_assoc_t assocId);
+sendEnrpError(uint32 receiverId, sctp_assoc_t assocId, int causeId, char *paramBuf, size_t bufLen);
 
 /*
  *  Message handling function prototypes
@@ -260,6 +263,10 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.15  2007/12/06 01:52:15  volkmer
  * moved peliftimeexpirytimeoutcallback
  *

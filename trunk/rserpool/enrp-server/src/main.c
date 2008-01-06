@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: main.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: main.c,v 1.2 2008-01-06 20:47:43 volkmer Exp $
  *
  **/
 #include <strings.h>
@@ -56,6 +56,7 @@
 int
 checkForIpv6() {
     int sd;
+    useIpv6 = 0;
 
     sd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
@@ -113,8 +114,11 @@ parseArgs(int argc, char **argv) {
         else if ((strncmp(argv[i], "--asapLocalPort=", 16)) == 0)
             asapLocalPort = atoi(&argv[i][16]);
 
-        else if ((strncmp(argv[i], "--useMulticast=off", 18)) == 0)
+        else if ((strncmp(argv[i], "--useEnrpMulticast=off", 22)) == 0)
             useEnrpAnnouncements = 0;
+
+        else if ((strncmp(argv[i], "--useAsapMulticast=off", 22)) == 0)
+            useAsapAnnouncements = 0;
 
         else if ((strncmp(argv[i], "--useIpv6=off", 13)) == 0)
             useIpv6 = 0;
@@ -143,6 +147,7 @@ parseArgs(int argc, char **argv) {
     logDebug("asapAnnounceAddr:     %s", asapAnnounceAddr);
     logDebug("asapAnnouncePort:     %d", asapAnnouncePort);
     logDebug("useEnrpAnnouncements: %d", useEnrpAnnouncements);
+    logDebug("useAsapAnnouncements: %d", useAsapAnnouncements);
     logDebug("useIpv6:              %d", useIpv6);
     logDebug("useLoopback:          %d", useLoopback);
 
@@ -163,11 +168,16 @@ parseArgs(int argc, char **argv) {
 int
 printHelp(char *binName) {
     printf("Usage: %s\n\n", binName);
-    printf("--enrpAnnounceAddr=<ipv4 or ipv6 addr> the multicast group address\n");
-    printf("--enrpAnnouncePort=<port>              the multicast input port\n");
+    printf("--enrpAnnounceAddr=<ipv4 or ipv6 addr> the enrp multicast group address\n");
+    printf("--enrpAnnouncePort=<port>              the enrp multicast input port\n");
     printf("--enrpLocalAddr=<Addr>                 local address of enrp endpoint\n");
     printf("--enrpLocalPort=<port>                 local port of enrp endpoint\n");
-    printf("--useMulticast=off                     turn of the use of multicast generally\n");
+    printf("--asapAnnounceAddr=<ipv4 or ipv6 addr> the asap multicast group address\n");
+    printf("--asapAnnouncePort=<port>              the asap multicast input port\n");
+    printf("--asapLocalAddr=<Addr>                 local address of asap endpoint\n");
+    printf("--asapLocalPort=<port>                 local port of asap endpoint\n");
+    printf("--useEnrpMulticast=off                 turn of the use of enrp multicast\n");
+    printf("--useAsapMulticast=off                 turn of the use of asap multicast\n");
     printf("--useIpv6=off                          turn off the use of ipv6 generally\n");
     printf("--useLoopback=off                      do NOT bind to loopback addresses\n");
     printf("--help                                 print this help\n");
@@ -780,6 +790,10 @@ main(int argc, char **argv) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.17  2007/12/06 01:52:53  volkmer
  * some pretty printing
  *
