@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: cblib.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: tuexen $
+ * $Id: cblib.c,v 1.2 2008-01-08 20:31:40 tuexen Exp $
  *
  **/
 
@@ -91,7 +91,7 @@ timerRegisterFdCallback(int fd, void (*callback)(void *), void *arg) {
 }
 
 void
-imerRegisterStdinCallback(void (*callback)(void *), void *arg) {
+timerRegisterStdinCallback(void (*callback)(void *), void *arg) {
     if (callback == NULL) {
         logDebug("invalid argument, callback is NULL");
         return;
@@ -221,6 +221,7 @@ timerStart(Timer timerToStart, unsigned int timeout) {
     timer = timerList;
     if (timevalBefore(&timerToStart->stop_time, &timer->stop_time)) {
         timerToStart->next = timer;
+        timerToStart->prev = NULL;
         timer->prev        = timerToStart;
         timerList          = timerToStart;
         timerListPrint();
@@ -232,12 +233,12 @@ timerStart(Timer timerToStart, unsigned int timeout) {
         if (timevalBefore(&timerToStart->stop_time, &timer->next->stop_time))
             break;
 
-    timerToStart->next = timer->next;
-    timerToStart->prev = timer;
     if (timer->next) {
         timer->next->prev = timerToStart;
     }
+    timerToStart->next = timer->next;
     timer->next = timerToStart;
+    timerToStart->prev = timer;
 
     timerListPrint();
 }
@@ -382,6 +383,10 @@ handleEvents(void) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.20  2007/12/02 22:08:42  volkmer
  * some pretty printing
  *
