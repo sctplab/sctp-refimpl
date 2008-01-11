@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.c,v 1.2 2008-01-06 20:47:43 volkmer Exp $
+ * $Id: enrp.c,v 1.3 2008-01-11 00:59:51 volkmer Exp $
  *
  **/
 
@@ -57,7 +57,7 @@
 size_t
 initEnrpPresence(struct enrpPresence *msg, uint32 receiverId, int replyReqBit) {
     msg->hdr.type = ENRP_PRESENCE;
-    msg->hdr.flags = (replyReqBit > 0) ? 0x01 : 0x00;
+    msg->hdr.flags = (replyReqBit > 0) ? ENRP_PRESENCE_REPLY_REQUIRED_BIT : 0x00;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -67,7 +67,7 @@ initEnrpPresence(struct enrpPresence *msg, uint32 receiverId, int replyReqBit) {
 size_t
 initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId, int ownChildsOnlyBit) {
     msg->hdr.type = ENRP_LIST_REQUEST;
-    msg->hdr.flags = (ownChildsOnlyBit > 0) ? 0x01 : 0x00;
+    msg->hdr.flags = (ownChildsOnlyBit > 0) ? ENRP_LIST_REQUEST_OWN_CHILDS_ONLY_BIT : 0x00;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -77,7 +77,7 @@ initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId, int ownChild
 size_t
 initEnrpListResponse(struct enrpListResponse *msg, uint32 receiverId, int rejectBit) {
     msg->hdr.type = ENRP_LIST_RESPONSE;
-    msg->hdr.flags = (rejectBit > 0) ? 0x01 : 0x00;
+    msg->hdr.flags = (rejectBit > 0) ? ENRP_LIST_RESPONSE_REJECT_BIT : 0x00;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -87,7 +87,7 @@ initEnrpListResponse(struct enrpListResponse *msg, uint32 receiverId, int reject
 size_t
 initEnrpHandleTableRequest(struct enrpHandleTableRequest *msg, uint32 receiverId, int ownBit) {
     msg->hdr.type = ENRP_HANDLE_TABLE_REQUEST;
-    msg->hdr.flags = (ownBit > 0) ? 0x01 : 0x00;
+    msg->hdr.flags = (ownBit > 0) ? ENRP_HANDLE_TABLE_REQUEST_OWN_BIT : 0x00;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -97,7 +97,7 @@ initEnrpHandleTableRequest(struct enrpHandleTableRequest *msg, uint32 receiverId
 size_t
 initEnrpHandleTableResponse(struct enrpHandleTableResponse *msg, uint32 receiverId, int moreBit, int rejectBit) {
     msg->hdr.type = ENRP_HANDLE_TABLE_RESPONSE;
-    msg->hdr.flags = 0x00 | ((moreBit > 0) ? 0x02 : 0x00) | ((rejectBit > 0) ? 0x01 : 0x00);
+    msg->hdr.flags = 0x00 | ((moreBit > 0) ? ENRP_HANDLE_TABLE_RESPONSE_MORE_BIT : 0x00) | ((rejectBit > 0) ? ENRP_HANDLE_TABLE_RESPONSE_REJECT_BIT : 0x00);
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -172,6 +172,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
     struct paramPeChecksum *chkSum;
     struct paramServerInformation *srvInfo;
     RegistrarServer server = NULL;
+    PoolElement pe;
     Takeover takeover = NULL;
     Address addrs[MAX_ADDR_CNT];
     char *offset;
@@ -183,7 +184,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
     uint16 port;
     uint16 transportUse;
     uint8 protocol;
-    int sendReply = 0;
+    int replyRequiered = 0;
     int addrCnt = 0;
     int isNew = 0;
     int ret;
@@ -203,8 +204,8 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
     bufLen -= sizeof(struct paramPeChecksum);
     offset += sizeof(struct paramPeChecksum);
 
-    if (pres->hdr.flags & 0x01)
-        sendReply = 1;
+    if (pres->hdr.flags & ENRP_PRESENCE_REPLY_REQUIRED_BIT)
+    	replyRequiered = 1;
 
     if (senderServerId == ownId) {
         logDebug("discarding own presence message");
@@ -237,7 +238,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
                 exit(-1);
             }
         } else {
-            logDebug("there was a parameter error: type == %d", checkTLV(offset, bufLen));
+            logDebug("there was a parameter error: type = %d", checkTLV(offset, bufLen));
             /* TODO:
              * send param error
              */
@@ -262,9 +263,17 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
                 takeoverDelete(takeover);
             }
         }
-        /* TODO:
-         * check checksum
-         */
+        
+        
+        if (server->rsChecksum != checksum) {
+        	logDebug("checksum mismatch, resyncing");
+        	server->rsIsSynchronizing = 1;
+        	
+        	for (pe = server->rsPeList; pe; pe = pe->serverNext)
+        		pe->peIsDirty = 1;
+        	
+        	sendEnrpHandleTableRequest(senderServerId, 1, assocId);
+        }
     } else {
         logDebug("0x%08x is not in peer list", senderServerId);
         server = registrarServerNew(senderServerId);
@@ -307,7 +316,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
         return 1;
     }
 
-    if (sendReply) {
+    if (replyRequiered) {
         logDebug("answering 0x%08x on reply required bit, using assocId %d", senderServerId, newAssocId);
         sendEnrpPresence(senderServerId, 0, 1, newAssocId);
     }
@@ -317,10 +326,11 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
 int
 handleEnrpListRequest(void *buf, ssize_t len, sctp_assoc_t assocId) {
-    int rejectBit = 0;
     struct enrpListRequest *list;
     RegistrarServer server;
     uint32 senderServerId;
+    int rejectBit = 0;
+    int ownChildsOnlyBit = 0;
 
     logDebug("got enrp list request msg");
 
@@ -330,6 +340,8 @@ handleEnrpListRequest(void *buf, ssize_t len, sctp_assoc_t assocId) {
         logDebug("discarding own list request message");
         return -1;
     }
+    
+    ownChildsOnlyBit = list->hdr.flags & ENRP_LIST_REQUEST_OWN_CHILDS_ONLY_BIT;
 
     if (registrarState == INITIALIZING)
         rejectBit = 1;
@@ -341,7 +353,7 @@ handleEnrpListRequest(void *buf, ssize_t len, sctp_assoc_t assocId) {
         return -1;
     }
 
-    sendEnrpListResponse(senderServerId, rejectBit, assocId);
+    sendEnrpListResponse(senderServerId, rejectBit, ownChildsOnlyBit, assocId);
 
     return 1;
 }
@@ -353,16 +365,16 @@ handleEnrpListResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
     struct paramServerInformation *srvInfo;
     char *offset;
     size_t bufSize;
-    uint16 paramtype;
-    int peerCnt = 0;
     Address addrs[MAX_ADDR_CNT];
-    int addrCnt;
+    uint32 senderServerId;
+    uint32 srvInfoServerId;
     uint16 port;
     uint16 transportUse;
     uint8 protocol;
     int ret;
-    uint32 senderServerId;
-    uint32 srvInfoServerId;
+    int addrCnt;
+    int rejectBit = 0;
+    int peerCnt = 0;
 
     logDebug("got enrp list response msg");
 
@@ -372,7 +384,7 @@ handleEnrpListResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
         logDebug("discarding own list request message");
         return -1;
     }
-
+    
     if ((server = registrarServerListGetServerByServerId(senderServerId)) != NULL)
         registrarServerResetTimer(server);
     else {
@@ -380,15 +392,20 @@ handleEnrpListResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
         return -1;
     }
 
-    if (list->hdr.flags & 0x01) {
+    if (list->hdr.flags & ENRP_LIST_REQUEST_OWN_CHILDS_ONLY_BIT) {
         logDebug("list request from 0x%08x was rejected", senderServerId);
+        
+        /*
+         * TODO: request from somewhere else
+         */
+        
         return 1;
     }
 
     offset = (char *) buf + sizeof(struct enrpListResponse);
     bufSize = ntohs(list->hdr.length) - sizeof(struct enrpListResponse);
 
-    while ((paramtype = checkTLV(offset, bufSize)) == PARAM_SERVER_INFORMATION) {
+    while (checkTLV(offset, bufSize) == PARAM_SERVER_INFORMATION) {
         srvInfo = (struct paramServerInformation *) offset;
         offset += sizeof(struct paramServerInformation);
         bufSize += sizeof(struct paramServerInformation);
@@ -415,12 +432,9 @@ handleEnrpListResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
         }
 
         if (protocol == IPPROTO_SCTP && addrCnt > 0) {
-            /* TODO:
-             *
-            */
             memcpy(&server->rsEnrpAddr, addrs, sizeof(Address) * addrCnt);
-
         }
+
         peerCnt++;
     }
 
@@ -446,7 +460,7 @@ handleEnrpHandleTableRequest(void *buf, ssize_t len, sctp_assoc_t assocId) {
     if (registrarState == INITIALIZING)
         rejectBit = 1;
 
-    if (handle->hdr.flags & 0x01)
+    if (handle->hdr.flags & ENRP_HANDLE_TABLE_REQUEST_OWN_BITs)
         ownBit = 1;
 
     if ((server = registrarServerListGetServerByServerId(senderServerId)) != NULL)
@@ -471,6 +485,8 @@ handleEnrpHandleTableResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
     size_t bufSize;
     char poolhandle[POOLHANDLE_SIZE + 1];
     int length;
+    int moreBit;
+    int rejectBit;
     uint32 senderServerId;
 
     logDebug("got enrp handle table request msg");
@@ -482,8 +498,15 @@ handleEnrpHandleTableResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
         return -1;
     }
 
-    if (handle->hdr.flags & 0x01)  {
+    rejectBit = handle->hdr.flags & ENRP_HANDLE_TABLE_RESPONSE_REJECT_BIT;
+    moreBit = handle->hdr.flags & ENRP_HANDLE_TABLE_RESPONSE_MORE_BIT;
+
+    if (rejectBit)  {
         logDebug("handle table request was rejected");
+        /* TODO
+         * request rom somewhere else
+         */
+        
         return -1;
     }
 
@@ -529,15 +552,30 @@ handleEnrpHandleTableResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
                 if (serverPoolGetPoolElementById(pool, pelement->peIdentifier) == NULL) {
                     serverPoolAddPoolElement(pool, pelement);
                     if ((server = registrarServerListGetServerByServerId(senderServerId)) != NULL) {
-                       registrarServerAddPoolElement(server, pelement);
-                       logDebug("added pool element 0x%08x to server 0x%08x", pelement->peIdentifier, server->rsIdentifier);
+                    	/*
+                    	 * TODO:
+                    	 * if server has pe
+                    	 * if server is synchronizing
+                    	 * 
+                    	 * 
+                    	 * move information into pe in db and remove isdirty flag
+                    	 * mergePe function?   can not overwrite because of assocId and 
+                    	 * list management information
+                    	 * 
+                    	 * at end of function: if not
+                    	 * 
+                    	 * global list of syncs?
+                    	 */
+                    
+                        registrarServerAddPoolElement(server, pelement);
+                        logDebug("added pool element 0x%08x to server 0x%08x", pelement->peIdentifier, server->rsIdentifier);
                     }
                     else {
-                       logDebug("registrar is unknown?!");
+                        logDebug("registrar is unknown?!");
                     }
                 }
                 else {
-                   poolElementDelete(pelement);
+                    poolElementDelete(pelement);
                 }
             }
             else {
@@ -546,6 +584,18 @@ handleEnrpHandleTableResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
         }
     }
     serverPoolListPrint();
+    
+/* TODO: handle space sync
+ * 
+ * 
+ *     if (moreBit) {
+    	logDebug("requesting more handle table informations");
+    	sendEnrpHandleTableRequest(senderServerId, 0, assocId);
+    } else {
+    	what??
+    }
+
+ */   
 
     return 1;
 }
@@ -1053,7 +1103,7 @@ sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBi
 }
 
 int
-sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId) {
+sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sctp_assoc_tassocId) {
     RegistrarServer server;
     struct enrpListResponse *response;
     struct paramServerInformation *srvInfo;
@@ -1071,12 +1121,32 @@ sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId) {
     offset += sizeof(struct enrpListResponse);
 
     if (!rejectBit) {
-        for (server = registrarServerList; server; server = server->next) {
-            if (server->rsActive == 0) {
-                logDebug("skipping inactive server 0x%08x", server->rsIdentifier);
-                continue;
-            }
-            logDebug("adding server information for 0x%08x ", server->rsIdentifier);
+    	if (!ownChildsOnlyBit) {
+	        for (server = registrarServerList; server; server = server->next) {
+	            if (server->rsActive == 0) {
+	                logDebug("skipping inactive server 0x%08x", server->rsIdentifier);
+	                continue;
+	            }
+	            
+	            logDebug("adding server information for 0x%08x ", server->rsIdentifier);
+	            srvInfo = (struct paramServerInformation *) offset;
+	            initParamServerInformation(srvInfo, server->rsIdentifier);
+	            offset += sizeof(*srvInfo);
+	
+	            length = transportAddressesToSendBuffer(offset, server->rsEnrpAddr, server->rsEnrpPort, TRANSPORT_USE_DATA_ONLY, IPPROTO_SCTP);
+	            logDebug("length of transport address parameter is %d", length);
+	
+	            if (length == -1) {
+	                logDebug("address to buffer conversion failed, omitting server information parameter");
+	                offset = (char *) response + sizeof(*response);
+	            } else {
+	                offset += length;
+	                srvInfo->hdr.length = htons((uint16) length + ntohs(srvInfo->hdr.length));
+	                response->hdr.length = htons(ntohs(response->hdr.length) + ntohs(srvInfo->hdr.length));
+	            }
+	        }
+    	} else {
+    		logDebug("responding only own childs");
             srvInfo = (struct paramServerInformation *) offset;
             initParamServerInformation(srvInfo, server->rsIdentifier);
             offset += sizeof(*srvInfo);
@@ -1092,7 +1162,11 @@ sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId) {
                 srvInfo->hdr.length = htons((uint16) length + ntohs(srvInfo->hdr.length));
                 response->hdr.length = htons(ntohs(response->hdr.length) + ntohs(srvInfo->hdr.length));
             }
-        }
+    	}
+    } else {
+    	logDebug("rejecting enro list response requests")
+    	
+    	response->hdr.flags = 0x00 & ENRP_LIST_RESPONSE_REJECT_BIT;
     }
 
     msgLen = offset - buf;
@@ -1382,6 +1456,11 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/06 20:47:43  volkmer
+ * added basic enrp error sending
+ * added ownchildsonlybit to list request
+ * enhanced main paramter handling
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
