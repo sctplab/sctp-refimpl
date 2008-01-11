@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: poolelement.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: poolelement.h,v 1.2 2008-01-11 00:59:08 volkmer Exp $
  *
  **/
 #ifndef _POOLELEMENT_H
@@ -59,6 +59,7 @@ struct pool_element_struct {
     uint32          peHomeRegistrarServer;
     int32           peRegistrationLife;
     checksumType    peChecksum;
+    int             peIsDirty;
 
     Timer           peLastHeardTimeout;
     int             peLastHeardTimeoutCnt;
@@ -91,6 +92,10 @@ poolElementDelete(PoolElement pe);
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.15  2007/11/19 22:37:37  volkmer
  * removed comment
  *

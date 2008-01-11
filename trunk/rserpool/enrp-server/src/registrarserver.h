@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: registrarserver.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: registrarserver.h,v 1.2 2008-01-11 00:59:08 volkmer Exp $
  *
  **/
 #ifndef _REGISTRARSERVER_H
@@ -57,6 +57,7 @@ struct registrar_server_struct {
     int                    rsUsesMultiCast;
 
     PoolElement            rsPeList;
+    int                    rsIsSynchronizing;
 
     uint16                 rsAsapPort;
     Address                rsAsapAddr[MAX_ADDR_CNT];
@@ -110,6 +111,10 @@ registrarServerListGetServerByAssocId(sctp_assoc_t assocId);
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.11  2007/11/06 08:18:43  volkmer
  * reformated the copyright statement
  *
