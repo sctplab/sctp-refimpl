@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.h,v 1.2 2008-01-06 20:47:43 volkmer Exp $
+ * $Id: enrp.h,v 1.3 2008-01-11 00:59:51 volkmer Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -70,6 +70,13 @@
 #define MAX_TIME_LAST_HEARD      5000 /* should be 61000 */
 #define MAX_TIME_NO_RESPONSE        3
 #define MAX_BAD_PE_REPORT           3
+
+#define ENRP_PRESENCE_REPLY_REQUIRED_BIT       0x01
+#define ENRP_LIST_REQUEST_OWN_CHILDS_ONLY_BIT  0x01
+#define ENRP_LIST_RESPONSE_REJECT_BIT          0x01
+#define ENRP_HANDLE_TABLE_REQUEST_OWN_BIT      0x01
+#define ENRP_HANDLE_TABLE_RESPONSE_REJECT_BIT  0x01
+#define ENRP_HANDLE_TABLE_RESPONSE_MORE_BIT    0x02
 
 /*
  *  Message structures
@@ -208,7 +215,7 @@ int
 sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBit);
 
 int
-sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId);
+sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sctp_assoc_tassocId);
 
 int
 sendEnrpInitTakeover(uint32 receiverId, uint32 targetId, sctp_assoc_t assocId);
@@ -263,6 +270,11 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/06 20:47:43  volkmer
+ * added basic enrp error sending
+ * added ownchildsonlybit to list request
+ * enhanced main paramter handling
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
