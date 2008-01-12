@@ -30,7 +30,7 @@
 
 /*
  * $Author: tuexen $
- * $Id: enrp.c,v 1.4 2008-01-12 13:10:21 tuexen Exp $
+ * $Id: enrp.c,v 1.5 2008-01-12 13:16:04 tuexen Exp $
  *
  **/
 
@@ -373,7 +373,6 @@ handleEnrpListResponse(void *buf, ssize_t len, sctp_assoc_t assocId) {
     uint8 protocol;
     int ret;
     int addrCnt;
-    int rejectBit = 0;
     int peerCnt = 0;
 
     logDebug("got enrp list response msg");
@@ -1115,7 +1114,8 @@ sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sct
 
     memset(buf, 0, BUFFER_SIZE);
     offset = (char *) buf;
-
+	server = NULL;
+	
     response = (struct enrpListResponse *) offset;
     msgLen = initEnrpListResponse(response, receiverId, rejectBit);
     offset += sizeof(struct enrpListResponse);
@@ -1456,6 +1456,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2008/01/12 13:10:21  tuexen
+ * Get it compiling.
+ *
  * Revision 1.3  2008/01/11 00:59:51  volkmer
  * implemented ownChildsOnlBit in enrp list handling and sending
  * introduced enrp message flags bitmasks
@@ -1475,8 +1478,8 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
  *
  * Revision 1.32  2007/12/05 23:10:27  volkmer
  * changed createassoctopeer to use sctp_connectx
-don't use special sendFd
-fixed a bug in handle table response
+ * don't use special sendFd
+ * fixed a bug in handle table response
  *
  * Revision 1.31  2007/12/02 22:14:23  volkmer
  * adapted to new sendbuffertopoolelement method
@@ -1486,7 +1489,7 @@ fixed a bug in handle table response
  *
  * Revision 1.29  2007/11/05 00:04:27  volkmer
  * reformated the copyright statement
-implemented sendenrphandleupdate
+ * implemented sendenrphandleupdate
  *
  * Revision 1.28  2007/10/27 15:05:20  volkmer
  * removed debug macro
