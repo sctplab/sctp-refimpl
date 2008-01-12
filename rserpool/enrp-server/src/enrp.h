@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: volkmer $
- * $Id: enrp.h,v 1.3 2008-01-11 00:59:51 volkmer Exp $
+ * $Author: tuexen $
+ * $Id: enrp.h,v 1.4 2008-01-12 13:10:21 tuexen Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -215,7 +215,7 @@ int
 sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBit);
 
 int
-sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sctp_assoc_tassocId);
+sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sctp_assoc_t assocId);
 
 int
 sendEnrpInitTakeover(uint32 receiverId, uint32 targetId, sctp_assoc_t assocId);
@@ -270,6 +270,11 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2008/01/11 00:59:51  volkmer
+ * implemented ownChildsOnlBit in enrp list handling and sending
+ * introduced enrp message flags bitmasks
+ * started working on handle space sync
+ *
  * Revision 1.2  2008/01/06 20:47:43  volkmer
  * added basic enrp error sending
  * added ownchildsonlybit to list request
@@ -283,7 +288,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
  * moved peliftimeexpirytimeoutcallback
  *
  * Revision 1.14  2007/12/05 23:10:27  volkmer
- * changed createassoctopeer to use sctp_connectxdon't use special sendFdfixed a bug in handle table response
+ * changed createassoctopeer to use sctp_connectx
+ * don't use special sendFd
+ * fixed a bug in handle table response
  *
  * Revision 1.13  2007/11/19 22:38:08  volkmer
  * removed checksum param from enrp presence message
@@ -292,7 +299,8 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
  * added missing prototypes
  *
  * Revision 1.11  2007/11/05 00:04:27  volkmer
- * reformated the copyright statementimplemented sendenrphandleupdate
+ * reformated the copyright statement
+ * implemented sendenrphandleupdate
  *
  * Revision 1.10  2007/10/27 15:05:20  volkmer
  * removed debug macro
