@@ -1,19 +1,24 @@
 AC_INIT(src/main.c)
-AM_INIT_AUTOMAKE(enrp-server, 0.1)
+AM_INIT_AUTOMAKE(enrp-server, 0.1.1)
 
 AC_PROG_CC
 
 AC_CANONICAL_HOST
 
-# Remove -Wno-variadic-macros for older versions of gcc
-CFLAGS="$CFLAGS -Wall -pedantic -ansi -Wno-variadic-macros"
+CFLAGS="$CFLAGS -Wall -pedantic -ansi"
 
 case $host_os in
 solaris*)
     CFLAGS="$CFLAGS -D_XPG4_2"
     ;;
 linux*)
-    CFLAGS="$CFLAGS -D_BSD_SOURCE"
+    CFLAGS="$CFLAGS -D_BSD_SOURCE -Wno-variadic-macros"
+    ;;
+darwin*)
+    CFLAGS="$CFLAGS -Wno-variadic-macros"
+    ;;
+freebsd7*)
+    CFLAGS="$CFLAGS -Wno-variadic-macros"
     ;;
 esac
 
