@@ -16,11 +16,26 @@ int rsp_close(int sockfd);
 
 int rsp_connect(int sockfd, const char *name, size_t namelen);
 
+int
+rsp_register_sctp(int sockfd, const char *name, size_t namelen, uint32_t policy, uint32_t pvalue);
 
-int rsp_register(int sockfd, const char *name, size_t namelen, uint32_t policy, uint32_t policy_value );
+int
+rsp_register(int sockfd, const char *name, size_t namelen, struct rsp_register_params *params,
+        struct asap_error_cause *cause);
 
-int rsp_deregister(int sockfd);
+/*
+int
+rsp_register(int sockfd, const char *name, size_t namelen,
+        uint16_t ptype, uint16_t tuse, const struct sockaddr *taddr, socklen_t len, uint32_t cnt_of_addr,
+        uint32_t policy, uint32_t policy_value, struct asap_error_cause *cause);
+*/
 
+int
+rsp_deregister(int sockfd, const char *name, size_t namelen, uint32_t pe_identifier,
+        struct asap_error_cause *cause);
+
+int
+rsp_lookup(int sockfd, const char *name, size_t namelen, int *protocol_type, struct sockaddr *addr);
 
 int 
 rsp_getPoolInfo(int sockfd, char *name, size_t namelen);

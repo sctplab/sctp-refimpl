@@ -481,7 +481,7 @@ rsp_load_file(FILE *io, char *file)
 	close(es->sd);
 	if(es->cache)
 		HashedTbl_destroy(es->cache);
-	
+
 	if(es->asocidHash)
 		HashedTbl_destroy(es->asocidHash);
 
@@ -936,7 +936,7 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
 	errno = EINVAL;
 	return (-1);
   }
-	
+
   sd = rsp_find_socket_with_sd(sockfd);
   if(sd == NULL) {
 	goto out;
@@ -969,36 +969,265 @@ rsp_connect(int sockfd, const char *name, size_t namelen)
   return (0);
 }
 
-int 
-rsp_register(int sockfd, const char *name, size_t namelen, uint32_t policy, uint32_t policy_value )
+int
+rsp_register_sctp(int sockfd, const char *name, size_t namelen,
+        uint32_t policy, uint32_t pvalue)
 {
-	if (rsp_inited == 0) {
-		errno = EINVAL;
-		return (-1);
-	}
+    struct rsp_socket *sdata;
+    struct rsp_enrp_scope *scp;
+    struct rsp_pool_ele *pes;
+    struct rsp_register_params params;
+    struct asap_error_cause cause;
+    socklen_t siz = sizeof(socklen_t);
+    uint16_t port;
 
-	return (0);	
+    if (rsp_inited == 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+
+    sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
+    if(sdata == NULL) {
+        /* sockfd is not one of ours */
+        errno = EINVAL;
+        return (-1);
+    }
+    printf("sdata ret:%x scp:%x\n",
+           (u_int)sdata, (u_int)sdata->scp);
+
+    scp = sdata->scp;
+    if(scp == NULL) {
+        errno = EFAULT;
+        return (-1);
+    }
+
+    /* Connect to an enrp server if not connected*/
+    if(scp->state & RSP_ENRP_HS_FOUND) {
+        /* we have a HS */
+        ;
+    } else {
+        /* Server Hunt may be IP */
+        if((scp->state & RSP_SERVER_HUNT_IP) == 0)
+            rsp_start_enrp_server_hunt(scp);
+
+        /* Block getting a server */
+        while((scp->state & RSP_ENRP_HS_FOUND) == 0) {
+            rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+        }
+    }
+
+    bzero(&params, sizeof(struct rsp_register_params));
+    params.transport_use = 1;
+    params.protocol_type = RSP_PARAM_SCTP_TRANSPORT;
+    params.policy = policy;
+    params.policy_value = pvalue;
+    params.reglife = -1; /* FIX read it from configfile */
+
+    if (getsockopt(scp->sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,  &params.socklen, &siz) < 0) {
+        perror("Failed to get addr size");
+        return (-1);
+    }
+
+    /* Get the laddrs from sctp socket */
+    params.cnt_of_addr = sctp_getladdrs(scp->sd, scp->homeServer->asocid, &(params.taddr));
+    if (params.cnt_of_addr < 0) {
+        perror("Failed to get laddrs");
+        return(-1);
+    }
+
+    printf("SCTP listen port: %d\n", port);
+
+    pes = asap_create_pool_ele(scp, name, namelen, &params);
+    if (pes == NULL) {
+        errno = EFAULT;
+        return (-1);
+    }
+
+    rsp_enrp_make_register_request(sdata, pes->pool, pes, 0, &cause);
+
+    listen(scp->sd, 10);
+
+    return (pes->pe_identifer);
 }
 
 int
-rsp_deregister(int sockfd)
+rsp_register(int sockfd, const char *name, size_t namelen,
+        struct rsp_register_params *params,
+        struct asap_error_cause *cause)
 {
+    struct rsp_socket *sdata;
+    struct rsp_enrp_scope *scp;
+    struct rsp_pool_ele *pes;
+
+    if (rsp_inited == 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+
+    if (params == NULL) {
+        errno = EINVAL;
+        return(-1);
+    }
+
+    sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
+    if(sdata == NULL) {
+        /* sockfd is not one of ours */
+        errno = EINVAL;
+        return (-1);
+    }
+    printf("sdata ret:%x scp:%x\n",
+           (u_int)sdata, (u_int)sdata->scp);
+
+    scp = sdata->scp;
+    if(scp == NULL) {
+        errno = EFAULT;
+        return (-1);
+    }
+
+    /* Connect to an enrp server if not connected*/
+
+    if(scp->state & RSP_ENRP_HS_FOUND) {
+        /* we have a HS */
+        ;
+    } else {
+        /* Server Hunt may be IP */
+        if((scp->state & RSP_SERVER_HUNT_IP) == 0)
+            rsp_start_enrp_server_hunt(scp);
+
+        /* Block getting a server */
+        while((scp->state & RSP_ENRP_HS_FOUND) == 0) {
+            rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+        }
+    }
+    pes = asap_create_pool_ele(scp, name, namelen, params);
+    if (pes == NULL) {
+        errno = EFAULT;
+        return (-1);
+    }
+
+    rsp_enrp_make_register_request(sdata, pes->pool, pes, 0, cause);
+
+    return (pes->pe_identifer);
+}
+
+int
+rsp_deregister(int sockfd, const char *name, size_t namelen, uint32_t pe_identifier,
+               struct asap_error_cause *cause)
+{
+    struct rsp_socket *sdata;
+    struct rsp_enrp_scope *scp;
+    struct rsp_pool_ele *pes;
+    struct rsp_pool *pool;
+
 	if (rsp_inited == 0) {
 		errno = EINVAL;
 		return (-1);
 	}
 
+    sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
+    if(sdata == NULL) {
+        /* sockfd is not one of ours */
+        errno = EINVAL;
+        return (-1);
+    }
+    printf("sdata ret:%x scp:%x\n",
+           (u_int)sdata, (u_int)sdata->scp);
+
+    scp = sdata->scp;
+    if(scp == NULL) {
+        errno = EINVAL;
+        return (-1);
+    }
+    pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache, name, namelen, NULL);
+    if (pool == NULL) {
+        errno = EINVAL;
+        return (-1);
+    }
+
+    pes = asap_find_pe(pool, pe_identifier);
+    if (pes == NULL) {
+        errno = ENOENT;
+        return -1;
+    }
+
+    rsp_enrp_make_deregister_request(sdata, pool, pes, 0, cause);
 	return (0);
 }
 
+int
+rsp_lookup(int sockfd, const char *name, size_t namelen, int *protocol_type,
+        struct sockaddr *addr)
+{
+    struct rsp_socket *sdata;
+    struct rsp_enrp_scope *scp;
+    struct rsp_pool_ele *pe;
+    struct rsp_pool *pool;
+
+    if (rsp_inited == 0) {
+        errno = EINVAL;
+        return (-1);
+    }
+
+    sdata  = (struct rsp_socket *)rsp_find_socket_with_sd(sockfd);
+    if(sdata == NULL) {
+        /* sockfd is not one of ours */
+        errno = EINVAL;
+        return (-1);
+    }
+    printf("sdata ret:%x scp:%x\n",
+           (u_int)sdata, (u_int)sdata->scp);
+
+    scp = sdata->scp;
+    if(scp == NULL) {
+        errno = EINVAL;
+        return (-1);
+    }
+
+    /* named based hunting, imply's using
+     * load balancing policy after finding name.
+     */
+    pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+    if(pool == NULL) {
+        /* need to block and get info, first is
+         * there already a request pending for this.
+         * If so just join sleep, if not create and
+         * send, then sleep.
+         */
+        rsp_connect(sockfd, name, namelen);
+        printf("Connect returns, lookup pool\n");
+        pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache ,name, namelen, NULL);
+    }
+    /* If we fall to here we have a pool to send to */
+    if ((pool == NULL) || (pool->state == RSP_POOL_STATE_NOTFOUND)) {
+        errno = ENOENT;
+        return (-1);
+    }
+    pe = rsp_server_select(pool);
+    printf("Pick a pe\n");
+
+    if (pe == NULL) {
+        errno = ENOENT;
+        return(-1);
+    }
+    /* Collect the address info and return to the called */
+    *protocol_type = pe->protocol_type;
+    addr = malloc(pe->number_of_addr * pe->len);
+    if (addr == NULL) {
+        errno = EINVAL; // FIX
+        return (-1);
+    }
+    memcpy(addr, pe->addrList, pe->number_of_addr * pe->len);
+    return (0);
+
+}
 int
 rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
 {
   struct rsp_socket *sd;
   struct rsp_pool *pool;
   struct rsp_enrp_scope *scp;
-  
-  
+
+
   if (rsp_inited == 0) {
 	errno = EINVAL;
 	return (-1);
@@ -1007,7 +1236,7 @@ rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
 	errno = EINVAL;
 	return (-1);
   }
-  
+
   sd = rsp_find_socket_with_sd(sockfd);
   if(sd == NULL) {
 	errno = EFAULT;
@@ -1033,7 +1262,7 @@ rsp_getPoolInfo(int sockfd, char *name, size_t namelen)
   return (-1);
 }
 
-int 
+int
 rsp_reportfailure(int sockfd, char *name,size_t namelen,  const struct sockaddr *to, const sctp_assoc_t id)
 {
 	if (rsp_inited == 0) {
@@ -1152,8 +1381,8 @@ rsp_sendmsg(int sockfd,         /* HA socket descriptor */
 		struct sockaddr *sa;
 		int cnt;
 
-		cnt = pe->number_of_addr;
 	use_addrs_collect_associd:
+	    cnt = pe->number_of_addr;
 		sa = pe->addrList;
 		while(sa->sa_family == AF_INET6) {
 			sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
@@ -1276,7 +1505,7 @@ rsp_internal_poll(nfds_t nfds, int timeout, int ret_from_enrp)
 
 	do_poll:
 		/* delay min_timeout */
-		
+
 		if ((timeout > 0) && (timeout < min_timeout)) {
 			rem_to = 1;
 			min_timeout = timeout;
@@ -1378,6 +1607,7 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 		return(-1);
 	}
  try_again:
+    flags = 0; /* flags from previous recvmsg might mess up subsequent recvmsg calls */
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].fd = sdata->sd;
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].events = POLLIN;
 	rsp_pcbinfo.watchfds[rsp_pcbinfo.num_fds].revents = 0;
@@ -1412,12 +1642,13 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 		}
 		ret = sctp_recvmsg(sdata->sd, msg, len,
 				   from, fromlen, sinfo, &flags);
-		printf("ret:%d sinfo->sinfo_flags:%x flags:%x ppid:%x\n",
+		printf("ret:%d sinfo->sinfo_flags:%x flags:%x ppid:%x msg:%s\n",
 		       ret,
 		       sinfo->sinfo_flags,
 		       flags,
-		       ntohl(sinfo->sinfo_ppid));
-		       
+		       ntohl(sinfo->sinfo_ppid),
+		       msg);
+
 		if (flags & MSG_NOTIFICATION) {
 			printf("Its a notification\n");
 			handle_asap_sctp_notification(sdata, msg, ret, from, *fromlen, sinfo, flags);
@@ -1433,7 +1664,7 @@ rsp_rcvmsg(int sockfd,		/* HA socket descriptor */
 		/* UDP */
 		return(recvfrom(sdata->sd, msg, len, flags,
 				from, fromlen));
-				
+
 	}
 	if(name) {
 		pe = (struct rsp_pool_ele  *)HashedTbl_lookupKeyed(scp->asocidHash, 
@@ -1472,7 +1703,7 @@ rsp_select(int nfds,
 	int ms;
 	int at,nat, incr_needed, added_fds;
 	int ret,nret, didone;
-	
+
 	if(timeout == NULL) {
 		/* Infinity */
 		ms = INFTIM;
@@ -1523,7 +1754,7 @@ rsp_select(int nfds,
 	}
 	ret = rsp_internal_poll((nfds_t)(added_fds+rsp_pcbinfo.num_fds), ms, 0);
 	nret = ret;
-	
+
 	if(readfds) {
 		FD_ZERO(readfds);
 	}

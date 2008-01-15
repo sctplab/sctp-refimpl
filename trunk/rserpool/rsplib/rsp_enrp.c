@@ -237,6 +237,18 @@ asap_destroy_pe(struct rsp_pool_ele *pes, int remove_from_cache)
 	free(pes);
 }
 
+struct rsp_pool_ele *
+asap_find_pe(struct rsp_pool *pool, uint32_t id) {
+    struct rsp_pool_ele *ele ;
+
+    dlist_reset(pool->peList);
+    while ((ele = (struct rsp_pool_ele *)dlist_get(pool->peList)) != NULL) {
+        if (ele->pe_identifer == id) {
+            return ele;
+        }
+    }
+    return NULL;
+}
 
 struct rsp_pool_ele *
 asap_build_pool_element(struct rsp_enrp_scope *scp, 
@@ -280,7 +292,7 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 	pes->reglife = htonl(pe->registration_life);
 	/* pull/check transport */
 	at = (uint8_t *)&pe->user_transport;
-	
+
 	siz = ntohs(pe->user_transport.param_length);
 	calc = (uint8_t *)pe;
 	calc += siz;
@@ -329,7 +341,7 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 			local_at = local_nxt;
 			ph = get_next_parameter (local_at, local_limit, &local_nxt, &local_type);			
 		}
-	
+
 	}
 	break;
 	case RSP_PARAM_TCP_TRANSPORT:
@@ -345,7 +357,7 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 			goto destroy_it;
 		}
 		/* enter it in the hash */
-		
+
 		break;
 	case RSP_PARAM_UDP_TRANSPORT:
 		udp = (struct rsp_udp_transport *)&pe->user_transport;
@@ -400,8 +412,8 @@ asap_build_pool_element(struct rsp_enrp_scope *scp,
 		fprintf(stderr, "Unknown policy type %d - set to default values for RR\n", policy->policy_type);
 		break;
 	}
-	
-	/* 
+
+	/*
 	 * Now we must get the actual ASAP transport out too. But
 	 * I don't see the value, so I won't for now. FIX ME FIX ME!
 	 * maybe when I do enrp I will get this out.
@@ -534,6 +546,13 @@ build_a_pool(struct rsp_enrp_scope *scp, const char *name, int namelen, uint32_t
 		free(pool);
 		return(NULL);
 	}
+
+	if (pool->next_peid == 0) {
+	    /* initialize it with a random number */
+	    srandomdev();
+	    pool->next_peid = random();
+	}
+
 	/* The cookie stuff is inited to NULL/0 len */
 	pool->refcnt = 1;
 
@@ -550,11 +569,114 @@ build_a_pool(struct rsp_enrp_scope *scp, const char *name, int namelen, uint32_t
 	return(pool);
 }
 
+struct rsp_pool_ele *
+asap_create_pool_ele (struct rsp_enrp_scope *scp, const char *name, size_t namelen,
+                      struct rsp_register_params *params)
+{
+
+    struct rsp_pool_ele *pes;
+    struct rsp_pool *pool;
+
+    pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache, name, namelen, NULL);
+    if (pool == NULL) {
+        printf("Building the pool for %s\n", name);
+        pool = build_a_pool(scp, name, namelen, params->policy);
+        if (pool == NULL) {
+            return NULL;
+        }
+    }
+    printf("Pool is %x\n", (u_int)pool);
+
+
+    pes = malloc(sizeof(struct rsp_pool_ele));
+    if(pes == NULL) {
+        /* no memory ? */
+        return(NULL);
+    }
+    memset(pes, 0, sizeof(*pes));
+    pes->failover_list = dlist_create();
+    if(pes->failover_list == NULL) {
+        /* no memory */
+        free(pes);
+        return(NULL);
+    }
+    pes->pool = pool;
+    pes->state = RSP_PE_STATE_INACTIVE;
+    pes->pe_identifer = ++(pool->next_peid);
+    pes->protocol_type = params->protocol_type;
+    pes->reglife = params->reglife; // FIX
+
+    /* Simply Copy the addressess */
+    pes->addrList = malloc(params->cnt_of_addr * params->socklen);
+    if (pes->addrList == NULL) {
+        dlist_destroy(pes->failover_list);
+        free(pes);
+        return(NULL);
+    }
+    pes->number_of_addr = params->cnt_of_addr;
+    pes->len = params->socklen;
+    memcpy(pes->addrList, params->taddr, params->cnt_of_addr * params->socklen);
+    if (pes->addrList->sa_family == AF_INET) {
+        pes->port = ((struct sockaddr_in*)pes->addrList)->sin_port;
+    } else if(pes->addrList[0].sa_family == AF_INET6) {
+        pes->port = ((struct sockaddr_in6*)pes->addrList)->sin6_port;
+    } else {
+        dlist_destroy(pes->failover_list);
+        free(pes);
+        printf("\nUnknown address family");
+        return(NULL);
+    }
+
+    pes->transport_use = params->transport_use;
+
+    /* policy FIX*/
+    pes->policy_value = params->policy;
+    pes->policy_actvalue = params->policy_value;
+
+    /* add it */
+    dlist_append(pool->peList, pes);
+
+    return pes;
+}
+
 void
-handle_response_op_error(struct rsp_enrp_scope *scp, 
-			 struct rsp_enrp_entry *enrp, 
-			 struct rsp_pool_handle *ph, 
-			 struct rsp_operational_error *op) 
+handle_response_op_errorx(struct rsp_enrp_scope *scp,
+        struct rsp_timer_entry *tme,
+        struct rsp_pool *pool,
+        struct rsp_operational_error *op_error) {
+    int len;
+    struct rsp_enrp_req *req = tme->req;
+
+    /* update the req with error cause code and string */
+    req->cause.ccode = ntohs(op_error->cause[0].code);
+    len = ntohs(op_error->cause[0].length);
+
+    /*
+     * the cause code and optional cause TLV needs to be returned to the caller
+     * Store it in the req structure. retrieve it after the rsp_internal_poll from the req
+     * and store it in the user supplied data structure.
+     */
+    if (len > 4) {
+        /* Has an optional cause variable length string */
+        req->cause.olen = (len-4); /* -cause header + 1 byte to store \0 */
+        req->cause.ocause = malloc(req->cause.olen);
+        memcpy(req->cause.ocause, op_error->cause[0].ocause, req->cause.olen);
+    } else {
+        /* No optional cause header */
+        req->cause.olen = 0;
+    }
+
+    /* now we must stop any timers and wake any sleepers */
+    /* stop timer, which wakes everyone */
+    rsp_stop_timer(tme);
+    return; /* basically returns to the caller waiting for response */
+
+}
+void
+handle_response_op_error(struct rsp_enrp_scope *scp,
+			 struct rsp_enrp_entry *enrp,
+			 struct rsp_pool_handle *ph,
+			 struct rsp_operational_error *op)
 {
 	int pool_nm_len;
 	struct rsp_pool *pool;
@@ -567,6 +689,176 @@ handle_response_op_error(struct rsp_enrp_scope *scp,
 		return;
 	}
 	pool->state = RSP_POOL_STATE_NOTFOUND;
+
+}
+
+void
+asap_handle_registration_response(struct rsp_enrp_scope *scp,
+        struct rsp_enrp_entry *enrp,
+        uint8_t *buf,
+        ssize_t sz,
+        struct sctp_sndrcvinfo *sinfo)
+{
+    struct rsp_pool_handle *ph;
+    struct rsp_pe_identifier *pe_id;
+    struct rsp_operational_error *op_error;
+
+    struct rsp_pool *pool;
+    uint8_t *limit, *at, *bu;
+    struct rsp_enrp_req *req;
+    struct rsp_timer_entry *tme;
+    uint16_t this_param;
+    int pool_nm_len;
+
+    /* at all times our pointer must be less than limit */
+    limit = (buf + sz);
+    at = buf + sizeof(struct asap_message);
+
+    /* Now we must first we get the pool handle parameter */
+    ph  = (struct rsp_pool_handle *)get_next_parameter(at, limit, &at, &this_param);
+    if ((this_param != RSP_PARAM_POOL_HANDLE) || (ph == NULL)) {
+        fprintf(stderr, "Did not find first req param, pool handle in msg found %d\n",
+                this_param);
+        return;
+    }
+    bu = at;
+
+    pool_nm_len = ph->ph.param_length - sizeof(struct rsp_paramhdr);
+
+    pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache, ph->pool_handle, pool_nm_len, NULL);
+    if (pool == NULL) {
+        fprintf(stderr, "pool %s not found\n", ph->pool_handle);
+        return;
+    }
+    printf("Pool is %x\n", (u_int)pool);
+
+    /* mark time of update */
+    gettimeofday(&pool->received, NULL);
+    pool->state = RSP_POOL_STATE_RESPONDED;
+
+    /* Now we must first we get the pe identifier parameter */
+    pe_id  = (struct rsp_pe_identifier *)get_next_parameter(at, limit, &at, &this_param);
+    if ((this_param != RSP_PARAM_PE_IDENTIFIER) || (pe_id == NULL)) {
+        fprintf(stderr, "Did not find required param, pool identifier in msg found %d\n",
+                this_param);
+        return;
+    }
+
+    tme = asap_find_req(scp, pool->name, pool->name_len, ASAP_REQUEST_REGISTRATION, 0);
+    if(tme == NULL) {
+        fprintf (stderr, "Error, can't find resolve request for pool\n");
+        return;
+    }
+    req = tme->req;
+
+    /* Check if operation error is present */
+    if (at < limit) {
+        op_error = (struct rsp_operational_error*)get_next_parameter(at, limit, &at, &this_param);
+        if ((this_param != RSP_PARAM_OPERATION_ERROR) || op_error == NULL) {
+            fprintf(stderr, "Did not find required param, pool identifier in msg found %d\n",
+                    this_param);
+        }
+        handle_response_op_errorx(scp, tme, pool, op_error);
+        return;
+    } else {
+        /* No error. Registered ok */
+
+    }
+
+
+    /* now we must stop any timers and wake any sleepers */
+    /* stop timer, which wakes everyone */
+    rsp_stop_timer(tme);
+    req->resolved = 1;
+    printf("Registered now\n");
+
+}
+
+void
+asap_handle_deregistration_response(struct rsp_enrp_scope *scp,
+        struct rsp_enrp_entry *enrp,
+        uint8_t *buf,
+        ssize_t sz,
+        struct sctp_sndrcvinfo *sinfo)
+{
+    struct rsp_pool_handle *ph;
+    struct rsp_pe_identifier *pe_id;
+    struct rsp_operational_error *op_error;
+
+    struct rsp_pool *pool;
+    uint8_t *limit, *at, *bu;
+    struct rsp_enrp_req *req;
+    struct rsp_timer_entry *tme;
+    uint16_t this_param;
+    int pool_nm_len;
+
+    /* at all times our pointer must be less than limit */
+    limit = (buf + sz);
+    at = buf + sizeof(struct asap_message);
+
+    /* Now we must first we get the pool handle parameter */
+    ph  = (struct rsp_pool_handle *)get_next_parameter(at, limit, &at, &this_param);
+    if ((this_param != RSP_PARAM_POOL_HANDLE) || (ph == NULL)) {
+        fprintf(stderr, "Did not find first req param, pool handle in msg found %d\n",
+                this_param);
+        return;
+    }
+    bu = at;
+
+    pool_nm_len = ph->ph.param_length - sizeof(struct rsp_paramhdr);
+
+    pool = (struct rsp_pool *)HashedTbl_lookup(scp->cache, ph->pool_handle, pool_nm_len, NULL);
+    if (pool == NULL) {
+        fprintf(stderr, "pool %s not found\n", ph->pool_handle);
+        return;
+    }
+    printf("Pool is %x\n", (u_int)pool);
+
+    /* mark time of update */
+    gettimeofday(&pool->received, NULL);
+    pool->state = RSP_POOL_STATE_RESPONDED;
+
+    /* Now we must first we get the pe identifier parameter */
+    pe_id  = (struct rsp_pe_identifier *)get_next_parameter(at, limit, &at, &this_param);
+    if ((this_param != RSP_PARAM_PE_IDENTIFIER) || (pe_id == NULL)) {
+        fprintf(stderr, "Did not find required param, pool identifier in msg found %d\n",
+                this_param);
+        return;
+    }
+
+    /* now we must stop any timers and wake any sleepers */
+    tme = asap_find_req(scp, pool->name, pool->name_len, ASAP_REQUEST_DEREGISTRATION, 0);
+    if(tme == NULL) {
+        fprintf (stderr, "Error, can't find resolve request for pool\n");
+        return;
+    }
+    req = tme->req;
+
+    /* Check if operation error is present */
+    if (at < limit) {
+        op_error = (struct rsp_operational_error*)get_next_parameter(at, limit, &at, &this_param);
+        if ((this_param != RSP_PARAM_OPERATION_ERROR) || op_error == NULL) {
+            fprintf(stderr, "Did not find required param, pool identifier in msg found %d\n",
+                    this_param);
+        }
+        handle_response_op_errorx(scp, tme, pool, op_error);
+        return;
+    } else {
+        /* No error. DeRegistered ok */
+        /* Remove the pe from the pool FIX*/
+        struct rsp_pool_ele *pes;
+        pes = asap_find_pe(pool, ntohl(pe_id->id));
+        if (pes)
+            asap_destroy_pe(pes, 1);
+    }
+
+
+
+    /* stop timer, which wakes everyone */
+    rsp_stop_timer(tme);
+    req->resolved = 1;
+    printf("DeRegistered now\n");
+
 }
 
 void
@@ -613,7 +905,7 @@ asap_handle_name_resolution_response(struct rsp_enrp_scope *scp,
 	} else {
 		/* reselect */
 		regType = RSP_POLICY_ROUND_ROBIN;
-		
+
 		/* the Overall Selection Policy is an optional parameter */
 	    overall_sp = 0;
 	}
@@ -1019,12 +1311,14 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		 * sleeper so it can unblock and realize it
 		 * failed.
 		 */
+	    asap_handle_registration_response(scp, enrp, (uint8_t *)buf, sz, sinfo);
  		break;
 	case ASAP_DEREGISTRATION_RESPONSE:
 		/* Here we can check our de-reg response, it
 		 * should be ok since the ENRP server should
-		 * not refuse to let us deregister. 
+		 * not refuse to let us deregister.
 		 */
+	    asap_handle_deregistration_response(scp, enrp, (uint8_t *)buf, sz, sinfo);
  		break;
 	case ASAP_HANDLE_RESOLUTION_RESPONSE:
 		/* Ok we must find the pending response
@@ -1034,12 +1328,11 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		 * send to a name) then we must wake the sleeper's
 		 * afterwards.
 		 */
-	  asap_handle_name_resolution_response(scp, enrp, (uint8_t *)buf,
-										   sz, sinfo);
+	  asap_handle_name_resolution_response(scp, enrp, (uint8_t *)buf, sz, sinfo);
 		break;
 	case ASAP_ENDPOINT_KEEP_ALIVE:
 		/* its a keep-alive, we must declare
-		 * this to be our new home server if it is not already 
+		 * this to be our new home server if it is not already
 		 * and send back an ASAP_ENDPOINT_KEEP_ALIVE_ACK.
 		 */
 		break;
@@ -1073,6 +1366,7 @@ handle_asapmsg_fromenrp (struct rsp_enrp_scope *scp, char *buf,
 		break;
 	};
 }
+
 
 int
 rsp_enrp_make_name_request(struct rsp_socket *sd,
@@ -1131,7 +1425,7 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	 * B) If no H-ENRP-S, find serverhunt, if happening,
 	 *    and then chain to end of that.
 	 *
-	 * In either case we will then run the select loop 
+	 * In either case we will then run the select loop
 	 * setting it up to return when a message is received
 	 * from ENRP as well.
 	 */
@@ -1177,7 +1471,349 @@ rsp_enrp_make_name_request(struct rsp_socket *sd,
 	return(0);
 }
 
+void
+rsp_create_pool_handle_param(void *req, char *name, int32_t namelen, uint32_t *nlen)
+{
+    struct rsp_pool_handle *phandle;
+    phandle = (struct rsp_pool_handle *)req;
+    phandle->ph.param_type = htons(RSP_PARAM_POOL_HANDLE);
+    memcpy(phandle->pool_handle, name, namelen);
+    *nlen = namelen + sizeof(struct rsp_pool_handle);
+    phandle->ph.param_length = htons(*nlen);
+}
 
+void
+rsp_create_pe_identifier_param(void *req, uint32_t peid, uint32_t *nlen)
+{
+    struct rsp_pe_identifier *pe_identifier;
+    pe_identifier = (struct rsp_pe_identifier *)req;
+    pe_identifier->ph.param_type = htons(RSP_PARAM_PE_IDENTIFIER);
+    pe_identifier->id = htonl(peid);
+    *nlen = sizeof(struct rsp_pe_identifier);
+    pe_identifier->ph.param_length = htons(*nlen);
+}
+
+int
+rsp_create_pool_element_param(void *req, struct rsp_pool_ele *pes, uint32_t *nlen)
+{
+    struct rsp_pool_element *pe;
+
+    uint16_t tlen;
+
+    pe = (struct rsp_pool_element *)req;
+    pe->ph.param_type = htons(RSP_PARAM_POOL_ELEMENT);
+    pe->id = htonl(pes->pe_identifer);
+    pe->home_enrp_id = htonl(0); // FIX
+    pe->registration_life = htonl(pes->reglife);
+    switch (pes->protocol_type ) {
+        case RSP_PARAM_SCTP_TRANSPORT: {
+            struct rsp_sctp_transport *sctp;
+            int i=0;
+            tlen = sizeof(struct rsp_sctp_transport);
+            sctp = (struct rsp_sctp_transport *)&pe->user_transport;
+            sctp->ph.param_type = htons(RSP_PARAM_SCTP_TRANSPORT);
+            sctp->port = pes->port; /* Already in network byte order */
+            sctp->transport_use = htons(pes->transport_use);
+
+            for (i=0;i<pes->number_of_addr;++i) {
+                uint16_t atype = (pes->addrList[i].sa_family == AF_INET)?RSP_PARAM_IPV4_ADDR:RSP_PARAM_IPV6_ADDR;
+                if (atype == RSP_PARAM_IPV4_ADDR) {
+                    struct rsp_ipv4_address *ipv4 = (struct rsp_ipv4_address *)
+                        ((void *)sctp->address + (i*sizeof(struct rsp_ipv4_address)));
+                    ipv4->ph.param_type = htons(atype);
+                    ipv4->ph.param_length = htons(8);
+                    ipv4->in = ((struct sockaddr_in *)&pes->addrList[i])->sin_addr;
+                    tlen += sizeof(struct rsp_ipv4_address);
+                } else {
+                    struct rsp_ipv6_address *ipv6 = (struct rsp_ipv6_address *)
+                        ((void *)sctp->address + (i*sizeof(struct rsp_ipv6_address)));
+                    ipv6->ph.param_type = htons(atype);
+                    ipv6->ph.param_length = htons(16);
+                    ipv6->in6 = ((struct sockaddr_in6 *)&pes->addrList[i])->sin6_addr;
+                    tlen += sizeof(struct rsp_ipv6_address);
+                }
+            }
+            sctp->ph.param_length = htons(tlen);
+        }
+        break;
+        case RSP_PARAM_TCP_TRANSPORT: {
+            struct rsp_tcp_transport *tcp;
+            tlen = sizeof(struct rsp_tcp_transport);
+            tcp = (struct rsp_tcp_transport *)&pe->user_transport;
+            tcp->ph.param_type = htons(RSP_PARAM_TCP_TRANSPORT);
+            tcp->port = htons(pes->port);
+            tcp->transport_use = 0; /* Not significant */
+
+            uint16_t atype = (pes->addrList->sa_family == AF_INET)?RSP_PARAM_IPV4_ADDR:RSP_PARAM_IPV6_ADDR;
+            if (atype == RSP_PARAM_IPV4_ADDR) {
+                tcp->address.ipv4.ph.param_type = htons(atype);
+                tcp->address.ipv4.ph.param_length = htons(8);
+                tcp->address.ipv4.in = ((struct sockaddr_in *)&pes->addrList)->sin_addr;
+                tlen += sizeof(struct rsp_ipv4_address);
+            } else {
+                tcp->address.ipv6.ph.param_type = htons(atype);
+                tcp->address.ipv6.ph.param_length = htons(16);
+                tcp->address.ipv6.in6 = ((struct sockaddr_in6 *)pes->addrList)->sin6_addr;
+                tlen += sizeof(struct rsp_ipv6_address);
+            }
+            tcp->ph.param_length = htons(tlen);
+        }
+        break;
+        default:
+            return (-1);
+    }
+    /* Add selection policy param */
+    if (pes->policy_value == RSP_POLICY_ROUND_ROBIN) {
+        struct rsp_select_policy *spolicy;
+        spolicy = (struct rsp_select_policy*)((void *)&pe->user_transport + tlen);
+        spolicy->ph.param_type = htons(RSP_PARAM_SELECT_POLICY);
+        spolicy->ph.param_length = htons(8);
+        spolicy->policy_type = htonl(pes->policy_value);
+        *nlen = (sizeof(struct rsp_pool_element) - 4) + tlen + sizeof(struct rsp_select_policy);
+    } else {
+        struct rsp_select_policy_value *spolicy;
+        spolicy = (struct rsp_select_policy_value *)((void *)&pe->user_transport + tlen);
+        spolicy->ph.param_type = htons(RSP_PARAM_SELECT_POLICY);
+        spolicy->ph.param_length = htons(12);
+        spolicy->policy_type = htonl(pes->policy_value);
+        spolicy->policy_value = htonl(pes->policy_actvalue);
+        *nlen = (sizeof(struct rsp_pool_element) - 4) + tlen + sizeof(struct rsp_select_policy_value);
+    }
+    pe->ph.param_length = htons(*nlen);
+    return (0);
+}
+
+uint32_t pe_paramlen(struct rsp_pool_ele *pes)
+{
+    uint32_t tlen = 0, pelen=0;
+    int i=0;
+
+    switch (pes->protocol_type ) {
+        case RSP_PARAM_SCTP_TRANSPORT:
+            tlen = sizeof(struct rsp_sctp_transport);
+            for (i=0;i<pes->number_of_addr;++i) {
+                uint16_t atype = (pes->addrList->sa_family == AF_INET)?RSP_PARAM_IPV4_ADDR:RSP_PARAM_IPV6_ADDR;
+                if (atype == RSP_PARAM_IPV4_ADDR) {
+                    tlen += sizeof(struct rsp_ipv4_address);
+                } else {
+                    tlen += sizeof(struct rsp_ipv6_address);
+                }
+            }
+        break;
+        case RSP_PARAM_TCP_TRANSPORT: {
+            tlen = sizeof(struct rsp_tcp_transport);
+            uint16_t atype = (pes->addrList->sa_family == AF_INET)?RSP_PARAM_IPV4_ADDR:RSP_PARAM_IPV6_ADDR;
+            if (atype == RSP_PARAM_IPV4_ADDR) {
+                tlen += sizeof(struct rsp_ipv4_address);
+            } else {
+                tlen += sizeof(struct rsp_ipv6_address);
+            }
+        }
+        break;
+    }
+    if (pes->policy_value == RSP_POLICY_ROUND_ROBIN) {
+        pelen = (sizeof(struct rsp_pool_element) - 4 ) + tlen + sizeof(struct rsp_select_policy);
+    } else {
+        pelen = (sizeof(struct rsp_pool_element) - 4 ) + tlen + sizeof(struct rsp_select_policy_value);
+    }
+    return pelen;
+}
+
+int
+rsp_enrp_make_register_request(struct rsp_socket *sd, struct rsp_pool *pool,
+        struct rsp_pool_ele *pes, uint32_t flags, struct asap_error_cause *cause)
+
+{
+    uint32_t len=0, nlen=0;
+    struct rsp_enrp_req *req;
+    struct asap_message *msg;
+    struct rsp_enrp_scope *scp;
+    struct rsp_timer_entry *ote=NULL;
+    void *at = NULL;
+
+    scp = sd->scp;
+    if (pool == NULL || pes == NULL) {
+        return(-1);
+    }
+
+    /* FIX */
+    if (pool->state != RSP_POOL_STATE_TIMEDOUT)
+        pool->state = RSP_POOL_STATE_REQUESTED;
+
+
+    req = rsp_aloc_req(pool->name, pool->name_len, (void *)NULL, 0, ASAP_REQUEST_REGISTRATION);
+    if (req == NULL) {
+        return(-1);
+    }
+
+    /* FIX calculating pelen */
+
+    /* asap msg + pool handle param*/
+    len = RSP_SIZE32((sizeof(struct asap_message) + pool->name_len + sizeof(struct rsp_pool_handle)));
+    len += pe_paramlen(pes);
+
+    req->req = malloc(len);
+    if(req->req == NULL) {
+        rsp_free_req(req);
+        return(-1);
+    }
+    bzero(req->req, len);
+    req->len = len;
+    req->cause.ccode = -1; /* NO ERROR */
+    msg = (struct asap_message *)req->req;
+    msg->asap_type = ASAP_REGISTRATION;
+    msg->asap_length = htons(req->len);
+
+    /* Add a pool handle parameter */
+    at = ((caddr_t)msg + sizeof(*msg));
+    rsp_create_pool_handle_param(at, pool->name, pool->name_len, &nlen);
+
+    /* Add a pool element parameter */
+    rsp_create_pool_element_param(at+nlen, pes, &nlen);
+
+    /* Now we have fully formed registration request */
+
+    /* Now we must send off the request */
+    rsp_send_enrp_req(sd, req);
+
+    rsp_start_timer(scp,sd, sd->timers[RSP_T1_ENRP_REQUEST], req, RSP_T1_ENRP_REQUEST, &ote);
+    if(ote == NULL) {
+        fprintf(stderr, "Timer fails to start, enrp-request!\n");
+    }
+
+    /* For a thread safe library we probably
+     * need to change INFTIM into a set amount.
+     * Then check every so often to see if another
+     * thread has gotten my response and thus we
+     * would be done.
+     */
+    if ((flags & MSG_DONTWAIT) == 0) {
+        while(pool->state == RSP_POOL_STATE_REQUESTED) {
+            rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+        }
+    }
+
+
+    /* Check if there was an error.
+     * retrieve the information from req and store it in the out parameter provided by the user
+     */
+    if (req->cause.ccode >= 0) {
+        cause->ccode = req->cause.ccode;
+        cause->olen = req->cause.olen;
+        if (cause->olen > 0) {
+            memcpy(cause->ocause, req->cause.ocause, cause->olen);
+        }
+    }
+
+    rsp_free_req(req);
+    if (ote) {
+        rsp_stop_timer(ote);
+        free(ote);
+    }
+    printf("returning to caller, registered\n");
+    return (0);
+}
+
+int
+rsp_enrp_make_deregister_request(struct rsp_socket *sd, struct rsp_pool *pool,
+        struct rsp_pool_ele *pes, uint32_t flags, struct asap_error_cause *cause)
+{
+    uint32_t len=0, nlen=0;
+    struct rsp_enrp_req *req;
+    struct asap_message *msg;
+    struct rsp_enrp_scope *scp;
+    struct rsp_timer_entry *ote=NULL;
+    void *at = NULL;
+
+    scp = sd->scp;
+    if (pool == NULL || pes == NULL) {
+        return(-1);
+    }
+
+    /* FIX */
+    if (pool->state != RSP_POOL_STATE_TIMEDOUT)
+        pool->state = RSP_POOL_STATE_REQUESTED;
+
+    req = rsp_aloc_req(pool->name, pool->name_len, (void *)NULL, 0, ASAP_REQUEST_DEREGISTRATION);
+    if (req == NULL) {
+        return(-1);
+    }
+
+    /* asap msg + pool handle param + pe identifier param*/
+    len = RSP_SIZE32((sizeof(struct asap_message) + pool->name_len +
+            sizeof(struct rsp_pool_handle)) + sizeof(struct rsp_pe_identifier));
+    req->req = malloc(len);
+    if(req->req == NULL) {
+        rsp_free_req(req);
+        return(-1);
+    }
+    bzero(req->req, len);
+    req->len = len;
+    msg = (struct asap_message *)req->req;
+    msg->asap_type = ASAP_DEREGISTRATION;
+    msg->asap_length = htons(req->len);
+
+    /* Add a pool handle parameter */
+    at = ((caddr_t)msg + sizeof(*msg));
+    rsp_create_pool_handle_param(at, pool->name, pool->name_len, &nlen);
+
+    /* Add a pool identifier param */
+    rsp_create_pe_identifier_param(at+nlen, pes->pe_identifer, &nlen);
+
+    /* Now we have fully formed registration request */
+    if(scp->state & RSP_ENRP_HS_FOUND) {
+        /* we have a HS */
+        ;
+    } else {
+        /* Server Hunt may be IP */
+        if((scp->state & RSP_SERVER_HUNT_IP) == 0)
+            rsp_start_enrp_server_hunt(scp);
+
+        /* Block getting a server */
+        while((scp->state & RSP_ENRP_HS_FOUND) == 0) {
+            rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+        }
+    }
+    /* Now we must send off the request */
+    rsp_send_enrp_req(sd, req);
+
+    rsp_start_timer(scp,sd, sd->timers[RSP_T1_ENRP_REQUEST], req, RSP_T1_ENRP_REQUEST, &ote);
+    if(ote == NULL) {
+        fprintf(stderr, "Timer fails to start, enrp-request!\n");
+    }
+
+    /* For a thread safe library we probably
+     * need to change INFTIM into a set amount.
+     * Then check every so often to see if another
+     * thread has gotten my response and thus we
+     * would be done.
+     */
+    if ((flags & MSG_DONTWAIT) == 0) {
+        while(pool->state == RSP_POOL_STATE_REQUESTED) {
+            rsp_internal_poll(rsp_pcbinfo.num_fds, INFTIM, 1);
+        }
+    }
+
+    /* Check if there was an error.
+     * retrieve the information from req and store it in the out parameter provided by the user
+     */
+
+    if (req->cause.ccode >= 0) {
+        cause->ccode = req->cause.ccode;
+        cause->olen = req->cause.olen;
+        if (cause->olen > 0) {
+            memcpy(cause->ocause, req->cause.ocause, cause->olen);
+        }
+    }
+
+    rsp_free_req(req);
+    if (ote) {
+        rsp_stop_timer(ote);
+        /* free(ote); FIX uncomment and fix crash */
+    }
+    printf("returning to caller, deregistered\n");
+    return (0);
+}
 struct rsp_pool_ele *
 rsp_server_select(struct rsp_pool *pool)
 {
@@ -1306,7 +1942,7 @@ rsp_server_select(struct rsp_pool *pool)
 			pe->policy_actvalue--;
 			break;
 		}
-		
+
 		if ((pe == NULL) && (cnt == 0)) {
 			/* go back to the beginning. */
 			cnt++;

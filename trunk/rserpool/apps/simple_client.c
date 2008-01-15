@@ -26,9 +26,9 @@
 
 #include <netinet/sctp.h>
 
+#include <rserpool_lib.h>
 #include <rserpool.h>
 #include <rserpool_io.h>
-#include <rserpool_lib.h>
 #include <rserpool_util.h>
 
 
@@ -62,7 +62,7 @@ main(int argc, char **argv)
 	if(logdir == NULL) {
 		printf("Error, no config dir specified -c dirname\n");
 		return(-1);
-		       
+
 	}
 	if(name == NULL) {
 		printf("Error, no send to name -n name\n");
@@ -78,14 +78,15 @@ main(int argc, char **argv)
 	}
 	printf("Operational scope is %d\n", op_scope);
 
+	bzero((void *)&sinfo, sizeof(struct sctp_sndrcvinfo));
 	sd = rsp_socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP, op_scope);
 	if(sd == -1) {
 		printf("Can't init socket error:%d\n", errno);
 		return(-1);
 	}
-	sprintf(buffer, "Hello.Echo Me\n");
+	sprintf(buffer, "Hello.Echo Me");
 	len = strlen(buffer) + 1;
-	ret = rsp_sendmsg(sd, buffer, len, NULL, 0, name, strlen(name), NULL, 0); 
+	ret = rsp_sendmsg(sd, buffer, len, NULL, 0, name, strlen(name), &sinfo, 0);
 	printf("rsp_sendmsg returns %d errno:%d\n", ret, errno);
 	addrlen = sizeof(addr);
 	memset(retname, 0, sizeof(retname));

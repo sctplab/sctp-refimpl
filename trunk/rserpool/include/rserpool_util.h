@@ -13,12 +13,26 @@ void rsp_start_enrp_server_hunt(struct rsp_enrp_scope *sd);
 
 void rsp_send_enrp_req(struct rsp_socket *sd, struct rsp_enrp_req *req);
 
+struct rsp_pool_ele *
+asap_find_pe(struct rsp_pool *pool, uint32_t id);
+
 int
 rsp_enrp_make_name_request(struct rsp_socket *sd,
 			   struct rsp_pool *pool,
 			   const char *name,
 			   int namelen,
 			   uint32_t flags);
+int
+rsp_enrp_make_register_request(struct rsp_socket *sd,
+               struct rsp_pool *pool,
+               struct rsp_pool_ele *pes,
+               uint32_t flags, struct asap_error_cause *cause);
+
+int
+rsp_enrp_make_deregister_request(struct rsp_socket *sd,
+               struct rsp_pool *pool,
+               struct rsp_pool_ele *pes,
+               uint32_t flags, struct asap_error_cause *cause);
 
 struct rsp_pool_ele *
 rsp_server_select(struct rsp_pool *pool);
@@ -44,6 +58,10 @@ int rsp_stop_timer(struct rsp_timer_entry *te);
 int rsp_process_fds(int poll_ret);
 
 void rsp_expire_timer(struct rsp_timer_entry *entry);
+
+struct rsp_pool_ele *
+asap_create_pool_ele (struct rsp_enrp_scope *scp, const char *name, size_t namelen,
+                      struct rsp_register_params *params);
 
 
 void

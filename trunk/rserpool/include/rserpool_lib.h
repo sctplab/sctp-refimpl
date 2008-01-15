@@ -82,11 +82,31 @@ struct rsp_enrp_entry {
 	struct rsp_enrp_scope *scp;  /* scope this guy belongs to */
 	uint32_t enrpId;	     /* id of the enrp deamon, if know or local config */
 	sctp_assoc_t	asocid;	     /* sctp asoc id */
-	struct sockaddr *addrList;   /* list of addresses, gotten from sctp_getpaddr() */	
+	struct sockaddr *addrList;   /* list of addresses, gotten from sctp_getpaddr() */
 	int number_of_addresses;     /* count of addresses in addrList */
 	int size_of_addrList;        /* length of the addrList alloc */
 	uint32_t refcount;           /* how man sd's refer to us */
 	uint8_t state;               /* state of the ENRP association */
+};
+
+/* FIX move these 2 to rserpool.h */
+struct asap_error_cause {
+    int16_t ccode;
+    uint16_t olen;
+    void *ocause;
+};
+struct rsp_register_params {
+    /* Transport Parameters */
+    uint16_t protocol_type;
+    uint16_t transport_use;
+    struct sockaddr *taddr;
+    socklen_t socklen;
+    uint32_t cnt_of_addr;
+    uint32_t reglife;
+
+    /* Policy parameters */
+    uint32_t policy;
+    uint32_t policy_value;
 };
 
 /* when we make an ENRP request we save it
@@ -96,11 +116,12 @@ struct rsp_enrp_entry {
 
 struct rsp_enrp_req {
 	void *req;
-	int len;	
+	int len;
 	char *name;
 	int namelen;
 	int request_type;
 	int resolved;
+	struct asap_error_cause cause;
 };
 
 /* types */
@@ -178,8 +199,8 @@ struct rsp_pool {
 	char 		*name;			/* string name */
 	uint32_t 	name_len;		/* len of string */
 	dlist_t 	*peList;		/* list of all pe's */
-	void		*lastCookie;		/* last cookie received */
-	int32_t		cookieSize;		/* length of cookie */
+	void		*lastCookie;	/* last cookie received */
+	int32_t		cookieSize; 	/* length of cookie */
 	uint32_t 	refcnt;			/* number of PE's pointing to me */
 	uint32_t	regType;		/* reg type - the policy */
 	struct timeval  received;		/* Time we got it */
@@ -187,6 +208,7 @@ struct rsp_pool {
 	uint16_t        state;			/* State of this entry */
 	uint8_t		failover_allowed;	/* auto failover of queued messages? */
 	uint8_t         auto_update;		/* did we subscribe to upds */
+    uint32_t    next_peid;      /* identifier the next newly created pe will get */
 };
 
 
@@ -219,6 +241,7 @@ struct rsp_pool_ele {
 	sctp_assoc_t	asocid;		/* sctp asoc id if sctp is transport type */
 	uint16_t        transport_use;	/* 0000 = Data only, 0001 = data+ctl */
 	uint16_t	port;		/* keep it here too in network order */
+
 };
 
 /* An address entry in the list */
@@ -236,7 +259,7 @@ struct pe_address {
 #define RSP_LSD_WAKE_WRITE 1
 
 /* default settings and such */
-#define RSP_SD_HASH_TABLE_NAME "rsp_sd_hashtable" 
+#define RSP_SD_HASH_TABLE_NAME "rsp_sd_hashtable"
 #define RSP_SD_HASH_TBL_SIZE 4
 
 #define RSP_CACHE_HASH_TABLE_NAME "rsp_names_to_pool"
@@ -258,7 +281,7 @@ struct pe_address {
 #define DEF_RSP_T7_ENRPOUTDATE		5000
 
 #define DEF_MAX_REG_ATTEMPT	    2
-#define DEF_MAX_REQUEST_RETRANSMIT  2 
+#define DEF_MAX_REQUEST_RETRANSMIT  2
 #define DEF_STALE_CACHE_VALUE       30000
 
 #define DEF_MINIMUM_TIMER_QUANTUM   50	/* minimum poll fd ms */
