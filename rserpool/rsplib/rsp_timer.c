@@ -15,6 +15,8 @@ rsp_free_req(struct rsp_enrp_req *req)
 		free(req->req);
 	if(req->name)
 		free(req->name);
+	if (req->cause.olen > 0)
+	    free(req->cause.ocause);
 	free(req);
 }
 

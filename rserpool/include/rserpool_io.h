@@ -85,8 +85,8 @@ struct rsp_udp_transport {
 
 struct rsp_select_policy {
 	struct rsp_paramhdr      ph;
-	uint8_t                  policy_type;
-	uint8_t                  reserved[3];
+	uint32_t                 policy_type;
+	//uint8_t                  reserved[3];
 };
 
 /* Round robin uses the rsp_select_policy 
@@ -97,8 +97,11 @@ struct rsp_select_policy {
 
 struct rsp_select_policy_value {
 	struct rsp_paramhdr      ph;
+	uint32_t                 policy_type;
+	/*
 	uint8_t                  policy_type;
 	uint8_t                  reserved[3];
+	*/
 	uint32_t                 policy_value;
 };
 
@@ -130,7 +133,7 @@ struct rsp_server_info {
 	struct rsp_paramhdr        ph;
 	uint32_t                   server_id;
 	uint32_t		   flags;
-	struct rsp_sctp_transport  transport;	
+	struct rsp_sctp_transport  transport;   
 };
 
 #define RSP_UNSPECIFIED_ERROR       0x0000
@@ -148,6 +151,7 @@ struct rsp_error_cause {
 	u_int16_t code;
 	u_int16_t length;
 	/* optional cause-specific info may follow */
+	void *ocause;
 };
 
 struct rsp_operational_error {

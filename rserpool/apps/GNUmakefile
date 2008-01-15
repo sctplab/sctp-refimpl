@@ -21,7 +21,7 @@ ifeq ($(GUESS_HOST),Linux)
 LOCAL_LIBS+= -lnsl -lm -ltermcap -lreadline -lsctp
 else
 ifeq ($(GUESS_HOST),FreeBSD)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -lsctp
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -lsctp -lpthread
 #LOCAL_LIBS+= /usr/local/v6/lib/libsctp.a -lm -lreadline
 else
 ifeq ($(GUESS_HOST),NetBSD)
@@ -46,7 +46,7 @@ endif
 endif
 endif
 
-PROGSRCS= simple_client.c
+PROGSRCS=simple_client.c thread_pe.c
 
 
 
