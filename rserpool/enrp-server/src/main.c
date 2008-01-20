@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: volkmer $
- * $Id: main.c,v 1.2 2008-01-06 20:47:43 volkmer Exp $
+ * $Author: tuexen $
+ * $Id: main.c,v 1.3 2008-01-20 13:06:34 tuexen Exp $
  *
  **/
 #include <strings.h>
@@ -350,13 +350,16 @@ initEnrpUdpSocket(char *enrpAnnounceAddrStr, uint16 port) {
             return -1;
         }
 
-#ifdef HAVE_SO_REUSEPORT
+#if defined(SO_REUSEPORT)
         if (setsockopt(enrpUdpFd, SOL_SOCKET, SO_REUSEPORT, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt reuseport");
 #else
         if (setsockopt(enrpUdpFd, SOL_SOCKET, SO_REUSEADDR, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt reuseaddr");
 #endif
+
+        if (setsockopt(enrpUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+            perror("setsockopt multicast loop");
 
         memset(&in6, 0, sizeof(in6));
         in6.sin6_family = AF_INET6;
@@ -387,13 +390,15 @@ initEnrpUdpSocket(char *enrpAnnounceAddrStr, uint16 port) {
             return -1;
         }
 
-#ifdef HAVE_SO_REUSEPORT
+#if defined(SO_REUSEPORT)
         if (setsockopt(enrpUdpFd, SOL_SOCKET, SO_REUSEPORT, (const void *) &on, (size_t) sizeof(int)) != 0)
             perror("setsockopt reuseport");
 #else
         if (setsockopt(enrpUdpFd, SOL_SOCKET, SO_REUSEADDR, (const void *) &on, (size_t) sizeof(int)) != 0)
             perror("setsockopt reuseaddr");
 #endif
+        if (setsockopt(enrpUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+            perror("setsockopt multicast loop");
 
         memset(&in4, 0, sizeof(in4));
         in4.sin_family = AF_INET;
@@ -560,13 +565,16 @@ initAsapUdpSocket(char *asapAnnounceAddrStr, uint16 port) {
             return -1;
         }
 
-#ifdef HAVE_SO_REUSEPORT
+#if defined(SO_REUSEPORT)
         if (setsockopt(asapUdpFd, SOL_SOCKET, SO_REUSEPORT, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt reuseport");
 #else
         if (setsockopt(asapUdpFd, SOL_SOCKET, SO_REUSEADDR, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt reuseaddr");
 #endif
+
+        if (setsockopt(asapUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+            perror("setsockopt multicast loop");
 
         memset(&in6, 0, sizeof(in6));
         in6.sin6_family = AF_INET6;
@@ -597,13 +605,16 @@ initAsapUdpSocket(char *asapAnnounceAddrStr, uint16 port) {
             return -1;
         }
 
-#ifdef HAVE_SO_REUSEPORT
+#if defined(SO_REUSEPORT)
         if (setsockopt(asapUdpFd, SOL_SOCKET, SO_REUSEPORT, (const void *) &on, (size_t) sizeof(int)) != 0)
             perror("setsockopt reuseport");
 #else
         if (setsockopt(asapUdpFd, SOL_SOCKET, SO_REUSEADDR, (const void *) &on, (size_t) sizeof(int)) != 0)
             perror("setsockopt reuseaddr");
 #endif
+
+        if (setsockopt(asapUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+            perror("setsockopt multicast loop");
 
         memset(&in4, 0, sizeof(in4));
         in4.sin_family = AF_INET;
@@ -790,6 +801,11 @@ main(int argc, char **argv) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/06 20:47:43  volkmer
+ * added basic enrp error sending
+ * added ownchildsonlybit to list request
+ * enhanced main paramter handling
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
