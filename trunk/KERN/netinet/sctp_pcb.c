@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.64 2007/10/30 14:09:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.65 2008/01/28 10:34:38 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2712,11 +2712,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			return (EAFNOSUPPORT);
 		}
 	}
-	/* Setup a vrf_id to be the default for the non-bind-all case. */
- 	vrf_id = inp->def_vrf_id;
 
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	/* Setup a vrf_id to be the default for the non-bind-all case. */
+ 	vrf_id = inp->def_vrf_id;
+
 	/* increase our count due to the unlock we do */
 	SCTP_INP_INCR_REF(inp);
 	if (lport) {
