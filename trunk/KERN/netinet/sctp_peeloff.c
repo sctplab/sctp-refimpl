@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.16 2007/09/08 11:35:10 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.17 2008/01/31 08:22:24 rwatson Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -141,7 +141,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
 
-	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, SBL_WAIT);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 
 	return (0);
@@ -264,7 +264,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	 * And now the final hack. We move data in the pending side i.e.
 	 * head to the new socket buffer. Let the GRUBBING begin :-0
 	 */
-	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, M_WAITOK);
+	sctp_pull_off_control_to_new_inp(inp, n_inp, stcb, SBL_WAIT);
 	atomic_subtract_int(&stcb->asoc.refcnt, 1);
 	return (newso);
 #endif

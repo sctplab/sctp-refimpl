@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.72 2007/12/07 01:32:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.73 2008/01/31 08:22:24 rwatson Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5240,7 +5240,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 
 #if defined(__FreeBSD__)
-	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
+	error = sblock(&so->so_rcv, (block_allowed ? SBL_WAIT : 0));
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	sockbuf_lock=1;
 #endif
