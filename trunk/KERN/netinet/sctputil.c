@@ -4384,13 +4384,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
-#if defined(__APPLE__)
-	error = sblock(&old_so->so_rcv, 0);
-#endif
-#if defined(__NetBSD__)
-	error = sblock(&old_so->so_rcv, waitflags);
-#endif
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	error = sblock(&old_so->so_rcv, waitflags);
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
