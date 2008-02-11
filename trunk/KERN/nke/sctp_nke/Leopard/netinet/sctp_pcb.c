@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.64 2007/10/30 14:09:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.65 2008/01/28 10:34:38 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -238,6 +238,10 @@ sctp_free_vrf(struct sctp_vrf *vrf)
 	int ret;
 	ret = atomic_fetchadd_int(&vrf->refcount, -1);
 	if(ret == 1) {
+                if (vrf->vrf_addr_hash) {
+                    SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
+                    vrf->vrf_addr_hash = NULL;
+                }
 		/* We zero'd the count */
 		LIST_REMOVE(vrf, next_vrf);
 		SCTP_FREE(vrf, SCTP_M_VRF);
@@ -2640,8 +2644,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			if(prison) {
 				/* For INADDR_ANY and  LOOPBACK the prison_ip()
-				 * call will tranmute the ip address to the proper
-				 * valie.
+				 * call will transmute the ip address to the proper
+				 * value (i.e. the IP address owned by the jail).
 				 */
 				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr)) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
@@ -2712,11 +2716,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			return (EAFNOSUPPORT);
 		}
 	}
-	/* Setup a vrf_id to be the default for the non-bind-all case. */
- 	vrf_id = inp->def_vrf_id;
 
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	/* Setup a vrf_id to be the default for the non-bind-all case. */
+ 	vrf_id = inp->def_vrf_id;
+
 	/* increase our count due to the unlock we do */
 	SCTP_INP_INCR_REF(inp);
 	if (lport) {
