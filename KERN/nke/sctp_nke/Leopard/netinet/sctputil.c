@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.71 2007/12/06 00:22:55 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.73 2008/01/31 08:22:24 rwatson Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4384,13 +4384,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
 	SOCKBUF_LOCK(&(old_so->so_rcv));
 #endif
-#if defined(__APPLE__)
-	error = sblock(&old_so->so_rcv, 0);
-#endif
-#if defined(__NetBSD__)
-	error = sblock(&old_so->so_rcv, waitflags);
-#endif
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 	error = sblock(&old_so->so_rcv, waitflags);
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
@@ -5240,7 +5234,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 
 #if defined(__FreeBSD__)
-	error = sblock(&so->so_rcv, (block_allowed ? M_WAITOK : 0));
+	error = sblock(&so->so_rcv, (block_allowed ? SBL_WAIT : 0));
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	sockbuf_lock=1;
 #endif
