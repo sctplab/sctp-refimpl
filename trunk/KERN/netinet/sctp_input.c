@@ -2543,7 +2543,8 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			SCTP_TCB_UNLOCK((*stcb));
 
 #if defined(__FreeBSD__)
-			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, 0);
+			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb,
+			    0);
 #else
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
 #endif
