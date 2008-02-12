@@ -223,11 +223,7 @@ void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t);
 
 int
 sctp_sosend(struct socket *so,
-#ifdef __NetBSD__
-    struct mbuf *addr_mbuf,
-#else
     struct sockaddr *addr,
-#endif
     struct uio *uio,
 #ifdef __Panda__
     pakhandle_type top,
@@ -236,7 +232,7 @@ sctp_sosend(struct socket *so,
     struct mbuf *top,
     struct mbuf *control,
 #endif
-#if defined(__NetBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__APPLE__) || defined(__Panda__)
     int flags
 #else
     int flags,
