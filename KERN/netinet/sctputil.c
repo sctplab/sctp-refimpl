@@ -708,20 +708,12 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 void
 sctp_audit_log(uint8_t ev, uint8_t fd)
 {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-	s = splsoftnet();
-#endif
-
 	sctp_audit_data[sctp_audit_indx][0] = ev;
 	sctp_audit_data[sctp_audit_indx][1] = fd;
 	sctp_audit_indx++;
 	if (sctp_audit_indx >= SCTP_AUDIT_SIZE) {
 		sctp_audit_indx = 0;
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 }
 
 #endif
@@ -901,8 +893,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
-#elif defined(__NetBSD__)
-	asoc->default_tos = m->ip_inp.inp.inp_ip.ip_tos;
 #else
 	asoc->default_tos = m->inp_ip_tos;
 #endif
@@ -1418,18 +1408,12 @@ sctp_timeout_handler(void *t)
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
 	struct sctp_timer *tmr;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
 	int did_output;
 	struct sctp_iterator *it = NULL;
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 	tmr = (struct sctp_timer *)t;
 	inp = (struct sctp_inpcb *)tmr->ep;
 	stcb = (struct sctp_tcb *)tmr->tcb;
@@ -1447,9 +1431,6 @@ sctp_timeout_handler(void *t)
 		 * SCTP_PRINTF("Stale SCTP timer fired (%p), ignoring...\n",
 		 * tmr);
 		 */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		return;
 	}
 	tmr->stopped_from = 0xa001;
@@ -1458,16 +1439,10 @@ sctp_timeout_handler(void *t)
 		 * SCTP_PRINTF("SCTP timer fired with invalid type: 0x%x\n",
 		 * tmr->type);
 		 */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		return;
 	}
 	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		return;
 	}
 	/* if this is an iterator timeout, get the struct and clear inp */
@@ -1485,9 +1460,6 @@ sctp_timeout_handler(void *t)
 		     (tmr->type !=  SCTP_TIMER_TYPE_SHUTDOWNGUARD) &&
 		     (tmr->type != SCTP_TIMER_TYPE_ASOCKILL))
 			) {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			SCTP_INP_DECR_REF(inp);
 			return;
 		}
@@ -1497,9 +1469,6 @@ sctp_timeout_handler(void *t)
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		if (stcb->asoc.state == 0) {
 			atomic_add_int(&stcb->asoc.refcnt, -1);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			if (inp) {
 				SCTP_INP_DECR_REF(inp);
 			}
@@ -1508,11 +1477,7 @@ sctp_timeout_handler(void *t)
 	}
 	tmr->stopped_from = 0xa005;
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer type %d goes off\n", tmr->type);
-#ifndef __NetBSD__
 	if (!SCTP_OS_TIMER_ACTIVE(&tmr->timer)) {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		if (inp) {
 			SCTP_INP_DECR_REF(inp);
 		}
@@ -1521,7 +1486,6 @@ sctp_timeout_handler(void *t)
 		}
 		return;
 	}
-#endif
 	tmr->stopped_from = 0xa006;
 
 	if (stcb) {
@@ -1905,9 +1869,6 @@ out_decr:
 out_no_decr:
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer now complete (type %d)\n",
 		tmr->type);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	if (inp) {
 	}
 }
@@ -4435,9 +4396,6 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 #if defined(__APPLE__)
 	sbunlock(&old_so->so_rcv, 1);
 #endif
-#if defined (__NetBSD__) 
-	sbunlock(&old_so->so_rcv);
-#endif
 
 #if defined(__FreeBSD__)
 	sbunlock(&old_so->so_rcv);
@@ -5155,9 +5113,6 @@ sctp_sorecvmsg(struct socket *so,
 	int block_allowed = 1;
 	uint32_t freed_so_far = 0;
 	uint32_t copied_so_far = 0;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 	int in_eeor_mode=0;
 	int no_rcv_needed = 0;
 	uint32_t rwnd_req=0;
@@ -5205,9 +5160,6 @@ sctp_sorecvmsg(struct socket *so,
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, EFAULT);
 		return (EFAULT);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 	rwnd_req = (SCTP_SB_LIMIT_RCV(so) >> SCTP_RWND_HIWAT_SHIFT);
 	/* Must be at least a MTU's worth */
 	if (rwnd_req < SCTP_MIN_RWND)
@@ -5229,9 +5181,6 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__APPLE__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-#if defined(__NetBSD__)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-#endif
 
 #if defined(__FreeBSD__)
 	error = sblock(&so->so_rcv, (block_allowed ? SBL_WAIT : 0));
@@ -5251,9 +5200,6 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 #if defined(__APPLE__)
 	sbunlock(&so->so_rcv, 1);
-#endif
-#if defined (__NetBSD__) 
-	sbunlock(&so->so_rcv);
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
@@ -5376,9 +5322,6 @@ sctp_sorecvmsg(struct socket *so,
 		hold_sblock = 0;
 	}
 #if defined(__APPLE__)
-	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
-#endif
-#if defined(__NetBSD__)
 	error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version < 700000
@@ -5698,9 +5641,6 @@ sctp_sorecvmsg(struct socket *so,
 				SCTP_INP_READ_UNLOCK(inp);
 				hold_rlock = 0;
 			}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 #if defined(__APPLE__)
 			SCTP_SOCKET_UNLOCK(so, 0);
 #endif
@@ -5708,9 +5648,6 @@ sctp_sorecvmsg(struct socket *so,
 				error = uiomove(mtod(m, char *), cp_len, uio);
 #if defined(__APPLE__)
 			SCTP_SOCKET_LOCK(so, 0);
-#endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			s = splsoftnet();
 #endif
 			/* re-read */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
@@ -5961,7 +5898,7 @@ sctp_sorecvmsg(struct socket *so,
 		if(so->so_rcv.sb_cc <= control->held_length) {
 			error = sbwait(&so->so_rcv);
 			if (error){
-#if defined(__FreeBSD__) || defined(__NetBSD__)
+#if defined(__FreeBSD__)
 				goto release;
 #else
 				goto release_unlocked;
@@ -6082,9 +6019,6 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__APPLE__)
 	sbunlock(&so->so_rcv, 1);
 #endif
-#if defined(__NetBSD__)
-	sbunlock(&so->so_rcv);
-#endif
 
 #if defined(__FreeBSD__)
 	sbunlock(&so->so_rcv);
@@ -6145,9 +6079,6 @@ sctp_sorecvmsg(struct socket *so,
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	if(sctp_logging_level &SCTP_RECV_RWND_LOGGING_ENABLE) {
 		if(stcb) {
 			sctp_misc_ints(SCTP_SORECV_DONE,
@@ -6237,74 +6168,6 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 
 
 
-#if defined(__NetBSD__)
-int
-sctp_soreceive(so, paddr, uio, mp0, controlp, flagsp)
-	struct socket *so;
-	struct mbuf **paddr;
-	struct uio *uio;
-	struct mbuf **mp0;
-	struct mbuf **controlp;
-	int *flagsp;
-{
-	int error, fromlen;
-	uint8_t sockbuf[256];
-	struct sockaddr *from;
-	struct sctp_extrcvinfo sinfo;
-	int filling_sinfo = 1;
-	struct sctp_inpcb *inp;
-	struct mbuf *maddr;
-
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	/* pickup the assoc we are reading from */
-	if (inp == NULL) {
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
-		return (EINVAL);
-	}
-	if ((sctp_is_feature_off(inp,
-	    SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
-	    (controlp == NULL)) {
-		/* user does not want the sndrcv ctl */
-		filling_sinfo = 0;
-	}
-	/* pickup the assoc we are reading from */
-	if (paddr) {
-		from = (struct sockaddr *)sockbuf;
-		fromlen = sizeof(sockbuf);
-	} else {
-		from = NULL;
-		fromlen = 0;
-	}
-
-	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
-			       (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo);
-	if (controlp) {
-		/* copy back the sinfo in a CMSG format */
-		struct sctp_inpcb *inp;
-
-		inp = (struct sctp_inpcb *)so->so_pcb;
-
-		if(filling_sinfo)
-			*controlp = sctp_build_ctl_nchunk(inp, (struct sctp_sndrcvinfo *)&sinfo);
-		else
-			*controlp = NULL;
-	}
-	if (paddr) {
-		maddr = sctp_get_mbuf_for_msg(fromlen, 0, M_DONTWAIT, 1, MT_SONAME);
-		if (maddr == 0) {
-			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
-			return (ENOMEM);
-		}
-		SCTP_BUF_LEN(maddr) = fromlen;
-		memcpy(mtod(maddr, caddr_t), (caddr_t)from, fromlen);
-		*paddr = maddr;
-
-	}
-
-	return (error);
-}
-
-#else
 
 int
 sctp_soreceive(	struct socket *so,
@@ -6379,7 +6242,6 @@ sctp_soreceive(	struct socket *so,
 	return (error);
 }
 
-#endif
 
 int sctp_l_soreceive(struct socket *so,
 		     struct sockaddr **name, 
@@ -6461,29 +6323,6 @@ int sctp_l_soreceive(struct socket *so,
 
 
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-void *
-sctp_pool_get(struct pool *pp, int flags)
-{
-	int s;
-	void *ptr;
-
-	s = splsoftnet();
-	ptr = pool_get(pp, flags);
-	splx(s);
-	return ptr;
-}
-void
-sctp_pool_put(struct pool *pp, void *ptr)
-{
-	int s;
-
-	s = splsoftnet();
-	pool_put(pp, ptr);
-	splx(s);
-}
-
-#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version < 603000) || defined(__Windows__)
 /*
  * General routine to allocate a hash table with control of memory flags.

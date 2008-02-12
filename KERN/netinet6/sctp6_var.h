@@ -44,18 +44,10 @@ SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
 
 #else
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int sctp6_usrreq 
-__P((struct socket *, int, struct mbuf *, struct mbuf *,
-    struct mbuf *, struct proc *));
-
-#else
 int sctp6_usrreq 
 __P((struct socket *, int, struct mbuf *, struct mbuf *,
     struct mbuf *));
 
-#endif				/* __NetBSD__ || __OpenBSD__ */
 #endif				/* __FreeBSD__ */
 
 #if defined(__APPLE__)
