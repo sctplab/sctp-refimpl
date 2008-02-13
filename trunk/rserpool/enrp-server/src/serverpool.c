@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: skaliann $
- * $Id: serverpool.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
+ * $Author: volkmer $
+ * $Id: serverpool.c,v 1.3 2008-02-13 17:04:55 volkmer Exp $
  *
  **/
 #include <stdlib.h>
@@ -102,6 +102,7 @@ int
 serverPoolAddPoolElement(ServerPool pool, PoolElement newPoolElement) {
     char buf[POOLHANDLE_SIZE + 5];
     size_t poolHandleLen;
+	uint32 peId;
 
     if (!newPoolElement) {
         logDebug("newPoolElement is NULL\n");
@@ -118,7 +119,8 @@ serverPoolAddPoolElement(ServerPool pool, PoolElement newPoolElement) {
     poolHandleLen = strlen(pool->spHandle);
     if (poolHandleLen < POOLHANDLE_SIZE) {
         memcpy(buf, pool->spHandle, poolHandleLen);
-        sprintf(buf + ADD_PADDING(poolHandleLen), "%d", htonl(newPoolElement->peIdentifier));
+		peId = htonl(newPoolElement->peIdentifier);
+		memcpy(buf + ADD_PADDING(poolHandleLen), &peId, 4);
         newPoolElement->peChecksum = checksumCompute(0, buf, ADD_PADDING(poolHandleLen) + 4);
     } else {
         logDebug("pool handle size is too big, can not calculate checksum");
@@ -323,6 +325,17 @@ serverPoolListRemovePool(char *poolHandle) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2007/12/27 01:06:27  skaliann
+ * rserpool
+ * - Fixed compilation errors and warnings
+ * - modified the parameter type values to the latest draft
+ * - Handle the case when the overall selection policy parameter is not sent
+ *
+ * enrp-server
+ * - added poolHandle parameter to the HANDLE_RESOLUTION_RESPONSE
+ * - Fixed a crash in policy selection code
+ * - Fixed pelement->peIdentifier ntohl
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
@@ -334,6 +347,7 @@ serverPoolListRemovePool(char *poolHandle) {
  * reformated the copyright statement
  *
  * Revision 1.13  2007/10/27 12:42:00  volkmer
- * removed debug macrosadded policys to the pool struct
+ * removed debug macros
+added policys to the pool struct
  *
  **/
