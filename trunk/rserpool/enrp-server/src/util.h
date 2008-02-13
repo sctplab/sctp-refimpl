@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: util.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: util.h,v 1.2 2008-02-13 17:06:50 volkmer Exp $
  *
  **/
 
@@ -74,19 +74,23 @@ void
 enterServicingMode();
 
 #ifndef HAVE_SCTP_SENDX
-ssize_t sctp_sendx(int                           sd,
-                   const void*                   data,
-                   size_t                        len,
-                   struct sockaddr*        addrs,
-                   int                           addrcnt,
-                   struct sctp_sndrcvinfo* sinfo,
-                   int                           flags);
+ssize_t sctp_sendx(int                      sd,
+                   const void*              data,
+                   size_t                   len,
+                   struct sockaddr*         addrs,
+                   int                      addrcnt,
+                   struct sctp_sndrcvinfo*  sinfo,
+                   int                      flags);
 #endif
 
 #endif
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.13  2007/12/05 23:13:06  volkmer
  * refactored enterservicingmode to util.c
  *
