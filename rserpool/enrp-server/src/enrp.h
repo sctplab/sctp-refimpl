@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: tuexen $
- * $Id: enrp.h,v 1.4 2008-01-12 13:10:21 tuexen Exp $
+ * $Author: volkmer $
+ * $Id: enrp.h,v 1.5 2008-02-13 17:02:15 volkmer Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -72,11 +72,10 @@
 #define MAX_BAD_PE_REPORT           3
 
 #define ENRP_PRESENCE_REPLY_REQUIRED_BIT       0x01
-#define ENRP_LIST_REQUEST_OWN_CHILDS_ONLY_BIT  0x01
-#define ENRP_LIST_RESPONSE_REJECT_BIT          0x01
 #define ENRP_HANDLE_TABLE_REQUEST_OWN_BIT      0x01
 #define ENRP_HANDLE_TABLE_RESPONSE_REJECT_BIT  0x01
 #define ENRP_HANDLE_TABLE_RESPONSE_MORE_BIT    0x02
+#define ENRP_LIST_RESPONSE_REJECT_BIT          0x01
 
 /*
  *  Message structures
@@ -172,7 +171,7 @@ size_t
 initEnrpHandleUpdate(struct enrpHandleUpdate *msg, uint32 receiverId, uint16 updateAction);
 
 size_t
-initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId, int ownChildsOnlyBit);
+initEnrpListRequest(struct enrpListRequest *msg, uint32 receiverId);
 
 size_t
 initEnrpListResponse(struct enrpListResponse *msg, uint32 receiverId,int rejectBit);
@@ -212,10 +211,10 @@ int
 sendEnrpHandleUpdate(ServerPool pool, PoolElement element, uint16 handleAction);
 
 int
-sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId, int ownChildsOnlyBit);
+sendEnrpListRequest(uint32 receiverId, sctp_assoc_t assocId);
 
 int
-sendEnrpListResponse(uint32 receiverId, int rejectBit, int ownChildsOnlyBit, sctp_assoc_t assocId);
+sendEnrpListResponse(uint32 receiverId, int rejectBit, sctp_assoc_t assocId);
 
 int
 sendEnrpInitTakeover(uint32 receiverId, uint32 targetId, sctp_assoc_t assocId);
@@ -270,6 +269,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2008/01/12 13:10:21  tuexen
+ * Get it compiling.
+ *
  * Revision 1.3  2008/01/11 00:59:51  volkmer
  * implemented ownChildsOnlBit in enrp list handling and sending
  * introduced enrp message flags bitmasks
