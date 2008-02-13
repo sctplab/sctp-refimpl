@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: skaliann $
- * $Id: util.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
+ * $Author: volkmer $
+ * $Id: util.c,v 1.3 2008-02-13 17:06:21 volkmer Exp $
  *
  **/
 
@@ -272,6 +272,9 @@ sendBufferToPoolElement(char *offset, size_t bufSize, PoolElement *pe) {/* , int
                                                 asapAddr, &asapAddrCnt,
                                                 &asapPort, &asapTransportUse,
                                                 &asapProtocol);
+
+		offset += length;
+		bufSize -= length;
 
         logDebug("offset: %p, bufSize %d", offset, (int) bufSize);
         if (length < 0) {
@@ -554,9 +557,13 @@ sendBufferToTransportAddresses(char *offset, size_t bufSize,
                     pos += sizeof(struct paramIpv4Addr);
                     logDebug("offset: %p, bufSize: %d", offset, (int) bufSize);
 
-                    addr[addressCnt].type = AF_INET;
-                    addr[addressCnt].addr.in4 = ipv4Addr->addr;
-                    addressCnt++;
+					if (!useLoopback && ipv4Addr->addr.s_addr == INADDR_LOOPBACK) {
+						logDebug("skipping ipv4 loopback address");
+					} else {
+						addr[addressCnt].type = AF_INET;
+						addr[addressCnt].addr.in4 = ipv4Addr->addr;
+						addressCnt++;
+					}
                 } else if (paramType == PARAM_IPV6_ADDR) {
                     logDebug("parsing ipv6 parameter");
 
@@ -566,9 +573,13 @@ sendBufferToTransportAddresses(char *offset, size_t bufSize,
                     pos += sizeof(struct paramIpv6Addr);
                     logDebug("offset: %p, bufSize: %d", offset, (int) bufSize);
 
-                    addr[addressCnt].type = AF_INET6;
-                    addr[addressCnt].addr.in6 = ipv6Addr->addr;
-                    addressCnt++;
+					if (!useLoopback && memcmp((const void *) &ipv6Addr->addr, (const void *) &in6addr_loopback, sizeof(struct in6_addr)) == 0) {
+						logDebug("skipping ipv6 loopback address");
+					} else {
+						addr[addressCnt].type = AF_INET6;
+						addr[addressCnt].addr.in6 = ipv6Addr->addr;
+						addressCnt++;
+					}
                 } else {
                     logDebug("could not find any address in here");
                     success = 0;
@@ -1068,6 +1079,17 @@ ssize_t sctp_sendx(int                           sd,
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2007/12/27 01:06:27  skaliann
+ * rserpool
+ * - Fixed compilation errors and warnings
+ * - modified the parameter type values to the latest draft
+ * - Handle the case when the overall selection policy parameter is not sent
+ *
+ * enrp-server
+ * - added poolHandle parameter to the HANDLE_RESOLUTION_RESPONSE
+ * - Fixed a crash in policy selection code
+ * - Fixed pelement->peIdentifier ntohl
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
