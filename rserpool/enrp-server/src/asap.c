@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: skaliann $
- * $Id: asap.c,v 1.2 2007-12-27 01:06:27 skaliann Exp $
+ * $Author: volkmer $
+ * $Id: asap.c,v 1.3 2008-02-13 16:58:30 volkmer Exp $
  *
  **/
  
@@ -188,6 +188,7 @@ handleAsapRegistration(void *buf, ssize_t len, sctp_assoc_t assocId) {
         }
 
         element->peAsapAssocId = assocId;
+		element->peHomeRegistrarServer = ownId;
 	} else {
 		logDebug("malformed packet, pool element parameter");
 		return -1;
@@ -840,18 +841,34 @@ handleAsapError(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2007/12/27 01:06:27  skaliann
+ * rserpool
+ * - Fixed compilation errors and warnings
+ * - modified the parameter type values to the latest draft
+ * - Handle the case when the overall selection policy parameter is not sent
+ *
+ * enrp-server
+ * - added poolHandle parameter to the HANDLE_RESOLUTION_RESPONSE
+ * - Fixed a crash in policy selection code
+ * - Fixed pelement->peIdentifier ntohl
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
  *
  * Revision 1.15  2007/12/03 23:44:26  volkmer
- * fixed bug in handleasapderegestrationadded pe removing stuff to sendasapendpointkeepaliveadded handleasapendpointkeepaliveack, unsure what exactly needs to be done thereadded handleasapendpoint unreachable
+ * fixed bug in handleasapderegestration
+added pe removing stuff to sendasapendpointkeepalive
+added handleasapendpointkeepaliveack, unsure what exactly needs to be done there
+added handleasapendpoint unreachable
  *
  * Revision 1.14  2007/12/02 22:46:59  volkmer
  * use correct fd ... fixed sendAsapRegistrationResponse
  *
  * Revision 1.13  2007/12/02 22:13:05  volkmer
- * do not use asapUdpSendFdfixed handle registrationimplemented handle resolution and sendHandleResolutuin
+ * do not use asapUdpSendFd
+fixed handle registration
+implemented handle resolution and sendHandleResolutuin
  *
  * Revision 1.12  2007/11/19 22:43:48  volkmer
  * added asap send announce, changed send server announce to work with rsplib, changed registration response
@@ -863,6 +880,9 @@ handleAsapError(void *buf, ssize_t len, sctp_assoc_t assocId) {
  * changed signature of sendAsapEndpointKeepAlive
  *
  * Revision 1.9  2007/11/05 00:05:47  volkmer
- * reformated the copyright statementstarted implementing asapre- /deregistartion needs to be tested
+ * reformated the copyright statement
+
+started implementing asap
+re- /deregistartion needs to be tested
  *
  **/
