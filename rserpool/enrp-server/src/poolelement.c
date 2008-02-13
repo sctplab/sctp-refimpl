@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: poolelement.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: poolelement.c,v 1.2 2008-02-13 17:03:41 volkmer Exp $
  *
  **/
 
@@ -39,7 +39,6 @@
 #include <string.h>
 
 #include "poolelement.h"
-#include "serverpool.h"
 #include "registrarserver.h"
 #include "debug.h"
 #include "util.h"
@@ -51,8 +50,11 @@ poolElementNew(uint32 pelementId) {
     char timerName[TIMER_DESCRIPTION_LENGTH + 1];
 
     pe = (PoolElement) malloc(sizeof(*pe));
-    if (pe == NULL)
+    if (pe == NULL) {
+        logDebug("pe is NULL: out of memory");
+
         return NULL;
+    }
 
     memset(pe, 0, sizeof(*pe));
     memset(timerName, 0, sizeof(timerName));
@@ -67,16 +69,16 @@ poolElementNew(uint32 pelementId) {
 
     pe->peIdentifier = pelementId;
     logDebug("created new pool element with id 0x%08x", pelementId);
+    
     return pe;
 }
 
 int
 poolElementPrint(PoolElement pe) {
     if (pe == NULL) {
-        logDebug("pe is NULL\n");
+        logDebug("pe is NULL");
         return -1;
     }
-
 
     logDebug("--- Pool Element 0x%08x ---",     pe->peIdentifier);
     logDebug("peHomeRegistrarServer:   0x%08x", pe->peHomeRegistrarServer);
@@ -106,11 +108,15 @@ poolElementDelete(PoolElement pe) {
     if (pe->peLastHeardTimeout != NULL) {
         logDebug("deleting LastHeardTimeout timer from poolElement");
         timerDelete(pe->peLastHeardTimeout);
-    }
+    } else 
+        logDebug("peLastHeardTimeout is NULL !!!");
+        
     if (pe->peLifetimeExpiryTimer != NULL) {
         logDebug("deleting LifetimeExpiryTimer timer from poolElement");
         timerDelete(pe->peLifetimeExpiryTimer);
-    }
+    } else
+        logDebug("peLifetimeExpiryTimer is NULL !!!");
+
 
     logDebug("deleting pool element 0x%08x", pe->peIdentifier);
 
@@ -122,6 +128,10 @@ poolElementDelete(PoolElement pe) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.14  2007/12/06 01:52:53  volkmer
  * some pretty printing
  *
