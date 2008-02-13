@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: debug.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: debug.h,v 1.2 2008-02-13 16:59:17 volkmer Exp $
  *
  **/
 #ifndef _DEBUG_H
@@ -40,7 +40,8 @@
 #include <sys/time.h>
 #include <assert.h>
 
-#define DEBUG 1
+#define DEBUG           1
+#define DEBUG_PRINT_BUF 0
 
 #if DEBUG == 1
 #define logDebug(fmt...)\
@@ -53,6 +54,7 @@
         fprintf(stdout, "\n");\
     }
 
+#if DEBUG_PRINT_BUF == 1
 #define printBuf(buf, size, bufferName)\
     {\
         int i = 0;\
@@ -69,6 +71,9 @@
         } while (++i < (int) size);\
         fprintf(stdout, "\n");\
     }
+
+#endif /* DEBUG_PRINT_BUF */
+
 #else
 
 #define logDebug(fmt...) {}
@@ -80,6 +85,10 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.12  2007/12/02 22:08:18  volkmer
  * added length information to printBuf
  *
