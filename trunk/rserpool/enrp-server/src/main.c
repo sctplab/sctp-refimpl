@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: tuexen $
- * $Id: main.c,v 1.3 2008-01-20 13:06:34 tuexen Exp $
+ * $Author: volkmer $
+ * $Id: main.c,v 1.4 2008-02-13 17:02:48 volkmer Exp $
  *
  **/
 #include <strings.h>
@@ -56,8 +56,12 @@
 int
 checkForIpv6() {
     int sd;
-    useIpv6 = 0;
+    if (useIpv6 == 0) {
+		logDebug("ipv6 is disabled");
+		return useIpv6;
+	}
 
+	useIpv6 = 0;
     sd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
 
     if (sd != -1) {
@@ -801,6 +805,9 @@ main(int argc, char **argv) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2008/01/20 13:06:34  tuexen
+ * Initialize multicast socket appropriately.
+ *
  * Revision 1.2  2008/01/06 20:47:43  volkmer
  * added basic enrp error sending
  * added ownchildsonlybit to list request
