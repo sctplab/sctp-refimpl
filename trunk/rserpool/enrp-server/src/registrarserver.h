@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: registrarserver.h,v 1.2 2008-01-11 00:59:08 volkmer Exp $
+ * $Id: registrarserver.h,v 1.3 2008-02-13 17:04:26 volkmer Exp $
  *
  **/
 #ifndef _REGISTRARSERVER_H
@@ -84,7 +84,7 @@ int
 registrarServerResetTimer(RegistrarServer server);
 
 uint16
-registrarServerGetChecksum(uint32 serverId);
+registrarServerGetChecksum(RegistrarServer server);
 
 PoolElement
 registrarServerGetPoolElementById(RegistrarServer server, uint32 pelementId);
@@ -111,6 +111,9 @@ registrarServerListGetServerByAssocId(sctp_assoc_t assocId);
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/11 00:59:08  volkmer
+ * added handle space synchronizing flags
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
