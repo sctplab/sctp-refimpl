@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: debug.h,v 1.2 2008-02-13 16:59:17 volkmer Exp $
+ * $Id: debug.h,v 1.3 2008-02-14 10:22:44 volkmer Exp $
  *
  **/
 #ifndef _DEBUG_H
@@ -72,6 +72,9 @@
         fprintf(stdout, "\n");\
     }
 
+#else
+
+#define printBuf(buf, size, bufferName) {}
 #endif /* DEBUG_PRINT_BUF */
 
 #else
@@ -85,6 +88,9 @@
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/02/13 16:59:17  volkmer
+ * disabled printBuf debugging
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
