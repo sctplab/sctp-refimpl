@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: asap.c,v 1.3 2008-02-13 16:58:30 volkmer Exp $
+ * $Id: asap.c,v 1.4 2008-02-14 10:19:03 volkmer Exp $
  *
  **/
  
@@ -782,8 +782,8 @@ sendAsapServerAnnounce() {
 	struct asapServerAnnounce *msg;
 	char buf[BUFFER_SIZE];
     char *offset;
-/*	int length = 0;
-*/    size_t msgLen, sentLen;
+	int length = 0;
+    size_t msgLen, sentLen;
 
 	memset(buf, 0, sizeof(buf));
     offset = (char *) &buf;
@@ -792,7 +792,7 @@ sendAsapServerAnnounce() {
 	initAsapServerAnnounce(msg, ownId);
     offset += sizeof(*msg);
 	
-/*	length = transportAddressesToSendBuffer(offset, this->rsAsapAddr, this->rsAsapPort, TRANSPORT_USE_DATA_ONLY, IPPROTO_SCTP);
+	length = transportAddressesToSendBuffer(offset, this->rsAsapAddr, this->rsAsapPort, TRANSPORT_USE_DATA_ONLY, IPPROTO_SCTP);
 	logDebug("length of transport address parameter is %d", length);
 	
 	if (length == -1) {
@@ -800,10 +800,10 @@ sendAsapServerAnnounce() {
         return -1;
 	} else {
 		offset += length;
-*/        msgLen = offset - buf;
+        msgLen = offset - buf;
 		msg->length = htons(msgLen);
-/*	}
-*/
+	}
+
 	printBuf(buf, msgLen, "asap server announce send buffer");
 
 	sentLen = sendAsapMsg(buf, msgLen, 0, 1);
@@ -841,6 +841,9 @@ handleAsapError(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.3  2008/02/13 16:58:30  volkmer
+ * initialize peHomeregistrar correctly
+ *
  * Revision 1.2  2007/12/27 01:06:27  skaliann
  * rserpool
  * - Fixed compilation errors and warnings
