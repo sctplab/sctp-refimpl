@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: main.c,v 1.5 2008-02-14 10:21:39 volkmer Exp $
+ * $Id: main.c,v 1.6 2008-02-14 15:14:18 volkmer Exp $
  *
  **/
 #include <strings.h>
@@ -56,10 +56,6 @@
 int
 checkForIpv6() {
     int sd;
-    if (useIpv6 == 0) {
-		logDebug("ipv6 is disabled");
-		return useIpv6;
-	}
 
 	useIpv6 = 0;
     sd = socket(AF_INET6, SOCK_STREAM, IPPROTO_TCP);
@@ -94,9 +90,12 @@ parseArgs(int argc, char **argv) {
             break;
         }
 
+        else if ((strncmp(argv[i], "--enrpRegistrarId=", 18)) == 0)
+            ownId = atoi(&argv[i][18]);
+		
         else if ((strncmp(argv[i], "--enrpAnnounceAddr=", 19)) == 0)
             enrpAnnounceAddr = &argv[i][19];
-
+		
         else if ((strncmp(argv[i], "--enrpAnnouncePort=", 19)) == 0)
             enrpAnnouncePort = atoi(&argv[i][19]);
 
@@ -142,6 +141,7 @@ parseArgs(int argc, char **argv) {
         exit(-1);
     }
 
+    logDebug("enrpRegistrarId:      0x%08x", ownId);
     logDebug("enrpLocalAddr:        %s", enrpLocalAddr);
     logDebug("enrpLocalPort:        %d", enrpLocalPort);
     logDebug("enrpAnnounceAddr:     %s", enrpAnnounceAddr);
@@ -172,6 +172,7 @@ parseArgs(int argc, char **argv) {
 int
 printHelp(char *binName) {
     printf("Usage: %s\n\n", binName);
+    printf("--enrpRegistrarId=<id>                 the enrp registrar id\n");
     printf("--enrpAnnounceAddr=<ipv4 or ipv6 addr> the enrp multicast group address\n");
     printf("--enrpAnnouncePort=<port>              the enrp multicast input port\n");
     printf("--enrpLocalAddr=<Addr>                 local address of enrp endpoint\n");
@@ -198,6 +199,8 @@ convertStringToAddr(char *str, Address *addr) {
     memset(&in4, 0, sizeof(in4));
     memset(&in6, 0, sizeof(in6));
     memset(addr, 0, sizeof(Address));
+	
+	logDebug("trying to convert '%s'", str);
 
     if (str == NULL)
         return -1;
@@ -205,6 +208,8 @@ convertStringToAddr(char *str, Address *addr) {
     if (inet_pton(AF_INET6, str, (void *) &in6) > 0) {
         addr->type = AF_INET6;
         addr->addr.in6 = in6;
+		logDebug("converted to ipv6");
+
         return 1;
     } else if (inet_pton(AF_INET, str, (void *) &in4) > 0) {
         if (useIpv6) {
@@ -212,12 +217,19 @@ convertStringToAddr(char *str, Address *addr) {
             ((uint32 *) &in6)[3] = in4.s_addr;
             addr->type = AF_INET6;
             addr->addr.in6 = in6;
+
+			logDebug("converted to ipv6");
             return 1;
         }
+
         addr->type = AF_INET;
         addr->addr.in4 = in4;
+
+		logDebug("converted to ipv4");
         return 1;
     }
+
+	logDebug("conversion failed");
     return -1;
 }
 
@@ -362,7 +374,7 @@ initEnrpUdpSocket(char *enrpAnnounceAddrStr, uint16 port) {
             perror("setsockopt reuseaddr");
 #endif
 
-        if (setsockopt(enrpUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+        if (setsockopt(enrpUdpFd, IPPROTO_IPV6, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt multicast loop");
 
         memset(&in6, 0, sizeof(in6));
@@ -377,11 +389,11 @@ initEnrpUdpSocket(char *enrpAnnounceAddrStr, uint16 port) {
             perror("ipv6 enrp udp bind failed");
             return -1;
         }
-
-        mreq6.ipv6mr_multiaddr = announceAddr.addr.in6;
+		
+       mreq6.ipv6mr_multiaddr = announceAddr.addr.in6;
         mreq6.ipv6mr_interface = 0;
 
-        if (setsockopt(enrpUdpFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) < 0) {
+        if (setsockopt(enrpUdpFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, sizeof(mreq6)) < 0) {
             perror("setsockopt add membership on enrp udp port failed");
             return -1;
         }
@@ -577,7 +589,7 @@ initAsapUdpSocket(char *asapAnnounceAddrStr, uint16 port) {
             perror("setsockopt reuseaddr");
 #endif
 
-        if (setsockopt(asapUdpFd, IPPROTO_IP, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
+        if (setsockopt(asapUdpFd, IPPROTO_IPV6, IP_MULTICAST_LOOP, (const void *) &on, (size_t)sizeof(int)) != 0)
             perror("setsockopt multicast loop");
 
         memset(&in6, 0, sizeof(in6));
@@ -596,7 +608,7 @@ initAsapUdpSocket(char *asapAnnounceAddrStr, uint16 port) {
         mreq6.ipv6mr_multiaddr = announceAddr.addr.in6;
         mreq6.ipv6mr_interface = 0;
 
-        if (setsockopt(asapUdpFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq, sizeof(mreq)) < 0) {
+        if (setsockopt(asapUdpFd, IPPROTO_IPV6, IPV6_JOIN_GROUP, &mreq6, sizeof(mreq6)) < 0) {
             perror("setsockopt add membership on asap udp port failed");
             return -1;
         }
@@ -667,11 +679,13 @@ initRegistrar() {
     logDebug("initializing own registrar");
 
     /* init own id */
-    getTime(&now);
-    seed = now.tv_sec | now.tv_usec;
-    srand(seed);
-    ownId = (uint32) rand();
-    logDebug("server id is: 0x%08x", ownId);
+	if (ownId == 0) {
+		getTime(&now);
+		seed = now.tv_sec | now.tv_usec;
+		srand(seed);
+		ownId = (uint32) rand();
+		logDebug("server id is: 0x%08x", ownId);
+	}
 
     this = registrarServerNew(ownId);
     registrarServerListAddServer(this);
@@ -805,6 +819,9 @@ main(int argc, char **argv) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2008/02/14 10:21:39  volkmer
+ * removed enrp presence reply required bit
+ *
  * Revision 1.4  2008/02/13 17:02:48  volkmer
  * enhanced ipv6 checking
  *
