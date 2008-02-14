@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: backend.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: backend.c,v 1.2 2008-02-14 15:05:00 volkmer Exp $
  *
  **/
 #include <stdlib.h>
@@ -104,6 +104,7 @@ initGlobals() {
     asapAnnounceAddr.addr.in4.s_addr = inet_addr(ASAP_ANNOUNCE_ADDR);
     asapAnnouncePort                 = ASAP_UDP_PORT;
 
+	ownId                            = 0;
     useIpv6                          = 0;
     useLoopback                      = 1;
     registrarState                   = INITIALIZING;
@@ -121,6 +122,10 @@ initGlobals() {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.13  2007/12/05 23:06:42  volkmer
  * removed unneeded file descriptors
  *
