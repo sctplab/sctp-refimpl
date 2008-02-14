@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: tuexen $
- * $Id: cblib.c,v 1.2 2008-01-08 20:31:40 tuexen Exp $
+ * $Author: volkmer $
+ * $Id: cblib.c,v 1.3 2008-02-14 15:05:42 volkmer Exp $
  *
  **/
 
@@ -213,7 +213,6 @@ timerStart(Timer timerToStart, unsigned int timeout) {
     /* check for timerList */
     if (timerList == NULL) {
         timerList = timerToStart;
-        timerListPrint();
         return;
     }
 
@@ -224,7 +223,6 @@ timerStart(Timer timerToStart, unsigned int timeout) {
         timerToStart->prev = NULL;
         timer->prev        = timerToStart;
         timerList          = timerToStart;
-        timerListPrint();
         return;
     }
 
@@ -240,7 +238,6 @@ timerStart(Timer timerToStart, unsigned int timeout) {
     timer->next = timerToStart;
     timerToStart->prev = timer;
 
-    timerListPrint();
 }
 
 void
@@ -266,7 +263,7 @@ timerStop(Timer timerToStop) {
     }
 
     logDebug("timer name: %s", timerToStop->description);
-    timerListPrint();
+    /* timerListPrint(); */
 
     /* find timer in timerList */
     for (timer = timerList; timer; timer = timer->next)
@@ -383,6 +380,9 @@ handleEvents(void) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/08 20:31:40  tuexen
+ * Fix a bug in start_timer().
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
