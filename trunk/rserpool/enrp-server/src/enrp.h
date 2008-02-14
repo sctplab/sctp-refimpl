@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.h,v 1.6 2008-02-14 10:21:39 volkmer Exp $
+ * $Id: enrp.h,v 1.7 2008-02-14 15:10:16 volkmer Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -192,10 +192,10 @@ initEnrpError(struct enrpError *msg, uint32 receiverId);
  */
 
 int
-sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int announcement);
+sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int udpAnnounce);
 
 ssize_t
-sendEnrpAnnounceMsg(char *buf, size_t msgLen);
+sendEnrpAnnounceMsg(char *buf, size_t msgLen, int udpAnnounce);
 
 int
 sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId);
@@ -268,6 +268,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2008/02/14 10:21:39  volkmer
+ * removed enrp presence reply required bit
+ *
  * Revision 1.5  2008/02/13 17:02:15  volkmer
  * fixed enrp flags stuff
  *
