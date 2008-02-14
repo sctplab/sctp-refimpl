@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: main.c,v 1.4 2008-02-13 17:02:48 volkmer Exp $
+ * $Id: main.c,v 1.5 2008-02-14 10:21:39 volkmer Exp $
  *
  **/
 #include <strings.h>
@@ -757,7 +757,7 @@ startRegistrarServerHunt() {
 
     if (useEnrpAnnouncements) {
         logDebug("using announcements to find mentor peer");
-        sendEnrpPresence(0, 1, 1, 0);
+        sendEnrpPresence(0, 1, 0);
         serverHuntTimer = timerCreate(serverHuntTimeout, NULL, "server hunt timer");
         timerStart(serverHuntTimer, TIMEOUT_SERVER_HUNT);
 
@@ -805,6 +805,9 @@ main(int argc, char **argv) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.4  2008/02/13 17:02:48  volkmer
+ * enhanced ipv6 checking
+ *
  * Revision 1.3  2008/01/20 13:06:34  tuexen
  * Initialize multicast socket appropriately.
  *

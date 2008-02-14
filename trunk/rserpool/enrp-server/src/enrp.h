@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.h,v 1.5 2008-02-13 17:02:15 volkmer Exp $
+ * $Id: enrp.h,v 1.6 2008-02-14 10:21:39 volkmer Exp $
  *
  **/
 #ifndef _ENRP_H
@@ -71,7 +71,6 @@
 #define MAX_TIME_NO_RESPONSE        3
 #define MAX_BAD_PE_REPORT           3
 
-#define ENRP_PRESENCE_REPLY_REQUIRED_BIT       0x01
 #define ENRP_HANDLE_TABLE_REQUEST_OWN_BIT      0x01
 #define ENRP_HANDLE_TABLE_RESPONSE_REJECT_BIT  0x01
 #define ENRP_HANDLE_TABLE_RESPONSE_MORE_BIT    0x02
@@ -159,7 +158,7 @@ struct enrpError {
  */
 
 size_t
-initEnrpPresence(struct enrpPresence *msg, uint32 receiverId, int replyBit);
+initEnrpPresence(struct enrpPresence *msg, uint32 receiverId);
 
 size_t
 initEnrpHandleTableRequest(struct enrpHandleTableRequest *msg, uint32 receiverId, int ownBit);
@@ -199,7 +198,7 @@ ssize_t
 sendEnrpAnnounceMsg(char *buf, size_t msgLen);
 
 int
-sendEnrpPresence(uint32 receiverId, int replyBit, int sendInfo, sctp_assoc_t assocId);
+sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId);
 
 int
 sendEnrpHandleTableRequest(uint32 receiverId, int ownBit, sctp_assoc_t assocId);
@@ -269,6 +268,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.5  2008/02/13 17:02:15  volkmer
+ * fixed enrp flags stuff
+ *
  * Revision 1.4  2008/01/12 13:10:21  tuexen
  * Get it compiling.
  *
