@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: backend.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: backend.h,v 1.2 2008-02-14 15:05:00 volkmer Exp $
  *
  **/
 #ifndef _BACKEND_H_
@@ -49,8 +49,14 @@
 #define MAX_ADDR_CNT                  32
 #define POLICY_DESCRIPTION_SIZE      255
 
-#define ENRP_ANNOUNCE_ADDR  "239.0.0.1"
-#define ASAP_ANNOUNCE_ADDR  "239.0.0.2"
+#define ENRP_ANNOUNCE_ADDR_V4 "239.0.0.51"
+#define ASAP_ANNOUNCE_ADDR_V4 "239.0.0.50"
+
+#define ENRP_ANNOUNCE_ADDR_V6 "ff08::51"
+#define ASAP_ANNOUNCE_ADDR_V6 "ff08::50"
+
+#define ENRP_ANNOUNCE_ADDR ENRP_ANNOUNCE_ADDR_V4
+#define ASAP_ANNOUNCE_ADDR ASAP_ANNOUNCE_ADDR_V4
 
 /* as defined in http://www.iana.org/assignments/port-numbers */
 #define ENRP_SCTP_PPID        12
@@ -134,6 +140,10 @@ initGlobals();
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.15  2007/12/05 23:06:42  volkmer
  * removed unneeded file descriptors
  *
