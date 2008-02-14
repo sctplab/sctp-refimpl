@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.c,v 1.7 2008-02-14 10:21:39 volkmer Exp $
+ * $Id: enrp.c,v 1.8 2008-02-14 15:10:16 volkmer Exp $
  *
  **/
 
@@ -854,7 +854,7 @@ handleEnrpTakeoverServer(void *buf, ssize_t len, sctp_assoc_t assocId) {
 }
 
 int
-sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int announcement) {
+sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int udpAnnounc) {
     int sentLen = 0;
     struct sctp_sndrcvinfo sinfo;
 
@@ -868,9 +868,9 @@ sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int announcement) {
         return -1;
     }
 
-    if (announcement || (assocId == 0)) {
+    if (udpAnnounc || (assocId == 0)) {
         logDebug("sending as announcement");
-        return sendEnrpAnnounceMsg(buf, len);
+        return sendEnrpAnnounceMsg(buf, len, udpAnnounc);
     }
 
     /* TODO:
@@ -900,7 +900,7 @@ sendEnrpMsg(char *buf, size_t len, sctp_assoc_t assocId, int announcement) {
 }
 
 ssize_t
-sendEnrpAnnounceMsg(char *buf, size_t msgLen) {
+sendEnrpAnnounceMsg(char *buf, size_t msgLen, int udpAnnounce) {
     RegistrarServer server;
     struct enrpMsgHeader *hdr;
     struct sockaddr_in in4;
@@ -908,37 +908,40 @@ sendEnrpAnnounceMsg(char *buf, size_t msgLen) {
     struct sctp_sndrcvinfo sinfo;
     ssize_t sentLen = -1;
 
-    switch (enrpAnnounceAddr.type) {
-    case AF_INET:
-        memset(&in4, 0, sizeof(in4));
-        in4.sin_family = AF_INET;
-        in4.sin_addr = enrpAnnounceAddr.addr.in4;
-        in4.sin_port = htons(enrpAnnouncePort);
-#ifdef HAVE_SIN_LEN
-        in4.sin_len = sizeof(struct sockaddr_in);
-#endif
+	if (udpAnnounce) {
+		logDebug("sending as udp announcement");
+		switch (enrpAnnounceAddr.type) {
+		case AF_INET:
+			memset(&in4, 0, sizeof(in4));
+			in4.sin_family = AF_INET;
+			in4.sin_addr = enrpAnnounceAddr.addr.in4;
+			in4.sin_port = htons(enrpAnnouncePort);
+	#ifdef HAVE_SIN_LEN
+			in4.sin_len = sizeof(struct sockaddr_in);
+	#endif
 
-        if ((sentLen = sendto(enrpUdpFd, (const void *)buf, msgLen, 0, (const struct sockaddr *) &in4, sizeof(struct sockaddr_in))) < 0)
-            perror("sendto: ipv4 send presence announcment failed");
-        break;
+			if ((sentLen = sendto(enrpUdpFd, (const void *)buf, msgLen, 0, (const struct sockaddr *) &in4, sizeof(struct sockaddr_in))) < 0)
+				perror("sendto: ipv4 send presence announcment failed");
+			break;
 
-    case AF_INET6:
-        memset(&in6, 0, sizeof(in6));
-        in6.sin6_family = AF_INET6;
-        in6.sin6_addr = enrpAnnounceAddr.addr.in6;
-        in6.sin6_port = htons(enrpAnnouncePort);
-#ifdef HAVE_SIN6_LEN
-        in6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
+		case AF_INET6:
+			memset(&in6, 0, sizeof(in6));
+			in6.sin6_family = AF_INET6;
+			in6.sin6_addr = enrpAnnounceAddr.addr.in6;
+			in6.sin6_port = htons(enrpAnnouncePort);
+	#ifdef HAVE_SIN6_LEN
+			in6.sin6_len = sizeof(struct sockaddr_in6);
+	#endif
 
-        if ((sentLen = sendto(enrpUdpFd, (const void *)buf, msgLen, 0, (const struct sockaddr *) &in6, sizeof(struct sockaddr_in6))) < 0)
-            perror("sendto: ipv6 send presence announcment failed");
-        break;
+			if ((sentLen = sendto(enrpUdpFd, (const void *)buf, msgLen, 0, (const struct sockaddr *) &in6, sizeof(struct sockaddr_in6))) < 0)
+				perror("sendto: ipv6 send presence announcment failed");
+			break;
 
-    default:
-        logDebug("enrp announce addr is uninitialized! EXIT!!!");
-        exit(-1);
-    }
+		default:
+			logDebug("enrp announce addr is uninitialized! EXIT!!!");
+			exit(-1);
+		}
+	}
 
     memset(&sinfo, 0, sizeof(sinfo));
     sinfo.sinfo_ppid = htonl(ENRP_SCTP_PPID);
@@ -1028,6 +1031,7 @@ sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId) {
     char *offset;
     size_t msgLen, sentLen;
     int length = 0;
+	int oldLen = 0;
 
     logDebug("receiverId: 0x%08x, sendInfo: %d, assocId: %d", receiverId, sendInfo, assocId);
 
@@ -1040,7 +1044,9 @@ sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId) {
 
     chkSum = (struct paramPeChecksum *) offset;
     length = initParamPeChecksum(chkSum, registrarServerGetChecksum(this));
-    pres->hdr.length = htons(ntohs(pres->hdr.length) + length);    
+    
+	oldLen = htons(ntohs(pres->hdr.length) + length);
+	pres->hdr.length = oldLen;
     offset += sizeof(*chkSum);
 
     if (sendInfo) {
@@ -1052,7 +1058,7 @@ sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId) {
 
         if (length == -1) {
             logDebug("address to buffer conversion failed, omitting server information parameter");
-            offset = (char *) buf + sizeof(*pres);
+            offset = buf + oldLen;
         } else {
             offset += length;
             srvInfo->hdr.length = htons((uint16) length + ntohs(srvInfo->hdr.length));
@@ -1268,7 +1274,7 @@ sendEnrpHandleUpdate(ServerPool pool, PoolElement element, uint16 handleAction) 
 
     printBuf(buf, msgLen, "enrp handle update send buffer");
 
-    ret = sendEnrpMsg(buf, msgLen, 0, 1);
+    ret = sendEnrpMsg(buf, msgLen, 0, 0);
 
     return (ret == (int) msgLen) ? 1 : -1;
 }
@@ -1428,6 +1434,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.7  2008/02/14 10:21:39  volkmer
+ * removed enrp presence reply required bit
+ *
  * Revision 1.6  2008/02/13 17:01:22  volkmer
  * fixed enrp flags and some checksum stuff
  *
