@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: main.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: main.h,v 1.2 2008-02-14 10:21:39 volkmer Exp $
  *
  **/
 #ifndef _MAIN_H
@@ -72,6 +72,10 @@ checkForIpv6();
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.9  2007/12/06 01:52:53  volkmer
  * some pretty printing
  *

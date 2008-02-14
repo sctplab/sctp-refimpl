@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2006-2007, Michael Tuexen, Frank Volkmer. All rights reserved.
+ * Copyright (c) 2006-2008, Michael Tuexen, Frank Volkmer. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: callbacks.c,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: volkmer $
+ * $Id: callbacks.c,v 1.2 2008-02-14 10:21:39 volkmer Exp $
  *
  **/
  
@@ -356,7 +356,7 @@ serverHuntTimeout(void *arg) {
     if (registrarState == INITIALIZING) {
         logDebug("initializing mode");
         if (serverHuntCnt < MAX_NUMBER_SERVER_HUNT) {
-            sendEnrpPresence(0, 1, 1, 0);
+            sendEnrpPresence(0, 1, 0);
             timerStart(serverHuntTimer, TIMEOUT_SERVER_HUNT);
             serverHuntCnt++;
             return;
@@ -376,7 +376,7 @@ void
 enrpAnnounceTimeout(void *arg) {
     /* normal peer announcment */
     logDebug("sending peer announcement");
-    sendEnrpPresence(0, 0, 1, 0);
+    sendEnrpPresence(0, 1, 0);
 
     /* restart timer */
     logDebug("restarting announce timer");
@@ -411,7 +411,7 @@ peerLastHeardTimeout(void *arg) {
             logDebug("server is already inactive");
     }
 
-    sendEnrpPresence(server->rsIdentifier, 0, 1, server->rsEnrpAssocId);
+    sendEnrpPresence(server->rsIdentifier, 1, server->rsEnrpAssocId);
 
     return;
 }
@@ -545,6 +545,10 @@ endTimeout(void *arg) {
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.23  2007/12/06 01:52:15  volkmer
  * moved peliftimeexpirytimeoutcallback
  *
@@ -558,9 +562,12 @@ endTimeout(void *arg) {
  * moved asap announce starting to server hunt callback, added asap udp callback, futher implemented asap sctp callback
  *
  * Revision 1.19  2007/11/05 00:06:05  volkmer
- * reformated the copyright statementstarted working on the asapsctpcallback
+ * reformated the copyright statement
+
+started working on the asapsctpcallback
  *
  * Revision 1.18  2007/10/27 13:25:58  volkmer
- * added asap callbacksremoved debug macro
+ * added asap callbacks
+removed debug macro
  *
  **/

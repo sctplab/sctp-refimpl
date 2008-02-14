@@ -30,7 +30,7 @@
 
 /*
  * $Author: volkmer $
- * $Id: enrp.c,v 1.6 2008-02-13 17:01:22 volkmer Exp $
+ * $Id: enrp.c,v 1.7 2008-02-14 10:21:39 volkmer Exp $
  *
  **/
 
@@ -55,9 +55,9 @@
 #include "util.h"
 
 size_t
-initEnrpPresence(struct enrpPresence *msg, uint32 receiverId, int replyReqBit) {
+initEnrpPresence(struct enrpPresence *msg, uint32 receiverId) {
     msg->hdr.type = ENRP_PRESENCE;
-    msg->hdr.flags = (replyReqBit > 0) ? ENRP_PRESENCE_REPLY_REQUIRED_BIT : 0x00;
+    msg->hdr.flags = 0;
     msg->hdr.length = htons(12);
     msg->senderServerId = htonl(ownId);
     msg->receiverServerId = htonl(receiverId);
@@ -184,7 +184,6 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
     uint16 port;
     uint16 transportUse;
     uint8 protocol;
-    int replyRequiered = 0;
     int addrCnt = 0;
     int isNew = 0;
     int ret;
@@ -204,10 +203,7 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
     bufLen -= sizeof(struct paramPeChecksum);
     offset += sizeof(struct paramPeChecksum);
 
-    if (pres->hdr.flags & ENRP_PRESENCE_REPLY_REQUIRED_BIT)
-    	replyRequiered = 1;
-
-    if (senderServerId == ownId) {
+	if (senderServerId == ownId) {
         logDebug("discarding own presence message");
         return -1;
     }
@@ -309,16 +305,11 @@ handleEnrpPresence(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
         enterServicingMode();
 
-        sendEnrpPresence(mentorServerId, 1, 1, newAssocId);
+        sendEnrpPresence(mentorServerId, 1, newAssocId);
         sendEnrpListRequest(mentorServerId, newAssocId);
         sendEnrpHandleTableRequest(mentorServerId, 0, newAssocId);
 
         return 1;
-    }
-
-    if (replyRequiered) {
-        logDebug("answering 0x%08x on reply required bit, using assocId %d", senderServerId, newAssocId);
-        sendEnrpPresence(senderServerId, 0, 1, newAssocId);
     }
 
     return 1;
@@ -740,7 +731,7 @@ handleEnrpInitTakeover(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
     if (targetServerId == ownId) {
         logDebug("somebody is trying to overtake us");
-        sendEnrpPresence(0, 0, 0, 0);
+        sendEnrpPresence(0, 0, 0);
         return -1;
     }
 
@@ -794,7 +785,7 @@ handleEnrpInitTakeoverAck(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
     if (targetServerId == ownId) {
         logDebug("abort takeover by sending presence");
-        sendEnrpPresence(0, 0, 1, 0);
+        sendEnrpPresence(0, 1, 0);
         return 1;
     }
 
@@ -833,7 +824,7 @@ handleEnrpTakeoverServer(void *buf, ssize_t len, sctp_assoc_t assocId) {
 
     if (targetServerId == ownId) {
         logDebug("abort takeover by sending presence");
-        sendEnrpPresence(0, 0, 1, 0);
+        sendEnrpPresence(0, 1, 0);
         return 1;
     }
 
@@ -1029,7 +1020,7 @@ sendEnrpMsgToAll(char *buf, size_t msgLen) {
 }
 
 int
-sendEnrpPresence(uint32 receiverId, int replyBit, int sendInfo, sctp_assoc_t assocId) {
+sendEnrpPresence(uint32 receiverId, int sendInfo, sctp_assoc_t assocId) {
     struct enrpPresence *pres;
     struct paramPeChecksum *chkSum;
     struct paramServerInformation *srvInfo;
@@ -1038,13 +1029,13 @@ sendEnrpPresence(uint32 receiverId, int replyBit, int sendInfo, sctp_assoc_t ass
     size_t msgLen, sentLen;
     int length = 0;
 
-    logDebug("receiverId: 0x%08x, replyBit: %d, sendInfo: %d, assocId: %d", receiverId, replyBit, sendInfo, assocId);
+    logDebug("receiverId: 0x%08x, sendInfo: %d, assocId: %d", receiverId, sendInfo, assocId);
 
     memset(buf, 0, BUFFER_SIZE);
     offset = buf;
 
     pres = (struct enrpPresence *) offset;
-    initEnrpPresence(pres, receiverId, replyBit);
+    initEnrpPresence(pres, receiverId);
     offset += sizeof(*pres);
 
     chkSum = (struct paramPeChecksum *) offset;
@@ -1171,7 +1162,7 @@ sendEnrpHandleTableRequest(uint32 receiverId, int ownBit, sctp_assoc_t assocId) 
     msg = (struct enrpHandleTableRequest *) buf;
     msgLen = initEnrpHandleTableRequest(msg, receiverId, ownBit);
 
-    printBuf(buf, msgLen, "enrp list request send buffer")
+    printBuf(buf, msgLen, "enrp list request send buffer");
 
     ret = sendEnrpMsg(buf, msgLen, assocId, 0);
     logDebug("sent enrp handle table request to 0x%08x", receiverId);
@@ -1437,6 +1428,9 @@ createAssocToPeer(Address *addrs, int addrCnt, uint16 port, uint32 serverId, sct
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.6  2008/02/13 17:01:22  volkmer
+ * fixed enrp flags and some checksum stuff
+ *
  * Revision 1.5  2008/01/12 13:16:04  tuexen
  * Get rid of warnings.
  * Frank Volkmer: Line 1151 might dereference a NULL pointer (server).
