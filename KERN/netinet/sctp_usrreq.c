@@ -4515,6 +4515,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #ifdef SCTP_MVRF
 	int i, fnd=0;
 #endif
+	int do_panic = 0;
 	int error = 0;
 	int create_lock_on = 0;
 	uint32_t vrf_id;
@@ -4542,11 +4543,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EINVAL);
 	}
 #endif
-
+	SCTP_INP_INCR_REF(inp);
 	SCTP_ASOC_CREATE_LOCK(inp);
 	create_lock_on = 1;
 
-	SCTP_INP_INCR_REF(inp);
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 		/* Should I really unlock ? */
@@ -4605,6 +4606,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		/* Already have or am bring up an association */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EALREADY);
 		error = EALREADY;
+		do_panic = 1;
 		goto out_now;
 	}
 
@@ -4647,6 +4649,9 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 
 	SCTP_INP_DECR_REF(inp);
+	if (do_panic) {
+	  panic("from connect error:%d", error);
+	}
 	return error;
 }
 
