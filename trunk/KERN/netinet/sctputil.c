@@ -708,6 +708,7 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 void
 sctp_audit_log(uint8_t ev, uint8_t fd)
 {
+  
 	sctp_audit_data[sctp_audit_indx][0] = ev;
 	sctp_audit_data[sctp_audit_indx][1] = fd;
 	sctp_audit_indx++;
