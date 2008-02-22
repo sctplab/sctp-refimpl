@@ -4515,7 +4515,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #ifdef SCTP_MVRF
 	int i, fnd=0;
 #endif
-	int do_panic = 0;
 	int error = 0;
 	int create_lock_on = 0;
 	uint32_t vrf_id;
@@ -4599,14 +4598,13 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		if (stcb == NULL) {
 			SCTP_INP_DECR_REF(inp);
 		} else {
-			SCTP_TCB_LOCK(stcb);
+			SCTP_TCB_UNLOCK(stcb);
 		}
 	}
 	if (stcb != NULL) {
 		/* Already have or am bring up an association */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EALREADY);
 		error = EALREADY;
-		do_panic = 1;
 		goto out_now;
 	}
 
@@ -4649,9 +4647,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 
 	SCTP_INP_DECR_REF(inp);
-	if (do_panic) {
-	  panic("from connect error:%d", error);
-	}
 	return error;
 }
 
