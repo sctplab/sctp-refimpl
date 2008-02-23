@@ -5258,9 +5258,6 @@ sctp_input(i_pak, va_alist)
 #ifdef __Panda__
 	int off;
 #endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 	uint32_t vrf_id = 0;
 	uint8_t ecn_bits;
 	struct ip *ip;
@@ -5342,7 +5339,7 @@ sctp_input(i_pak, va_alist)
 		}
 		ip = mtod(m, struct ip *);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__Windows__)
+#if defined(__Windows__)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
@@ -5353,14 +5350,9 @@ sctp_input(i_pak, va_alist)
 		"sctp_input() length:%d iphlen:%d\n", mlen, iphlen);
 
 	/* SCTP does not allow broadcasts or multicasts */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	if (IN_MULTICAST(ip->ip_dst.s_addr))
-#else
-		if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)))
-#endif
-		{
+	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr))) {
 			goto bad;
-		}
+	}
 	if (SCTP_IS_IT_BROADCAST(ip->ip_dst, m)) {
 		/* We only look at broadcast if its a
 		 * front state, All others we will 
@@ -5473,26 +5465,17 @@ sctp_input(i_pak, va_alist)
 	 */
 #if defined(__FreeBSD__)  || defined(__APPLE__)
 	length = ip->ip_len + iphlen;
-#elif defined(__NetBSD__)
-	/* Does this really work? */
-	length = ip->ip_len - (ip->ip_hl << 2) + iphlen;
 #else
 	length = ip->ip_len;
 #endif
 	offset -= sizeof(struct sctp_chunkhdr);
 
 	ecn_bits = ip->ip_tos;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 
 	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 				     inp, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	if (m) {
 		sctp_m_freem(m);
 	}

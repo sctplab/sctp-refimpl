@@ -587,7 +587,7 @@ struct sctp_tcb {
 
 #else
 /*
- * Pre-5.x FreeBSD, NetBSD and others.
+ * Pre-5.x FreeBSD, and others.
  */
 #include <netinet/sctp_lock_empty.h>
 #endif
