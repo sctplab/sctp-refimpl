@@ -28,11 +28,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*	$KAME: sctp6_var.h,v 1.7 2004/08/17 04:06:22 itojun Exp $	*/
+
 #ifndef _NETINET6_SCTP6_VAR_H_
 #define _NETINET6_SCTP6_VAR_H_
+
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.8 2007/09/13 10:36:43 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.9 2007/12/10 16:03:39 obrien Exp $");
 #endif
 
 #if defined(_KERNEL)
@@ -42,18 +44,10 @@ SYSCTL_DECL(_net_inet6_sctp6);
 extern struct pr_usrreqs sctp6_usrreqs;
 
 #else
-
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-int sctp6_usrreq 
-__P((struct socket *, int, struct mbuf *, struct mbuf *,
-    struct mbuf *, struct proc *));
-
-#else
 int sctp6_usrreq 
 __P((struct socket *, int, struct mbuf *, struct mbuf *,
     struct mbuf *));
 
-#endif				/* __NetBSD__ || __OpenBSD__ */
 #endif				/* __FreeBSD__ */
 
 #if defined(__APPLE__)

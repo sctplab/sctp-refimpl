@@ -247,7 +247,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	TAILQ_REMOVE(&head->so_comp, newso, so_list);
 	head->so_qlen--;
 	SOCK_UNLOCK(head);
-#else  /* Netbsd */
+#else
         newso = TAILQ_FIRST(&head->so_q);
 	if (soqremque(newso, 1) == 0) {
 		SCTP_PRINTF("soremque failed, peeloff-fails (invarients would panic)\n");
