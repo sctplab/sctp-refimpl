@@ -3661,11 +3661,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	else if (to->sa_family == AF_INET6) {
 		uint32_t flowlabel;
 		struct ip6_hdr *ip6h;
-#ifdef NEW_STRUCT_ROUTE
-		sctp_route_t ip6route;
-#else
 		struct route_in6 ip6route;
-#endif
 #if defined(__Panda__)
 		void *ifp;
 #else
@@ -4886,11 +4882,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			sctp_free_ifa(addr);
 		} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
 			struct sctp_ifa *addr;
-#ifdef NEW_STRUCT_ROUTE
-			sctp_route_t iproute6;
-#else
 			struct route_in6 iproute6;
-#endif
 
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
@@ -9826,11 +9818,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
 	} else if (ip6_out != NULL) {
-#ifdef NEW_STRUCT_ROUTE
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
@@ -10786,11 +10774,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
 	} else if (ip6_out != NULL) {
-#ifdef NEW_STRUCT_ROUTE
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
@@ -10929,11 +10913,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			RTFREE(ro.ro_rt);
 	} else {
 		/* V6 */
-#ifdef NEW_STRUCT_ROUTE
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
