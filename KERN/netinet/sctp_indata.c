@@ -3329,7 +3329,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					tp1->sent++;
 				}
 			}
-		} else if (tp1->rec.data.doing_fast_retransmit) {
+		} else if ((tp1->rec.data.doing_fast_retransmit) && (sctp_cmt_on_off == 0)) {
 			/*
 			 * For those that have done a FR we must take
 			 * special consideration if we strike. I.e the
