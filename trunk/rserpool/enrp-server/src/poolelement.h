@@ -29,13 +29,14 @@
  */
 
 /*
- * $Author: volkmer $
- * $Id: poolelement.h,v 1.2 2008-01-11 00:59:08 volkmer Exp $
+ * $Author: tuexen $
+ * $Id: poolelement.h,v 1.3 2008-03-06 17:56:50 tuexen Exp $
  *
  **/
 #ifndef _POOLELEMENT_H
 #define _POOLELEMENT_H 1
 
+#include <netinet/in.h>
 #include <netinet/sctp.h>
 
 #include "backend.h"
@@ -92,6 +93,9 @@ poolElementDelete(PoolElement pe);
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.2  2008/01/11 00:59:08  volkmer
+ * added handle space synchronizing flags
+ *
  * Revision 1.1  2007/12/06 18:30:27  randall
  * cloned all code over from M Tuexen's repository. May yet need
  * some updates.
