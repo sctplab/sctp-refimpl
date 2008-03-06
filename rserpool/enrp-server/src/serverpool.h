@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: serverpool.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: tuexen $
+ * $Id: serverpool.h,v 1.2 2008-03-06 17:56:50 tuexen Exp $
  *
  **/
 #ifndef _SERVERPOOL_H
@@ -86,10 +86,14 @@ serverPoolListGetPool(char *poolHandle);
 int
 serverPoolListRemovePool(char *poolHandle);
 
-#endif _SERVERPOOL_H
+#endif
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.12  2007/12/02 22:07:18  volkmer
  * added method to get handle response information
  *
@@ -97,6 +101,7 @@ serverPoolListRemovePool(char *poolHandle);
  * reformated the copyright statement
  *
  * Revision 1.10  2007/10/27 12:42:00  volkmer
- * removed debug macrosadded policys to the pool struct
+ * removed debug macros
+added policys to the pool struct
  *
  **/

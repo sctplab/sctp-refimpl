@@ -29,8 +29,8 @@
  */
 
 /*
- * $Author: randall $
- * $Id: policy.h,v 1.1 2007-12-06 18:30:27 randall Exp $
+ * $Author: tuexen $
+ * $Id: policy.h,v 1.2 2008-03-06 17:56:49 tuexen Exp $
  *
  **/
 
@@ -58,12 +58,17 @@ policyCheck(Policy policy, PoolElement element);
 int
 policyDelete(Policy policy);
 
-#endif _POLICY_H
+#endif
 
 /*
  * $Log: not supported by cvs2svn $
+ * Revision 1.1  2007/12/06 18:30:27  randall
+ * cloned all code over from M Tuexen's repository. May yet need
+ * some updates.
+ *
  * Revision 1.2  2007/11/05 00:03:17  volkmer
- * reformated the copyright statementstarted implementing the policys
+ * reformated the copyright statement
+started implementing the policys
  *
  * Revision 1.1  2007/10/27 12:42:59  volkmer
  * internal representation of a pool member selection policy
