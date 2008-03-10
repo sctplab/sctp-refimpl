@@ -1,3 +1,5 @@
+- Add logging for mbuf.
+- Fix a problem around calculating of maximum length for send.
 - optimize the initialization of the SB max variables.
 - Missing lock when sending data and moving it to the
   outqueue.
