@@ -430,7 +430,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_5)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
