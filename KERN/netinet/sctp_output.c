@@ -3953,7 +3953,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if !defined(__Panda__)
 			else if (ifp) {
 #if defined(__APPLE__)
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if !defined(APPLE_LEOPARD)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #endif			  
 #elif defined(__Windows__)
