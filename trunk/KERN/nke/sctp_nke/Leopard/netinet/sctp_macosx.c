@@ -87,7 +87,7 @@ extern struct fileops socketops;
 
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
 #define CONFIG_MACF_SOCKET_SUBSET 1
 #include <sys/vnode_internal.h>
 #if CONFIG_MACF_SOCKET_SUBSET
@@ -124,7 +124,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int fd = uap->s;
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
 	/* workaround sonewconn() issue where qlimits are checked.
 	   i.e. sonewconn() can only be done on listening sockets */
 	int old_qlimit;
@@ -140,7 +140,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		error = EBADF;
 		goto out;
 	}
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
 	if ((error = mac_socket_check_accept(kauth_cred_get(), head)) != 0)
 		goto out;
 #endif /* MAC_SOCKET_SUBSET */
@@ -153,7 +153,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
 
 	fflag = fp->f_flag;
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5)
 	proc_fdlock(p);
 	error = falloc_locked(p, &fp, &newfd, 1);
 #else
@@ -167,13 +167,13 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		 * have a chance at it.
 		 */
 		/* SCTP will NOT put the connection back onto queue */
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5)
 		proc_fdunlock(p);
 #endif
 		socket_lock(head, 0);
 		goto out;
 	}
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5)
 	*fdflags(p, newfd) &= ~UF_RESERVED;
 #endif
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
@@ -185,7 +185,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 	head->so_qlimit = old_qlimit;
 	if (so == NULL) {
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
 		goto release_fd;
 #else
 		goto out;
@@ -193,7 +193,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 	socket_unlock(head, 0);
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5) && CONFIG_MACF_SOCKET_SUBSET
 	/*
 	 * Pass the pre-accepted socket to the MAC framework. This is
 	 * cheaper than allocating a file descriptor for the socket,
@@ -214,7 +214,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5)
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
 #endif
@@ -225,7 +225,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         so->so_head = NULL;
 	socket_unlock(so, 1);
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED >= MAC_OS_X_VERSION_10_5)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
 release_fd:
 	proc_fdlock(p);
 	procfdtbl_releasefd(p, newfd, NULL);
@@ -385,7 +385,7 @@ void *sctp_calloutq_mtx;
 #endif
 #endif
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED <= MAC_OS_X_VERSION_10_4)
+#if (MAC_OS_X_VERSION_MIN_REQUIRED < MAC_OS_X_VERSION_10_5)
 
 /*
  * here we hack in a fix for Apple's m_copym for the case where the first
