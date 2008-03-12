@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.64 2007/10/30 14:09:23 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.65 2008/01/28 10:34:38 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -238,6 +238,10 @@ sctp_free_vrf(struct sctp_vrf *vrf)
 	int ret;
 	ret = atomic_fetchadd_int(&vrf->refcount, -1);
 	if(ret == 1) {
+                if (vrf->vrf_addr_hash) {
+                    SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
+                    vrf->vrf_addr_hash = NULL;
+                }
 		/* We zero'd the count */
 		LIST_REMOVE(vrf, next_vrf);
 		SCTP_FREE(vrf, SCTP_M_VRF);
@@ -2640,8 +2644,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			if(prison) {
 				/* For INADDR_ANY and  LOOPBACK the prison_ip()
-				 * call will tranmute the ip address to the proper
-				 * valie.
+				 * call will transmute the ip address to the proper
+				 * value (i.e. the IP address owned by the jail).
 				 */
 				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr)) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
@@ -2712,11 +2716,12 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			return (EAFNOSUPPORT);
 		}
 	}
-	/* Setup a vrf_id to be the default for the non-bind-all case. */
- 	vrf_id = inp->def_vrf_id;
 
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
+	/* Setup a vrf_id to be the default for the non-bind-all case. */
+ 	vrf_id = inp->def_vrf_id;
+
 	/* increase our count due to the unlock we do */
 	SCTP_INP_INCR_REF(inp);
 	if (lport) {
@@ -2736,7 +2741,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #else
 				  suser(p)
 #endif
-#elif defined(__NetBSD__) || defined(__APPLE__)
+#elif defined(__APPLE__)
 				  suser(p->p_ucred, &p->p_acflag)
 #else
 				  suser(p, 0)
@@ -2848,7 +2853,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #else
 				  suser(p)
 #endif
-#elif defined(__NetBSD__) || defined(__APPLE__)
+#elif defined(__APPLE__)
 				  suser(p->p_ucred, &p->p_acflag)
 #else
 				  suser(p, 0)
@@ -3133,15 +3138,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 #endif
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 	int cnt;
 	sctp_sharedkey_t *shared_key;
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 
 #if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
@@ -3153,9 +3152,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	so = inp->sctp_socket;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		SCTP_PRINTF("This conflict in free SHOULD not be happening! from %d, imm %d\n", from, immediate);
 		SCTP_ITERATOR_UNLOCK();
 #ifdef SCTP_LOG_CLOSING
@@ -3360,9 +3356,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
@@ -3524,9 +3517,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		ipsec4_delete_pcbpolicy(ip_pcb);
 #endif				/* IPSEC */
 
-#ifdef  __NetBSD__
-		sofree(so);
-#endif
 		/* Unlocks not needed since the socket is gone now */
 	}
 #ifndef __Panda__
@@ -3641,9 +3631,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_DECR_EP_COUNT();
 #else
 	/* For Tiger, we will do this later... */
-#endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
 #endif
 }
 
@@ -4523,14 +4510,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	struct socket *so;
 	int ccnt=0;
 	int cnt=0;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 
 	/* first, lets purge the entry from the hash table. */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 #if defined(__APPLE__)
 	sctp_lock_assert(SCTP_INP_SO(inp));
 #endif
@@ -4541,9 +4522,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (stcb->asoc.state == 0) {
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 7);
-#endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
 #endif
 		/* there is no asoc, really TSNH :-0 */
 		return (1);
@@ -4582,9 +4560,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 			/* no asoc destroyed */
 			SCTP_TCB_UNLOCK(stcb);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-			splx(s);
-#endif
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, stcb, 8);
 #endif
@@ -4684,9 +4659,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_sowwakeup(inp, so);
 		}
 
-#if defined(__NetBSD__)
-		splx(s);
-#endif
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, stcb, 9);
 #endif
@@ -5105,9 +5077,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_INP_RUNLOCK(inp);
 	}
  out_of:
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	/* destroyed the asoc */
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 11);
@@ -5411,17 +5380,10 @@ int
 sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 {
 	struct sctp_laddr *laddr;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-	s = splsoftnet();
-#endif
 
 	laddr = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
 	if (laddr == NULL) {
 		/* out of memory? */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-		splx(s);
-#endif
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 		return (EINVAL);
 	}
@@ -5434,9 +5396,6 @@ sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 	/* insert it */
 	LIST_INSERT_HEAD(list, laddr, sctp_nxt_addr);
 
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	return (0);
 }
 
@@ -5446,19 +5405,12 @@ sctp_insert_laddr(struct sctpladdr *list, struct sctp_ifa *ifa, uint32_t act)
 void
 sctp_remove_laddr(struct sctp_laddr *laddr)
 {
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-	s = splsoftnet();
-#endif
 
 	/* remove from the list */
 	LIST_REMOVE(laddr, sctp_nxt_addr);
 	sctp_free_ifa(laddr->ifa);
 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, laddr);
 	SCTP_DECR_LADDR_COUNT();
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 }
 
 /*
@@ -6785,9 +6737,6 @@ sctp_initiate_iterator(inp_func inpf,
 		       uint8_t chunk_output_off)
 {
 	struct sctp_iterator *it = NULL;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 
 	if (af == NULL) {
 		return (-1);
@@ -6841,14 +6790,8 @@ sctp_initiate_iterator(inp_func inpf,
 	/* Init the timer */
 	SCTP_OS_TIMER_INIT(&it->tmr.timer);
 	/* add to the list of all iterators */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it,
 			 NULL, NULL);
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 #endif
     /* sa_ignore MEMLEAK {memory is put on the tailq for the iterator} */
 	return (0);

@@ -325,15 +325,6 @@ do { \
 } while (0)
 
 
-#if defined(__NetBSD__)
-int
-sctp_soreceive(struct socket *so, struct mbuf **paddr,
-    struct uio *uio,
-    struct mbuf **mp0,
-    struct mbuf **controlp,
-    int *flagsp);
-
-#else
 int
 sctp_soreceive(struct socket *so, struct sockaddr **psa,
     struct uio *uio,
@@ -341,7 +332,6 @@ sctp_soreceive(struct socket *so, struct sockaddr **psa,
     struct mbuf **controlp,
     int *flagsp);
 
-#endif
 
 /* For those not passing mbufs, this does the 
  * translations for you. Caller owns memory

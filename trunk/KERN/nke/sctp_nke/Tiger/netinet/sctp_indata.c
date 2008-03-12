@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.47 2007/11/10 00:47:14 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.48 2008/01/28 10:25:43 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2882,7 +2882,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		for (j = frag_strt + last_tsn; j <= frag_end + last_tsn; j++) {
+		for (j = frag_strt + last_tsn; (compare_with_wrap((frag_end + last_tsn), j, MAX_TSN)); j++) {
 			while (tp1) {
 				if (tp1->rec.data.doing_fast_retransmit)
 					num_frs++;
@@ -3329,7 +3329,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					tp1->sent++;
 				}
 			}
-		} else if (tp1->rec.data.doing_fast_retransmit) {
+		} else if ((tp1->rec.data.doing_fast_retransmit) && (sctp_cmt_on_off == 0)) {
 			/*
 			 * For those that have done a FR we must take
 			 * special consideration if we strike. I.e the

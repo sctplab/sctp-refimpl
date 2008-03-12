@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.66 2007/10/16 14:05:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.67 2008/01/31 08:22:24 rwatson Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2189,6 +2189,18 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* out of memory or ?? */
 		return (NULL);
 	}
+#ifdef SCTP_MBUF_LOGGING
+	if (sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+		struct mbuf *mat;
+		mat = m_sig;
+		while (mat) {
+			if (SCTP_BUF_IS_EXTENDED(mat)) {
+				sctp_log_mb(mat, SCTP_MBUF_SPLIT);
+			}
+			mat = SCTP_BUF_NEXT(mat);
+		}
+	}
+#endif
 
 	/*
 	 * compute the signature/digest for the cookie
@@ -2542,7 +2554,12 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
 
+#if defined(__FreeBSD__)
+			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb,
+			    0);
+#else
 			sctp_pull_off_control_to_new_inp((*inp_p), inp, *stcb, M_NOWAIT);
+#endif
 			SCTP_TCB_LOCK((*stcb));
 			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
 
@@ -4820,6 +4837,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset, SCTP_SIZE32(chk_length),
 									 M_DONTWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
+#ifdef SCTP_MBUF_LOGGING
+						if (sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+							struct mbuf *mat;
+							mat = SCTP_BUF_NEXT(mm);
+							while (mat) {
+								if (SCTP_BUF_IS_EXTENDED(mat)) {
+									sctp_log_mb(mat, SCTP_MBUF_ICOPY);
+								}
+								mat = SCTP_BUF_NEXT(mat);
+							}
+						}
+#endif
 						sctp_queue_op_err(stcb, mm);
 					} else {
 						sctp_m_freem(mm);
@@ -5253,9 +5282,6 @@ sctp_input(i_pak, va_alist)
 #ifdef __Panda__
 	int off;
 #endif
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	int s;
-#endif
 	uint32_t vrf_id = 0;
 	uint8_t ecn_bits;
 	struct ip *ip;
@@ -5337,7 +5363,7 @@ sctp_input(i_pak, va_alist)
 		}
 		ip = mtod(m, struct ip *);
 	}
-#if defined(__NetBSD__) || defined(__OpenBSD__) || defined(__Windows__)
+#if defined(__Windows__)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
@@ -5348,14 +5374,9 @@ sctp_input(i_pak, va_alist)
 		"sctp_input() length:%d iphlen:%d\n", mlen, iphlen);
 
 	/* SCTP does not allow broadcasts or multicasts */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	if (IN_MULTICAST(ip->ip_dst.s_addr))
-#else
-		if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr)))
-#endif
-		{
+	if (IN_MULTICAST(ntohl(ip->ip_dst.s_addr))) {
 			goto bad;
-		}
+	}
 	if (SCTP_IS_IT_BROADCAST(ip->ip_dst, m)) {
 		/* We only look at broadcast if its a
 		 * front state, All others we will 
@@ -5468,26 +5489,17 @@ sctp_input(i_pak, va_alist)
 	 */
 #if defined(__FreeBSD__)  || defined(__APPLE__)
 	length = ip->ip_len + iphlen;
-#elif defined(__NetBSD__)
-	/* Does this really work? */
-	length = ip->ip_len - (ip->ip_hl << 2) + iphlen;
 #else
 	length = ip->ip_len;
 #endif
 	offset -= sizeof(struct sctp_chunkhdr);
 
 	ecn_bits = ip->ip_tos;
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	s = splsoftnet();
-#endif
 
 	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
 				     inp, stcb, net, ecn_bits, vrf_id);
 	/* inp's ref-count reduced && stcb unlocked */
-#if defined(__NetBSD__) || defined(__OpenBSD__)
-	splx(s);
-#endif
 	if (m) {
 		sctp_m_freem(m);
 	}
