@@ -180,10 +180,14 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
+#if defined(APPLE_LEOPARD)
 	old_qlimit = head->so_qlimit;	/* work around sonewconn() needing listen */
 	head->so_qlimit = 1;
+#endif
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
+#if defined(APPLE_LEOPARD)
 	head->so_qlimit = old_qlimit;
+#endif
 	if (so == NULL) {
 #if defined(APPLE_LEOPARD)
 		goto release_fd;
