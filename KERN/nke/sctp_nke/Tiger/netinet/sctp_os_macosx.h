@@ -95,7 +95,6 @@
 extern struct fileops socketops;
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-
 #if defined(HAVE_NRL_INPCB)
 #ifndef in6pcb
 #define in6pcb		inpcb
@@ -282,10 +281,12 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
 #define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
+#if defined(APPLE_LEOPARD)
+#define SCTP_M_COPYM m_copym
+#else
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
-
 #define SCTP_M_COPYM sctp_m_copym
-
+#endif
 /*
  * timers
  */
@@ -427,6 +428,18 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
+#if defined(APPLE_LEOPARD)
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
+{ \
+	int o_flgs = 0; \
+	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
+		o_flgs = IP_RAWOUTPUT | (stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE); \
+	} else { \
+		o_flgs = IP_RAWOUTPUT; \
+	} \
+	result = ip_output(o_pak, NULL, ro, o_flgs, NULL, NULL); \
+}
+#else
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
@@ -437,7 +450,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	} \
 	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
 }
-
+#endif
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
  	if (stcb && stcb->sctp_ep) \
@@ -460,7 +473,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else
+#if defined(APPLE_LEOPARD)
+#include <libkern/crypto/sha1.h>
+#else
 #include <crypto/sha1.h>
+#endif
 /* map standard crypto API names */
 #define SHA1_Init	SHA1Init
 #define SHA1_Update	SHA1Update
@@ -471,7 +488,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #include <crypto/sha2/sha2.h>
 #endif
 
+#if defined(APPLE_LEOPARD)
+#include <libkern/crypto/md5.h>
+#else
 #include <sys/md5.h>
+#endif
 /* map standard crypto API names */
 #define MD5_Init	MD5Init
 #define MD5_Update	MD5Update

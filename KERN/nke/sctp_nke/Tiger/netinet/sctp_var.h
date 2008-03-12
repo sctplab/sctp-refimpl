@@ -44,13 +44,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.21 2007/10/16 14:05:51 rrs Ex
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 extern struct pr_usrreqs sctp_usrreqs;
-
-#elif defined(__NetBSD__)
-int sctp_usrreq
-__P((struct socket *, int, struct mbuf *, struct mbuf *,
-     struct mbuf *, struct proc *p));
-
 #endif
+
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
 #define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
