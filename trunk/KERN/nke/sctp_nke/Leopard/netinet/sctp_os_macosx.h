@@ -95,8 +95,6 @@
 extern struct fileops socketops;
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-#include <AvailabilityMacros.h>
-
 #if defined(HAVE_NRL_INPCB)
 #ifndef in6pcb
 #define in6pcb		inpcb
@@ -283,7 +281,7 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
 #define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
-#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
+#if defined(APPLE_LEOPARD)
 #define SCTP_M_COPYM m_copym
 #else
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
@@ -430,7 +428,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#if (MAC_OS_X_VERSION_MAX_ALLOWED < MAC_OS_X_VERSION_10_5)
+#if defined(APPLE_LEOPARD)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
@@ -439,7 +437,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	} else { \
 		o_flgs = IP_RAWOUTPUT; \
 	} \
-	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
+	result = ip_output(o_pak, NULL, ro, o_flgs, NULL, NULL); \
 }
 #else
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
@@ -450,7 +448,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	} else { \
 		o_flgs = IP_RAWOUTPUT; \
 	} \
-	result = ip_output(o_pak, NULL, ro, o_flgs, NULL, NULL); \
+	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
 }
 #endif
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
@@ -475,7 +473,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else
-#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
+#if defined(APPLE_LEOPARD)
 #include <libkern/crypto/sha1.h>
 #else
 #include <crypto/sha1.h>
@@ -490,7 +488,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #include <crypto/sha2/sha2.h>
 #endif
 
-#if (MAC_OS_X_VERSION_MIN_REQUIRED >= MAC_OS_X_VERSION_10_5)
+#if defined(APPLE_LEOPARD)
 #include <libkern/crypto/md5.h>
 #else
 #include <sys/md5.h>
