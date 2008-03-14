@@ -77,6 +77,7 @@
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
 		50DE01150C3998AA0009809A /* sctp_cc_functions.c in Sources */ = {isa = PBXBuildFile; fileRef = 50DE01110C3998AA0009809A /* sctp_cc_functions.c */; };
 		50DE01160C3998AA0009809A /* sctp_cc_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = 50DE01120C3998AA0009809A /* sctp_cc_functions.h */; };
+		50EF0E650D2323BB0060D28C /* namei.h in Headers */ = {isa = PBXBuildFile; fileRef = 50EF0E640D2323BB0060D28C /* namei.h */; };
 		50FA27180CDB24950013C550 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50FA27170CDB24950013C550 /* locks.h */; };
 		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
 		876D69470AF6812C003372FB /* sctp_os.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69450AF6812C003372FB /* sctp_os.h */; };
@@ -167,6 +168,7 @@
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
 		50DE01110C3998AA0009809A /* sctp_cc_functions.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_cc_functions.c; sourceTree = "<group>"; };
 		50DE01120C3998AA0009809A /* sctp_cc_functions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_cc_functions.h; sourceTree = "<group>"; };
+		50EF0E640D2323BB0060D28C /* namei.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = namei.h; sourceTree = "<group>"; };
 		50FA27170CDB24950013C550 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = locks.h; sourceTree = "<group>"; };
 		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
 		876D69450AF6812C003372FB /* sctp_os.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os.h; sourceTree = "<group>"; };
@@ -253,6 +255,7 @@
 		5045DCE006DE7B870057890E /* sys */ = {
 			isa = PBXGroup;
 			children = (
+				50EF0E640D2323BB0060D28C /* namei.h */,
 				503E5D4508A1778B00714243 /* proc_internal.h */,
 				5079593A0893C59400D7E924 /* domain.h */,
 				5079593B0893C59400D7E924 /* kernel.h */,
@@ -434,6 +437,7 @@
 				50BDE7C90BAB46ED00ED41D7 /* sctp_sysctl.h in Headers */,
 				50DE01160C3998AA0009809A /* sctp_cc_functions.h in Headers */,
 				50FA27180CDB24950013C550 /* locks.h in Headers */,
+				50EF0E650D2323BB0060D28C /* namei.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -606,12 +610,13 @@
 				GCC_GENERATE_DEBUGGING_SYMBOLS = YES;
 				GCC_OPTIMIZATION_LEVEL = 1;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					APPLE_LEOPARD,
 					SCTP_LOCAL_TRACE_BUF,
 					INVARIANTS,
 					SCTP_DEBUG,
 					KERNEL,
-					INET,
 					INET6,
+					INET,
 					PRIVATE,
 					BSD_BUILD,
 					HAVE_SCTP_PEELOFF_SOCKOPT,
@@ -642,7 +647,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 5.0.0;
+				MODULE_VERSION = 5.2.0;
 				OTHER_CFLAGS = "$(inherited)";
 				PRODUCT_NAME = SCTP;
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
@@ -657,16 +662,15 @@
 				COPY_PHASE_STRIP = YES;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_PREPROCESSOR_DEFINITIONS = (
+					APPLE_LEOPARD,
+					SCTP_DEBUG,
 					KERNEL,
-					INET,
 					INET6,
+					INET,
 					PRIVATE,
 					BSD_BUILD,
 					HAVE_SCTP_PEELOFF_SOCKOPT,
 					SCTP_EMBEDDED_V6_SCOPE,
-					HAVE_SCTP_SORECEIVE,
-					SCTP_APPLE_FINE_GRAINED_LOCKING,
-					HAVE_SHA2,
 				);
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INFOPLIST_FILE = Info.plist;
@@ -675,7 +679,7 @@
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 5.1.0;
+				MODULE_VERSION = 5.2.0;
 				PRODUCT_NAME = SCTP;
 				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 				WRAPPER_EXTENSION = kext;
@@ -689,11 +693,13 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INFOPLIST_FILE = Info.plist;
 				INSTALL_PATH = "$(SYSTEM_LIBRARY_DIR)/Extensions";
+				MACOSX_DEPLOYMENT_TARGET = 10.5;
 				MODULE_NAME = org.sctp.kext.SCTP;
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
-				MODULE_VERSION = 4.1.0;
+				MODULE_VERSION = 5.2.0;
 				PRODUCT_NAME = SCTP;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Default;
@@ -749,10 +755,23 @@
 		50C5C69B08560FAC0054138C /* Deployment */ = {
 			isa = XCBuildConfiguration;
 			buildSettings = {
+				ARCHS = (
+					ppc,
+					i386,
+					ppc64,
+					x86_64,
+				);
 				COPY_PHASE_STRIP = YES;
 				DYLIB_COMPATIBILITY_VERSION = 1;
 				DYLIB_CURRENT_VERSION = 1;
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
+				GCC_PREPROCESSOR_DEFINITIONS = (
+					HAVE_SCTP_PEELOFF_SOCKOPT,
+					SCTP,
+					INET6,
+					PRIVATE,
+					BSD_BUILD,
+				);
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/local/lib;
 				LIBRARY_STYLE = DYNAMIC;
@@ -761,6 +780,7 @@
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = libsctp;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
 					"-Wmost",
@@ -784,6 +804,7 @@
 				OTHER_LDFLAGS = "";
 				OTHER_REZFLAGS = "";
 				PRODUCT_NAME = libsctp;
+				SDKROOT = /Developer/SDKs/MacOSX10.5.sdk;
 				SECTORDER_FLAGS = "";
 				WARNING_CFLAGS = (
 					"-Wmost",
