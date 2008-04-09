@@ -566,7 +566,7 @@ But how exactly does this occur?
 
 Lets consider a TCP connection for a moment look at Fig~\ref{lost}. 
 The sender, EA, sends Packets P1, P2 and P3. Note that to TCP the data
-in each packet is dependant on what is on queue at the time TCP decided
+in each packet is dependent on what is on queue at the time TCP decided
 to send the data, no message boundaries are implied by the packets. In this
 transfer we have the unfortunate occurrence of a lost packet, P1 is lost. P2 and P3
 arrive safely, but since the data is NOT in order they are held by the TCP stack
@@ -697,7 +697,7 @@ SCTP but one that many developers will be happy to see. When you think of
 an interaction between two applications rarely do they exchange a ``stream of bytes''.
 Instead they send, receive and act upon messages. In a TCP connection each
 message must be framed in some way. Any read of a buffer may return
-parts of two seperate messages. The application needs to provide application
+parts of two separate messages. The application needs to provide application
 layer code that parses the message based on the way the messages
 were framed by the sender. 
 
@@ -755,15 +755,15 @@ There are a few other differences worth noting in any comparison of
 transports. One of the obvious differences is the checksum. In both
 UDP and TCP a summation is used of all bits in the message. The summation
 is done as a simple addition of all bytes in the message including a
-psuedo-header. The psuedo-header is selected parts of the IP
+pseudo-header. The pseudo-header is selected parts of the IP
 header to help detect when a router mis-directs a packet. For SCTP
 a Cyclic Redundancy Check is used (CRC32c). A CRC is much stronger
 than a checksum and provides much better protection against
 bit errors and packet damage done by routers and other network
 devices. 
 
-The Psuedo-header mentioned above is not needed in SCTP. The reason
-is the vtag discussed earlier. The Psuedo-header, as noted, is used to
+The Pseudo-header mentioned above is not needed in SCTP. The reason
+is the vtag discussed earlier. The Pseudo-header, as noted, is used to
 detect mis-routed packets in the checksum. For SCTP the 32 bit random
 nonce provides this same protection without the need to embed a
 hidden field in the packets checksum.
@@ -779,7 +779,7 @@ us from this same situation as long as vtags themselves are
 put into a ``timed-wait''.
 
 SCTP also includes a required heartbeat mechanism. In contrast
-TCP has an optional keep-alive mechanism which must be explicty
+TCP has an optional keep-alive mechanism which must be explicitly
 enabled by the application. 
 
 One other striking difference between TCP and SCTP is the absence
@@ -799,11 +799,11 @@ SCTP implementation will include:
  \item  RFC4960 (basic SCTP)
  \item  RFC3758 (partial reliability)
  \item  RFC4895 (authentication)
- \item  RFC5061 (dynmic addresses)
+ \item  RFC5061 (dynamic addresses)
 \end{enumerate}
 
 There are other drafts and extensions that are currently being
-reviewed by the IETF but these will truely be optional in our
+reviewed by the IETF but these will truly be optional in our
 opinions. The ones listed above, however, though optional we
 consider quite necessary for a full featured SCTP stack.
 
@@ -816,7 +816,7 @@ basic elements and choices that an application writer will have when using
 SCTP.
 
 \subsection{Models}
-First and formost when we go to use SCTP we have two choices. We can
+First and foremost when we go to use SCTP we have two choices. We can
 use either the one-to-one model or the one-to-many model. So what exactly
 are these two models, what do I gain from them and how do I access them?
 
@@ -846,7 +846,7 @@ in this model, calling \emph{accept()} will return an error. One of the big adva
 ability to send data on the third leg of the four way handshake\footnote{Note that some 
 implementations do allow this with the one-to-one model at the expense of
 breaking TCP compatibility}. Another advantage is that an application does not
-really need to track connection state. In order to be truely free of connection
+really need to track connection state. In order to be truly free of connection
 state however the application is recommended to turn on the \emph{AUTO\_CLOSE} socket option
 that will automatically close connections that are idle for long periods. 
 
@@ -856,7 +856,7 @@ SOCK\_DGRAM and the proto as IPPROTO\_SCTP.
 \subsection{Notifications}
 
 While developing the socket API for SCTP it became quickly obvious
-that the transport itself would often have things to say to the applicaiton 
+that the transport itself would often have things to say to the application 
 (if the application is interested). The existing socket API had no method
 for the transport to easily communicate events that were happening
 on the transport. To deal with this the socket API for SCTP allows an
@@ -885,7 +885,7 @@ There are current eight types of notifications. they are:
 Often applications will not be interested in a number of these notification. Two of the most
 useful notifications for the one-to-many model is the Association and Shutdown events. Within
 these events is an association identification often called assoc\_id. This identify's uniquely the
-association that is in the one-to-many socket. It can acutally be used with some of the extended
+association that is in the one-to-many socket. It can actually be used with some of the extended
 API calls to send to (instead of using a socket address).  Many of the socket options used with
 SCTP will take the assoc\_id has an argument to identify changing or gathering settings on
 a specific association instead of the whole socket descriptor.
@@ -903,7 +903,7 @@ where the socket API just does not have adequate utility:
 \begin{itemize}
  \item  For binding addresses, you can have one or all addresses.
  \item  For connecting to a peer you can connect to one and only one address.
- \item  For sending or receiving, getting access to the stream information is rather ackward.
+ \item  For sending or receiving, getting access to the stream information is rather awkward.
 \end{itemize}
 
 To solve these problems there are extensions to the socket API to add
