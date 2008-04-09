@@ -938,6 +938,119 @@ a rough overview of he way a user can best interact with SCTP.
 
 \subsection{Socket Options}
 
+\begin{table}
+\begin{tabular}{|l|r|l|}
+\hline
+Option & R-W & Description\\
+\hline \hline
+SCTP\_RTOINFO & rw & RTO min/max\\
+\hline
+SCTP\_ASSOCINFO & rw & Association parameters\\
+\hline
+SCTP\_INITMSG & rw & Setup options\\
+\hline
+SCTP\_NODELAY & rw & Nagle algorithm\\
+\hline
+SCTP\_AUTOCLOSE & rw & Automatic closing\\
+\hline
+SCTP\_SET\_PEER\_PRIMARY\_ADDR & rw & Remote primary\\
+\hline
+SCTP\_PRIMARY\_ADDR & rw & Local primary\\
+\hline
+SCTP\_ADAPTATION\_LAYER & rw & AI indication\\
+\hline
+SCTP\_DISABLE\_FRAGMENTS & rw & Fragmentation\\
+\hline
+SCTP\_PEER\_ADDR\_PARAM & rw & Misc parameters\\
+\hline
+SCTP\_DEFAULT\_SEND\_PARAMS & rw & Default sendrcvinfo\\
+\hline
+SCTP\_EVENTS & rw & Notifications\\
+\hline
+SCTP\_I\_WANT\_MAPPED\_V4\_ADDR & rw & Mapped v4 addresses\\
+\hline
+SCTP\_MAXSEG & rw & Fragmentation point\\
+\hline
+SCTP\_DELAYED\_SACK & rw & Delayed sack\\
+\hline
+SCTP\_FRAGMENT\_INTERLEAVE & rw & Receive interleave\\
+\hline
+SCTP\_PARTIAL\_DELIVERY\_POINT & rw & receive PD point\\
+\hline
+SCTP\_AUTH\_CHUNK & w & Add Auth Chunk\\
+\hline
+SCTP\_AUTH\_KEY & w & Add auth key\\
+\hline
+SCTP\_HMAC\_IDENT & rw & hmac algo\\
+\hline
+SCTP\_AUTH\_ACTIVE\_KEY & rw & Active key\\
+\hline
+SCTP\_AUTH\_DELETE\_KEY & w & Delete key\\
+\hline
+SCTP\_USE\_EXT\_RCVINFO & rw & Extended sndrcvinfo\\
+\hline
+SCTP\_AUTO\_ASCONF & rw & Automatic IP add/del\\
+\hline
+SCTP\_MAXBURST & rw & Microburst control\\
+\hline
+SCTP\_CONTEXT & rw & Default context\\
+\hline
+SCTP\_EXPLICTI\_EOR & rw & Explict EOR\\
+\hline
+SCTP\_STATUS & r & Assoc status\\
+\hline
+SCTP\_GET\_PEER\_ADDR\_INFO & r & Info on dest\\
+\hline
+SCTP\_PEER\_AUTH\_CHUNKS & r & peer requires auth\\
+\hline
+SCTP\_LOCAL\_AUTH\_CHUNKS & r & local requires auth\\
+\hline
+SCTP\_GET\_ASSOC\_NUMBER & r & Num of assocs\\
+\hline
+SCTP\_GET\_ASSOC\_ID\_LIST & r & Assoc ids\\
+\hline
+\end{tabular}
+\caption{SCTP Socket Options\label{sockopt}}
+\end{table}
+
+\begin{table}
+\begin{tabular}{|l|r|l|}
+\hline
+Option & R-W & Description\\
+\hline \hline
+SCTP\_RESET\_STREAMS & w & Stream reset\\
+\hline
+SCTP\_SET\_DEBUG\_LEVEL & rw & Debug output\\
+\hline
+SCTP\_CMT\_ON\_OFF & rw & CMT on/off\\
+\hline
+SCTP\_CMT\_USE\_DAC & rw & DAC with CMT\\
+\hline
+SCTP\_PLUGGABLE\_CC & rw & Set CC\\
+\hline
+SCTP\_GET\_SNDBUF\_USE & r &  send space\\
+\hline
+SCTP\_GET\_NONCE\_VALUES & r & Vtag pair\\
+\hline
+SCTP\_SET\_DYNAMIC\_PRIMARY & w & Global primary\\
+\hline
+SCTP\_GET\_PACKET\_LOG & r & Packet log \\
+\hline
+SCTP\_VRF\_ID & rw & Defaut vrf\\
+\hline
+SCTP\_ADD\_VRF\_ID & w & Add a VRF\\
+\hline
+SCTP\_GET\_VRF\_IDS & r & Get VRF IDs\\
+\hline
+SCTP\_GET\_ASOC\_VRF & r & Asoc VRF ID\\
+\hline
+SCTP\_DEL\_VRF\_ID & w & Del VRF ID\\
+\hline
+\end{tabular}
+\caption{SCTP FreeBSD Specific Socket Options\label{sockopt}}
+\end{table}
+
+
 \subsection{Some Examples}
 
 
