@@ -663,7 +663,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
   	        if ((compare_with_wrap(asoc->cumulative_tsn,
 			    control->sinfo_tsn, MAX_TSN)) ||
-		            (control->sinfo_tsn == assoc->cumulative_tsn)) {
+		            (control->sinfo_tsn == asoc->cumulative_tsn)) {
 		        goto protocol_error;
 		}
 		if (TAILQ_EMPTY(&strm->inqueue)) {
