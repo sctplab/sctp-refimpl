@@ -2,5 +2,5 @@
 *.log
 bsdcan_sctp.pdf
 bsdcan_sctp.ps
-discard_client
-discard_server
+client
+server
