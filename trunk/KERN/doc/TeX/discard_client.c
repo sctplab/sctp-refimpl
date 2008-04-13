@@ -1,0 +1,59 @@
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+
+#define PORT 9
+#define ADDR "127.0.0.1"
+#define SIZE_OF_MESSAGE    1000
+#define NUMBER_OF_MESSAGES 500
+#define PPID 1234
+
+int main() {
+	unsigned int i;
+	int fd;
+	struct sockaddr_in addr;
+	char buffer[SIZE_OF_MESSAGE];
+	struct sctp_status status;
+	socklen_t opt_len;
+	
+	memset((void *)buffer, 'A', SIZE_OF_MESSAGE);
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		perror("socket");
+	
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_family      = AF_INET;
+	addr.sin_port        = htons(PORT);
+	addr.sin_addr.s_addr = inet_addr(ADDR);	
+	
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0)
+		perror("connect");
+
+	memset((void *)&status, 0, sizeof(struct sctp_status));
+	opt_len = (socklen_t)sizeof(struct sctp_status);
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_STATUS, &status, &opt_len) < 0) {
+		perror("setsockopt");
+	}
+
+	for (i = 0; i <  NUMBER_OF_MESSAGES; i++) {
+		if (sctp_sendmsg(fd, (const void *)buffer, SIZE_OF_MESSAGE,
+		                 NULL, 0,
+		                 htonl(PPID), 0, i % status.sstat_outstrms,
+		                 0, 0) < 0) {
+			perror("send");
+		}
+	}
+	
+	if (close(fd) < 0)
+		perror("close");
+	
+	return(0);
+}
