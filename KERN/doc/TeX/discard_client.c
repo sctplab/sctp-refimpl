@@ -13,7 +13,7 @@
 #define NUMBER_OF_MESSAGES 500
 #define PPID 1234
 
-int main() {
+int main(int argc, char *argv[]) {
 	unsigned int i;
 	int fd;
 	struct sockaddr_in addr;
@@ -23,9 +23,9 @@ int main() {
 	
 	memset((void *)buffer, 'A', SIZE_OF_MESSAGE);
 	
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		perror("socket");
-	
+	}
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
@@ -34,9 +34,9 @@ int main() {
 	addr.sin_port        = htons(PORT);
 	addr.sin_addr.s_addr = inet_addr(ADDR);	
 	
-	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0)
+	if (connect(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("connect");
-
+	}
 	memset((void *)&status, 0, sizeof(struct sctp_status));
 	opt_len = (socklen_t)sizeof(struct sctp_status);
 	if (getsockopt(fd, IPPROTO_SCTP, SCTP_STATUS, &status, &opt_len) < 0) {
@@ -52,8 +52,8 @@ int main() {
 		}
 	}
 	
-	if (close(fd) < 0)
+	if (close(fd) < 0) {
 		perror("close");
-	
+	}
 	return(0);
 }
