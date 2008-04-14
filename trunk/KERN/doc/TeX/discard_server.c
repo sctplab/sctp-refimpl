@@ -55,7 +55,7 @@ int main(int argc, char *argv[]) {
 		if (flags & MSG_NOTIFICATION) {
 			printf("Notification received.\n");
 		} else {
-			printf("Message of length %d received from=%s:%u on stream %d with PPID %d.\n",
+			printf("Msg of length %d received from %s:%u on stream %d, PPID %d.\n",
 			       n, inet_ntoa(addr.sin_addr), ntohs(addr.sin_port),
 			       sinfo.sinfo_stream, ntohl(sinfo.sinfo_ppid));
 		}
