@@ -1687,6 +1687,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 	.pru_close = sctp6_close,
 	.pru_detach = sctp6_close,
 	.pru_sopoll = sopoll_generic,
+	.pru_flush = sctp_flush,	
 #else
 	.pru_detach = sctp6_detach,
 	.pru_sopoll = sopoll,
