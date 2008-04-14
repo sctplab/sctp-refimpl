@@ -335,7 +335,7 @@
 
 
 
-
+\usepackage{listings}
 
 % *** Do not adjust lengths that control margins, column widths, etc. ***
 % *** Do not use packages that alter fonts (such as pslatex).         ***
@@ -352,7 +352,7 @@
 %
 % paper title
 % can use linebreaks \\ within to get better formatting as desired
-\title{SCTP what is it, and how to use it}
+\title{SCTP: What is it, and how to use it?}
 
 
 % author names and affiliations
@@ -360,28 +360,28 @@
 % affiliations
 \author{\IEEEauthorblockN{Randall~Stewart}
         \IEEEauthorblockA{Cisco Systems Inc.\\
-                4875~Forest Drive\\
-                Suite~200\\
-                Columbia, SC~29206\\
-                USA,\\
-                Email: rrs@cisco.com}
+                          4875~Forest Drive\\
+                          Suite~200\\
+                          Columbia, SC~29206\\
+                          USA\\
+                          Email: rrs@cisco.com}
 \and
     \IEEEauthorblockN{Michael~T\"uxen}
     \IEEEauthorblockA{M\"unster University of Applied Sciences\\
-            Department of Electrical Engineering\\
-            and Computer Science\\
-            Stegerwaldstr.~39\\
-             D-48565 Steinfurt,\\
-            Germany\\
-            Email: tuexen@fh-muenster.de}
+                      Department of Electrical Engineering\\
+                      and Computer Science\\
+                      Stegerwaldstr.~39\\
+                      D-48565 Steinfurt\\
+                      Germany\\
+                      Email: tuexen@fh-muenster.de}
 \and
-     \IEEEauthorblockN{Peter~Lei}
-     \IEEEauthorblockA{Cisco Systems Inc.\\
-             8735~West Higgins Road\\
-             Suite~300\\
-             Chicago, IL~60631\\
-             USA\\
-             Email: peterlei@cisco.com}
+    \IEEEauthorblockN{Peter~Lei}
+    \IEEEauthorblockA{Cisco Systems Inc.\\
+                      8735~West Higgins Road\\
+                      Suite~300\\
+                      Chicago, IL~60631\\
+                      USA\\
+                      Email: peterlei@cisco.com}
 }
 % \and
 % \IEEEauthorblockN{Homer Simpson}
@@ -426,14 +426,15 @@
 
 \begin{abstract}
 %\boldmath
-Stream Control Transmission Protocol (SCTP)  is a new transport protocol incorporated into  FreeBSD 7.0. It was first standardized in the IETF in October of 2000 and later updated by~\cite{rfc4960}. 
-Like TCP it provides reliable end to end communication between two peers in an IP network.  So why would one want to use SCTP instead of just using TCP?
+Stream Control Transmission Protocol~(SCTP) is a new transport protocol incorporated into  FreeBSD~7.0. It was first standardized by the Internet Engineering Task Force~(IETF)
+in October of 2000 in~RFC~2960 and later updated by~RFC~4960.
+SCTP is a message oriented protocol providing  reliable end to end communication
+between two peers in an IP network.  
+So why would one want to use SCTP instead of just using TCP or UDP?
 
-This paper will try to answer that question by detailing:
-\begin{enumerate}
- \item  Additional features and functionality provided by SCTP that is not available in TCP. 
-\item And illustrating how such features can be easily used with the SCTP socket API.
-\end{enumerate}
+This paper will try to answer that question by detailing
+services provided by SCTP, and illustrating how SCTP can be easily used
+with the socket API.
 \end{abstract}
 % IEEEtran.cls defaults to using nonbold math in the Abstract.
 % This preserves the distinction between vectors and scalars. However,
@@ -461,68 +462,47 @@ This paper will try to answer that question by detailing:
 
 \section{Introduction}
 % no \IEEEPARstart
-Stream Control Transmission Protocol (SCTP)~\cite{rfc4960} is an end to end transport protocol that provides new services and features for IP communication.
+Stream Control Transmission Protocol (SCTP)~\cite{rfc4960} is a reliable, message oriented
+transport protocol that provides new services and features for IP communication.
 For the past twenty years, reliable communication as been provided by TCP~\cite{rfc793}, and unreliable service as been provided by UDP~\cite{rfc768}.
 So what has brought about the addition of a third protocol to the IP suite of protocols? Many of the features found in TCP and UDP can also be found in SCTP
-see TABLE\ref{features} for a comprehensive comparison of the features. 
+see TABLE~\ref{features} for a comprehensive comparison of the features. 
 
 \begin{table}
+\begin{center}
 \begin{tabular}{|l|r|r|r|}
- \hline
-Service/Features & SCTP & TCP & UDP \\
-\hline \hline
-Connection-Oriented & yes & yes & no \\
 \hline
-Full Duplex & yes & yes & yes \\
+Service/Features               & SCTP & TCP & UDP \\\hline
 \hline
-Reliable data transfer & yes & yes & no  \\
-\hline
-Partial-Reliable data transfer & opt & no & no \\
-\hline
-Ordered data delivery & yes & yes & no \\
-\hline
-Unordered delivery & yes & no & yes \\
-\hline
-Flow control & yes & yes & no \\
-\hline
-Congestion Control & yes & yes & no \\
-\hline
-ECN Capable & yes & yes & no \\
-\hline
-Selective Acknowledgments & yes & opt& no \\
-\hline
-Preserve message boundaries & yes & no & yes \\
-\hline
-Path MTU discovery & yes & yes & no \\
-\hline
-Application PDU fragmentation & yes & yes & no \\
-\hline
-Application PDU bundling & yes & yes & no \\
-\hline
-Multistreaming & yes & no & no \\
-\hline
-Multihoming & yes & no & no \\
-\hline
-Dynamic Multihoming & opt & no & no \\
-\hline
-Syn flooding attack prevention & yes & no & n/a \\
-\hline
-Allows half-closed state & no & yes & n/a \\
-\hline
-reach-ability check & yes & opt & no \\
-\hline
-Pseudo-header for checksum & no & yes & yes \\
-\hline
-Time wait state & no & yes & n/a \\
-\hline
-Authentication & opt & opt  & no \\
-\hline
-CRC based checksum & yes & no & no \\
-\hline
+Message-Oriented               & yes  & no  & yes \\\hline 
+Byte-Oriented                  & no   & yes & no  \\\hline
+Connection-Oriented            & yes  & yes & no  \\\hline
+Full Duplex                    & yes  & yes & yes \\\hline
+Reliable data transfer         & yes  & yes & no  \\\hline
+Partial-Reliable data transfer & opt  & no  & no  \\\hline
+Ordered data delivery          & yes  & yes & no  \\\hline
+Unordered delivery             & yes  & no  & yes \\\hline
+Flow control                   & yes  & yes & no  \\\hline
+Congestion Control             & yes  & yes & no  \\\hline
+ECN Capable                    & yes  & yes & no  \\\hline
+Selective Acknowledgments      & yes  & opt & no  \\\hline
+Path MTU discovery             & yes  & yes & no  \\\hline
+Application PDU fragmentation  & yes  & yes & no  \\\hline
+Application PDU bundling       & yes  & yes & no  \\\hline
+Multistreaming                 & yes  & no  & no  \\\hline
+Multihoming                    & yes  & no  & no  \\\hline
+Dynamic Multihoming            & opt  & no  & no  \\\hline
+Syn flooding attack prevention & yes  & no  & n/a \\\hline
+Allows half-closed state       & no   & yes & n/a \\\hline
+reach-ability check            & yes  & opt & no  \\\hline
+Pseudo-header for checksum     & no   & yes & yes \\\hline
+Time wait state                & no   & yes & n/a \\\hline
+Authentication                 & opt  & opt & no  \\\hline
+CRC based checksum             & yes  & no  & no  \\\hline
 \end{tabular}
+\end{center}
 \caption{Feature List \label{features}}
 \end{table}
-
 As you can see, in SCTP there are overlaps and additions to the list
 of features an application developer can draw upon.  The rest of this document will be laid
 out as follows: In Section II we will discuss and contrast the feature sets of SCTP, TCP and UDP.
@@ -531,21 +511,22 @@ get into some of the details for using the SCTP socket API. In Section V we will
 advantages of using SCTP.
 
 \section{A comparison of features}
-SCTP, like TCP, provides a connection oriented, full duplex, reliable data communication path. Many
-of the standard features you will find in TCP (congestion control, flow control etc) can also be found
-in SCTP. But interestingly there are features in SCTP that resemble in some ways UDP. In this section we
-will go through the unique and strikingly different features found in SCTP. For features that are the same
-(e.g. congestion control in TCP vs SCTP) we will not comment and allow the reader to research the feature
+SCTP, like TCP, provides a connection oriented, full duplex, reliable data communication path. 
+Many of the standard features you will find in TCP (congestion control, flow control etc)
+can also be found in SCTP. But unlike TCP, it provides a transport of messages, not just
+bytes. In this section we will go through the unique and strikingly different
+features found in SCTP. For features that are the same (e.g. congestion control in TCP versus
+SCTP) we will not comment and allow the reader to research the feature
 in TCP (if interested) since SCTP and TCP will react in the same way.
 
 \subsection{Ordering options}
 \label{hol}
 One of the two most striking features of SCTP is its ``multi-streaming''. When you hear
-this term what is being referred to in reality is the ordering options that SCTP provides. The 
-term is also where the ``Stream'' in SCTP's name comes from.
+this term what is being referred to in reality is the ordering options that SCTP provides.
+The term is also where the ``Stream'' in SCTP's name comes from.
 
 In a classic TCP connection, you have no choices in the ordering and presentation of your
-data to your peer. All data transmitted is delivered in strict transmission order. In many
+data to your peer. All bytes transmitted is delivered in strict transmission order. In many
 instances this is exactly what an application wants. Consider for a moment a stream of
 requests to a banking system from an application controlled by a client. If a transfer of
 money is first sent, followed by a sizable withdrawal from that account, we would not want
@@ -583,8 +564,9 @@ SCTP's streams were designed to deal with this very problem and provide a
 method for applications to have finer grain control of what gets blocked by
 the SCTP stack when such a packet loss occurs. When an application sends
 data it can specify a stream number. There are up to 65,535 streams in an
-SCTP association\footnote{The use of the term association is common and SCTP and represents a similar
-concept to a TCP connection} (the exact number is negotiated at association startup).
+SCTP association\footnote{The use of the term association is common for SCTP and
+represents a similar concept to a TCP connection}
+(the exact number is negotiated at association startup).
 When a message is sent in Stream N, a loss of data  that does not have
 any Stream N data does not cause delays in delivery. In other words when data arrives
 in a given stream (N) it is only held for reordering if other data is missing in that same stream.
@@ -629,14 +611,14 @@ errors..
 
 An additional feature that many SCTP stacks offer is the ability to dynamically 
 reconfigure the IP address set that makes up the association ~\cite{rfc5061}. This
-provides the ability for an association to survive an address renumber or take
+provides the ability for an association to survive an address renumbering or take
 advantage of a hot-pluggable network interface without restarting the 
 association. Again this unique feature provides yet again more support 
 to an application attempting to minimize down time.
 
-\begin{figure}]
+\begin{figure}
 \includegraphics{multihome}
-\caption{A multi-home loss}
+\caption{Packet loss in a multi-homed scenario}
 \label{mhomeloss}
 \end{figure}
 
@@ -644,9 +626,9 @@ to an application attempting to minimize down time.
 \subsection{Partial Reliability}
 \label{prsctp}
 Partial Reliability, as the name implies, lets SCTP control the 
-amount of reliability an application wants. Consider a video
-game sending character position updates every 400 milliseconds.
-If data is lost and not retransmitted within that time period (400ms) then
+amount of reliability an application wants on a per message granularity.
+Consider a video game sending character position updates every 400 milliseconds.
+If data is lost and not retransmitted within that time period (400~ms) then
 retransmitting the character position makes no sense when a new
 updated one is already enqueue. With the addition of \cite{rfc3758} SCTP
 gained the ability to specify how long a message is good for.  The initial
@@ -728,11 +710,11 @@ way handshake includes a signed cookie that the passive server side
 sends to the active initiating client. The server holds no state and thus
 is not subject to the SYN flooding attack. 
 
-In the first two packets during the setup exchange a 32 bit random
+In the first two packets during the setup exchange a 32-bit random
 value is supplied by both endpoints. All packets sent by one side must
 have the verification tag (vtag) supplied during setup of the association in
-order to be accepted by the receiving SCTP stack. This 32 bit vtag serves
-as a 32 bit random nonce. This means that a blind attacker must generate
+order to be accepted by the receiving SCTP stack. This 32-bit vtag serves
+as a 32-bit random nonce. This means that a blind attacker must generate
 2 billion guess (on average) in order to say inject a ``ABORT'' chunk to tear
 down the association. 
 
@@ -764,7 +746,7 @@ devices.
 
 The Pseudo-header mentioned above is not needed in SCTP. The reason
 is the vtag discussed earlier. The Pseudo-header, as noted, is used to
-detect mis-routed packets in the checksum. For SCTP the 32 bit random
+detect mis-routed packets in the checksum. For SCTP the 32-bit random
 nonce provides this same protection without the need to embed a
 hidden field in the packets checksum.
 
@@ -816,42 +798,49 @@ basic elements and choices that an application writer will have when using
 SCTP.
 
 \subsection{Models}
-First and foremost when we go to use SCTP we have two choices. We can
-use either the one-to-one model or the one-to-many model. So what exactly
-are these two models, what do I gain from them and how do I access them?
+First and foremost when we go to use SCTP we have two choices.
+The SCTP socket API provides two models: the one-to-one model and the
+one-to-many model.
+
+The one-to-one model is based on a one to one relationship between the sockets and
+SCTP-associations (not taking listening sockets into account). This is similar to
+TCP sockets.
+For the one-to-many model, there is a one-to-many relationship between the sockets
+and the SCTP-association. This is similar to the way of unconnected UDP sockets.
 
 The one-to-one model is a ``TCP'' compatibility model. Basically this model
 works the same exact way that the standard TCP socket API model works.
-A server will typically call \emph{socket()}, \emph{bind()}, and \emph{listen()}. Then after
+A server will typically call \texttt{socket()}, \texttt{bind()}, and \texttt{listen()}. Then after
 the initial setup will sit in an loop calling \emph{accept()} to gain new connections.
 Each new connection is a new socket descriptor on which the new
 connection is available to send and data on. The application must track each individual socket
-descriptor for each connection setup.  The client would do a call \emph{socket()}  followed by a call to \emph{connect()} to the
-address of the server. 
+descriptor for each connection setup.  The client would do a call \texttt{socket()}  followed
+by a call to \texttt{connect()} to the address of the server. 
 
 The big advantage to this model is that a simple change to 
 existing TCP code will make that code work with SCTP. To access this model a user
-calls \emph{socket(int domain,  int type, int proto)}
-with type set to SOCK\_STREAM and proto set to IPPROTO\_SCTP. 
+calls \texttt{socket(int domain,  int type, int proto)}
+with type set to \texttt{SOCK\_STREAM} and proto set to \texttt{IPPROTO\_SCTP}. 
 Note that the domain argument is generally how you choose between IPv6 
-and IPv4 (AF\_INET6 and AF\_INET).
+and IPv4 (\texttt{AF\_INET6} and \texttt{AF\_INET}).
 
-The one-to-many model is unique to SCTP but has some characteristics of UDP.
-It is designed as a peer-to-peer type model.  In this model both side generally
-call \emph{socket()} followed by listen. Then when they wish to exchange information
-with a peer they call \emph{sendto()} or \emph{recvfom()} (or any of the extended send or receive
-calls (see section \ref{adv}). Note that the one single  socket will have multiple
+The one-to-many model is designed as a peer-to-peer type model.
+In this model both side generally call \texttt{socket()} followed by listen.
+Then when they wish to exchange information
+with a peer they call \texttt{sendto()} or \texttt{recvfom()} (or any of the extended send or
+receive calls (see section \ref{adv}). Note that the one single socket will have multiple
 associations underneath it. Only one socket descriptor is ever used for
-in this model, calling \emph{accept()} will return an error. One of the big advantages to this model is the
-ability to send data on the third leg of the four way handshake\footnote{Note that some 
-implementations do allow this with the one-to-one model at the expense of
-breaking TCP compatibility}. Another advantage is that an application does not
-really need to track connection state. In order to be truly free of connection
-state however the application is recommended to turn on the \emph{AUTO\_CLOSE} socket option
-that will automatically close connections that are idle for long periods. 
+in this model, calling \texttt{accept()} will return an error.
+One of the big advantages to this model is the ability to send data on the third leg
+of the four way handshake\footnote{Note that some implementations do allow this with
+the one-to-one model at the expense of breaking TCP compatibility}.
+Another advantage is that an application does not really need to track connection state.
+In order to be truly free of connection state however the application is recommended
+to turn on the \texttt{AUTO\_CLOSE} socket option that will automatically close connections
+that are idle for long periods. 
 
 Accessing the one to many model is done by calling the call specifying the type as
-SOCK\_DGRAM and the proto as IPPROTO\_SCTP.
+\texttt{SOCK\_SEQPACKET} and the proto as \texttt{IPPROTO\_SCTP}.
 
 \subsection{Notifications}
 
@@ -861,10 +850,10 @@ that the transport itself would often have things to say to the application
 for the transport to easily communicate events that were happening
 on the transport. To deal with this the socket API for SCTP allows an
 application to subscribe to ``notifications''. The subscription is
-done via one of the SCTP \emph{setsockopt()} calls. Once a
+done via one of the SCTP \texttt{setsockopt()} calls. Once a
 notification is turned on, when the transport has an event to tell
 the application it sends a message to the application up the normal
-data path with the flags field set to \emph{MSG\_NOTIFICATION}. When a
+data path with the flags field set to \texttt{MSG\_NOTIFICATION}. When a
 user application does subscribe, it is in effect acknowledging to the SCTP stack
 that it (the application) understands it must look at the flags field before interpreting
 a message, since its possible its not a message from a peer but from the transport
@@ -884,10 +873,10 @@ There are current eight types of notifications. they are:
 
 Often applications will not be interested in a number of these notification. Two of the most
 useful notifications for the one-to-many model is the Association and Shutdown events. Within
-these events is an association identification often called assoc\_id. This identify's uniquely the
+these events is an association identification often called \texttt{assoc\_id}. This identify's uniquely the
 association that is in the one-to-many socket. It can actually be used with some of the extended
 API calls to send to (instead of using a socket address).  Many of the socket options used with
-SCTP will take the assoc\_id has an argument to identify changing or gathering settings on
+SCTP will take the \texttt{assoc\_id} has an argument to identify changing or gathering settings on
 a specific association instead of the whole socket descriptor.
 
 We will discuss all of the notifications in some detail in the next section.
@@ -924,16 +913,17 @@ a rough overview of he way a user can best interact with SCTP.
 \subsection{Notifications}
 
 As mentioned earlier SCTP can provide information to the user via
-notifications. Notifications are received in the data path i.e. by \emph{recvmsg()} or \emph{sctp\_recvmsg()}. You
-could in theory use \emph{recvfrom()} or \emph{recv()} but then you would have no way of knowing if
+notifications. Notifications are received in the data path i.e. by \texttt{recvmsg()} or \texttt{sctp\_recvmsg()}. You
+could in theory use \texttt{recvfrom()} or \texttt{recv()} but then you would have no way of knowing if
 the message was a Notification from SCTP or a real peer message.  All notifications are disabled by default, so
-an application must set a socket option (\emph{SCTP\_EVENTS}) to turn on one or more notifications. Once you 
-enable a notification you are making an implicit pledge to the SCTP stack that you will not use emph{recvfrom()} or \emph{recv()}.
+an application must set a socket option (\texttt{SCTP\_EVENTS}) to turn on one or more notifications. Once you 
+enable a notification you are making an implicit pledge to the SCTP stack that you will not use \texttt{recvfrom()} or \texttt{recv()}.
 If you violate that pledge, you will most likely be confused by messages arriving from both the peer application as well as
 the SCTP stack.
 
-The \emph{SCTP\_EVENTS} socket option takes has input a structure as shown
-in Fig. \ref{fig:events}. Note that each uint8\_t is intrepted has a boolean where zero turns off the 
+The \texttt{SCTP\_EVENTS} socket option takes has input a structure as shown
+in Fig. \ref{fig:events}. Note that each \texttt{uint8\_t}
+is interpreted has a boolean where zero turns off the 
 notification and non-zero turns the notification on.
 \begin{figure}
 \verbatiminput{event.h}
@@ -942,20 +932,20 @@ notification and non-zero turns the notification on.
 \end{figure}
 
 The careful reader will notice two distinctions. There is an extra event
-for FreeBSD (found in the \#ifdefs), and there is a ``notifcation'' that was 
-not listed \emph{sctp\_data\_io\_event}. The data\_io event is not a 
+for FreeBSD (found in the \#ifdefs), and there is a ``notification'' that was 
+not listed \texttt{sctp\_data\_io\_event}. The data\_io event is not a 
 notification but the ability to receive extra information with the receive.
 The extra information tells you the stream number as well as other
 ancillary data. If you wish to receive this information you must enable
 the ``event'' just like  you would for a notification. 
 
-Note when this event
-is enabled you will receive the \emph{sctp\_sndrcvinfo} structure with every
-\emph{recvmsg()} or \emph{sctp\_recvmsg()}. You cannot receive
-this information with the \emph{recv()} or \emph{recvfrom()} calls. In the
-\emph{sctp\_recvmsg()} call the \emph{sctp\_sndrcvinfo}  structure is an
-argument passed in the call. For the \emph{recvmsg} call the user will
-need to parse ancillary data. The \emph{sctp\_sndrcvinfo}  is shown in Fig. \ref{fig:sndrcv}
+Note when this event is enabled you will receive the \texttt{sctp\_sndrcvinfo}
+structure with every
+\texttt{recvmsg()} or \texttt{sctp\_recvmsg()}. You cannot receive
+this information with the \texttt{recv()} or \texttt{recvfrom()} calls. In the
+\texttt{sctp\_recvmsg()} call the \texttt{sctp\_sndrcvinfo}  structure is an
+argument passed in the call. For the \texttt{recvmsg} call the user will
+need to parse ancillary data. The \texttt{sctp\_sndrcvinfo}  is shown in Fig.~\ref{fig:sndrcv}
 \begin{figure}
 \verbatiminput{sndrcv.h}
 \caption{The SCTP sndrcvinfo}
@@ -964,7 +954,7 @@ need to parse ancillary data. The \emph{sctp\_sndrcvinfo}  is shown in Fig. \ref
 
 Each notification, as mentioned, provides you with a specific structure. 
 We will examine two of the notifications and leave the rest
-as an excercise for the reader note \cite{socketdraft} and \cite{stevensapi} may
+as an exercise for the reader note \cite{socketdraft} and \cite{stevensapi} may
 also be helpful.
 
 \begin{figure}
@@ -976,24 +966,27 @@ also be helpful.
 One of the most common notifications an application will be interested in is
 the association events notification. This notification tells you about changes in
 associations including the arrival of new associations.  Refer to Figure \ref{fig:assocnotify} for the full structure.
-Some noteable items from this structure are sac\_type, sac\_flags, and sac\_length. Every notification
+Some notable items from this structure are \texttt{sac\_type}, \texttt{sac\_flags},
+and \texttt{sac\_length}. Every notification
 begins with a type, flags and length. This allows the receiver to cast the structure to a base type and then
-examine the type to know exactly which notification has arrived. In this particular notification
-an application may be interested in sac\_outbound\_streams and sac\_inbound\_streams, which tells
+examine the type to know exactly which notification has arrived.
+In this particular notification an application may be interested in
+\texttt{sac\_outbound\_streams} and \texttt{sac\_inbound\_streams}, which tells
 the user how many streams were negotiated (note this may not be the number expected by
 the application and the two values are not necessarily equal). Another useful field is the
-sac\_assoc\_id. This field uniqly identifies this association and can actually be used as a destination
+\texttt{sac\_assoc\_id}.
+This field uniquely identifies this association and can actually be used as a destination
 when using the advanced sctp send calls.
 
-Another notification often subscribed to can be found in Figure \ref{fig:paddr}. This notification
-arrives when some event has occured concerning one of the peers addresses. The spc\_state
-field will reflect what happened possible events include:
+Another notification often subscribed to can be found in Figure \ref{fig:paddr}.
+This notification arrives when some event has occurred concerning one of the peers
+addresses. The \texttt{spc\_state} field will reflect what happened possible events include:
 
 \begin{itemize}
- \item  It was added (SCTP\_ADDR\_ADDED)
- \item  It was deleted (SCTP\_ADDR\_REMOVED)
- \item  It is now reachable (SCTP\_ADDR\_AVAILABLE)
- \item  It~is~now~un-reachable~(SCTP\_ADDR\_UNREACHABLE)
+ \item  It was added~(\texttt{SCTP\_ADDR\_ADDED}).
+ \item  It was deleted~(\texttt{SCTP\_ADDR\_REMOVED}).
+ \item  It is now reachable~(\texttt{SCTP\_ADDR\_AVAILABLE}).
+ \item  It~is~now~un-reachable~(\texttt{SCTP\_ADDR\_UNREACHABLE}).
 \end{itemize}
 
 For fault tolerant applications, tracking the states of the peers addresses
@@ -1006,180 +999,208 @@ may well be an essential job.
 \end{figure}
 
 \subsection{Extended system calls}
-
+SCTP provides some additional system calls:
 \begin{itemize}
- \item  sctp\_connectx(int sd, struct sockaddr *, int addrcnt, sctp\_assoc\_t *)
- \item  sctp\_bindx(int sd, struct sockaddr *, int addrcnt, int type)
- \item  sctp\_recvmsg(int sd, void *msg, size\_t len, struct sockaddr *from, socklen\_t *fromlen, struct sctp\_sndrcvinfo *, int *flags)
- \item  sctp\_sendmsg(int s, void *msg, size\_t len, struct sockaddr *to, socklen\_t tolen, uint32\_t ppid, uint32\_t flags, uint16\_t stream, uint32\_t timetolive, uint32\_t context) \item  sctp\_sendmsgx(int s, void *msg, size\_t len, struct sockaddr *to, int addrcnt, socklen\_t tolen, uint32\_t ppid, uint32\_t flags, uint16\_t stream, uint32\_t timetolive, uint32\_t context)
- \item  sctp\_send(int sd, void *msg, size\_t len, struct sctp\_sndrcvinfo *, int flags)
- \item  sctp\_sendx(int sd, void *msg, size\_t len, struct sockaddr *addrs, int addrcnt, struct sctp\_sndrcvinfo *, int flags)
+ \item  \texttt{sctp\_recvmsg(int sd, void *msg, size\_t len, struct sockaddr *from, socklen\_t *fromlen, struct sctp\_sndrcvinfo *sinfo, int *flags)}
+ \item  \texttt{sctp\_sendmsg(int s, void *msg, size\_t len, struct sockaddr *to, socklen\_t tolen, uint32\_t ppid, uint32\_t flags, uint16\_t stream, uint32\_t timetolive, uint32\_t context)}
+ \item  \texttt{sctp\_send(int sd, void *msg, size\_t len, struct sctp\_sndrcvinfo *sinfo, int flags)}
+ \item  \texttt{sctp\_bindx(int sd, struct sockaddr *addrs, int addrcnt, int type)}
+ \item  \texttt{sctp\_connectx(int sd, struct sockaddr *addrs, int addrcnt, sctp\_assoc\_t *assoc\_id)}
+ \item  \texttt{sctp\_sendmsgx(int s, void *msg, size\_t len, struct sockaddr *to, int addrcnt, socklen\_t tolen, uint32\_t ppid, uint32\_t flags, uint16\_t stream, uint32\_t timetolive, uint32\_t context)}
+ \item  \texttt{sctp\_sendx(int sd, void *msg, size\_t len, struct sockaddr *addrs, int addrcnt, struct sctp\_sndrcvinfo *, int flags)}
 \end{itemize}
+The first three are basically proving some convenience. Their functionality could be provided by
+using \texttt{sendmsg()} and \texttt{recvmsg()} calls with ancillary data. The last four functions
+are necessary to make the support of multihoming possible. \texttt{sctp\_bindx()} makes is
+possible to bind an arbitrary subset of local addresses to a socket. \texttt{sctp\_connectx()},
+\texttt{sctp\_sendx()} and \texttt{sctp\_sendx()} make it possible to use multiple addresses
+of the peer already during the association setup if they are known. Without these functions
+multihoming would only be available after the association has been set up completely.
 
 \subsection{Socket Options}
 
-\begin{table}
+SCTP provides a large set of socket options given in TABLE~\ref{sockopt} and TABLE~\ref{bsdsockopt}.
+This is due to the fact that SCTP allows a lot of protocol parameters to be controlled by the
+user. Also some protocol extensions, like the SCTP-AUTH extension, use socket options to
+control the hash algorithms and keys. The usage of some of these options are described in the
+next session. For a detailed description see~\cite{socketdraft}.
+
+\begin{table}[h]
+\begin{center}
 \begin{tabular}{|l|r|l|}
 \hline
-Option & R-W & Description\\
-\hline \hline
-SCTP\_RTOINFO & rw & RTO min/max\\
+Option                          & R-W & Description              \\\hline
 \hline
-SCTP\_ASSOCINFO & rw & Association parameters\\
-\hline
-SCTP\_INITMSG & rw & Setup options\\
-\hline
-SCTP\_NODELAY & rw & Nagle algorithm\\
-\hline
-SCTP\_AUTOCLOSE & rw & Automatic closing\\
-\hline
-SCTP\_SET\_PEER\_PRIMARY\_ADDR & rw & Remote primary\\
-\hline
-SCTP\_PRIMARY\_ADDR & rw & Local primary\\
-\hline
-SCTP\_ADAPTATION\_LAYER & rw & AI indication\\
-\hline
-SCTP\_DISABLE\_FRAGMENTS & rw & Fragmentation\\
-\hline
-SCTP\_PEER\_ADDR\_PARAM & rw & Misc parameters\\
-\hline
-SCTP\_DEFAULT\_SEND\_PARAMS & rw & Default sendrcvinfo\\
-\hline
-SCTP\_EVENTS & rw & Notifications\\
-\hline
-SCTP\_I\_WANT\_MAPPED\_V4\_ADDR & rw & Mapped v4 addresses\\
-\hline
-SCTP\_MAXSEG & rw & Fragmentation point\\
-\hline
-SCTP\_DELAYED\_SACK & rw & Delayed sack\\
-\hline
-SCTP\_FRAGMENT\_INTERLEAVE & rw & Receive interleave\\
-\hline
-SCTP\_PARTIAL\_DELIVERY\_POINT & rw & receive PD point\\
-\hline
-SCTP\_AUTH\_CHUNK & w & Add Auth Chunk\\
-\hline
-SCTP\_AUTH\_KEY & w & Add auth key\\
-\hline
-SCTP\_HMAC\_IDENT & rw & hmac algo\\
-\hline
-SCTP\_AUTH\_ACTIVE\_KEY & rw & Active key\\
-\hline
-SCTP\_AUTH\_DELETE\_KEY & w & Delete key\\
-\hline
-SCTP\_USE\_EXT\_RCVINFO & rw & Extended sndrcvinfo\\
-\hline
-SCTP\_AUTO\_ASCONF & rw & Automatic IP add/del\\
-\hline
-SCTP\_MAXBURST & rw & Microburst control\\
-\hline
-SCTP\_CONTEXT & rw & Default context\\
-\hline
-SCTP\_EXPLICTI\_EOR & rw & Explict EOR\\
-\hline
-SCTP\_STATUS & r & Assoc status\\
-\hline
-SCTP\_GET\_PEER\_ADDR\_INFO & r & Info on dest\\
-\hline
-SCTP\_PEER\_AUTH\_CHUNKS & r & peer requires auth\\
-\hline
-SCTP\_LOCAL\_AUTH\_CHUNKS & r & local requires auth\\
-\hline
-SCTP\_GET\_ASSOC\_NUMBER & r & Num of assocs\\
-\hline
-SCTP\_GET\_ASSOC\_ID\_LIST & r & Assoc ids\\
-\hline
+SCTP\_RTOINFO                   & rw  & RTO min/max              \\\hline
+SCTP\_ASSOCINFO                 & rw  & Association parameters   \\\hline
+SCTP\_INITMSG                   & rw  & Setup options            \\\hline
+SCTP\_NODELAY                   & rw  & Nagle algorithm          \\\hline
+SCTP\_AUTOCLOSE                 & rw  & Automatic closing        \\\hline
+SCTP\_SET\_PEER\_PRIMARY\_ADDR  & rw  & Remote primary           \\\hline
+SCTP\_PRIMARY\_ADDR             & rw  & Local primary            \\\hline
+SCTP\_ADAPTATION\_LAYER         & rw  & AI indication            \\\hline
+SCTP\_DISABLE\_FRAGMENTS        & rw  & Fragmentation            \\\hline
+SCTP\_PEER\_ADDR\_PARAM         & rw  & Misc parameters          \\\hline
+SCTP\_DEFAULT\_SEND\_PARAMS     & rw  & Default sendrcvinfo      \\\hline
+SCTP\_EVENTS                    & rw  & Notifications            \\\hline
+SCTP\_I\_WANT\_MAPPED\_V4\_ADDR & rw  & Mapped v4 addresses      \\\hline
+SCTP\_MAXSEG                    & rw  & Fragmentation point      \\\hline
+SCTP\_DELAYED\_SACK             & rw  & Delayed sack             \\\hline
+SCTP\_FRAGMENT\_INTERLEAVE      & rw  & Receive interleave       \\\hline
+SCTP\_PARTIAL\_DELIVERY\_POINT  & rw  & receive PD point         \\\hline
+SCTP\_AUTH\_CHUNK               & w   & Add Auth Chunk           \\\hline
+SCTP\_AUTH\_KEY                 & w   & Add auth key             \\\hline
+SCTP\_HMAC\_IDENT               & rw  & hmac algo                \\\hline
+SCTP\_AUTH\_ACTIVE\_KEY         & rw  & Active key               \\\hline
+SCTP\_AUTH\_DELETE\_KEY         & w   & Delete key               \\\hline
+SCTP\_USE\_EXT\_RCVINFO         & rw  & Extended sndrcvinfo      \\\hline
+SCTP\_AUTO\_ASCONF              & rw  & Automatic IP add/del     \\\hline
+SCTP\_MAXBURST                  & rw  & Microburst control       \\\hline
+SCTP\_CONTEXT                   & rw  & Default context          \\\hline
+SCTP\_EXPLICTI\_EOR             & rw  & Explicit EOR             \\\hline
+SCTP\_STATUS                    & r   & Assoc status             \\\hline
+SCTP\_GET\_PEER\_ADDR\_INFO     & r   & Info on dest             \\\hline
+SCTP\_PEER\_AUTH\_CHUNKS        & r   & Peer requires auth       \\\hline
+SCTP\_LOCAL\_AUTH\_CHUNKS       & r   & Local requires auth      \\\hline
+SCTP\_GET\_ASSOC\_NUMBER        & r   & Number of assocs         \\\hline
+SCTP\_GET\_ASSOC\_ID\_LIST      & r   & Assoc ids                \\\hline
 \end{tabular}
+\end{center}
 \caption{SCTP Socket Options\label{sockopt}}
 \end{table}
 
-\begin{table}
+\begin{table}[h]
+\begin{center}
 \begin{tabular}{|l|r|l|}
 \hline
-Option & R-W & Description\\
-\hline \hline
-SCTP\_RESET\_STREAMS & w & Stream reset\\
+Option                      & R-W & Description   \\\hline
 \hline
-SCTP\_SET\_DEBUG\_LEVEL & rw & Debug output\\
-\hline
-SCTP\_CMT\_ON\_OFF & rw & CMT on/off\\
-\hline
-SCTP\_CMT\_USE\_DAC & rw & DAC with CMT\\
-\hline
-SCTP\_PLUGGABLE\_CC & rw & Set CC\\
-\hline
-SCTP\_GET\_SNDBUF\_USE & r &  send space\\
-\hline
-SCTP\_GET\_NONCE\_VALUES & r & Vtag pair\\
-\hline
-SCTP\_SET\_DYNAMIC\_PRIMARY & w & Global primary\\
-\hline
-SCTP\_GET\_PACKET\_LOG & r & Packet log \\
-\hline
-SCTP\_VRF\_ID & rw & Defaut vrf\\
-\hline
-SCTP\_ADD\_VRF\_ID & w & Add a VRF\\
-\hline
-SCTP\_GET\_VRF\_IDS & r & Get VRF IDs\\
-\hline
-SCTP\_GET\_ASOC\_VRF & r & Asoc VRF ID\\
-\hline
-SCTP\_DEL\_VRF\_ID & w & Del VRF ID\\
-\hline
+SCTP\_RESET\_STREAMS        & w   & Stream reset  \\\hline
+SCTP\_SET\_DEBUG\_LEVEL     & rw  & Debug output  \\\hline
+SCTP\_CMT\_ON\_OFF          & rw  & CMT on/off    \\\hline
+SCTP\_CMT\_USE\_DAC         & rw  & DAC with CMT  \\\hline
+SCTP\_PLUGGABLE\_CC         & rw  & Set CC        \\\hline
+SCTP\_GET\_SNDBUF\_USE      & r   & Send space    \\\hline
+SCTP\_GET\_NONCE\_VALUES    & r   & Vtag pair     \\\hline
+SCTP\_SET\_DYNAMIC\_PRIMARY & w   & Global primary\\\hline
+SCTP\_GET\_PACKET\_LOG      & r   & Packet log    \\\hline
+SCTP\_VRF\_ID               & rw  & Default VRF   \\\hline
+SCTP\_ADD\_VRF\_ID          & w   & Add a VRF     \\\hline
+SCTP\_GET\_VRF\_IDS         & r   & Get VRF IDs   \\\hline
+SCTP\_GET\_ASOC\_VRF        & r   & Assoc VRF ID  \\\hline
+SCTP\_DEL\_VRF\_ID          & w   & Delete VRF ID \\\hline
 \end{tabular}
+\end{center}
 \caption{SCTP FreeBSD Specific Socket Options\label{bsdsockopt}}
 \end{table}
 
 
 \subsection{Some Examples}
 
+In this section we will provide an example for a simple client
+which send a number of messages to a server and a server which
+just discards all messages. The client will use the one-to-one
+model and the server will use the one-to-many model. Of course,
+the client can talk to the server.
+
+\begin{figure*}[h]
+\lstset{numbers=left, frame=single, basicstyle=\footnotesize,}
+\lstinputlisting{discard_server.c}
+\caption{Discard server using the one-to-many model.}
+\label{fig:discard-server}
+\end{figure*}
+
+Let us first consider the server in Figure~\ref{fig:discard-server}.
+in line~22 a one-to-many style socket is created. A way of enabling
+all notifications is shown in line 25--27. Then in line~31--38
+the socket is bound to the IPv4 wildcard address and the well known port
+for the discard service. To allow the kernel to accept SCTP
+associations on the discard port the socket is put into listening
+mode in line~41. 
+The reception of messages and notifications is handled in the
+infinite loop in line 45--62. \texttt{sctp\_recvmsg} is used in 
+line~51 to get notifications or messages after initializing
+several variables in line~46--49. If a notification is received
+only a simple message is printed. For a received message its
+length, source address and port number, stream identifier and
+payload protocol identifier is printed. It should be noted that
+this simple program does not check if the notification or message
+was completely received by checking for the \texttt{MSG\_EOR}-flag.
+In line 64 the socket would be close, but this line will never be
+executed.
+
+The second example is a simple client shown in~Figure~\ref{fig:discard-client}
+sending a number of messages of the same length to a discard server.
+
+\begin{figure*}[h]
+\lstset{numbers=left, frame=single, basicstyle=\footnotesize,}
+\lstinputlisting{discard_client.c}
+\caption{Discard client using the one-to-one model.}
+\label{fig:discard-client}
+\end{figure*}
+
+In line~27 a one-to-one style socket is created. In line 31--36 the
+number of outgoing streams to be requested during association setup
+is set to 2048. Then the association is established in line~48. Since 
+the number of incoming and outgoing streams is negotiated during the
+association setup, the number of streams is retrieved in line 50--54
+via a socket option. Then all messages are sent via a \texttt{sctp\_sendmsg}
+call in line~57--60. A given payload protocol identifier is used and the
+stream number is used in a round robin fashion. In line~65 the
+association teardown procedure is started by closing the socket.
 
 \section{Conclusion}
+This paper describes the services provided by SCTP and shows
+when it is preferable to use SCTP instead of TCP or UDP.
+We also describe that existing UDP or TCP applications can
+easily be ported to SCTP and how to use the advanced features
+of SCTP.
 
-\section*{Acknowledgment}
+%\section*{Acknowledgment}
+%
+%
+%The authors would like to thank...
+%
 
-
-The authors would like to thank...
-
-
-\begin{thebibliography}{11}
-\bibitem{rfc4960} R.~Stewart,
-  ``Stream Control Transmission Protocol'',
-  \textit{RFC~4960},
-  September~2007
-.\bibitem{rfc793}  J~Postel,
-  ``Transmission Control Protocol'',
-  \textit{RFC~793},
-  September~1981
-.\bibitem{rfc768}  J~Postel,
+\begin{thebibliography}{9}
+\bibitem{rfc768}
+  J.~Postel,
   ``User Datagram Protocol'',
   \textit{RFC~768},
-  August~1980
-.\bibitem{rfc5061}  R~Stewart et.al.,
-  ``Stream Control Transmission Protocol Dynamic Address Reconfiguration'',
-  \textit{RFC~5061},
-  September~2007
-.\bibitem{rfc3758}  M~Tuexen~et~al.,
- ``Stream Control Transmission Protocol Partial Reliability Extension'',
+  August~1980.
+\bibitem{rfc793}
+  J.~Postel,
+  ``Transmission Control Protocol'',
+  \textit{RFC~793},
+  September~1981.
+\bibitem{rfc3758}
+  M.~T\"uxen~et~al.,
+  ``Stream Control Transmission Protocol Partial Reliability Extension'',
   \textit{RFC~3758},
-  May~2004
-.\bibitem{rfc4895}  R~Stewart~et~al.,
+  May~2004.
+\bibitem{rfc4960}
+  R.~Stewart,
+  ``Stream Control Transmission Protocol'',
+  \textit{RFC~4960},
+  September~2007.
+\bibitem{rfc4895}  
+  R.~Stewart~et~al.,
   ``Authenticated Chunks for the Stream Control Transmission Protocol'',
   \textit{RFC~4895},
-  August~2007
-\bibitem{stevensapi} R~Stevens~et~al,
- ``UNIX Network Programming Volume 1 Third Edition''',
-2004
-\bibitem{socketdraft} R~Stewart~et~al,
- ``Socket API Extensions for Stream Control Transmission Protocol (SCTP)'',
- \textit{draft-ietf-tsvwg-sctpsocket-16.txt},
-work~in~progress
-
-
+  August~2007.
+\bibitem{rfc5061}
+  R.~Stewart~et~al.,
+  ``Stream Control Transmission Protocol Dynamic Address Reconfiguration'',
+  \textit{RFC~5061},
+  September~2007.
+\bibitem{socketdraft}
+  R.~Stewart~et~al,
+  ``Socket API Extensions for Stream Control Transmission Protocol (SCTP)'',
+  \textit{draft-ietf-tsvwg-sctpsocket-16.txt}, work~in~progress.
+\bibitem{stevensapi}
+  R.~Stevens~et~al.,
+  ``UNIX Network Programming Volume 1 Third Edition''', Addison Wesley, 2004.
 \end{thebibliography}
-
-
-
 
 % that's all folks
 \end{document}
