@@ -10,4 +10,3 @@ struct sctp_sndrcvinfo {
  uint32_t sinfo_cumtsn;
  sctp_assoc_t sinfo_assoc_id;
 };
-
