@@ -1137,6 +1137,36 @@ sctp_disconnect(struct socket *so)
 }
 
 int
+sctp_flush(struct socket *so, int how)
+{
+        /*
+	 * We will just clear out the values and let
+	 * subsequent close clear out the data, if any.
+	 * Note if the user did a shutdown(SHUT_RD) they
+	 * will not be able to read the data, the socket
+	 * will block that from happening.
+	 */
+        if ((how == PRU_FLUSH_RD) || (how == PRU_FLUSH_RDWR)) {
+               /* First make sure the sb will be happy, we don't
+                * use these except maybe the count
+                */
+               so->so_rcv.sb_cc = 0;
+               so->so_rcv.sb_mbcnt = 0;
+               so->so_rcv.sb_mb = NULL;
+	}
+        if ((how == PRU_FLUSH_WR) || (how == PRU_FLUSH_RDWR)) {
+               /* First make sure the sb will be happy, we don't
+                * use these except maybe the count
+		*/
+	       so->so_snd.sb_cc = 0;
+	       so->so_snd.sb_mbcnt = 0;
+	       so->so_snd.sb_mb = NULL;
+
+	}
+	return (0);
+}
+
+int
 sctp_shutdown(struct socket *so)
 {
 	struct sctp_inpcb *inp;
@@ -5127,6 +5157,7 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_close = sctp_close,
 	.pru_detach = sctp_close,
 	.pru_sopoll = sopoll_generic,
+	.pru_flush = sctp_flush,
 #else
 	.pru_detach = sctp_detach,
 	.pru_sopoll = sopoll,

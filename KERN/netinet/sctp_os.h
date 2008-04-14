@@ -74,6 +74,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_os.h,v 1.9 2007/08/24 00:53:52 rrs Exp 
 #include <netinet/sctp_os_windows.h>
 #endif
 
+
 /* All os's must implement this address gatherer. If
  * no VRF's exist, then vrf 0 is the only one and all
  * addresses and ifn's live here.
