@@ -20,7 +20,7 @@ main(int argc, char **argv)
 	u_int16_t port=0;
 	int optval;
 	socklen_t optlen;
-	int protocol_touse = IPPROTO_TCP;
+	int protocol_touse = IPPROTO_SCTP;
 	struct sockaddr_in bindto,got,from;
 	int sleep_period = 60;
 	
