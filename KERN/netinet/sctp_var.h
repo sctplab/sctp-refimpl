@@ -411,9 +411,9 @@ void sctp_finish(void);
 #endif
 
 void sctp_pcbinfo_cleanup(void);
-
+#if defined(__FreeBSD__)
 int sctp_flush(struct socket *, int);
-
+#endif
 int sctp_shutdown __P((struct socket *));
 void sctp_notify __P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
 		struct sockaddr *, struct sctp_tcb *,
