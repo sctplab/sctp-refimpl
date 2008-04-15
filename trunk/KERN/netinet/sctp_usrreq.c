@@ -1136,6 +1136,7 @@ sctp_disconnect(struct socket *so)
 	}
 }
 
+#if defined(__FreeBSD__)
 int
 sctp_flush(struct socket *so, int how)
 {
@@ -1165,6 +1166,7 @@ sctp_flush(struct socket *so, int how)
 	}
 	return (0);
 }
+#endif
 
 int
 sctp_shutdown(struct socket *so)
