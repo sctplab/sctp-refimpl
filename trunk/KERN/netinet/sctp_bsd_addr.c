@@ -202,7 +202,7 @@ sctp_startup_iterator(void)
 }
 #endif
 
-
+#ifdef INET6
 void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 {
@@ -228,7 +228,7 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 		ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
 	}
 }
-
+#endif
 
 
 static uint32_t

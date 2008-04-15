@@ -205,46 +205,60 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 					if (sctp_is_addr_restricted(stcb, sctp_ifa))
 						continue;
 				}
-				if ((sctp_ifa->address.sa.sa_family == AF_INET) && (ipv4_addr_legal)) {
-					struct sockaddr_in *sin;
+				switch (sctp_ifa->address.sa.sa_family) {
+				case AF_INET:
+					if (ipv4_addr_legal) {
+						struct sockaddr_in *sin;
 
-					sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
-					if (sin->sin_addr.s_addr == 0)
+						sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
+						if (sin->sin_addr.s_addr == 0)
+							continue;
+						if ((ipv4_local_scope == 0) && (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)))
+							continue;
+					} else {
 						continue;
-					if ((ipv4_local_scope == 0) && (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)))
-						continue;
-				} else if ((sctp_ifa->address.sa.sa_family == AF_INET6) && (ipv6_addr_legal)) {
-					struct sockaddr_in6 *sin6;
+					}
+					break;
+#ifdef INET6
+				case AF_INET6:
+					if (ipv6_addr_legal) {
+						struct sockaddr_in6 *sin6;
 
 #if defined(SCTP_EMBEDDED_V6_SCOPE) && !defined(SCTP_KAME)
-					struct sockaddr_in6 lsa6;
+						struct sockaddr_in6 lsa6;
 #endif
-					sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
-					if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
-						continue;
-					if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
-						if (local_scope == 0)
+						sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
+						if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
 							continue;
+						if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
+							if (local_scope == 0)
+								continue;
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
-						if (sin6->sin6_scope_id == 0) {
+							if (sin6->sin6_scope_id == 0) {
 #ifdef SCTP_KAME
-							/* bad link local address */
-							if (sa6_recoverscope(sin6) != 0)
-								continue;
+								/* bad link local address */
+								if (sa6_recoverscope(sin6) != 0)
+									continue;
 #else
-							lsa6 = *sin6;
-							/* bad link local address */
-							if (in6_recoverscope(&lsa6, &lsa6.sin6_addr, NULL))
-								continue;
-							sin6 = &lsa6;
+								lsa6 = *sin6;
+								/* bad link local address */
+								if (in6_recoverscope(&lsa6, &lsa6.sin6_addr, NULL))
+									continue;
+								sin6 = &lsa6;
 #endif				/* SCTP_KAME */
-						}
+							}
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-					}
-					if ((site_scope == 0) && (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)))
+						}
+						if ((site_scope == 0) && (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)))
+							continue;
+					} else {
 						continue;
-				} else
+					}
+					break;
+#endif
+				default:
 					continue;
+				}
 				memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
 				memcpy((void *)&xladdr.address, (const void *)&sctp_ifa->address, sizeof(union sctp_sockstore));
 				SCTP_INP_RUNLOCK(inp);

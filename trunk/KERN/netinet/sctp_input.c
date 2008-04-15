@@ -1246,7 +1246,11 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
+#ifdef INET6
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+#else
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+#endif
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
 		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
@@ -2119,7 +2123,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	}
 	/* First get the destination address setup too. */
 	iph = mtod(m, struct ip *);
-	if (iph->ip_v == IPVERSION) {
+	switch (iph->ip_v) {
+	case IPVERSION:
+	{
 		/* its IPv4 */
 		struct sockaddr_in *lsin;
 
@@ -2132,7 +2138,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin->sin_port = sh->dest_port;
 		lsin->sin_addr.s_addr = iph->ip_dst.s_addr;
 		size_of_pkt = SCTP_GET_IPV4_LENGTH(iph);
-	} else if (iph->ip_v == (IPV6_VERSION >> 4)) {
+		break;
+	}
+#ifdef INET6
+	case IPV6_VERSION >> 4:
+	{
 		/* its IPv6 */
 		struct ip6_hdr *ip6;
 		struct sockaddr_in6 *lsin6;
@@ -2147,7 +2157,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin6->sin6_port = sh->dest_port;
 		lsin6->sin6_addr = ip6->ip6_dst;
 		size_of_pkt = SCTP_GET_IPV6_LENGTH(ip6) + iphlen;
-	} else {
+		break;
+	}
+#endif
+	default:
 		return (NULL);
 	}
 
@@ -2298,7 +2311,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			return (NULL);
 		}
 		/* pre-reserve some space */
+#ifdef INET6
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+#else
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+#endif
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
 		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
 
