@@ -507,8 +507,8 @@ As you can see, SCTP overlaps and adds to the list
 of features that an application developer can draw upon.  The rest of this document will be laid
 out as follows: In Section II we will compare and contrast the feature sets of SCTP, TCP and UDP.
 In Section III we will provide an overview of the socket API used with SCTP. In Section IV we will
-get into some of the details for using the SCTP socket API. In Section V we will summarize the
-advantages of using SCTP.
+get into some of the details for using the SCTP socket API. In Section V we will close
+with a brief review and a few conclusions.
 
 \section{A comparison of features}
 SCTP, like TCP, provides a connection oriented, full duplex, reliable data communication path. 
@@ -597,7 +597,7 @@ In a traditional TCP connection, one IP address and one port are chosen at each 
 send and receive packets with. The two IP addresses and ports selected represent
 the four tuple identification of the TCP connection (IP-A + Port-A, IP-Z + Port-Z).
 
-In SCTP, an association is composed of a two ``sets'' of IP addresses and two ports. This
+In SCTP, an association is composed of two ``sets'' of IP addresses and two ports. This
 means that if two hosts are multihomed, all of their IP addresses can be involved
 in sending and receiving data. In instances of lost packets, SCTP will often select
 one of the alternate addresses to send data to. This provides a form of network 
@@ -635,7 +635,7 @@ amount of reliability an application wants on a per message granularity.
 Consider a video game sending character position updates every 400 milliseconds.
 If data is lost and not retransmitted within that time period (400~ms), then
 retransmitting the character position makes no sense since a new
-updated one would already be enqueued. With the addition of \cite{rfc3758}, SCTP
+updated one would already be en-queued. With the addition of \cite{rfc3758}, SCTP
 gained the ability to specify how long a message is ``good" for.  The initial
 RFC allows the user to specify a ``time to live'' for each message. The 
 sender makes a decision based on this ``time to live'' as to when to stop retransmitting and
@@ -672,7 +672,7 @@ UDP makes no such assurance}.
 
 In all cases, no matter which profile is used, fully reliable and partially reliable
 data may be mixed. In effect, a single stream may have both reliable and
-partially reliable data enqueued on it. This also has ramifications to the 
+partially reliable data en-queued on it. This also has ramifications to the 
 buffer based method in that if the entire association is filled with 
 fully reliable data, then the new send itself will be the one subject
 to ``skipping.''
@@ -804,20 +804,20 @@ basic elements and choices that an application writer will have when using
 SCTP.
 
 \subsection{Models}
-First and foremost, when we go to use SCTP is that we now have two choices.
+First and foremost, when we go to use SCTP, is that we now have two choices.
 The SCTP socket API provides two models: the one-to-one model and the
 one-to-many model.
 
-The one-to-one model is based on a one to one relationship between the sockets and
-SCTP associations (not taking listening sockets into account). This is similar to
-standard TCP sockets.
-For the one-to-many model, there is a one-to-many relationship between the sockets
-and the SCTP-association. This is similar to using unconnected UDP sockets.
+The one-to-one model is based on a one to one relationship between the socket and
+a SCTP association (not taking the listening sockets into account). This is similar to
+a standard TCP socket.
+For the one-to-many model, there is a one-to-many relationship between the socket
+and the SCTP-associations. This is similar to using unconnected UDP sockets.
 
 The one-to-one model is basically a ``TCP'' compatibility model. This model
 works the same exact way that the standard TCP socket API model works.
 A server will typically call \texttt{socket()}, \texttt{bind()}, and \texttt{listen()}. Then after
-the initial setup will sit in an loop calling \texttt{accept()} to gain new connections.
+the initial setup will sit in a loop calling \texttt{accept()} to gain new connections.
 Each new connection is a new socket descriptor on which the new connection is
 available to send and receive data on. The application must track each individual socket
 descriptor for each connection setup.  The client will call \texttt{socket()} followed
@@ -834,8 +834,8 @@ The one-to-many model is designed as a peer-to-peer type model.
 In this model, both sides generally call \texttt{socket()} followed by \texttt {listen()}.
 Then, when they wish to exchange information
 with a peer, they call \texttt{sendto()} or \texttt{recvfom()} (or any of the extended send or
-receive calls (see section \ref{adv}). Note that the one single socket will have multiple
-associations underneath it. Only one socket descriptor is ever used for
+receive calls, see section \ref{adv}). Note that the one single socket will have multiple
+associations underneath it. Only one socket descriptor is ever used
 in this model, calling \texttt{accept()} will return an error.
 One of the advantages to this model is the ability to send data on the third leg
 of the four way handshake\footnote{Note that some implementations do allow this with
@@ -845,7 +845,7 @@ In order to be truly free of association state, however, the application is reco
 to turn on the \texttt{AUTO\_CLOSE} socket option that will automatically close associations
 that are idle for long periods. 
 
-Accessing the one to many model is done by calling the call specifying the type as
+Accessing the one to many model is done by calling the socket system call specifying the type as
 \texttt{SOCK\_SEQPACKET} and the proto as \texttt{IPPROTO\_SCTP}.
 
 \subsection{Notifications}
@@ -944,7 +944,7 @@ The extra information tells you the stream number as well as other
 ancillary data. If you wish to receive this information you must enable
 the ``event'' just like you would for a notification. 
 
-Note when this event is enabled you will receive the \texttt{sctp\_sndrcvinfo}
+Note when the \texttt{sctp\_data\_io\_event} event is enabled you will receive the \texttt{sctp\_sndrcvinfo}
 structure with every 
 \texttt{recvmsg()} or \texttt{sctp\_recvmsg()} call. You cannot receive
 this information with the \texttt{recv()} or \texttt{recvfrom()} calls. In the
@@ -1030,7 +1030,7 @@ multihoming would only be available after the association has been completely es
 \subsection{Socket Options}
 
 SCTP provides a large set of socket options as shown in TABLE~\ref{sockopt}, and some FreeBSD
-specific extensions as shown inTABLE~\ref{bsdsockopt}.
+specific extensions as shown in TABLE~\ref{bsdsockopt}.
 This is due to the fact that SCTP allows a lot of protocol parameters to be controlled by the
 user. Also, some protocol extensions, like the SCTP-AUTH \cite{rfc4895} extension, use socket options to
 control the feature (e.g. controls hash algorithms, keys, chunks to authenticate, etc.). 
@@ -1061,7 +1061,7 @@ SCTP\_DELAYED\_SACK             & rw  & Delayed sack             \\\hline
 SCTP\_FRAGMENT\_INTERLEAVE      & rw  & Receive interleave       \\\hline
 SCTP\_PARTIAL\_DELIVERY\_POINT  & rw  & receive PD point         \\\hline
 SCTP\_AUTH\_CHUNK               & w   & Add Auth Chunk           \\\hline
-SCTP\_AUTH\_KEY                 & w   & Add auth key             \\\hline
+SCTP\_AUTH\_KEY                 & w   & Add Auth key             \\\hline
 SCTP\_HMAC\_IDENT               & rw  & hmac algo                \\\hline
 SCTP\_AUTH\_ACTIVE\_KEY         & rw  & Active key               \\\hline
 SCTP\_AUTH\_DELETE\_KEY         & w   & Delete key               \\\hline
@@ -1069,7 +1069,7 @@ SCTP\_USE\_EXT\_RCVINFO         & rw  & Extended sndrcvinfo      \\\hline
 SCTP\_AUTO\_ASCONF              & rw  & Automatic IP add/del     \\\hline
 SCTP\_MAXBURST                  & rw  & Microburst control       \\\hline
 SCTP\_CONTEXT                   & rw  & Default context          \\\hline
-SCTP\_EXPLICTI\_EOR             & rw  & Explicit EOR             \\\hline
+SCTP\_EXPLICIT\_EOR             & rw  & Explicit EOR             \\\hline
 SCTP\_STATUS                    & r   & Assoc status             \\\hline
 SCTP\_GET\_PEER\_ADDR\_INFO     & r   & Info on dest             \\\hline
 SCTP\_PEER\_AUTH\_CHUNKS        & r   & Peer requires auth       \\\hline
@@ -1163,11 +1163,28 @@ stream number to send with is used in a round robin fashion. In line~65, the
 association teardown procedure is started by closing the socket.
 
 \section{Conclusion}
-This paper describes the services provided by SCTP and shows
-when it is preferable to use SCTP instead of TCP or UDP.
-We also describe that existing UDP or TCP applications can
-easily be ported to SCTP and how to use the advanced features
-of SCTP.
+This paper describes the features provided by SCTP and gives
+a glimpse into the many ways an application can control and
+configure it. SCTP has been designed to be flexible and
+yet provide reasonable defaults for applications that do
+not wish to dig into the deep details of controlling the
+transport. For applications that need more control, SCTP
+provides a wide host of socket options and a multitude of
+ordering options. 
+
+In general, SCTP can be used any place TCP can be used
+and gives the application greater flexibility. No longer
+does the application need to frame messages, the transport
+does that for you. No longer does the application need
+to worry about connection state (when using the one to
+many socket model). SCTP may also be used in cases where
+one might consider UDP, assuming a full featured implementation
+of SCTP including Partial Reliability. 
+
+The authors encourage you to go and explore SCTP it will
+become addictive.
+
+Happy SCTPing.
 
 %\section*{Acknowledgment}
 %
