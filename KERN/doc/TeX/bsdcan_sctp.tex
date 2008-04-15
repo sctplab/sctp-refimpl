@@ -808,11 +808,11 @@ First and foremost, when we go to use SCTP, is that we now have two choices.
 The SCTP socket API provides two models: the one-to-one model and the
 one-to-many model.
 
-The one-to-one model is based on a one to one relationship between the socket and
-a SCTP association (not taking the listening sockets into account). This is similar to
+The one-to-one model is based on a one-to-one relationship between the socket and
+an SCTP association (not taking the listening sockets into account). This is similar to
 a standard TCP socket.
 For the one-to-many model, there is a one-to-many relationship between the socket
-and the SCTP-associations. This is similar to using unconnected UDP sockets.
+and the SCTP associations. This is similar to using unconnected UDP sockets.
 
 The one-to-one model is basically a ``TCP'' compatibility model. This model
 works the same exact way that the standard TCP socket API model works.
@@ -845,7 +845,7 @@ In order to be truly free of association state, however, the application is reco
 to turn on the \texttt{AUTO\_CLOSE} socket option that will automatically close associations
 that are idle for long periods. 
 
-Accessing the one to many model is done by calling the socket system call specifying the type as
+Accessing the one-to-many model is done by calling the \texttt{socket()} system call specifying the type as
 \texttt{SOCK\_SEQPACKET} and the proto as \texttt{IPPROTO\_SCTP}.
 
 \subsection{Notifications}
@@ -1176,12 +1176,12 @@ In general, SCTP can be used any place TCP can be used
 and gives the application greater flexibility. No longer
 does the application need to frame messages, the transport
 does that for you. No longer does the application need
-to worry about connection state (when using the one to
+to worry about connection state (when using the one-to-
 many socket model). SCTP may also be used in cases where
 one might consider UDP, assuming a full featured implementation
 of SCTP including Partial Reliability. 
 
-The authors encourage you to go and explore SCTP it will
+The authors encourage you to go and explore SCTP as it will
 become addictive.
 
 Happy SCTPing.
