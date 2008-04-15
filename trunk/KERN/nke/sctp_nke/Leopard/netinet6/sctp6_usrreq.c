@@ -33,6 +33,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.42 2007/12/10 16:03:39 obrien Exp $");
 #endif
+#ifdef INET6
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -1687,6 +1688,7 @@ struct pr_usrreqs sctp6_usrreqs = {
 	.pru_close = sctp6_close,
 	.pru_detach = sctp6_close,
 	.pru_sopoll = sopoll_generic,
+	.pru_flush = sctp_flush,	
 #else
 	.pru_detach = sctp6_detach,
 	.pru_sopoll = sopoll,
@@ -1849,4 +1851,5 @@ sctp6_usrreq(so, req, m, nam, control, p)
 	}
 	return (error);
 }
+#endif
 #endif
