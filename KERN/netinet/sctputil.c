@@ -5657,7 +5657,7 @@ sctp_sorecvmsg(struct socket *so,
 #if !defined(__Windows__)
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
-			sin6.sin6_addr.s6_addr32[2] = 0xffff;
+			sin6.sin6_addr.s6_addr32[2] = ntohl(0x0000ffff);
 			bcopy(&sin->sin_addr,
 			      &sin6.sin6_addr.s6_addr32[3],
 			      sizeof(sin6.sin6_addr.s6_addr32[3]));
