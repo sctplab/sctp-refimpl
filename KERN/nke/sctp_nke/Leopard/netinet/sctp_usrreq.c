@@ -1417,7 +1417,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 							continue;
 						}
 #ifdef INET6
-						if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) {
+						if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) {
 							in6_sin_2_v4mapsin6(sin, (struct sockaddr_in6 *)sas);
 							((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
 							sas = (struct sockaddr_storage *)((caddr_t)sas + sizeof(struct sockaddr_in6));
@@ -1603,7 +1603,7 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 				/* Count them if they are the right type */
 				if (sctp_ifa->address.sa.sa_family == AF_INET) {
-					if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)
+					if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4))
 						cnt += sizeof(struct sockaddr_in6);
 					else
 						cnt += sizeof(struct sockaddr_in);
@@ -1617,7 +1617,7 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			if (laddr->ifa->address.sa.sa_family == AF_INET) {
-				if (inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)
+				if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4))
 					cnt += sizeof(struct sockaddr_in6);
 				else
 					cnt += sizeof(struct sockaddr_in);
@@ -2310,7 +2310,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			size = 0;
 			/* Count the sizes */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ||
+				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) ||
 				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
 					size += sizeof(struct sockaddr_in6);
 				} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
@@ -2349,7 +2349,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) ||
+				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) ||
 				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
 					cpsz = sizeof(struct sockaddr_in6);
 				} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
@@ -2363,7 +2363,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					break;
 				}
 #ifdef INET6
-				if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
+				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) &&
 				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET)) {
 					/* Must map the address */
 					in6_sin_2_v4mapsin6((struct sockaddr_in *)&net->ro._l_addr,
