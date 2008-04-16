@@ -853,6 +853,9 @@ void sysctl_setup(void)
 #ifdef SCTP_DEBUG
 	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", "Configure debug output", &sctp_debug_on, sizeof(sctp_debug_on));
 #endif
+#if defined(SCTP_LOCAL_TRACE_BUF)
+	sysctl_create(CTLTYPE_STRUCT, CTLFLAG_RD, "sctp_log", "SCTP logging (struct sctp_log)", &sctp_log, sizeof(sctp_log));
+#endif
 }
 
 #endif
