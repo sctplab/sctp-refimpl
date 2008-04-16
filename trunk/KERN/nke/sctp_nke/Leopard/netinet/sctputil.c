@@ -60,7 +60,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.74 2008/04/16 17:24:18 rrs Ex
 #endif
 
 #ifndef KTR_SCTP
+#if !defined(__Windows__)
 #define KTR_SCTP KTR_SUBSYS
+#else
+#define KTR_SCTP 0
+#endif
 #endif
 
 void
@@ -112,6 +116,7 @@ void
 rto_logging(struct sctp_nets *net, int from)
 {
 	struct sctp_cwnd_log sctp_clog;
+	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	sctp_clog.x.rto.net = (void *) net;
 	sctp_clog.x.rto.rtt = net->prev_rtt;
 	SCTP_CTR6(KTR_SCTP, "SCTP:%d[%d]:%x-%x-%x-%x", 
@@ -185,6 +190,7 @@ void
 sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 {
 	struct sctp_cwnd_log sctp_clog;
+	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	sctp_clog.x.map.base = map;
 	sctp_clog.x.map.cum = cum;
 	sctp_clog.x.map.high = high;
@@ -202,6 +208,7 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
     int from)
 {
 	struct sctp_cwnd_log sctp_clog;
+	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	sctp_clog.x.fr.largest_tsn = biggest_tsn;
 	sctp_clog.x.fr.largest_new_tsn = biggest_new_tsn;
 	sctp_clog.x.fr.tsn = tsn;
@@ -315,6 +322,7 @@ void
 sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 {
 	struct sctp_cwnd_log sctp_clog;
+	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	if(inp) {
  		sctp_clog.x.lock.sock = (void *) inp->sctp_socket;
 
@@ -365,6 +373,7 @@ void
 sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
 	struct sctp_cwnd_log sctp_clog;
+	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	sctp_clog.x.cwnd.net = net;
 	sctp_clog.x.cwnd.cwnd_new_value = error;
 	sctp_clog.x.cwnd.inflight = net->flight_size;
@@ -4972,13 +4981,10 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 				sin6->sin6_addr.s6_addr32[2] +
 				sin6->sin6_addr.s6_addr32[3]);
 #else
-		{
-			int i;
-			hash_of_addr = 0;
-			for (i = 0; i < 16; i++) {
-				hash_of_addr += sin6->sin6_addr.s6_addr[i];
-			}
-		}
+		hash_of_addr = (((uint32_t *)&sin6->sin6_addr)[0] +
+				((uint32_t *)&sin6->sin6_addr)[1] +
+				((uint32_t *)&sin6->sin6_addr)[2] +
+				((uint32_t *)&sin6->sin6_addr)[3]);
 #endif
 		hash_of_addr = (hash_of_addr ^ (hash_of_addr >> 16));
 		return (hash_of_addr);
@@ -5656,11 +5662,17 @@ sctp_sorecvmsg(struct socket *so,
 			sin6.sin6_family = AF_INET6;
 #if !defined(__Windows__)
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
 			sin6.sin6_addr.s6_addr32[2] = ntohl(0x0000ffff);
 			bcopy(&sin->sin_addr,
 			      &sin6.sin6_addr.s6_addr32[3],
 			      sizeof(sin6.sin6_addr.s6_addr32[3]));
+#else
+			sin6.sin6_addr.s6_addr16[3] = 0x0000;
+			sin6.sin6_addr.s6_addr16[4] = 0xffff;
+			bcopy(&sin->sin_addr,
+			      &sin6.sin6_addr.s6_addr16[6],
+			      sizeof(sin->sin_addr));
+#endif
 			sin6.sin6_port = sin->sin_port;
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
 		}
