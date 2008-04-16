@@ -1100,7 +1100,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 #define sctp_sowwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1131,7 +1131,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \

@@ -4935,7 +4935,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			SCTP_INP_WUNLOCK(inp);
 			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
 			if (sowriteable(inp->sctp_socket)) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 				sowwakeup_locked(inp->sctp_socket);
 #else
 #if defined(__APPLE__)
@@ -4954,7 +4954,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			SOCKBUF_LOCK(&inp->sctp_socket->so_rcv);
 			if (soreadable(inp->sctp_socket)) {
 				sctp_defered_wakeup_cnt++;
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 				sorwakeup_locked(inp->sctp_socket);
 #else
 #if defined(__APPLE__)
