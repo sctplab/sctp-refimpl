@@ -56,7 +56,6 @@
  * @APPLE_LICENSE_OSREFERENCE_HEADER_END@
  */
 
-#include <sctp.h>
 
 #include <sys/param.h>
 #include <sys/domain.h>
@@ -70,6 +69,7 @@
 #include <netinet/ip6.h>
 #endif
 #include <netinet/in_pcb.h>
+#include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
