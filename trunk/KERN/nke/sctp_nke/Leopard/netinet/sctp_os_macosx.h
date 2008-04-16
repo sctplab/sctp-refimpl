@@ -33,7 +33,6 @@
 /*
  * includes
  */
-#include <sctp.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -71,6 +70,7 @@
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+#include <netinet/sctp.h>
 
 #ifdef INET6
 #include <sys/domain.h>
