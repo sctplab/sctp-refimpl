@@ -389,11 +389,15 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
+#if defined(__Windows__)
+	/* On Windows, anything not built yet when sctp_addr_change at first. */
+#else
 	if (first_time == 0) {
 		/* Special test to see if my ::1 will showup with this */
 		first_time = 1;
 		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
 	}
+#endif
 	if ((cmd != RTM_ADD) && (cmd != RTM_DELETE)) {
 		/* don't know what to do with this */
 		return;

@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2007 KOZUKA Masahiro  All rights reserved.
+ * Copyright (c) 2008 CO-CONV, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -123,6 +123,14 @@ SCTP_PRINTF(char *format, ...)
 /* Empty ktr statement for win */
 
 #if defined(SCTP_LOCAL_TRACE_BUF)
+__inline uint64_t
+get_cyclecount(void)
+{
+	LARGE_INTEGER tickCount;
+	KeQueryTickCount(&tickCount);
+	return (uint64_t)tickCount.QuadPart;
+}
+#define SCTP_GET_CYCLECOUNT get_cyclecount()
 #define SCTP_CTR6 sctp_log_trace
 #else
 #define SCTP_CTR6 CTR6
@@ -146,7 +154,7 @@ SCTP_PRINTF(char *format, ...)
 #define SCTP_VRF_IFN_HASH_SIZE	3
 #define	SCTP_INIT_VRF_TABLEID(vrf)
 
-#define SCTP_IFN_IS_IFT_LOOP(ifn) 0
+#define SCTP_IFN_IS_IFT_LOOP(ifn)	((ifn)->ifn_type == IFT_LOOP)
 
 /*
  * Access to IFN's to help with src-addr-selection
@@ -264,7 +272,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 /* return the base ext data pointer */
 #define SCTP_BUF_EXTEND_BASE(m)		(caddr_t)(m->m_ext.ext_buf)
  /* return the refcnt of the data pointer */
-#define SCTP_BUF_EXTEND_REFCNT(m)	(m->m_ext.ref_cnt)
+#define SCTP_BUF_EXTEND_REFCNT(m)	(*(m->m_ext.ref_cnt))
 /* return any buffer related flags, this is
  * used beyond logging for apple only.
  */
@@ -338,6 +346,7 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 	BOOLEAN blnDequeued = FALSE;
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - enter\n");
+
 	if (tmr->initialized == FALSE) {
 		tmr->func = func;
 		tmr->arg = arg;
@@ -347,18 +356,20 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 		tmr->initialized = TRUE;
 	}
 
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: Try to acquire spin lock, tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: Try to acquire spin lock, tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
 	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: KeRemoveQueueDpc=%d, tmr=%p, ticks=%d\n",
+	    blnDequeued, tmr, ticks);
 
+	/* the unit of ticks is millisecond, the unit of ExpireTime is 100-nanosecond */
 	tmr->ticks = ticks;
-	ExpireTime.QuadPart = -(LONGLONG)(100 * 10000)*ticks;
+	ExpireTime.QuadPart = -(LONGLONG)(10000)*ticks;
 	KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START: release spin lock, tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: release spin lock, tmr=%p\n", tmr);
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - leave\n");
 }
@@ -370,16 +381,16 @@ SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - enter\n");
 
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
 	blnCanceled = KeCancelTimer(&tmr->tmr);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: KeCancelTimer=%d, tmr=%p\n", blnCanceled, tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: KeCancelTimer=%d, tmr=%p\n", blnCanceled, tmr);
 	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - leave\n");
 }

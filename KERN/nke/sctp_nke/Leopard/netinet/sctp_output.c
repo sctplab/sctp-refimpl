@@ -12346,7 +12346,7 @@ sctp_lower_sosend(struct socket *so,
 					   so, asoc, sndlen);
 	  }
 	  be.error = 0;
-#ifndef __Panda__
+#if !defined(__Panda__) && !defined(__Windows__)
 	  stcb->block_entry = &be;
 #endif
 	  error = sbwait(&so->so_snd);
@@ -12699,7 +12699,7 @@ sctp_lower_sosend(struct socket *so,
 						 so, asoc, uio->uio_resid);
 		}
 		be.error = 0;
-#ifndef __Panda__
+#if !defined(__Panda__) && !defined(__Windows__)
 		stcb->block_entry = &be;
 #endif
 #if defined(__APPLE__)
