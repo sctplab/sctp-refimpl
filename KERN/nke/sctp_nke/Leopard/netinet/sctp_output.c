@@ -7043,7 +7043,6 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	}
 #else
 	goal_mtu = net->mtu - SCTP_MIN_OVERHEAD;
-	mtu_fromwheel = 0;
 #endif
 	/* Need an allowance for the data chunk header too */
 	goal_mtu -= sizeof(struct sctp_data_chunk);
