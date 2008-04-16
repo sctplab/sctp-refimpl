@@ -5645,7 +5645,7 @@ sctp_sorecvmsg(struct socket *so,
 
 		to = from;
 #if defined(INET) && defined(INET6)
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_NEEDS_MAPPED_V4) &&
+		if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) &&
 		    (to->sa_family == AF_INET) &&
 		    ((size_t)fromlen >= sizeof(struct sockaddr_in6))) {
 			struct sockaddr_in *sin;
