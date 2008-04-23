@@ -28,6 +28,7 @@ __FBSDID("$FreeBSD: src/sbin/natd/natd.c,v 1.50 2006/09/26 23:26:51 piso Exp $")
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
 #include <netinet/ip_icmp.h>
+#include <netinet/sctp_header.h>
 #include <net/if.h>
 #include <net/if_dl.h>
 #include <net/route.h>
@@ -552,6 +553,10 @@ static void DoGlobal (int fd)
 			printf ("[ICMP] ");
 			break;
 
+		case IPPROTO_SCTP:
+			printf ("[SCTP] ");
+			break;
+
 		default:
 			printf ("[%d]    ", ip->ip_p);
 			break;
@@ -683,6 +688,10 @@ static void DoAliasing (int fd, int direction)
 			printf ("[ICMP] ");
 			break;
 
+		case IPPROTO_SCTP:
+			printf ("[SCTP] ");
+			break;
+
 		default:
 			printf ("[%d]    ", ip->ip_p);
 			break;
@@ -697,9 +706,13 @@ static void DoAliasing (int fd, int direction)
 /*
  * Outgoing packets. Do aliasing.
  */
-		LibAliasOut (mla, buf, IP_MAXPACKET);
-	}
-	else {
+		status = LibAliasOut (mla, buf, IP_MAXPACKET);
+
+		if ((ip->ip_p == IPPROTO_SCTP) && (status == PKT_ALIAS_SCTP_VTAG_COLLISION)) {
+			SendSctpAbort(fd, ip);
+			return;
+		}
+	} else {
 
 /*
  * Do aliasing.
@@ -818,6 +831,7 @@ static char* FormatPacket (struct ip* ip)
 	struct tcphdr*	tcphdr;
 	struct udphdr*	udphdr;
 	struct icmp*	icmphdr;
+	struct sctphdr*	sctphdr;
 	char		src[20];
 	char		dst[20];
 
@@ -850,6 +864,16 @@ static char* FormatPacket (struct ip* ip)
 			      dst,
 			      icmphdr->icmp_type,
 			      icmphdr->icmp_code);
+		break;
+
+	case IPPROTO_SCTP:
+		sctphdr = (struct sctphdr*) ((char*) ip + (ip->ip_hl << 2));
+		sprintf (buf, "[SCTP] %s:%d -> %s:%d (VTAG: 0x%X)\n",
+			      src,
+			      ntohs (sctphdr->src_port),
+			      dst,
+			      ntohs (sctphdr->dest_port),
+			      ntohl (sctphdr->v_tag));
 		break;
 
 	default:
