@@ -9,7 +9,7 @@
  *
  * Ari Suutari <suutari@iki.fi>
  *
- * $FreeBSD: src/sbin/natd/natd.h,v 1.4 1999/08/28 00:13:46 peter Exp $
+ * $FreeBSD: src/sbin/natd/natd.h,v 1.5 2004/07/04 12:53:54 phk Exp $
  */
 
 #define PIDFILE	"/var/run/natd.pid"
@@ -20,5 +20,5 @@
 extern void Quit (const char* msg);
 extern void Warn (const char* msg);
 extern int SendNeedFragIcmp (int sock, struct ip* failedDgram, int mtu);
-
+extern struct libalias *mla;
 
