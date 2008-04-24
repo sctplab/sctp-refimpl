@@ -37,7 +37,170 @@
  */
 
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libalias/alias_pptp.c,v 1.1.2.5 2003/06/27 08:37:23 ru Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_pptp.c,v 1.15 2006/09/26 23:26:53 piso Exp $");
+
+/* Includes */
+#ifdef _KERNEL
+#include <sys/param.h>
+#include <sys/limits.h>
+#include <sys/kernel.h>
+#include <sys/module.h>
+#else
+#include <errno.h>
+#include <limits.h>
+#include <sys/types.h>
+#include <stdio.h>
+#endif
+
+#include <netinet/tcp.h>
+
+#ifdef _KERNEL
+#include <netinet/libalias/alias.h>
+#include <netinet/libalias/alias_local.h>
+#include <netinet/libalias/alias_mod.h>
+#else
+#include "alias.h"
+#include "alias_local.h"
+#include "alias_mod.h"
+#endif
+
+#define PPTP_CONTROL_PORT_NUMBER 1723
+
+static void
+AliasHandlePptpOut(struct libalias *, struct ip *, struct alias_link *);
+
+static void
+AliasHandlePptpIn(struct libalias *, struct ip *, struct alias_link *);
+
+static int
+AliasHandlePptpGreOut(struct libalias *, struct ip *);
+
+static int
+AliasHandlePptpGreIn(struct libalias *, struct ip *);
+
+static int 
+fingerprint(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+	if (ah->dport == NULL || ah->sport == NULL || ah->lnk == NULL)
+		return (-1);
+	if (ntohs(*ah->dport) == PPTP_CONTROL_PORT_NUMBER
+	    || ntohs(*ah->sport) == PPTP_CONTROL_PORT_NUMBER)
+		return (0);
+	return (-1);
+}
+
+static int 
+fingerprintgre(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+	return (0);
+}
+
+static int 
+protohandlerin(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+	
+	AliasHandlePptpIn(la, pip, ah->lnk);
+	return (0);
+}
+
+static int 
+protohandlerout(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+	
+	AliasHandlePptpOut(la, pip, ah->lnk);
+	return (0);
+}
+
+static int 
+protohandlergrein(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+	if (la->packetAliasMode & PKT_ALIAS_PROXY_ONLY ||
+	    AliasHandlePptpGreIn(la, pip) == 0)
+		return (0);
+	return (-1);
+}
+
+static int 
+protohandlergreout(struct libalias *la, struct ip *pip, struct alias_data *ah)
+{
+
+	if (AliasHandlePptpGreOut(la, pip) == 0)
+		return (0);
+	return (-1);
+}
+
+/* Kernel module definition. */
+struct proto_handler handlers[] = {
+	{ 
+	  .pri = 200, 
+	  .dir = IN, 
+	  .proto = TCP, 
+	  .fingerprint = &fingerprint, 
+	  .protohandler = &protohandlerin
+	},
+	{ 
+	  .pri = 210, 
+	  .dir = OUT, 
+	  .proto = TCP, 
+	  .fingerprint = &fingerprint, 
+	  .protohandler = &protohandlerout
+	},
+/* 
+ * WATCH OUT!!! these 2 handlers NEED a priority of INT_MAX (highest possible) 
+ * cause they will ALWAYS process packets, so they must be the last one
+ * in chain: look fingerprintgre() above.
+ */
+	{ 
+	  .pri = INT_MAX, 
+	  .dir = IN, 
+	  .proto = IP, 
+	  .fingerprint = &fingerprintgre, 
+	  .protohandler = &protohandlergrein
+	},
+	{ 
+	  .pri = INT_MAX, 
+	  .dir = OUT, 
+	  .proto = IP, 
+	  .fingerprint = &fingerprintgre, 
+	  .protohandler = &protohandlergreout
+	}, 
+	{ EOH }
+};
+static int
+mod_handler(module_t mod, int type, void *data)
+{
+	int error;
+
+	switch (type) {
+	case MOD_LOAD:
+		error = 0;
+		LibAliasAttachHandlers(handlers);
+		break;
+	case MOD_UNLOAD:
+		error = 0;
+		LibAliasDetachHandlers(handlers);
+		break;
+	default:
+		error = EINVAL;
+	}
+	return (error);
+}
+
+#ifdef _KERNEL
+static 
+#endif
+moduledata_t alias_mod = {
+       "alias_pptp", mod_handler, NULL
+};
+
+#ifdef	_KERNEL
+DECLARE_MODULE(alias_pptp, alias_mod, SI_SUB_DRIVERS, SI_ORDER_SECOND);
+MODULE_VERSION(alias_pptp, 1);
+MODULE_DEPEND(alias_pptp, libalias, 1, 1, 1);
+#endif
 
 /*
    Alias_pptp.c performs special processing for PPTP sessions under TCP.
@@ -65,31 +228,20 @@ __FBSDID("$FreeBSD: src/lib/libalias/alias_pptp.c,v 1.1.2.5 2003/06/27 08:37:23 
 
 */
 
-/* Includes */
-#include <sys/types.h>
-#include <netinet/in_systm.h>
-#include <netinet/in.h>
-#include <netinet/ip.h>
-#include <netinet/tcp.h>
-
-#include <stdio.h>
-
-#include "alias_local.h"
-
 /*
  * PPTP definitions
  */
 
-struct grehdr			/* Enhanced GRE header. */
-{
-    u_int16_t gh_flags;		/* Flags. */
-    u_int16_t gh_protocol;	/* Protocol type. */
-    u_int16_t gh_length;	/* Payload length. */
-    u_int16_t gh_call_id;	/* Call ID. */
-    u_int32_t gh_seq_no;	/* Sequence number (optional). */
-    u_int32_t gh_ack_no;	/* Acknowledgment number (optional). */
+struct grehdr {			/* Enhanced GRE header. */
+	u_int16_t	gh_flags;	/* Flags. */
+	u_int16_t	gh_protocol;	/* Protocol type. */
+	u_int16_t	gh_length;	/* Payload length. */
+	u_int16_t	gh_call_id;	/* Call ID. */
+	u_int32_t	gh_seq_no;	/* Sequence number (optional). */
+	u_int32_t	gh_ack_no;	/* Acknowledgment number
+					 * (optional). */
 };
-typedef struct grehdr		GreHdr;
+typedef struct grehdr GreHdr;
 
 /* The PPTP protocol ID used in the GRE 'proto' field. */
 #define PPTP_GRE_PROTO          0x880b
@@ -102,268 +254,270 @@ typedef struct grehdr		GreHdr;
 #define PPTP_CTRL_MSG_TYPE	1
 
 enum {
-  PPTP_StartCtrlConnRequest = 1,
-  PPTP_StartCtrlConnReply = 2,
-  PPTP_StopCtrlConnRequest = 3,
-  PPTP_StopCtrlConnReply = 4,
-  PPTP_EchoRequest = 5,
-  PPTP_EchoReply = 6,
-  PPTP_OutCallRequest = 7,
-  PPTP_OutCallReply = 8,
-  PPTP_InCallRequest = 9,
-  PPTP_InCallReply = 10,
-  PPTP_InCallConn = 11,
-  PPTP_CallClearRequest = 12,
-  PPTP_CallDiscNotify = 13,
-  PPTP_WanErrorNotify = 14,
-  PPTP_SetLinkInfo = 15
+	PPTP_StartCtrlConnRequest = 1,
+	PPTP_StartCtrlConnReply = 2,
+	PPTP_StopCtrlConnRequest = 3,
+	PPTP_StopCtrlConnReply = 4,
+	PPTP_EchoRequest = 5,
+	PPTP_EchoReply = 6,
+	PPTP_OutCallRequest = 7,
+	PPTP_OutCallReply = 8,
+	PPTP_InCallRequest = 9,
+	PPTP_InCallReply = 10,
+	PPTP_InCallConn = 11,
+	PPTP_CallClearRequest = 12,
+	PPTP_CallDiscNotify = 13,
+	PPTP_WanErrorNotify = 14,
+	PPTP_SetLinkInfo = 15
 };
 
-  /* Message structures */
-  struct pptpMsgHead {
-    u_int16_t   length;         /* total length */
-    u_int16_t   msgType;        /* PPTP message type */
-    u_int32_t   magic;          /* magic cookie */
-    u_int16_t   type;           /* control message type */
-    u_int16_t   resv0;          /* reserved */
-  };
-  typedef struct pptpMsgHead    *PptpMsgHead;
+ /* Message structures */
+struct pptpMsgHead {
+	u_int16_t	length;	/* total length */
+	u_int16_t	msgType;/* PPTP message type */
+	u_int32_t	magic;	/* magic cookie */
+	u_int16_t	type;	/* control message type */
+	u_int16_t	resv0;	/* reserved */
+};
+typedef struct pptpMsgHead *PptpMsgHead;
 
-  struct pptpCodes {
-    u_int8_t    resCode;        /* Result Code */
-    u_int8_t    errCode;        /* Error Code */
-  };
-  typedef struct pptpCodes      *PptpCode;
+struct pptpCodes {
+	u_int8_t	resCode;/* Result Code */
+	u_int8_t	errCode;/* Error Code */
+};
+typedef struct pptpCodes *PptpCode;
 
-  struct pptpCallIds {
-    u_int16_t   cid1;           /* Call ID field #1 */
-    u_int16_t   cid2;           /* Call ID field #2 */
-  };
-  typedef struct pptpCallIds    *PptpCallId;
+struct pptpCallIds {
+	u_int16_t	cid1;	/* Call ID field #1 */
+	u_int16_t	cid2;	/* Call ID field #2 */
+};
+typedef struct pptpCallIds *PptpCallId;
 
 static PptpCallId AliasVerifyPptp(struct ip *, u_int16_t *);
 
 
-void
-AliasHandlePptpOut(struct ip *pip,	    /* IP packet to examine/patch */
-                   struct alias_link *link) /* The PPTP control link */
-{
-    struct alias_link   *pptp_link;
-    PptpCallId    	cptr;
-    PptpCode            codes;
-    u_int16_t           ctl_type;           /* control message type */
-    struct tcphdr 	*tc;
+static void
+AliasHandlePptpOut(struct libalias *la,
+    struct ip *pip,		/* IP packet to examine/patch */
+    struct alias_link *lnk)
+{				/* The PPTP control link */
+	struct alias_link *pptp_lnk;
+	PptpCallId cptr;
+	PptpCode codes;
+	u_int16_t ctl_type;	/* control message type */
+	struct tcphdr *tc;
 
-    /* Verify valid PPTP control message */
-    if ((cptr = AliasVerifyPptp(pip, &ctl_type)) == NULL)
-      return;
+	/* Verify valid PPTP control message */
+	if ((cptr = AliasVerifyPptp(pip, &ctl_type)) == NULL)
+		return;
 
-    /* Modify certain PPTP messages */
-    switch (ctl_type) {
-    case PPTP_OutCallRequest:
-    case PPTP_OutCallReply:
-    case PPTP_InCallRequest:
-    case PPTP_InCallReply:
-	/* Establish PPTP link for address and Call ID found in control message. */
-	pptp_link = AddPptp(GetOriginalAddress(link), GetDestAddress(link),
-			    GetAliasAddress(link), cptr->cid1);
-	break;
-    case PPTP_CallClearRequest:
-    case PPTP_CallDiscNotify:
-	/* Find PPTP link for address and Call ID found in control message. */
-	pptp_link = FindPptpOutByCallId(GetOriginalAddress(link),
-					GetDestAddress(link),
-					cptr->cid1);
-	break;
-    default:
-	return;
-    }
-
-      if (pptp_link != NULL) {
-	int accumulate = cptr->cid1;
-
-	/* alias the Call Id */
-	cptr->cid1 = GetAliasPort(pptp_link);
-
-	/* Compute TCP checksum for revised packet */
-	tc = (struct tcphdr *) ((char *) pip + (pip->ip_hl << 2));
-	accumulate -= cptr->cid1;
-	ADJUST_CHECKSUM(accumulate, tc->th_sum);
-
+	/* Modify certain PPTP messages */
 	switch (ctl_type) {
+	case PPTP_OutCallRequest:
+	case PPTP_OutCallReply:
+	case PPTP_InCallRequest:
+	case PPTP_InCallReply:
+		/*
+		 * Establish PPTP link for address and Call ID found in
+		 * control message.
+		 */
+		pptp_lnk = AddPptp(la, GetOriginalAddress(lnk), GetDestAddress(lnk),
+		    GetAliasAddress(lnk), cptr->cid1);
+		break;
+	case PPTP_CallClearRequest:
+	case PPTP_CallDiscNotify:
+		/*
+		 * Find PPTP link for address and Call ID found in control
+		 * message.
+		 */
+		pptp_lnk = FindPptpOutByCallId(la, GetOriginalAddress(lnk),
+		    GetDestAddress(lnk),
+		    cptr->cid1);
+		break;
+	default:
+		return;
+	}
+
+	if (pptp_lnk != NULL) {
+		int accumulate = cptr->cid1;
+
+		/* alias the Call Id */
+		cptr->cid1 = GetAliasPort(pptp_lnk);
+
+		/* Compute TCP checksum for revised packet */
+		tc = (struct tcphdr *)ip_next(pip);
+		accumulate -= cptr->cid1;
+		ADJUST_CHECKSUM(accumulate, tc->th_sum);
+
+		switch (ctl_type) {
+		case PPTP_OutCallReply:
+		case PPTP_InCallReply:
+			codes = (PptpCode) (cptr + 1);
+			if (codes->resCode == 1)	/* Connection
+							 * established, */
+				SetDestCallId(pptp_lnk,	/* note the Peer's Call
+								 * ID. */
+				    cptr->cid2);
+			else
+				SetExpire(pptp_lnk, 0);	/* Connection refused. */
+			break;
+		case PPTP_CallDiscNotify:	/* Connection closed. */
+			SetExpire(pptp_lnk, 0);
+			break;
+		}
+	}
+}
+
+static void
+AliasHandlePptpIn(struct libalias *la,
+    struct ip *pip,		/* IP packet to examine/patch */
+    struct alias_link *lnk)
+{				/* The PPTP control link */
+	struct alias_link *pptp_lnk;
+	PptpCallId cptr;
+	u_int16_t *pcall_id;
+	u_int16_t ctl_type;	/* control message type */
+	struct tcphdr *tc;
+
+	/* Verify valid PPTP control message */
+	if ((cptr = AliasVerifyPptp(pip, &ctl_type)) == NULL)
+		return;
+
+	/* Modify certain PPTP messages */
+	switch (ctl_type) {
+	case PPTP_InCallConn:
+	case PPTP_WanErrorNotify:
+	case PPTP_SetLinkInfo:
+		pcall_id = &cptr->cid1;
+		break;
 	case PPTP_OutCallReply:
 	case PPTP_InCallReply:
-	    codes = (PptpCode)(cptr + 1);
-	    if (codes->resCode == 1)		/* Connection established, */
-		SetDestCallId(pptp_link,	/* note the Peer's Call ID. */
-			      cptr->cid2);
-	    else
-		SetExpire(pptp_link, 0);	/* Connection refused. */
-	    break;
-	case PPTP_CallDiscNotify:		/* Connection closed. */
-	    SetExpire(pptp_link, 0);
-	    break;
+		pcall_id = &cptr->cid2;
+		break;
+	case PPTP_CallDiscNotify:	/* Connection closed. */
+		pptp_lnk = FindPptpInByCallId(la, GetDestAddress(lnk),
+		    GetAliasAddress(lnk),
+		    cptr->cid1);
+		if (pptp_lnk != NULL)
+			SetExpire(pptp_lnk, 0);
+		return;
+	default:
+		return;
 	}
-      }
+
+	/* Find PPTP link for address and Call ID found in PPTP Control Msg */
+	pptp_lnk = FindPptpInByPeerCallId(la, GetDestAddress(lnk),
+	    GetAliasAddress(lnk),
+	    *pcall_id);
+
+	if (pptp_lnk != NULL) {
+		int accumulate = *pcall_id;
+
+		/* De-alias the Peer's Call Id. */
+		*pcall_id = GetOriginalPort(pptp_lnk);
+
+		/* Compute TCP checksum for modified packet */
+		tc = (struct tcphdr *)ip_next(pip);
+		accumulate -= *pcall_id;
+		ADJUST_CHECKSUM(accumulate, tc->th_sum);
+
+		if (ctl_type == PPTP_OutCallReply || ctl_type == PPTP_InCallReply) {
+			PptpCode codes = (PptpCode) (cptr + 1);
+
+			if (codes->resCode == 1)	/* Connection
+							 * established, */
+				SetDestCallId(pptp_lnk,	/* note the Call ID. */
+				    cptr->cid1);
+			else
+				SetExpire(pptp_lnk, 0);	/* Connection refused. */
+		}
+	}
 }
 
-void
-AliasHandlePptpIn(struct ip *pip,	   /* IP packet to examine/patch */
-                  struct alias_link *link) /* The PPTP control link */
-{
-    struct alias_link   *pptp_link;
-    PptpCallId    	cptr;
-    u_int16_t     	*pcall_id;
-    u_int16_t           ctl_type;           /* control message type */
-    struct tcphdr 	*tc;
+static		PptpCallId
+AliasVerifyPptp(struct ip *pip, u_int16_t * ptype)
+{				/* IP packet to examine/patch */
+	int hlen, tlen, dlen;
+	PptpMsgHead hptr;
+	struct tcphdr *tc;
 
-    /* Verify valid PPTP control message */
-    if ((cptr = AliasVerifyPptp(pip, &ctl_type)) == NULL)
-      return;
+	/* Calculate some lengths */
+	tc = (struct tcphdr *)ip_next(pip);
+	hlen = (pip->ip_hl + tc->th_off) << 2;
+	tlen = ntohs(pip->ip_len);
+	dlen = tlen - hlen;
 
-    /* Modify certain PPTP messages */
-    switch (ctl_type)
-    {
-    case PPTP_InCallConn:
-    case PPTP_WanErrorNotify:
-    case PPTP_SetLinkInfo:
-      pcall_id = &cptr->cid1;
-      break;
-    case PPTP_OutCallReply:
-    case PPTP_InCallReply:
-      pcall_id = &cptr->cid2;
-      break;
-    case PPTP_CallDiscNotify:			/* Connection closed. */
-      pptp_link = FindPptpInByCallId(GetDestAddress(link),
-				     GetAliasAddress(link),
-				     cptr->cid1);
-      if (pptp_link != NULL)
-	    SetExpire(pptp_link, 0);
-      return;
-    default:
-      return;
-    }
+	/* Verify data length */
+	if (dlen < (int)(sizeof(struct pptpMsgHead) + sizeof(struct pptpCallIds)))
+		return (NULL);
 
-    /* Find PPTP link for address and Call ID found in PPTP Control Msg */
-    pptp_link = FindPptpInByPeerCallId(GetDestAddress(link),
-				       GetAliasAddress(link),
-				       *pcall_id);
+	/* Move up to PPTP message header */
+	hptr = (PptpMsgHead) tcp_next(tc);
 
-    if (pptp_link != NULL) {
-      int accumulate = *pcall_id;
+	/* Return the control message type */
+	*ptype = ntohs(hptr->type);
 
-      /* De-alias the Peer's Call Id. */
-      *pcall_id = GetOriginalPort(pptp_link);
+	/* Verify PPTP Control Message */
+	if ((ntohs(hptr->msgType) != PPTP_CTRL_MSG_TYPE) ||
+	    (ntohl(hptr->magic) != PPTP_MAGIC))
+		return (NULL);
 
-      /* Compute TCP checksum for modified packet */
-      tc = (struct tcphdr *) ((char *) pip + (pip->ip_hl << 2));
-      accumulate -= *pcall_id;
-      ADJUST_CHECKSUM(accumulate, tc->th_sum);
-
-      if (ctl_type == PPTP_OutCallReply || ctl_type == PPTP_InCallReply) {
-	    PptpCode codes = (PptpCode)(cptr + 1);
-
-	    if (codes->resCode == 1)		/* Connection established, */
-		SetDestCallId(pptp_link,	/* note the Call ID. */
-			      cptr->cid1);
-	    else
-		SetExpire(pptp_link, 0);	/* Connection refused. */
-      }
-    }
+	/* Verify data length. */
+	if ((*ptype == PPTP_OutCallReply || *ptype == PPTP_InCallReply) &&
+	    (dlen < (int)(sizeof(struct pptpMsgHead) + sizeof(struct pptpCallIds) +
+		sizeof(struct pptpCodes))))
+		return (NULL);
+	else
+		return (PptpCallId) (hptr + 1);
 }
 
-static PptpCallId
-AliasVerifyPptp(struct ip *pip, u_int16_t *ptype) /* IP packet to examine/patch */
+static int
+AliasHandlePptpGreOut(struct libalias *la, struct ip *pip)
 {
-    int           	hlen, tlen, dlen;
-    PptpMsgHead   	hptr;
-    struct tcphdr 	*tc;
+	GreHdr *gr;
+	struct alias_link *lnk;
 
-    /* Calculate some lengths */
-    tc = (struct tcphdr *) ((char *) pip + (pip->ip_hl << 2));
-    hlen = (pip->ip_hl + tc->th_off) << 2;
-    tlen = ntohs(pip->ip_len);
-    dlen = tlen - hlen;
+	gr = (GreHdr *) ip_next(pip);
 
-    /* Verify data length */
-    if (dlen < (sizeof(struct pptpMsgHead) + sizeof(struct pptpCallIds)))
-      return(NULL);
+	/* Check GRE header bits. */
+	if ((ntohl(*((u_int32_t *) gr)) & PPTP_INIT_MASK) != PPTP_INIT_VALUE)
+		return (-1);
 
-    /* Move up to PPTP message header */
-    hptr = (PptpMsgHead)(((char *) pip) + hlen);
+	lnk = FindPptpOutByPeerCallId(la, pip->ip_src, pip->ip_dst, gr->gh_call_id);
+	if (lnk != NULL) {
+		struct in_addr alias_addr = GetAliasAddress(lnk);
 
-    /* Return the control message type */
-    *ptype = ntohs(hptr->type);
-
-    /* Verify PPTP Control Message */
-    if ((ntohs(hptr->msgType) != PPTP_CTRL_MSG_TYPE) ||
-        (ntohl(hptr->magic) != PPTP_MAGIC))
-      return(NULL);
-
-    /* Verify data length. */
-    if ((*ptype == PPTP_OutCallReply || *ptype == PPTP_InCallReply) &&
-	(dlen < sizeof(struct pptpMsgHead) + sizeof(struct pptpCallIds) +
-		sizeof(struct pptpCodes)))
-	return (NULL);
-    else
-	return (PptpCallId)(hptr + 1);
+		/* Change source IP address. */
+		DifferentialChecksum(&pip->ip_sum,
+		    &alias_addr, &pip->ip_src, 2);
+		pip->ip_src = alias_addr;
+	}
+	return (0);
 }
 
-
-int
-AliasHandlePptpGreOut(struct ip *pip)
+static int
+AliasHandlePptpGreIn(struct libalias *la, struct ip *pip)
 {
-    GreHdr		*gr;
-    struct alias_link	*link;
+	GreHdr *gr;
+	struct alias_link *lnk;
 
-    gr = (GreHdr *)((char *)pip + (pip->ip_hl << 2));
+	gr = (GreHdr *) ip_next(pip);
 
-    /* Check GRE header bits. */
-    if ((ntohl(*((u_int32_t *)gr)) & PPTP_INIT_MASK) != PPTP_INIT_VALUE)
-	return (-1);
+	/* Check GRE header bits. */
+	if ((ntohl(*((u_int32_t *) gr)) & PPTP_INIT_MASK) != PPTP_INIT_VALUE)
+		return (-1);
 
-    link = FindPptpOutByPeerCallId(pip->ip_src, pip->ip_dst, gr->gh_call_id);
-    if (link != NULL) {
-	struct in_addr alias_addr = GetAliasAddress(link);
+	lnk = FindPptpInByPeerCallId(la, pip->ip_src, pip->ip_dst, gr->gh_call_id);
+	if (lnk != NULL) {
+		struct in_addr src_addr = GetOriginalAddress(lnk);
 
-	/* Change source IP address. */
-	DifferentialChecksum(&pip->ip_sum,
-			     (u_short *)&alias_addr,
-			     (u_short *)&pip->ip_src,
-			     2);
-	pip->ip_src = alias_addr;
-    }
+		/* De-alias the Peer's Call Id. */
+		gr->gh_call_id = GetOriginalPort(lnk);
 
-    return (0);
-}
-
-
-int
-AliasHandlePptpGreIn(struct ip *pip)
-{
-    GreHdr		*gr;
-    struct alias_link	*link;
-
-    gr = (GreHdr *)((char *)pip + (pip->ip_hl << 2));
-
-    /* Check GRE header bits. */
-    if ((ntohl(*((u_int32_t *)gr)) & PPTP_INIT_MASK) != PPTP_INIT_VALUE)
-	return (-1);
-
-    link = FindPptpInByPeerCallId(pip->ip_src, pip->ip_dst, gr->gh_call_id);
-    if (link != NULL) {
-	struct in_addr src_addr = GetOriginalAddress(link);
-
-	/* De-alias the Peer's Call Id. */
-	gr->gh_call_id = GetOriginalPort(link);
-
-	/* Restore original IP address. */
-	DifferentialChecksum(&pip->ip_sum,
-			     (u_short *)&src_addr,
-			     (u_short *)&pip->ip_dst,
-			     2);
-	pip->ip_dst = src_addr;
-    }
-
-    return (0);
+		/* Restore original IP address. */
+		DifferentialChecksum(&pip->ip_sum,
+		    &src_addr, &pip->ip_dst, 2);
+		pip->ip_dst = src_addr;
+	}
+	return (0);
 }
