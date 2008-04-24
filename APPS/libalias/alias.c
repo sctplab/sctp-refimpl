@@ -131,6 +131,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias.c,v 1.58 2006/12/15 12:50:06 
 #include <netinet/ip_icmp.h>
 #include <netinet/tcp.h>
 #include <netinet/udp.h>
+#include <netinet/sctp_header.h>
 
 #ifdef _KERNEL
 #include <netinet/libalias/alias.h>
@@ -228,6 +229,7 @@ TcpMonitorOut(struct ip *pip, struct alias_link *lnk)
     ProtoAliasIn(), ProtoAliasOut()
     UdpAliasIn(), UdpAliasOut()
     TcpAliasIn(), TcpAliasOut()
+    SctpAliasIn(), SctpAliasOut()
 
 These routines handle protocol specific details of packet aliasing.
 One may observe a certain amount of repetitive arithmetic in these
@@ -251,6 +253,9 @@ packet, and then incoming packets are identified by IP address and
 port numbers.  For TCP packets, there is additional logic in the event
 that sequence and ACK numbers have been altered (as in the case for
 FTP data port commands).
+
+SCTP packets do not have to be modified, only the IP-addresses gets
+aliased.
 
 The port numbers used by the packet aliasing module are not true
 ports in the Unix sense.  No sockets are actually bound to ports.
@@ -278,6 +283,9 @@ static int	UdpAliasOut(struct libalias *, struct ip *, int create);
 
 static int	TcpAliasIn(struct libalias *, struct ip *);
 static int	TcpAliasOut(struct libalias *, struct ip *, int, int create);
+
+static int	SctpAliasOut(struct libalias *, struct ip *);
+static int	SctpAliasIn(struct libalias *, struct ip *);
 
 
 static int
@@ -1073,7 +1081,98 @@ TcpAliasOut(struct libalias *la, struct ip *pip, int maxpacketsize, int create)
 	return (PKT_ALIAS_IGNORED);
 }
 
+static int 
+SctpAliasIn(struct libalias *la, struct ip *pip)
+{
+	struct alias_link *lnk;
+	struct in_addr original_address;
 
+	struct sctphdr *sctphdr;	
+	struct sctp_chunkhdr *sctp_chunkhdr;
+	struct sctp_init *sctp_init;
+
+	sctphdr = (struct sctphdr *)ip_next(pip);
+	sctp_chunkhdr = (struct sctp_chunkhdr*)((char*)sctphdr + sizeof(*sctphdr));
+
+	/* eingehende INIT_ACK Packete behandeln*/
+	if(sctp_chunkhdr->chunk_type == SCTP_INITIATION_ACK){
+		sctp_init = (struct sctp_init*)((char*)sctp_chunkhdr + sizeof(*sctp_chunkhdr));
+
+		lnk = FindSctpInINIT_ACK(la, pip->ip_src, pip->ip_dst,
+		(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port, 
+		(uint32_t) sctphdr->v_tag, (uint32_t) sctp_init->initiate_tag);
+	}
+	/* eingehende ABORT und SHUTDOWN Packete behandeln */
+	else if(sctp_chunkhdr->chunk_type == SCTP_ABORT_ASSOCIATION || sctp_chunkhdr->chunk_type == SCTP_SHUTDOWN_COMPLETE){
+		/* Wenn die Packete mit T-BIT gesetzt ankommen, ist das VTAG nicht das lokale VTAG, sondern das globale VTAG */ 
+		if(sctp_chunkhdr->chunk_flags & SCTP_HAD_NO_TCB){
+			lnk = FindSctpInTBIT(la, pip->ip_src, pip->ip_dst,
+				(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port, 
+				(uint32_t) sctphdr->v_tag);	
+		}
+		/* für die Packete ohne T-BIT gesetzt */
+		else{
+			lnk = FindSctpIn(la, pip->ip_src, pip->ip_dst,
+				(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port, 
+				(uint32_t) sctphdr->v_tag);
+		}
+	}
+	else{
+		/* für alle anderen eingehenden Packete */
+		lnk = FindSctpIn(la, pip->ip_src, pip->ip_dst,
+		(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port, 
+		(uint32_t) sctphdr->v_tag);
+	}
+	if(lnk != NULL){
+		/* Zieladresse durch originale ersetzen und IP Checksum anpassen */ 
+		original_address = GetOriginalAddress(lnk);
+		DifferentialChecksum(&pip->ip_sum, &original_address, &pip->ip_dst, 2);
+		pip->ip_dst = original_address;
+		return(PKT_ALIAS_OK);
+	}
+	/* Wenn kein Link gefunden wurde, Packet ignorieren */
+	return (PKT_ALIAS_IGNORED);
+}
+
+static int
+SctpAliasOut(struct libalias *la, struct ip *pip)
+{
+	struct alias_link *lnk;
+	struct in_addr *lnk_src_addr;
+
+	struct sctphdr *sctphdr;
+	struct sctp_chunkhdr *sctp_chunkhdr;
+	struct sctp_init *sctp_init;
+
+	sctphdr = (struct sctphdr *)ip_next(pip);
+	sctp_chunkhdr = (struct sctp_chunkhdr*)((char*)sctphdr + sizeof(*sctphdr));
+	
+	/* Ausgehende INIT Packete behandeln und Link erzeugen */	
+	if(sctp_chunkhdr->chunk_type == SCTP_INITIATION){
+		sctp_init = 	(struct sctp_init*)((char*)sctp_chunkhdr + sizeof(*sctp_chunkhdr));
+		/* Lokale Adresse des Links holen */
+		lnk_src_addr = FindSctpLinkLocalAddr(la, pip->ip_src, pip->ip_dst,
+		(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port,
+		(uint32_t) sctp_init->initiate_tag);
+ 		if(lnk_src_addr != NULL){
+			/* Wenn die Quelladresse des INIT Packetes und die lokale Adresse des Linkes ungleich sind, ein ABORT Packet zurückschicken */ 
+			if(memcmp(&pip->ip_src.s_addr, &lnk_src_addr->s_addr, sizeof(pip->ip_src)))
+				return (PKT_ALIAS_SCTP_VTAG_COLLISION);			
+ 		}
+		/* Wenn das Link noch nicht existiert, Link erzeugen */
+ 		else{
+			sctp_init = 	(struct sctp_init*)((char*)sctp_chunkhdr + sizeof(*sctp_chunkhdr));
+			lnk = CreateSctpLink(la, pip->ip_src, pip->ip_dst,
+			(uint16_t) sctphdr->src_port, (uint16_t) sctphdr->dest_port,
+			(uint32_t) sctp_init->initiate_tag);
+ 		}
+	}
+	/* Quelladresse durch alias Adresse ersetzen und IP Checksum anpassen */
+	DifferentialChecksum(&pip->ip_sum, &la->aliasAddress, &pip->ip_src, 2);
+	pip->ip_src = la->aliasAddress;
+	return (PKT_ALIAS_OK);	
+
+}
 
 
 /* Fragment Handling
@@ -1267,6 +1366,10 @@ LibAliasInLocked(struct libalias *la, char *ptr, int maxpacketsize)
 		case IPPROTO_TCP:
 			iresult = TcpAliasIn(la, pip);
 			break;
+		case IPPROTO_SCTP:
+			iresult = SctpAliasIn(la, pip);
+			CleanSctpLinks(la);
+			break;
  		case IPPROTO_GRE: {
 			int error;
 			struct alias_data ad = {
@@ -1408,6 +1511,9 @@ LibAliasOutLocked(struct libalias *la, char *ptr,	/* valid IP packet */
 			break;
 			case IPPROTO_TCP:
 			iresult = TcpAliasOut(la, pip, maxpacketsize, create);
+			break;
+		case IPPROTO_SCTP:
+ 			iresult = SctpAliasOut(la, pip);
 			break;
  		case IPPROTO_GRE: {
 			int error;
