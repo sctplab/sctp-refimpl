@@ -159,6 +159,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/libalias/alias_db.c,v 1.71 2007/04/07 09:47:
 
 #include <sys/socket.h>
 #include <netinet/tcp.h>
+#include <netinet/sctp.h>
 
 #ifdef _KERNEL  
 #include <netinet/libalias/alias.h>
@@ -186,6 +187,7 @@ static		LIST_HEAD(, libalias) instancehead = LIST_HEAD_INITIALIZER(instancehead)
 /* Timeouts (in seconds) for different link types */
 #define ICMP_EXPIRE_TIME             60
 #define UDP_EXPIRE_TIME              60
+#define SCTP_EXPIRE_TIME             60
 #define PROTO_EXPIRE_TIME            60
 #define FRAGMENT_ID_EXPIRE_TIME      10
 #define FRAGMENT_PTR_EXPIRE_TIME     30
@@ -292,15 +294,18 @@ struct alias_link {		/* Main data structure */
 	u_short		dst_port;
 	u_short		alias_port;
 	u_short		proxy_port;
+	uint32_t 	global_vtag;
+	uint32_t 	local_vtag;
 	struct server  *server;
 
-	int		link_type;	/* Type of link: TCP, UDP, ICMP,
+	int		link_type;	/* Type of link: TCP, UDP, ICMP, SCTP,
 					 * proto, frag */
 
 /* values for link_type */
 #define LINK_ICMP                     IPPROTO_ICMP
 #define LINK_UDP                      IPPROTO_UDP
 #define LINK_TCP                      IPPROTO_TCP
+#define LINK_SCTP                     IPPROTO_SCTP
 #define LINK_FRAGMENT_ID              (IPPROTO_MAX + 1)
 #define LINK_FRAGMENT_PTR             (IPPROTO_MAX + 2)
 #define LINK_ADDR                     (IPPROTO_MAX + 3)
@@ -325,6 +330,9 @@ struct alias_link {		/* Main data structure */
 								 * pointers for     */
 			LIST_ENTRY    (alias_link) list_in;	/* input and output
 								 * lookup tables  */
+			LIST_ENTRY    (alias_link) list_sctp_in;
+
+			LIST_ENTRY    (alias_link) list_sctp_in_tbit;
 
 	union {			/* Auxiliary data                      */
 		char           *frag_ptr;
@@ -379,6 +387,11 @@ Lookup table starting points:
 				incoming packets
     StartPointOut()          -- link table initial search point for
 				outgoing packets
+    StartPointSctpIn()       -- link table initial search point for
+				incoming SCTP packets 
+    StartPointSctpInTBIT()   -- link table initial search point for
+				incoming ABORT & SHUTDOWN SCTP 
+				packets with TBIT set
 
 Miscellaneous:
     SeqDiff()                -- difference between two TCP sequences
@@ -392,6 +405,10 @@ static u_int	StartPointIn(struct in_addr, u_short, int);
 static		u_int
 StartPointOut(struct in_addr, struct in_addr,
     u_short, u_short, int);
+
+static u_int	StartPointSctpIn(u_short, struct in_addr, uint32_t, u_short);
+
+static u_int	StartPointSctpInTBIT(uint32_t, u_short, struct in_addr, u_short);
 
 static int	SeqDiff(u_long, u_long);
 
@@ -440,6 +457,33 @@ StartPointOut(struct in_addr src_addr, struct in_addr dst_addr,
 	return (n % LINK_TABLE_OUT_SIZE);
 }
 
+static u_int
+StartPointSctpIn(u_short global_port, 
+    struct in_addr global_addr, uint32_t local_vtag, u_short local_port)
+{
+	u_int n;
+	
+	n = global_port,
+	n += global_addr.s_addr;
+	n += local_vtag;
+	n += local_port;
+
+	return (n % LINK_TABLE_IN_SIZE);
+}
+
+static u_int
+StartPointSctpInTBIT(uint32_t global_vtag, u_short global_port, 
+    struct in_addr global_addr, u_short local_port)
+{
+	u_int n;
+	
+	n = global_vtag;
+	n += global_port,
+	n += global_addr.s_addr;
+	n += local_port;
+
+	return (n % LINK_TABLE_IN_SIZE);
+}
 
 static int
 SeqDiff(u_long x, u_long y)
@@ -486,15 +530,16 @@ ShowAliasStats(struct libalias *la)
 /* Used for debugging */
 	if (la->logDesc) {
 		int tot  = la->icmpLinkCount + la->udpLinkCount + 
-			la->tcpLinkCount + la->pptpLinkCount +
+			la->tcpLinkCount + la->sctpLinkCount + la->pptpLinkCount +
 			la->protoLinkCount + la->fragmentIdLinkCount +
 			la->fragmentPtrLinkCount;
 		
 		AliasLog(la->logDesc,
-			 "icmp=%u, udp=%u, tcp=%u, pptp=%u, proto=%u, frag_id=%u frag_ptr=%u / tot=%u",
+			 "icmp=%u, udp=%u, tcp=%u, sctp=%u, pptp=%u, proto=%u, frag_id=%u frag_ptr=%u / tot=%u",
 			 la->icmpLinkCount,
 			 la->udpLinkCount,
 			 la->tcpLinkCount,
+			 la->sctpLinkCount,
 			 la->pptpLinkCount,
 			 la->protoLinkCount,
 			 la->fragmentIdLinkCount,
@@ -521,6 +566,7 @@ Link creation and deletion:
 Link search:
     FindLinkOut()           - find link for outgoing packets
     FindLinkIn()            - find link for incoming packets
+    FindLinkInSctp()        - find link for incoming SCTP packets
 
 Port search:
     FindNewPortGroup()      - find an available group of ports
@@ -552,6 +598,8 @@ static struct alias_link *
 static struct alias_link *
 		FindLinkIn    (struct libalias *, struct in_addr, struct in_addr, u_short, u_short, int, int);
 
+static struct alias_link *
+		FindLinkInSctp    (struct libalias *, struct in_addr, struct in_addr, u_short, u_short, uint32_t, uint32_t);
 
 #define ALIAS_PORT_BASE            0x08000
 #define ALIAS_PORT_MASK            0x07fff
@@ -901,11 +949,22 @@ DeleteLink(struct alias_link *lnk)
 			free(curr);
 		} while ((curr = next) != head);
 	}
-/* Adjust output table pointers */
-	LIST_REMOVE(lnk, list_out);
+	
+	if(lnk->link_type == LINK_SCTP){
 
-/* Adjust input table pointers */
-	LIST_REMOVE(lnk, list_in);
+	/* Adjust input Sctp table pointers */
+		LIST_REMOVE(lnk, list_sctp_in);
+
+	/* Adjust input Sctp table pointers for ABORT & SHUTDOWN Packets with T-BIT set */
+		LIST_REMOVE(lnk, list_sctp_in_tbit);
+	}
+	else{
+	/* Adjust output table pointers */
+		LIST_REMOVE(lnk, list_out);
+	
+	/* Adjust input table pointers */
+		LIST_REMOVE(lnk, list_in);
+	}
 #ifndef	NO_USE_SOCKETS
 /* Close socket, if one has been allocated */
 	if (lnk->sockfd != -1) {
@@ -924,6 +983,9 @@ DeleteLink(struct alias_link *lnk)
 	case LINK_TCP:
 		la->tcpLinkCount--;
 		free(lnk->data.tcp);
+		break;
+	case LINK_SCTP:
+		la->sctpLinkCount--;
 		break;
 	case LINK_PPTP:
 		la->pptpLinkCount--;
@@ -977,6 +1039,8 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 		lnk->proxy_addr.s_addr = INADDR_ANY;
 		lnk->src_port = src_port;
 		lnk->dst_port = dst_port;
+		lnk->global_vtag = 0;
+		lnk->local_vtag = 0;
 		lnk->proxy_port = 0;
 		lnk->server = NULL;
 		lnk->link_type = link_type;
@@ -997,6 +1061,9 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 			break;
 		case LINK_TCP:
 			lnk->expire_time = TCP_EXPIRE_INITIAL;
+			break;
+		case LINK_SCTP:
+			lnk->expire_time = SCTP_EXPIRE_TIME;
 			break;
 		case LINK_PPTP:
 			lnk->flags |= LINK_PERMANENT;	/* no timeout. */
@@ -1021,10 +1088,16 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 			lnk->flags |= LINK_UNKNOWN_DEST_PORT;
 
 		/* Determine alias port */
-		if (GetNewPort(la, lnk, alias_port_param) != 0) {
-			free(lnk);
-			return (NULL);
+		if(link_type == LINK_SCTP){
+ 			lnk->alias_port = src_port;	/* kein Port Aliasing bei SCTP. Lokales Port (Quellport) und Aliasport sind also gleich */ 
 		}
+		else{
+			if ((GetNewPort(la, lnk, alias_port_param) && link_type != LINK_SCTP) != 0){
+				free(lnk);
+				return (NULL);
+			}
+		}
+
 		/* Link-type dependent initialization */
 		switch (link_type) {
 			struct tcp_dat *aux_tcp;
@@ -1058,6 +1131,11 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 				return (NULL);
 			}
 			break;
+		case LINK_SCTP:
+			la->sctpLinkCount++;
+			lnk->local_vtag = (uint32_t) alias_port_param;
+			lnk->global_vtag = 0;
+			break;
 		case LINK_PPTP:
 			la->pptpLinkCount++;
 			break;
@@ -1074,6 +1152,13 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 			break;
 		}
 
+		/* Set up pointers for SCTP input lookup table */
+		if(link_type == LINK_SCTP){
+			start_point = StartPointSctpIn(dst_port, dst_addr, (uint32_t) alias_port_param, src_port);
+			LIST_INSERT_HEAD(&la->linkTableSctpIn[start_point], lnk, list_sctp_in);
+		}
+		else{
+
 		/* Set up pointers for output lookup table */
 		start_point = StartPointOut(src_addr, dst_addr,
 		    src_port, dst_port, link_type);
@@ -1082,6 +1167,7 @@ AddLink(struct libalias *la, struct in_addr src_addr,
 		/* Set up pointers for input lookup table */
 		start_point = StartPointIn(alias_addr, lnk->alias_port, link_type);
 		LIST_INSERT_HEAD(&la->linkTableIn[start_point], lnk, list_in);
+		}
 	} else {
 #ifdef LIBALIAS_DEBUG
 		fprintf(stderr, "PacketAlias/AddLink(): ");
@@ -1343,7 +1429,174 @@ FindLinkIn(struct libalias *la, struct in_addr dst_addr,
 	return (lnk);
 }
 
+static struct alias_link *
+_FindLinkInSctp(struct libalias *la, struct in_addr dst_addr,
+    struct in_addr alias_addr,
+    u_short dst_port,
+    u_short src_port,
+    uint32_t global_vtag,
+    uint32_t local_vtag)
+{
+	int flags_in;
+	u_int start_point;
+	struct alias_link *lnk;
+	struct alias_link *lnk_fully_specified;
+	struct alias_link *lnk_unknown_all;
+	struct alias_link *lnk_unknown_dst_addr;
+	struct alias_link *lnk_unknown_dst_port;
 
+/* Initialize pointers */
+	lnk_fully_specified = NULL;
+	lnk_unknown_all = NULL;
+	lnk_unknown_dst_addr = NULL;
+	lnk_unknown_dst_port = NULL;
+
+/* If either the dest addr or port is unknown, the search
+   loop will have to know about this. */
+
+	flags_in = 0;
+	if (dst_addr.s_addr == INADDR_ANY)
+		flags_in |= LINK_UNKNOWN_DEST_ADDR;
+	if (dst_port == 0)
+		flags_in |= LINK_UNKNOWN_DEST_PORT;
+
+/* Search loop */
+
+/* For ABORT bzw. SHUTDOWN SCTP packets with T-bit set */
+
+	if(global_vtag != 0 && local_vtag == 0){
+		start_point = StartPointSctpInTBIT(global_vtag, dst_port, dst_addr, src_port);
+		LIST_FOREACH(lnk, &la->linkTableSctpInTBIT[start_point], list_sctp_in_tbit) {
+			int flags;
+			flags = flags_in | lnk->flags;
+			if (!(flags & LINK_PARTIALLY_SPECIFIED)) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->dst_addr.s_addr == dst_addr.s_addr
+				&& lnk->dst_port == dst_port
+				&& lnk->global_vtag == global_vtag) 
+					lnk_fully_specified = lnk;	
+					break;
+			} else if ((flags & LINK_UNKNOWN_DEST_ADDR)
+			&& (flags & LINK_UNKNOWN_DEST_PORT)) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->global_vtag == global_vtag) {
+					if (lnk_unknown_all == NULL)
+						lnk_unknown_all = lnk;				
+				}
+			} else if (flags & LINK_UNKNOWN_DEST_ADDR) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->global_vtag == global_vtag
+				&& lnk->dst_port == dst_port) {
+					if (lnk_unknown_dst_addr == NULL)
+						lnk_unknown_dst_addr = lnk;
+				}
+			} else if (flags & LINK_UNKNOWN_DEST_PORT) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->global_vtag == global_vtag
+				&& lnk->dst_addr.s_addr == dst_addr.s_addr) {
+					if (lnk_unknown_dst_port == NULL)
+						lnk_unknown_dst_port = lnk;
+				}
+			}
+		}
+	}
+
+/* For all other packets without T-bit set. */
+
+	else{
+		start_point = StartPointSctpIn(dst_port, dst_addr, local_vtag, src_port);
+		LIST_FOREACH(lnk, &la->linkTableSctpIn[start_point], list_sctp_in) {
+			int flags;
+			flags = flags_in | lnk->flags;
+			if (!(flags & LINK_PARTIALLY_SPECIFIED)) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->dst_addr.s_addr == dst_addr.s_addr
+				&& lnk->dst_port == dst_port
+				&& lnk->local_vtag == local_vtag) 
+					lnk_fully_specified = lnk;
+					break;
+			} else if ((flags & LINK_UNKNOWN_DEST_ADDR)
+			&& (flags & LINK_UNKNOWN_DEST_PORT)) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->local_vtag == local_vtag) {
+					if (lnk_unknown_all == NULL)
+						lnk_unknown_all = lnk;
+				}
+			} else if (flags & LINK_UNKNOWN_DEST_ADDR) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->local_vtag == local_vtag
+				&& lnk->dst_port == dst_port) {
+					if (lnk_unknown_dst_addr == NULL)
+						lnk_unknown_dst_addr = lnk;
+				}
+			} else if (flags & LINK_UNKNOWN_DEST_PORT) {
+				if (lnk->alias_addr.s_addr == alias_addr.s_addr
+				&& lnk->src_port == src_port
+				&& lnk->local_vtag == local_vtag
+				&& lnk->dst_addr.s_addr == dst_addr.s_addr) {
+					if (lnk_unknown_dst_port == NULL)
+						lnk_unknown_dst_port = lnk;
+				}
+			}
+		}
+	}
+
+	if (lnk_fully_specified != NULL) {
+		lnk_fully_specified->timestamp = la->timeStamp;
+		lnk = lnk_fully_specified;
+	} else if (lnk_unknown_dst_port != NULL)
+		lnk = lnk_unknown_dst_port;
+	else if (lnk_unknown_dst_addr != NULL)
+		lnk = lnk_unknown_dst_addr;
+	else if (lnk_unknown_all != NULL)
+		lnk = lnk_unknown_all;
+	else
+		return (NULL);
+
+	return (lnk);
+}
+
+static struct alias_link *
+FindLinkInSctp(struct libalias *la, struct in_addr dst_addr,
+    struct in_addr alias_addr,
+    u_short dst_port,
+    u_short src_port,
+    uint32_t global_vtag,
+    uint32_t local_vtag)
+{
+	struct alias_link *lnk;
+
+	if(global_vtag != 0 && local_vtag == 0)				
+		lnk = _FindLinkInSctp(la, dst_addr, alias_addr, dst_port, src_port, global_vtag, 0);
+	else
+		lnk = _FindLinkInSctp(la, dst_addr, alias_addr, dst_port, src_port, 0, local_vtag);
+	
+
+	if (lnk == NULL) {
+		/*
+		 * The following allows permanent links to be specified as
+		 * using the default aliasing address (i.e. device
+		 * interface address) without knowing in advance what that
+		 * address is.
+		 */
+		if (la->aliasAddress.s_addr != INADDR_ANY &&
+		    alias_addr.s_addr == la->aliasAddress.s_addr) {
+
+			if(global_vtag != 0 && local_vtag == 0)
+				lnk = _FindLinkInSctp(la, dst_addr, la->nullAddress, dst_port, src_port, global_vtag, 0);
+			else
+				lnk = _FindLinkInSctp(la, dst_addr, la->nullAddress, dst_port, src_port, 0, local_vtag);
+		}
+	}
+	return (lnk);
+}
 
 
 /* External routines for finding/adding links
@@ -1358,6 +1611,10 @@ FindLinkIn(struct libalias *la, struct in_addr dst_addr,
     AddPptp(), FindPptpOutByCallId(), FindPptpInByCallId(),
     FindPptpOutByPeerCallId(), FindPptpInByPeerCallId()
     FindOriginalAddress(), FindAliasAddress()
+    FindSctpIn(), FindSctpInINIT_ACK(),
+    FindSctpInTBIT(), FindSctpLinkLocalAddr(), 
+    CreateSctpLink()
+    
 
 (prototypes in alias_local.h)
 */
@@ -1595,6 +1852,114 @@ FindUdpTcpOut(struct libalias *la, struct in_addr src_addr,
 	return (lnk);
 }
 
+/* Handle incoming SCTP packets with local V-tag. */
+
+struct alias_link *
+FindSctpIn(struct libalias *la, struct in_addr dst_addr,
+    struct in_addr alias_addr,
+    u_short dst_port,
+    u_short src_port,
+    uint32_t local_vtag)
+{
+	struct alias_link *lnk;
+
+	lnk = FindLinkInSctp(la, dst_addr, alias_addr,
+		dst_port, src_port, 0, local_vtag);
+
+	return (lnk);
+}
+
+/* Mit dieser Routine werden die eingehenden "INIT ACK" SCTP Packete 
+   bahandelt */
+
+struct alias_link *
+FindSctpInINIT_ACK(struct libalias *la, struct in_addr dst_addr,
+    struct in_addr alias_addr,
+    u_short dst_port,
+    u_short src_port,
+    uint32_t local_vtag,
+    uint32_t init_vtag)
+{
+	struct alias_link *lnk;
+
+	lnk = FindLinkInSctp(la, dst_addr, alias_addr,
+		dst_port, src_port, 0, local_vtag);
+	
+/* Nach dem Erfolg des Lookups mit dem lokalen VTAG, wird einen Eintrag in der Tabelle 
+  für die ABORT und SHUTDOWN Packete mit T-BIT gesetzt erstellt */
+
+	if(lnk != NULL) {
+		u_int start_point;
+
+		lnk->global_vtag = init_vtag;
+		start_point = StartPointSctpInTBIT(lnk->global_vtag, lnk->dst_port, lnk->dst_addr, lnk->src_port);
+		LIST_INSERT_HEAD(&la->linkTableSctpInTBIT[start_point], lnk, list_sctp_in_tbit);
+	}
+	return (lnk);
+}
+
+/* Mit der folgenden Funktion werden die eingehenden ABORT und SHUTDOWN SCTP Packeten 
+  mit dem T-BIT gesetzt behandelt */ 
+
+struct alias_link *
+FindSctpInTBIT(struct libalias *la, struct in_addr dst_addr,
+    struct in_addr alias_addr,
+    u_short dst_port,
+    u_short src_port,
+    uint32_t global_vtag)
+{
+	struct alias_link *lnk;
+
+	/* Die ABORT bzw. SHUTDOWN Packete kommen in diesem Fall nicht mit dem lokalen sondern mit dem globalen VTAG */ 
+	lnk = FindLinkInSctp(la, dst_addr, alias_addr,
+		dst_port, src_port, global_vtag, 0);
+
+	return (lnk);
+}
+
+/* Diese Funktion dient dazu die lokale Adresse eines Linkes zurückzugeben */ 
+
+struct in_addr *
+FindSctpLinkLocalAddr(struct libalias *la,
+    struct in_addr src_addr,
+    struct in_addr dst_addr,
+    u_short src_port,
+    u_short dst_port,
+    uint32_t init_vtag)
+{
+ 	struct in_addr alias_addr;
+	struct alias_link *lnk;
+
+	alias_addr = FindAliasAddress(la, src_addr);
+	lnk = FindLinkInSctp(la, dst_addr, alias_addr,
+		dst_port, src_port, 0, init_vtag);
+
+	if(lnk != NULL)
+		return (&lnk->src_addr);
+
+	return (NULL);
+	
+}
+
+/* Mit dieser Funktion, erzeugen wir ein Link für die eingehenden Packete mit lokalem VTAG */
+
+struct alias_link *
+CreateSctpLink(struct libalias *la, struct in_addr src_addr,
+    struct in_addr dst_addr,
+    u_short src_port,
+    u_short dst_port,
+    uint32_t init_vtag)
+{
+	struct alias_link *lnk;
+	struct in_addr alias_addr;
+	
+	alias_addr = FindAliasAddress(la, src_addr);
+	lnk = AddLink(la, src_addr, dst_addr, alias_addr,
+		src_port, dst_port, (int) init_vtag,
+		LINK_SCTP);
+
+	return(lnk);
+}
 
 struct alias_link *
 AddPptp(struct libalias *la, struct in_addr src_addr,
@@ -2187,6 +2552,7 @@ SetDestCallId(struct alias_link *lnk, u_int16_t cid)
     HouseKeeping()
     InitPacketAliasLog()
     UninitPacketAliasLog()
+    CleanSctpLinks()
 */
 
 /*
@@ -2248,6 +2614,36 @@ HouseKeeping(struct libalias *la)
 #endif
 		la->lastCleanupTime = la->timeStamp;
 		la->houseKeepingResidual = 0;
+	}
+}
+
+/* Remove old SCTP Links. */
+
+void
+CleanSctpLinks(struct libalias *la){
+	int icount = 0;
+	struct alias_link *lnk;
+
+	if((la->timeStamp - la->lastSctpCleanupTime) > ALIAS_CLEANUP_INTERVAL_SECS){
+		while(icount != LINK_TABLE_IN_SIZE ){
+			lnk = LIST_FIRST(&la->linkTableSctpIn[icount]);
+			while (lnk != NULL) {
+				int idelta;
+				struct alias_link *link_next;
+		
+				link_next = LIST_NEXT(lnk, list_out);
+				idelta = la->timeStamp - lnk->timestamp;
+	
+				if (idelta > lnk->expire_time) {
+					DeleteLink(lnk);
+					icount++;
+				}
+				break;
+				lnk = link_next;
+			}
+			icount++;
+		}
+		la->lastSctpCleanupTime = la->timeStamp;
 	}
 }
 
@@ -2545,12 +2941,13 @@ LibAliasInit(struct libalias *la)
 
 		for (i = 0; i < LINK_TABLE_OUT_SIZE; i++)
 			LIST_INIT(&la->linkTableOut[i]);
-		for (i = 0; i < LINK_TABLE_IN_SIZE; i++)
+		for (i = 0; i < LINK_TABLE_IN_SIZE; i++) {
 			LIST_INIT(&la->linkTableIn[i]);
-		LIBALIAS_LOCK_INIT(la);
-		LIBALIAS_LOCK(la);
+			LIST_INIT(&la->linkTableSctpIn[i]);
+			LIST_INIT(&la->linkTableSctpInTBIT[i]);
+		}
+
 	} else {
-		LIBALIAS_LOCK(la);
 		la->deleteAllLinks = 1;
 		CleanupAliasData(la);
 		la->deleteAllLinks = 0;
@@ -2562,6 +2959,7 @@ LibAliasInit(struct libalias *la)
 	la->icmpLinkCount = 0;
 	la->udpLinkCount = 0;
 	la->tcpLinkCount = 0;
+	la->sctpLinkCount = 0;
 	la->pptpLinkCount = 0;
 	la->protoLinkCount = 0;
 	la->fragmentIdLinkCount = 0;

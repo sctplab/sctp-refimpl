@@ -280,6 +280,7 @@ struct mbuf    *m_megapullup(struct mbuf *, int);
 #define	PKT_ALIAS_IGNORED		2
 #define	PKT_ALIAS_UNRESOLVED_FRAGMENT	3
 #define	PKT_ALIAS_FOUND_HEADER_FRAGMENT	4
+#define	PKT_ALIAS_SCTP_VTAG_COLLISION 	5
 
 #endif				/* !_ALIAS_H_ */
 

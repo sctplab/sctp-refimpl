@@ -90,10 +90,22 @@ struct libalias {
 	/* into input and output lookup  */
 	/* tables.                       */
 
+	/* Lookup table of pointers to  */
+	/* chains of Sctp link records. */
+
+			LIST_HEAD     (, alias_link) linkTableSctpIn[LINK_TABLE_IN_SIZE];
+
+	/* Lookup table of pointers to  */
+	/* chains of Sctp link records  */
+	/* when the T-BIT is set	*/
+
+			LIST_HEAD     (, alias_link) linkTableSctpInTBIT[LINK_TABLE_IN_SIZE];
+
 	/* Link statistics                 */
 	int		icmpLinkCount;
 	int		udpLinkCount;
 	int		tcpLinkCount;
+	int		sctpLinkCount;
 	int		pptpLinkCount;
 	int		protoLinkCount;
 	int		fragmentIdLinkCount;
@@ -108,6 +120,10 @@ struct libalias {
 
 	int		lastCleanupTime;	/* Last time
 						 * IncrementalCleanup()  */
+	/* was called                      */
+
+	int		lastSctpCleanupTime;	/* Last time
+						 * CleanSctpLinks()  */
 	/* was called                      */
 
 	int		houseKeepingResidual;	/* used by HouseKeeping()          */
@@ -245,6 +261,21 @@ struct alias_link *
 FindUdpTcpOut(struct libalias *la, struct in_addr _src_addr, struct in_addr _dst_addr,
     u_short _src_port, u_short _dst_port, u_char _proto, int _create);
 struct alias_link *
+FindSctpIn(struct libalias *la, struct in_addr _dst_addr, struct in_addr _alias_addr,
+    u_short _dst_port, u_short _src_port, uint32_t _local_vtag);
+struct alias_link *
+FindSctpInINIT_ACK(struct libalias *la, struct in_addr _dst_addr, struct in_addr _alias_addr,
+    u_short _dst_port, u_short _src_port, uint32_t _local_vtag, uint32_t _init_vtag);
+struct alias_link *
+FindSctpInTBIT(struct libalias *la, struct in_addr _dst_addr, struct in_addr _alias_addr, u_short _dst_port,
+    u_short _src_port, uint32_t _global_vtag);
+struct in_addr *
+FindSctpLinkLocalAddr(struct libalias *la, struct in_addr _src_addr, struct in_addr _dst_addr, u_short _src_port, u_short _dst_port, 
+    uint32_t _init_vtag);
+struct alias_link *
+CreateSctpLink(struct libalias *la, struct in_addr _src_addr, struct in_addr _dst_addr,
+    u_short _src_port, u_short _dst_port, uint32_t _init_vtag);
+struct alias_link *
 AddPptp(struct libalias *la, struct in_addr _src_addr, struct in_addr _dst_addr,
     struct in_addr _alias_addr, u_int16_t _src_call_id);
 struct alias_link *
@@ -314,6 +345,8 @@ void		PunchFWHole(struct alias_link *_lnk);
 
 /* Housekeeping function */
 void		HouseKeeping(struct libalias *);
+
+void		CleanSctpLinks(struct libalias *);
 
 /* Tcp specfic routines */
 /* lint -save -library Suppress flexelint warnings */
