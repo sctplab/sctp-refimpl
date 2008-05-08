@@ -1,5 +1,5 @@
 /*
-  $Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.3 2008-05-08 14:10:51 randall Exp $
+  $Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.4 2008-05-08 17:24:25 randall Exp $
  * Copyright (C) 2002 Cisco Systems Inc,
  * All rights reserved.
  *
@@ -28,6 +28,7 @@
  * SUCH DAMAGE.
  */
 
+/* a comment */
 
 #ifndef __HashedTbl_h__
 #define __HashedTbl_h__
