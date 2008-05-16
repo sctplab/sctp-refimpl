@@ -5767,7 +5767,7 @@ sctp_pcb_init()
 #endif
 }
 
-#if defined(__APPLE__) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__) || defined(__FreeBSD__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
@@ -5863,7 +5863,7 @@ sctp_pcb_finish(void)
 	lck_attr_free(sctppcbinfo.mtx_attr);
 #endif
 
-#if defined(__Windows__)
+#if defined(__Windows__) || defined(__FreeBSD__)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_ep);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asoc);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_laddr);
@@ -5873,30 +5873,6 @@ sctp_pcb_finish(void)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf_ack);
 #endif
-
-	/*
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep", sizeof(struct
-	 * sctp_inpcb), maxsockets);
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asoc, "sctp_asoc", sizeof(struct
-	 * sctp_tcb), sctp_max_number_of_assoc);
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_laddr, "sctp_laddr",
-	 * sizeof(struct sctp_laddr), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr", sizeof(struct
-	 * sctp_nets), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_chunk, "sctp_chunk",
-	 * sizeof(struct sctp_tmit_chunk), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address * sctp_chunkscale));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
-	 * sizeof(struct sctp_queued_to_read), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address * sctp_chunkscale));
-	 */
 }
 
 #endif
