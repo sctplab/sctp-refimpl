@@ -35,6 +35,7 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.67 2008/04/16 17:24:18 rrs Exp $");
 #endif
 
+#include <netinet/udp.h>
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
 #include <sys/proc.h>
@@ -3956,6 +3957,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	stcb->asoc.numnets++;
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
+	if (sctp_udp_tunneling_for_client_enable) {
+		net->port = sctp_udp_tunneling_port;
+	} else {
+		net->port = 0;
+	}
 #ifdef INET
 	if (newaddr->sa_family == AF_INET)
 		net->tos_flowlabel = stcb->asoc.default_tos;
@@ -4053,6 +4059,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		}
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
+	}
+	if (net->port) {
+		net->mtu -= sizeof(struct udphdr);
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 

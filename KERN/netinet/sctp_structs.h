@@ -257,7 +257,9 @@ struct sctp_nets {
 	uint16_t failure_threshold;
 	/* error stats on destination */
 	uint16_t error_count;
-
+	/* UDP port number in case of UDP tunneling */
+	uint16_t port;
+	
 	uint8_t fast_retran_loss_recovery;
 	uint8_t will_exit_fast_recovery;
 	/* Flags that probably can be combined into dest_state */
