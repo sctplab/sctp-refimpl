@@ -1,3 +1,4 @@
+- Fix problems around handling of IPv6 scope
 - Fix a bug where the the conversion IPv4 address -> IPv6 address was wrong.
 - Stop the SHUTDOWN-ACK timer on reception of a SHUTDOWN-COMPLETE.
 - Add logging for mbuf.
