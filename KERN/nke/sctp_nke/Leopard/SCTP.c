@@ -40,13 +40,20 @@
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_timer.h>
+#ifdef INET6
 #include <netinet6/sctp6_var.h>
+
+#endif
 #include <netinet/sctp.h>
 
 SYSCTL_DECL(_net_inet);
+#ifdef INET6
 SYSCTL_DECL(_net_inet6);
+#endif
 SYSCTL_NODE(_net_inet, IPPROTO_SCTP,    sctp,   CTLFLAG_RW, 0,  "SCTP")
+#ifdef INET6
 SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6")
+#endif
 
 extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
@@ -105,6 +112,8 @@ extern struct sysctl_oid sysctl__net_inet_sctp_mobility_fasthandoff;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 extern struct sysctl_oid sysctl__net_inet_sctp_log;
 #endif
+extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_for_client_enable;
+extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_port;
 #if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -113,20 +122,28 @@ extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
 extern struct sysctl_oid sysctl__net_inet_sctp_main_timer;
 
 extern struct domain inetdomain;
+#ifdef INET6
 extern struct domain inet6domain;
+#endif
 extern struct protosw *ip_protox[];
+#ifdef INET6
 extern struct protosw *ip6_protox[];
-
+#endif
 extern struct sctp_epinfo sctppcinfo;
 
 struct protosw sctp4_dgram;
 struct protosw sctp4_seqpacket;
 struct protosw sctp4_stream;
+#ifdef INET6
 struct protosw sctp6_dgram;
 struct protosw sctp6_seqpacket;
 struct protosw sctp6_stream;
+#endif
 
-struct protosw *old_pr4, *old_pr6;
+struct protosw *old_pr4;
+#ifdef INET6
+struct protosw *old_pr6;
+#endif
 
 kern_return_t 
 SCTP_start (kmod_info_t * ki, void * d)
@@ -134,14 +151,18 @@ SCTP_start (kmod_info_t * ki, void * d)
 	int err;
 
 	old_pr4  = ip_protox [IPPROTO_SCTP];
+#ifdef INET6
 	old_pr6  = ip6_protox[IPPROTO_SCTP];
-	
+#endif INET6
+
 	bzero(&sctp4_dgram,     sizeof(struct protosw));
 	bzero(&sctp4_seqpacket, sizeof(struct protosw));
 	bzero(&sctp4_stream,    sizeof(struct protosw));
+#ifdef INET6
 	bzero(&sctp6_dgram,     sizeof(struct protosw));
 	bzero(&sctp6_seqpacket, sizeof(struct protosw));
 	bzero(&sctp6_stream,    sizeof(struct protosw));
+#endif
 
 	sctp4_dgram.pr_type          = SOCK_DGRAM;
 	sctp4_dgram.pr_domain        = &inetdomain;
@@ -200,6 +221,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sctp4_stream.pr_unlock       = sctp_unlock;
 	sctp4_stream.pr_getlock      = sctp_getlock;
 
+#ifdef INET6
 	sctp6_dgram.pr_type          = SOCK_DGRAM;
 	sctp6_dgram.pr_domain        = &inet6domain;
 	sctp6_dgram.pr_protocol      = IPPROTO_SCTP;
@@ -256,28 +278,38 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sctp6_stream.pr_lock         = sctp_lock;
 	sctp6_stream.pr_unlock       = sctp_unlock;
 	sctp6_stream.pr_getlock      = sctp_getlock;
+#endif
 
 	lck_mtx_lock(inetdomain.dom_mtx);
+#ifdef INET6
 	lck_mtx_lock(inet6domain.dom_mtx);
+#endif
 
 	err  = net_add_proto(&sctp4_dgram,     &inetdomain);
 	err |= net_add_proto(&sctp4_seqpacket, &inetdomain);
 	err |= net_add_proto(&sctp4_stream,    &inetdomain);
+#ifdef INET6
 	err |= net_add_proto(&sctp6_dgram,     &inet6domain);
 	err |= net_add_proto(&sctp6_seqpacket, &inet6domain);
 	err |= net_add_proto(&sctp6_stream,    &inet6domain);
-
+#endif
 	if (err) {
+#ifdef INET6
 		lck_mtx_unlock(inet6domain.dom_mtx);
+#endif
 		lck_mtx_unlock(inetdomain.dom_mtx);
 		printf("SCTP NKE: Not all protocol handlers could be installed.\n");
 		return KERN_FAILURE;
 	}
 
 	ip_protox[IPPROTO_SCTP]  = &sctp4_dgram;
+#ifdef INET6
 	ip6_protox[IPPROTO_SCTP] = &sctp6_dgram;
+#endif
 
+#ifdef INET6
 	lck_mtx_unlock(inet6domain.dom_mtx);
+#endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
 	
 	sysctl_register_oid(&sysctl__net_inet_sctp);
@@ -338,13 +370,16 @@ SCTP_start (kmod_info_t * ki, void * d)
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	sysctl_register_oid(&sysctl__net_inet_sctp_log);
 #endif
+	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
+	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_stats);
 	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
 	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
-
+	
+	sctp_over_udp_start();
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
 }
@@ -374,6 +409,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 		return KERN_FAILURE;
 	}
+	sctp_over_udp_stop();
 	sctp_stop_main_timer();
 
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
@@ -433,6 +469,8 @@ SCTP_stop (kmod_info_t * ki, void * d)
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_log);
 #endif
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -442,24 +480,32 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
 	lck_mtx_lock(inetdomain.dom_mtx);
+#ifdef INET6
 	lck_mtx_lock(inet6domain.dom_mtx);
+#endif
 
 	ip_protox[IPPROTO_SCTP]  = old_pr4;
+#ifdef INET6
 	ip6_protox[IPPROTO_SCTP] = old_pr6;
+#endif
 
 	err  = net_del_proto(sctp4_dgram.pr_type,     sctp4_dgram.pr_protocol,     &inetdomain);
 	err |= net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, &inetdomain);
 	err |= net_del_proto(sctp4_stream.pr_type,    sctp4_stream.pr_protocol,    &inetdomain);
+#ifdef INET6
 	err |= net_del_proto(sctp6_dgram.pr_type,     sctp6_dgram.pr_protocol,     &inet6domain);
 	err |= net_del_proto(sctp6_seqpacket.pr_type, sctp6_seqpacket.pr_protocol, &inet6domain);
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
+#endif
 
 	/* cleanup */
 	sctp_pcbinfo_cleanup();
 
 	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
 	sctp_finish();
+#ifdef INET6
 	lck_mtx_unlock(inet6domain.dom_mtx);
+#endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
 
 	if (err) {

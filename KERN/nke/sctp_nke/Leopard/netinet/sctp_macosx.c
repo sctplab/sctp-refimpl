@@ -622,6 +622,49 @@ sctp_slowtimo()
 }
 #endif
 
+static void print_address(struct sockaddr *sa)
+{
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+	ushort port = 0;
+	int len = 0;
+	void *src;
+	char str[128];
+	const char *ptr = NULL;
+
+	switch(sa->sa_family) {
+	case AF_INET:
+		sin = (struct sockaddr_in *)sa;
+		src = (void *)&sin->sin_addr.s_addr;
+		port = ntohs(sin->sin_port);
+#ifdef HAVE_SA_LEN
+		len = sa->sa_len;
+#else
+		len = sizeof(*sin);
+#endif
+		break;
+	case AF_INET6:
+		sin6 = (struct sockaddr_in6 *)sa;
+		src = (void *)&sin6->sin6_addr;
+		port = ntohs(sin6->sin6_port);
+#ifdef HAVE_SA_LEN
+		len = sa->sa_len;
+#else
+		len = sizeof(*sin6);
+#endif
+		break;
+	default:
+		/* TSNH: unknown family */
+		printf("[unknown address family %d]", sa->sa_family);
+		return;
+	}
+	ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
+	if (ptr != NULL) 
+		printf("%s:%u", ptr, port);
+	else
+		printf("[cannot display address]:%u", port);
+}
+
 #if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = 0;
 
@@ -641,49 +684,6 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 	    rti_info[i] = NULL;
 	}
     }
-}
-
-static void print_address(struct sockaddr *sa)
-{
-    struct sockaddr_in *sin;
-    struct sockaddr_in6 *sin6;
-    ushort port = 0;
-    int len = 0;
-    void *src;
-    char str[128];
-    const char *ptr = NULL;
-
-    switch(sa->sa_family) {
-    case AF_INET:
-	sin = (struct sockaddr_in *)sa;
-	src = (void *)&sin->sin_addr.s_addr;
-	port = ntohs(sin->sin_port);
-#ifdef HAVE_SA_LEN
-	len = sa->sa_len;
-#else
-	len = sizeof(*sin);
-#endif
-	break;
-    case AF_INET6:
-	sin6 = (struct sockaddr_in6 *)sa;
-	src = (void *)&sin6->sin6_addr;
-	port = ntohs(sin6->sin6_port);
-#ifdef HAVE_SA_LEN
-	len = sa->sa_len;
-#else
-	len = sizeof(*sin6);
-#endif
-	break;
-    default:
-	/* TSNH: unknown family */
-	printf("[unknown address family]");
-	return;
-    }
-    ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
-    if (ptr != NULL) 
-	printf("%s:%u", ptr, port);
-    else
-	printf("[cannot display address]:%u", port);
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
@@ -788,7 +788,7 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
     error = sock_receive(rt_sock, &msg, flags, &length);
     if (error != 0) {
 	printf("Routing socket read error: length %d, errno %d\n",
-	       length, error);
+	       (int)length, error);
 	return;
     }
     if (length == 0) {
@@ -798,7 +798,7 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 
     /* process the routing event */
     rt_msg = (struct rt_msghdr *)rt_buffer;
-    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, length);
+    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, (unsigned int)length);
     switch (rt_msg->rtm_type) {
     case RTM_DELADDR:
     case RTM_NEWADDR:
@@ -839,3 +839,142 @@ void sctp_address_monitor_destroy(void)
 {
 }
 #endif
+
+extern uint32_t sctp_udp_tunneling_port;
+
+static void
+sctp_print_mbuf_chain(mbuf_t m)
+{
+	for(; m; m = SCTP_BUF_NEXT(m)) {
+		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
+		if (SCTP_BUF_IS_EXTENDED(m))
+			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
+	}  
+}
+
+void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
+{
+	errno_t error;
+	size_t length;
+	mbuf_t packet;
+	struct msghdr msg;
+	struct sockaddr_in src, dst;
+	char cmsgbuf[CMSG_SPACE(sizeof (struct in_addr))];
+	struct cmsghdr *cmsg;
+	struct ip *ip;
+	struct mbuf *ip_m;
+	
+	bzero((void *)&msg, sizeof(struct msghdr));
+	bzero((void *)&src, sizeof(struct sockaddr_in));
+	bzero((void *)&dst, sizeof(struct sockaddr_in));
+	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in_addr)));
+	cmsg = (struct cmsghdr *)cmsgbuf;
+	
+	msg.msg_name = (void *)&src;
+	msg.msg_namelen = sizeof(struct sockaddr_in);
+	msg.msg_iov = NULL;
+	msg.msg_iovlen = 0;
+	msg.msg_control = (void *)cmsgbuf;
+	msg.msg_controllen = CMSG_LEN(sizeof (struct in_addr));
+	msg.msg_flags = 0;
+	
+	length = (1<<16);
+	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	if (error) {
+		printf("sock_receivembuf returned error %d.\n", error);
+		return;
+	}
+	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(packet);
+		return;
+	}
+	if ((cmsg->cmsg_level == IPPROTO_IP) &&
+	    (cmsg->cmsg_type == IP_RECVDSTADDR)){
+		dst.sin_family = AF_INET;
+		dst.sin_len = sizeof(struct sockaddr_in);
+		dst.sin_port = htons(sctp_udp_tunneling_port);
+		memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
+	}
+	
+	ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
+	if (ip_m == NULL) {
+		mbuf_freem(packet);
+		return;
+	}
+	ip_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
+	ip = mtod(ip_m, struct ip *);
+	bzero((void *)ip, sizeof(struct ip));
+	ip->ip_v = IPVERSION;
+	ip->ip_len = length;
+	ip->ip_src = src.sin_addr;
+	ip->ip_dst = dst.sin_addr;
+	SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + length;
+	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
+	SCTP_BUF_NEXT(ip_m) = packet;
+
+	/*
+	printf("Received a UDP packet of length %d from ", (int)length);
+	print_address((struct sockaddr *)&src);
+	printf(" to ");
+	print_address((struct sockaddr *)&dst);
+	printf(".\n");
+	printf("packet = \n");
+	sctp_print_mbuf_chain(packet);
+	printf("ip_m = \n");
+	sctp_print_mbuf_chain(ip_m);
+	*/
+	sctp_input_with_port(ip_m, sizeof(struct ip), ntohs(src.sin_port));
+}
+
+socket_t sctp_over_udp_so = 0;
+
+errno_t
+sctp_over_udp_start(void)
+{
+	errno_t error;
+	struct sockaddr_in addr;
+	const int on = 1;
+	
+	if (sctp_over_udp_so != 0) {
+		sock_close(sctp_over_udp_so);
+		sctp_over_udp_so = 0;
+	}
+
+	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_cb, NULL, &sctp_over_udp_so);
+	if (error) {
+		printf("Failed to create SCTP/UDP tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	
+	error = sock_setsockopt(sctp_over_udp_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_so);
+		sctp_over_udp_so = 0;
+		printf("Failed to setsockopt() on SCTP/UDP tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	addr.sin_len         = sizeof(struct sockaddr_in);
+	addr.sin_family      = AF_INET;
+	addr.sin_port	     = htons(sctp_udp_tunneling_port);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
+	error = sock_bind(sctp_over_udp_so, (const struct sockaddr *)&addr);
+	if (error) {
+		sock_close(sctp_over_udp_so);
+		sctp_over_udp_so = 0;
+		printf("Failed to bind SCTP/UDP tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	return (0);
+}
+
+void sctp_over_udp_stop(void)
+{
+	if (sctp_over_udp_so == 0) {
+		return;
+	}
+	sock_close(sctp_over_udp_so);
+	sctp_over_udp_so = 0;
+}
+

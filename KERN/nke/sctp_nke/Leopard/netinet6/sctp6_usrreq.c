@@ -31,9 +31,8 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.42 2007/12/10 16:03:39 obrien Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.43 2008/04/14 18:12:37 rrs Exp $");
 #endif
-#ifdef INET6
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -292,7 +291,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id, 0);
  			goto bad;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
@@ -300,7 +299,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		}
 
 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id);
+			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id, 0);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
@@ -333,7 +332,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 
 	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-				     in6p, stcb, net, ecn_bits, vrf_id);
+				     in6p, stcb, net, ecn_bits, vrf_id, 0);
 	/* inp's ref-count reduced && stcb unlocked */
 	/* XXX this stuff below gets moved to appropriate parts later... */
 	if (m)
@@ -1851,5 +1850,4 @@ sctp6_usrreq(so, req, m, nam, control, p)
 	}
 	return (error);
 }
-#endif
 #endif
