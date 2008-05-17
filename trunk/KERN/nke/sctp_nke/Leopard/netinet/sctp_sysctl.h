@@ -372,6 +372,18 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.13 2007/09/15 19:07:42 rrs
 #define SCTPCTL_MOBILITY_FASTHANDOFF_MAX	1
 #define SCTPCTL_MOBILITY_FASTHANDOFF_DEFAULT	SCTP_DEFAULT_MOBILITY_FASTHANDOFF
 
+/* Enable SCTP/UDP tunneling for clients*/
+#define SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DESC	"Enable SCTP/UDP tunneling for client"
+#define SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MIN	0
+#define SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MAX	1
+#define SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT	SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MIN
+
+/* Enable SCTP/UDP tunneling port */
+#define SCTPCTL_UDP_TUNNELING_PORT_DESC		"Set the SCTP/UDP tunneling port"
+#define SCTPCTL_UDP_TUNNELING_PORT_MIN		0
+#define SCTPCTL_UDP_TUNNELING_PORT_MAX		65535
+#define SCTPCTL_UDP_TUNNELING_PORT_DEFAULT	SCTP_OVER_UDP_TUNNELING_PORT
+
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
@@ -453,6 +465,8 @@ extern uint32_t sctp_mobility_fasthandoff;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 extern struct sctp_log sctp_log;
 #endif
+extern uint32_t sctp_udp_tunneling_for_client_enable;
+extern uint32_t sctp_udp_tunneling_port;
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;
 #endif

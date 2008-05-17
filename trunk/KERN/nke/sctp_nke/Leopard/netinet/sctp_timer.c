@@ -1661,15 +1661,11 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-	uint32_t next_mtu;
-	/* restart the timer in any case */
+	uint32_t next_mtu, mtu;
+
 	next_mtu = sctp_getnext_mtu(inp, net->mtu);
-	if (next_mtu <= net->mtu) {
-		/* nothing to do */
-		return;
-	}
-	{
-		uint32_t mtu;
+
+	if ((next_mtu > net->mtu) && (net->port == 0)) {
 		if ((net->src_addr_selected == 0) ||
 		    (net->ro._s_addr == NULL) ||
 		    (net->ro._s_addr->localifa_flags & SCTP_BEING_DELETED)) {

@@ -35,6 +35,7 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.67 2008/04/16 17:24:18 rrs Exp $");
 #endif
 
+#include <netinet/udp.h>
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
 #include <sys/proc.h>
@@ -3956,6 +3957,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	stcb->asoc.numnets++;
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
+	if (sctp_udp_tunneling_for_client_enable) {
+		net->port = sctp_udp_tunneling_port;
+	} else {
+		net->port = 0;
+	}
 #ifdef INET
 	if (newaddr->sa_family == AF_INET)
 		net->tos_flowlabel = stcb->asoc.default_tos;
@@ -4053,6 +4059,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		}
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
+	}
+	if (net->port) {
+		net->mtu -= sizeof(struct udphdr);
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
@@ -5767,7 +5776,7 @@ sctp_pcb_init()
 #endif
 }
 
-#if defined(__APPLE__) || defined(__Windows__)
+#if defined(__APPLE__) || defined(__Windows__) || defined(__FreeBSD__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
@@ -5863,7 +5872,7 @@ sctp_pcb_finish(void)
 	lck_attr_free(sctppcbinfo.mtx_attr);
 #endif
 
-#if defined(__Windows__)
+#if defined(__Windows__) || defined(__FreeBSD__)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_ep);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asoc);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_laddr);
@@ -5873,30 +5882,6 @@ sctp_pcb_finish(void)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf_ack);
 #endif
-
-	/*
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_ep, "sctp_ep", sizeof(struct
-	 * sctp_inpcb), maxsockets);
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asoc, "sctp_asoc", sizeof(struct
-	 * sctp_tcb), sctp_max_number_of_assoc);
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_laddr, "sctp_laddr",
-	 * sizeof(struct sctp_laddr), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_net, "sctp_raddr", sizeof(struct
-	 * sctp_nets), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_chunk, "sctp_chunk",
-	 * sizeof(struct sctp_tmit_chunk), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address * sctp_chunkscale));
-	 * 
-	 * SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_readq, "sctp_readq",
-	 * sizeof(struct sctp_queued_to_read), (sctp_max_number_of_assoc *
-	 * sctp_scale_up_for_address * sctp_chunkscale));
-	 */
 }
 
 #endif
