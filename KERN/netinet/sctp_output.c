@@ -3926,7 +3926,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_KAME
 				(void)sa6_recoverscope(sin6);
 #else
-				(void)in6_recoverscope(&sin6, &sin6->sin6_addr, NULL);
+				(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 #endif	/* SCTP_KAME */
 #endif	/* SCTP_EMBEDDED_V6_SCOPE */
 				net->src_addr_selected = 1;
@@ -3948,7 +3948,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_KAME
 			(void)sa6_recoverscope(sin6);
 #else
-			(void)in6_recoverscope(&sin6, &sin6->sin6_addr, NULL);
+			(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 #endif	/* SCTP_KAME */
 #endif	/* SCTP_EMBEDDED_V6_SCOPE */
 			if (_lsrc == NULL) {
