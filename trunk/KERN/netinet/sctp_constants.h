@@ -38,6 +38,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.35 2008/04/14 14:33:07 
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
 
+/* IANA assigned port number for SCTP over UDP encapsulation */
+#define SCTP_OVER_UDP_TUNNELING_PORT 9899
+
 /* Number of packets to get before sack sent by default */
 #define SCTP_DEFAULT_SACK_FREQ 2
 

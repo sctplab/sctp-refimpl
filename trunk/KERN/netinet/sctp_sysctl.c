@@ -101,6 +101,8 @@ uint32_t sctp_mobility_fasthandoff = SCTPCTL_MOBILITY_FASTHANDOFF_DEFAULT;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 struct sctp_log sctp_log;
 #endif
+uint32_t sctp_udp_tunneling_for_client_enable = SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT;
+uint32_t sctp_udp_tunneling_port = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
 #ifdef SCTP_DEBUG
 uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 #endif
@@ -512,6 +514,32 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 
 static int
 #if defined (__APPLE__)
+sysctl_sctp_udp_tunneling_check SYSCTL_HANDLER_ARGS
+#else
+sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
+#endif
+{
+	int error;
+	uint32_t old_sctp_udp_tunneling_port;
+
+	old_sctp_udp_tunneling_port = sctp_udp_tunneling_port;
+	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
+	if (error == 0) {
+		RANGECHK(sctp_udp_tunneling_port, SCTPCTL_UDP_TUNNELING_PORT_MIN, SCTPCTL_UDP_TUNNELING_PORT_MAX);
+		if (old_sctp_udp_tunneling_port) {
+			sctp_over_udp_stop();
+		}
+		if (sctp_udp_tunneling_port) {
+			if (sctp_over_udp_start()) {
+				sctp_udp_tunneling_port = 0;
+			}
+		}
+	}
+	return (error);
+}
+
+static int
+#if defined (__APPLE__)
 sysctl_sctp_check SYSCTL_HANDLER_ARGS
 #else
 sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
@@ -582,6 +610,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #if defined(__FreeBSD__) || defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 		RANGECHK(sctp_mobility_fasthandoff, SCTPCTL_MOBILITY_FASTHANDOFF_MIN, SCTPCTL_MOBILITY_FASTHANDOFF_MAX);
 #endif
+		RANGECHK(sctp_udp_tunneling_for_client_enable, SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MIN, SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MAX);
 #ifdef SCTP_DEBUG
 		RANGECHK(sctp_debug_on, SCTPCTL_DEBUG_MIN, SCTPCTL_DEBUG_MAX);
 #endif
@@ -828,6 +857,14 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
 	      "SCTP logging (struct sctp_log)");
 #endif
 
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLTYPE_INT|CTLFLAG_RW,
+	    &sctp_udp_tunneling_for_client_enable, 0, sysctl_sctp_check, "IU",
+	    SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT);
+
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_port, CTLTYPE_INT|CTLFLAG_RW,
+	    &sctp_udp_tunneling_port, 0, sysctl_sctp_udp_tunneling_check, "IU",
+	    SCTPCTL_UDP_TUNNELING_PORT_DEFAULT);
+
 #ifdef SCTP_DEBUG
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,
             &sctp_debug_on, 0, sysctl_sctp_check, "IU",
@@ -836,7 +873,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,
 
 #if defined(__APPLE__)
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
-    &sctp_main_timer, 0, "Main timer interval in ms");
+           &sctp_main_timer, 0, "Main timer interval in ms");
 #endif
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,

@@ -3850,7 +3850,7 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
 void
 sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct mbuf *m, int iphlen, struct sctphdr *sh, struct mbuf *op_err,
-    uint32_t vrf_id)
+    uint32_t vrf_id, uint16_t port)
 {
 	uint32_t vtag;
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -3866,7 +3866,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		vrf_id = stcb->asoc.vrf_id;
 		stcb->asoc.state |= SCTP_STATE_WAS_ABORTED;
 	}
-	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id);
+	sctp_send_abort(m, iphlen, sh, vtag, op_err, vrf_id, port);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4041,7 +4041,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
-    struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id)
+    struct sctp_inpcb *inp, struct mbuf *op_err, uint32_t vrf_id, uint16_t port)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
@@ -4085,7 +4085,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 			 */
 			return;
 		case SCTP_SHUTDOWN_ACK:
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id, port);
 			return;
 		default:
 			break;
@@ -4094,7 +4094,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, offset,
 		    sizeof(*ch), (uint8_t *) & chunk_buf);
 	}
-	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id);
+	sctp_send_abort(m, iphlen, sh, 0, op_err, vrf_id, port);
 }
 
 /*
