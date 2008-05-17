@@ -2686,7 +2686,20 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 {
 	struct sctp_ifa *ifa, *sifa;
 	int num_eligible_addr = 0;
+#ifdef INET6
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+	struct sockaddr_in6 sin6, lsa6;
 
+	if (fam == AF_INET6) {
+		memcpy(&sin6, &ro->ro_dst, sizeof(struct sockaddr_in6));
+#ifdef SCTP_KAME
+		(void)sa6_recoverscope(&sin6);
+#else
+		(void)in6_recoverscope(&sin6, &sin6.sin6_addr, NULL);
+#endif  /* SCTP_KAME */
+	}
+#endif  /* SCTP_EMBEDDED_V6_SCOPE */
+#endif	/* INET6 */
 	LIST_FOREACH(ifa, &ifn->ifalist, next_ifa) {
 		if ((ifa->localifa_flags & SCTP_ADDR_DEFER_USE) &&
 		    (non_asoc_addr_ok == 0)) 
@@ -2695,6 +2708,22 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 						  dest_is_priv, fam);
 		if (sifa == NULL)
 			continue;
+#ifdef INET6
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+		if (fam == AF_INET6) {
+			memcpy(&lsa6, &sifa->address.sin6, sizeof(struct sockaddr_in6));
+#ifdef SCTP_KAME
+			(void)sa6_recoverscope(&lsa6);
+#else
+			(void)in6_recoverscope(&lsa6, &lsa6.sin6_addr, NULL);
+#endif  /* SCTP_KAME */
+			if (sin6.sin6_scope_id != lsa6.sin6_scope_id) {
+				continue;
+			}
+		}
+#endif  /* SCTP_EMBEDDED_V6_SCOPE */
+#endif	/* INET6 */
+
 #if defined(__FreeBSD__) || defined(__APPLE__) 
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted 
@@ -3092,23 +3121,24 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	switch (fam) {
 	case AF_INET:
 		/* Scope based on outbound address */
-		if ((IN4_ISPRIVATE_ADDRESS(&to->sin_addr))) {
-			dest_is_priv = 1;
-		} else if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
+		if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
 			dest_is_loop = 1;
 			if (net != NULL) {
 				/* mark it as local */
 				net->addr_is_local = 1;
 			}
+		} else if ((IN4_ISPRIVATE_ADDRESS(&to->sin_addr))) {
+			dest_is_priv = 1;
 		}
 		break;
 #ifdef INET6
 	case AF_INET6:
 		/* Scope based on outbound address */
-		if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
+		if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr) ||
+		    SCTP_ROUTE_IS_REAL_LOOP(ro)) {
 			/*
-			 * If the route goes to the loopback address OR the
-			 * address is a loopback address, we are loopback
+			 * If the address is a loopback address, which
+			 * consists of "::1" OR "fe80::1%lo0", we are loopback
 			 * scope. But we don't use dest_is_priv (link local
 			 * addresses).
 			 */
@@ -3866,6 +3896,21 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				}
 			}
 			if (net->src_addr_selected == 0) {
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+				sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+				/* KAME hack: embed scopeid */
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+				if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
+#elif defined(SCTP_KAME)
+				if (sa6_embedscope(sin6, ip6_use_defzone) != 0)
+#else
+				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
+#endif
+				{
+					SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
+					return (EINVAL);
+				}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				if (out_of_asoc_ok) {
 					/* do not cache */
 					goto temp_v6_src;
@@ -3877,6 +3922,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 										net, 
 										out_of_asoc_ok, 
 										vrf_id);
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+#ifdef SCTP_KAME
+				(void)sa6_recoverscope(sin6);
+#else
+				(void)in6_recoverscope(&sin6, &sin6->sin6_addr, NULL);
+#endif	/* SCTP_KAME */
+#endif	/* SCTP_EMBEDDED_V6_SCOPE */
 				net->src_addr_selected = 1;
 			}
 			if (net->ro._s_addr == NULL) {
@@ -3892,6 +3944,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 							      net,
 							      out_of_asoc_ok,
 							      vrf_id);
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+#ifdef SCTP_KAME
+			(void)sa6_recoverscope(sin6);
+#else
+			(void)in6_recoverscope(&sin6, &sin6->sin6_addr, NULL);
+#endif	/* SCTP_KAME */
+#endif	/* SCTP_EMBEDDED_V6_SCOPE */
 			if (_lsrc == NULL) {
 				goto no_route;
 			}
@@ -3920,6 +3979,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		lsa6_storage.sin6_len = sizeof(lsa6_storage);
 #endif
 #ifdef SCTP_KAME
+		lsa6_storage.sin6_addr = lsa6->sin6_addr;
 		if ((error = sa6_recoverscope(&lsa6_storage)) != 0) {
 #else
 		if ((error = in6_recoverscope(&lsa6_storage, &lsa6->sin6_addr,
