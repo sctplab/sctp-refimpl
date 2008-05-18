@@ -1674,10 +1674,34 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
 			} else  if (net->ro._s_addr == NULL) {
+#if defined(INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
+				if (net->ro._l_addr.sa.sa_family == AF_INET6) {
+					struct sockaddr *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+					/* KAME hack: embed scopeid */
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+					(void)in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL);
+#elif defined(SCTP_KAME)
+                			(void)sa6_embedscope(sin6, ip6_use_defzone);
+#else
+                			(void)in6_embedscope(&sin6->sin6_addr, sin6);
+#endif
+				}
+#endif
+
 				net->ro._s_addr = sctp_source_address_selection(inp, 
 										stcb,
 										(sctp_route_t *)&net->ro, 
 										net, 0, stcb->asoc.vrf_id);
+#if defined(INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
+				if (net->ro._l_addr.sa.sa_family == AF_INET6) {
+					struct sockaddr *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+#ifdef SCTP_KAME
+					(void)sa6_recoverscope(sin6);
+#else
+					(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+#endif	/* SCTP_KAME */
+				}
+#endif	/* INET6 */
 			}
 			if(net->ro._s_addr)
 				net->src_addr_selected = 1;

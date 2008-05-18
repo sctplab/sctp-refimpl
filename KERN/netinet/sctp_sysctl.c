@@ -859,11 +859,11 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_udp_tunneling_for_client_enable, 0, sysctl_sctp_check, "IU",
-	    SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT);
+	    SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DESC);
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_port, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_udp_tunneling_port, 0, sysctl_sctp_udp_tunneling_check, "IU",
-	    SCTPCTL_UDP_TUNNELING_PORT_DEFAULT);
+	    SCTPCTL_UDP_TUNNELING_PORT_DESC);
 
 #ifdef SCTP_DEBUG
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,

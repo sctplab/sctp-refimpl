@@ -597,7 +597,7 @@ struct sctp_tcb {
 extern struct sctp_epinfo sctppcbinfo;
 
 #ifdef INET6
-int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
+int SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b);
 #endif
 
 void sctp_fill_pcbinfo(struct sctp_pcbinfo *);

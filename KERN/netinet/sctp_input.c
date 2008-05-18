@@ -35,7 +35,6 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.69 2008/04/16 17:24:18 rrs Exp $");
 #endif
 
-#include <netinet/udp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.69 2008/04/16 17:24:18 rrs 
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/udp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2

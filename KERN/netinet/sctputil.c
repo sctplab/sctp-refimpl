@@ -4239,8 +4239,8 @@ sctp_cmpaddr(struct sockaddr *sa1, struct sockaddr *sa2)
 
 		sin6_1 = (struct sockaddr_in6 *)sa1;
 		sin6_2 = (struct sockaddr_in6 *)sa2;
-		return (SCTP6_ARE_ADDR_EQUAL(&sin6_1->sin6_addr,
-		    &sin6_2->sin6_addr));
+		return (SCTP6_ARE_ADDR_EQUAL(sin6_1,
+		    sin6_2));
 	}
 #endif
 	case AF_INET:
@@ -4946,8 +4946,8 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 		}
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &laddr->ifa->address.sin6.sin6_addr)) {
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
+						 &laddr->ifa->address.sin6)) {
 				/* found him. */
 				if (holds_lock == 0) {
 					SCTP_INP_RUNLOCK(inp);
@@ -5042,8 +5042,8 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 		}
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &sctp_ifap->address.sin6.sin6_addr)) {
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
+						 &sctp_ifap->address.sin6)) {
 				/* found him. */
 				if (holds_lock == 0)
 					SCTP_IPI_ADDR_RUNLOCK();
