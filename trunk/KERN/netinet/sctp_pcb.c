@@ -35,7 +35,6 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.67 2008/04/16 17:24:18 rrs Exp $");
 #endif
 
-#include <netinet/udp.h>
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
 #include <sys/proc.h>
@@ -50,6 +49,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.67 2008/04/16 17:24:18 rrs Ex
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/udp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 4
@@ -61,17 +61,46 @@ struct sctp_epinfo sctppcbinfo;
 /* "scopeless" replacement IN6_ARE_ADDR_EQUAL */
 #ifdef INET6
 int
-SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b)
+SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 {
 #ifdef SCTP_EMBEDDED_V6_SCOPE
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 	struct in6_addr tmp_a, tmp_b;
 
-	/* use a copy of a and b */
-	tmp_a = *a;
-	tmp_b = *b;
-	in6_clearscope(&tmp_a);
-	in6_clearscope(&tmp_b);
+	tmp_a = a->sin6_addr;
+	if (in6_embedscope(&tmp_a, a, NULL, NULL) != 0) {
+		return 0;
+	}
+	tmp_b = b->sin6_addr;
+	if (in6_embedscope(&tmp_b, b, NULL, NULL) != 0) {
+		return 0;
+	}
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
+#elif defined(SCTP_KAME)
+	struct sockaddr_in6 tmp_a, tmp_b;
+
+	memcpy(&tmp_a, a, sizeof(struct sockaddr_in6));
+	if (sa6_embedscope(&tmp_a, ip6_use_defzone) != 0) {
+		return 0;
+	}
+	memcpy(&tmp_b, b, sizeof(struct sockaddr_in6));
+	if (sa6_embedscope(&tmp_b, ip6_use_defzone) != 0) {
+		return 0;
+	}
+	return (IN6_ARE_ADDR_EQUAL(&tmp_a.sin6_addr, &tmp_b.sin6_addr));
+#else
+	struct in6_addr tmp_a, tmp_b;
+
+	tmp_a = a->sin6_addr;
+	if (in6_embedscope(&tmp_a, a) != 0) {
+		return 0;
+	}
+	tmp_b = b->sin6_addr;
+	if (in6_embedscope(&tmp_b, b) != 0) {
+		return 0;
+	}
+	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
+#endif
 #else
 	/* FIX ME: we just #define this */
 	return (IN6_ARE_ADDR_EQUAL(a, b));
@@ -942,8 +971,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						    to;
 						intf_addr6 = &laddr->ifa->address.sin6;
 
-						if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-						    &intf_addr6->sin6_addr)) {
+						if (SCTP6_ARE_ADDR_EQUAL(sin6,
+						    intf_addr6)) {
 							match = 1;
 							break;
 						}
@@ -1013,8 +1042,8 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 
 				sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 				rsin6 = (struct sockaddr_in6 *)from;
-				if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-				    &rsin6->sin6_addr)) {
+				if (SCTP6_ARE_ADDR_EQUAL(sin6,
+				    rsin6)) {
 					/* found it */
 					if (netp != NULL) {
 						*netp = net;
@@ -1192,8 +1221,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 
 					sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
-					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-					    &rsin6->sin6_addr)) {
+					if (SCTP6_ARE_ADDR_EQUAL(sin6,
+					    rsin6)) {
 						/* found it */
 						if (netp != NULL) {
 							*netp = net;
@@ -1288,8 +1317,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 					sin6 = (struct sockaddr_in6 *)
 					    &net->ro._l_addr;
 					rsin6 = (struct sockaddr_in6 *)remote;
-					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-					    &rsin6->sin6_addr)) {
+					if (SCTP6_ARE_ADDR_EQUAL(sin6,
+					    rsin6)) {
 						/* found it */
 						if (netp != NULL) {
 							*netp = net;
@@ -1595,8 +1624,8 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #ifdef INET6
 				case AF_INET6:
 					intf_addr6 = &laddr->ifa->address.sin6;
-					if (SCTP6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
-					    &intf_addr6->sin6_addr)) {
+					if (SCTP6_ARE_ADDR_EQUAL(sin6,
+					    intf_addr6)) {
 						SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
@@ -3999,20 +4028,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 	SCTP_RTALLOC((sctp_route_t *)&net->ro, stcb->asoc.vrf_id);
 
-#ifdef INET6
-#ifdef SCTP_EMBEDDED_V6_SCOPE
-	if (newaddr->sa_family == AF_INET6) {
-		struct sockaddr_in6 *sin6;
-
-		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
-#ifdef SCTP_KAME
-		(void)sa6_recoverscope(sin6);
-#else
-		(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
-#endif /* SCTP_KAME */
-	}
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
-#endif
 	if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro)) {
 		/* Get source address */
 		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
@@ -4060,6 +4075,20 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	} else {
 		net->mtu = stcb->asoc.smallest_mtu;
 	}
+#ifdef INET6
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+	if (newaddr->sa_family == AF_INET6) {
+		struct sockaddr_in6 *sin6;
+
+		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+#ifdef SCTP_KAME
+		(void)sa6_recoverscope(sin6);
+#else
+		(void)in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
+#endif /* SCTP_KAME */
+	}
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
+#endif
 	if (net->port) {
 		net->mtu -= sizeof(struct udphdr);
 	}

@@ -2236,7 +2236,7 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 			SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:1\n");
 			return (NULL);
 		}
-		if (ifa->src_is_priv) {
+		if (ifa->src_is_priv && !ifa->src_is_loop) {
 			if (dest_is_loop) {
 				SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:2\n");
 				return (NULL);
@@ -2710,7 +2710,10 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 			continue;
 #ifdef INET6
 #ifdef SCTP_EMBEDDED_V6_SCOPE
-		if (fam == AF_INET6) {
+		if (fam == AF_INET6 &&
+		    IN6_IS_ADDR_LINKLOCAL(&sifa->address.sin6.sin6_addr) &&
+		    IN6_IS_ADDR_LINKLOCAL(&sin6.sin6_addr)) {
+			/* link-local <-> link-local must belong to the same scope. */
 			memcpy(&lsa6, &sifa->address.sin6, sizeof(struct sockaddr_in6));
 #ifdef SCTP_KAME
 			(void)sa6_recoverscope(&lsa6);
@@ -4825,8 +4828,8 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 #ifdef INET6
 			if (sa->sa_family == AF_INET6) {
 				sa6 = (struct sockaddr_in6 *)sa;
-				if (SCTP6_ARE_ADDR_EQUAL(&sa6->sin6_addr,
-				    &sin6.sin6_addr)) {
+				if (SCTP6_ARE_ADDR_EQUAL(sa6,
+				    &sin6)) {
 					fnd = 1;
 					break;
 				}
@@ -4895,7 +4898,7 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 				if (sa->sa_family == AF_INET6) {
 					sa6 = (struct sockaddr_in6 *)sa;
 					if (SCTP6_ARE_ADDR_EQUAL(
-					    &sa6->sin6_addr, &sin6.sin6_addr)) {
+					    sa6, &sin6)) {
 						fnd = 1;
 						break;
 					}
@@ -5122,6 +5125,26 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			stc.addr_type = SCTP_IPV6_ADDRESS;
 			stc.scope_id = 0;
 			if (sctp_is_address_on_local_host((struct sockaddr *)sin6, vrf_id)) {
+#ifdef SCTP_EMBEDDED_V6_SCOPE
+#ifndef SCTP_KAME
+				(void)in6_recoverscope(sin6, &ip6->ip6_src,
+						       SCTP_BUF_RECVIF(init_pkt));
+#else
+				/* FIX ME: does this have scope from rcvif? */
+				(void)sa6_recoverscope(sin6);
+#endif /* not SCTP_KAME */
+				stc.scope_id = sin6->sin6_scope_id;
+#if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
+					       NULL);
+#elif defined(SCTP_KAME)
+				sa6_embedscope(sin6, ip6_use_defzone);
+#else
+				in6_embedscope(&sin6->sin6_addr, sin6);
+#endif
+#else
+				stc.scope_id = sin6->sin6_scope_id;
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				stc.loopback_scope = 1;
 				stc.local_scope = 0;
 				stc.site_scope = 1;
@@ -5155,7 +5178,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* FIX ME: does this have scope from rcvif? */
 				(void)sa6_recoverscope(sin6);
 #endif /* not SCTP_KAME */
-
+				stc.scope_id = sin6->sin6_scope_id;
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
@@ -5165,9 +5188,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
 #else
-
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				stc.scope_id = sin6->sin6_scope_id;
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 			} else if (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr)) {
 				/*
 				 * If the new destination is SITE_LOCAL then
