@@ -3958,7 +3958,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
 	if (sctp_udp_tunneling_for_client_enable) {
-		net->port = sctp_udp_tunneling_port;
+		net->port = htons(sctp_udp_tunneling_port);
 	} else {
 		net->port = 0;
 	}

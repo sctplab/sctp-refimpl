@@ -923,7 +923,7 @@ void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
 	printf("ip_m = \n");
 	sctp_print_mbuf_chain(ip_m);
 	*/
-	sctp_input_with_port(ip_m, sizeof(struct ip), ntohs(src.sin_port));
+	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
 }
 
 socket_t sctp_over_udp_so = 0;
