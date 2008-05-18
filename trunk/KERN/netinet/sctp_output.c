@@ -3624,7 +3624,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (port) {
 			udp = (struct udphdr *)(ip + 1);
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
-			udp->uh_dport = htons(port);
+			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
 			udp->uh_sum = 0;
 		}
@@ -4000,7 +4000,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (port) {
 			udp = (struct udphdr *)(ip6h + 1);
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
-			udp->uh_dport = htons(port);
+			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip6_hdr));	
 			udp->uh_sum = 0;
 		}
@@ -10132,7 +10132,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	if (port) {
 		udp = (struct udphdr *)comp_cp;
 		udp->uh_sport = htons(sctp_udp_tunneling_port);
-		udp->uh_dport = htons(port);
+		udp->uh_dport = port;
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
 		udp->uh_sum = 0;
 		offset_out += sizeof(struct udphdr);
@@ -11108,7 +11108,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	udp = (struct udphdr *)abm;
 	if (port) {
 		udp->uh_sport = htons(sctp_udp_tunneling_port);
-		udp->uh_dport = htons(port);
+		udp->uh_dport = port;
 		/* set udp->uh_ulen later */	
 		udp->uh_sum = 0;
 		iphlen_out += sizeof(struct udphdr);
@@ -11348,7 +11348,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		if (port) {
 			udp = (struct udphdr *)(out+1);
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
-			udp->uh_dport = htons(port);
+			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 			udp->uh_sum = 0;
 		}
@@ -11404,7 +11404,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		if (port) {
 			udp = (struct udphdr *)(out6+1);
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
-			udp->uh_dport = htons(port);
+			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 			udp->uh_sum = 0;
 		}
