@@ -449,7 +449,7 @@ struct sctp_inpcb {
 #endif
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 #ifndef INP_IPV6
 #define INP_IPV6	0x1
 #endif

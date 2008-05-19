@@ -642,7 +642,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	SCTP_INP_WLOCK(inp);
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUND_V6;	/* I'm not v6! */
 	ip_inp = &inp->ip_inp.inp;
-#if defined(__FreeBSD__) || defined(__APPLE__) 
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	ip_inp->inp_vflag |= INP_IPV4;
 	ip_inp->inp_ip_ttl = ip_defttl;
 #else
@@ -4493,16 +4493,12 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	}
 	if (sopt->sopt_level != IPPROTO_SCTP) {
 		/* wrong proto level... send back up to IP */
-#if defined(__Windows__)
-		error = ENOPROTOOPT;
-#else
 #ifdef INET6
 		if (INP_CHECK_SOCKAF(so, AF_INET6))
 			error = ip6_ctloutput(so, sopt);
 		else
 #endif				/* INET6 */
 			error = ip_ctloutput(so, sopt);
-#endif
 		return (error);
 	}
 	optsize = sopt->sopt_valsize;

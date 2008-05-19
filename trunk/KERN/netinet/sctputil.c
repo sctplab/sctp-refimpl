@@ -901,7 +901,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_pf = (uint8_t) sctp_cmt_pf;
 	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #else
 	asoc->default_tos = m->inp_ip_tos;
@@ -6625,7 +6625,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
-#if !defined(__Panda__)            
+#if !(defined(__Panda__) || defined(__Windows__))
 		if (p == NULL) {
 			/* Can't get proc for Net/Open BSD */
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
