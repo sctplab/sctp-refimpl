@@ -35,7 +35,6 @@
 __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.69 2008/04/16 17:24:18 rrs Exp $");
 #endif
 
-#include <netinet/udp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
@@ -49,6 +48,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.69 2008/04/16 17:24:18 rrs 
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/udp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -1638,6 +1638,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
+		asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
@@ -1885,6 +1886,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 	asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
+	asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
 	asoc->str_reset_seq_in = asoc->init_seq_number;

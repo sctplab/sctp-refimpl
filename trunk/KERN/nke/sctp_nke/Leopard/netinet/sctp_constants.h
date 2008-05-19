@@ -275,6 +275,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.35 2008/04/14 14:33:07 
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
 
+/* default MULTIPLE_ASCONF mode enable(1)/disable(0) value (sysctl) */
+#define SCTP_DEFAULT_MULTIPLE_ASCONFS	0
+
 /* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
 #if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
 #define SCTP_DEFAULT_MOBILITY_BASE      0

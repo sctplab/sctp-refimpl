@@ -88,6 +88,8 @@ extern void
 sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 #endif
 
+extern int
+sctp_is_addr_pending(struct sctp_tcb *, struct sctp_ifa *);
 #endif				/* _KERNEL */
 
 #endif				/* !_NETINET_SCTP_ASCONF_H_ */
