@@ -3088,6 +3088,11 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
+		if (sctp_multiple_asconfs == 0) {
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_MULTIPLE_ASCONFS);
+		} else {
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_MULTIPLE_ASCONFS);
+		}
 		/* set the automatic mobility_base from kernel 
 		   flag (by micchie) 
 		*/
@@ -5065,6 +5070,30 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
   ccnt = 0;
   }
 */
+
+	/* ASCONF queue MAY not be empty */
+	if (!TAILQ_EMPTY(&asoc->asconf_send_queue)) {
+		chk = TAILQ_FIRST(&asoc->asconf_send_queue);
+		while (chk) {
+			TAILQ_REMOVE(&asoc->asconf_send_queue, chk, sctp_next);
+			if (chk->data) {
+				sctp_m_freem(chk->data);
+				chk->data = NULL;
+			}
+			ccnt++;
+			sctp_free_remote_addr(chk->whoTo);
+			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, chk);
+			SCTP_DECR_CHK_COUNT();
+            /*sa_ignore FREED_MEMORY*/
+			chk = TAILQ_FIRST(&asoc->asconf_send_queue);
+		}
+	}
+/*
+  if(ccnt) {
+  printf("Freed %d from asconf_queue\n", ccnt);
+  ccnt = 0;
+  }
+*/
 	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
@@ -5723,6 +5752,10 @@ sctp_pcb_init()
 	    sizeof(struct sctp_stream_queue_pending),
 	    (sctp_max_number_of_assoc * sctp_chunkscale));
 
+	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asconf, "sctp_asconf",
+	    sizeof(struct sctp_asconf),
+	    (sctp_max_number_of_assoc * sctp_chunkscale));
+
 	SCTP_ZONE_INIT(sctppcbinfo.ipi_zone_asconf_ack, "sctp_asconf_ack",
 	    sizeof(struct sctp_asconf_ack),
 	    (sctp_max_number_of_assoc * sctp_chunkscale));
@@ -5911,6 +5944,7 @@ sctp_pcb_finish(void)
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_chunk);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_readq);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_strmoq);
+	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf);
 	SCTP_ZONE_DESTROY(sctppcbinfo.ipi_zone_asconf_ack);
 #endif
 }

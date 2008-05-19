@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.17 2008/04/16 17:24:18 rrs
 uint32_t sctp_sendspace = SCTPCTL_MAXDGRAM_DEFAULT;
 uint32_t sctp_recvspace = SCTPCTL_RECVSPACE_DEFAULT;
 uint32_t sctp_auto_asconf = SCTPCTL_AUTOASCONF_DEFAULT;
+uint32_t sctp_multiple_asconfs = SCTPCTL_MULTIPLEASCONFS_DEFAULT;
 uint32_t sctp_ecn_enable = SCTPCTL_ECN_ENABLE_DEFAULT;
 uint32_t sctp_ecn_nonce = SCTPCTL_ECN_NONCE_DEFAULT;
 uint32_t sctp_strict_sacks = SCTPCTL_STRICT_SACKS_DEFAULT;

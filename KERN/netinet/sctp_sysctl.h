@@ -60,6 +60,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.13 2007/09/15 19:07:42 rrs
 #define SCTPCTL_AUTOASCONF_MAX		1
 #define SCTPCTL_AUTOASCONF_DEFAULT	SCTP_DEFAULT_AUTO_ASCONF
 
+/* autoasconf: Enable SCTP Auto-ASCONF */
+#define SCTPCTL_MULTIPLEASCONFS_DESC	"Enable SCTP Muliple-ASCONFs"
+#define SCTPCTL_MULTIPLEASCONFS_MIN	0
+#define SCTPCTL_MULTIPLEASCONFS_MAX	1
+#define SCTPCTL_MULTIPLEASCONFS_DEFAULT	SCTP_DEFAULT_MULTIPLE_ASCONFS
+
 /* ecn_enable: Enable SCTP ECN */
 #define SCTPCTL_ECN_ENABLE_DESC		"Enable SCTP ECN"
 #define SCTPCTL_ECN_ENABLE_MIN		0
@@ -408,6 +414,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.13 2007/09/15 19:07:42 rrs
 extern uint32_t sctp_sendspace;
 extern uint32_t sctp_recvspace;
 extern uint32_t sctp_auto_asconf;
+extern uint32_t sctp_multiple_asconfs;
 extern uint32_t sctp_ecn_enable;
 extern uint32_t sctp_ecn_nonce;
 extern uint32_t sctp_strict_sacks;
