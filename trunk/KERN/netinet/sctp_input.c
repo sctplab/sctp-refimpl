@@ -1638,6 +1638,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			ntohs(initack_cp->init.num_outbound_streams);
 		asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 		asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
+		asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 
 		asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 		asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
@@ -1885,6 +1886,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
 	asoc->sending_seq = asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number;
+	asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->asconf_seq_in = asoc->last_acked_seq = asoc->init_seq_number - 1;
 	asoc->str_reset_seq_in = asoc->init_seq_number;
