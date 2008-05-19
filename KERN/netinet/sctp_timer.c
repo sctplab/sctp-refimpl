@@ -1676,7 +1676,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 			} else  if (net->ro._s_addr == NULL) {
 #if defined(INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
 				if (net->ro._l_addr.sa.sa_family == AF_INET6) {
-					struct sockaddr *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+					struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 					/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 					(void)in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL);
@@ -1694,7 +1694,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 										net, 0, stcb->asoc.vrf_id);
 #if defined(INET6) && defined(SCTP_EMBEDDED_V6_SCOPE)
 				if (net->ro._l_addr.sa.sa_family == AF_INET6) {
-					struct sockaddr *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+					struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 #ifdef SCTP_KAME
 					(void)sa6_recoverscope(sin6);
 #else
