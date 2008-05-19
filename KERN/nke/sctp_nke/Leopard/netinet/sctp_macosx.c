@@ -89,6 +89,7 @@ extern struct fileops socketops;
 #include <sys/file_internal.h>
 #if defined(APPLE_LEOPARD)
 #define CONFIG_MACF_SOCKET_SUBSET 1
+#include <sys/namei.h>
 #include <sys/vnode_internal.h>
 #if CONFIG_MACF_SOCKET_SUBSET
 #include <security/mac_framework.h>
@@ -666,7 +667,7 @@ static void print_address(struct sockaddr *sa)
 }
 
 #if defined(SCTP_APPLE_AUTO_ASCONF)
-socket_t sctp_address_monitor_so = 0;
+socket_t sctp_address_monitor_so = NULL;
 
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
 #define NEXT_SA(sa) sa = (struct sockaddr *) \
@@ -675,15 +676,15 @@ socket_t sctp_address_monitor_so = 0;
 static void
 sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 {
-    int i;
-    for (i = 0; i < RTAX_MAX; i++) {
-	if (addrs & (1 << i)) {
-	    rti_info[i] = sa;
-	    NEXT_SA(sa);
-	} else {
-	    rti_info[i] = NULL;
+	int i;
+	for (i = 0; i < RTAX_MAX; i++) {
+		if (addrs & (1 << i)) {
+			rti_info[i] = sa;
+			NEXT_SA(sa);
+		} else {
+			rti_info[i] = NULL;
+		}
 	}
-    }
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
@@ -737,8 +738,8 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 #if defined(INET6)
 	if (ifa->ifa_addr->sa_family == AF_INET6) {
-	    if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)sa)->sin6_addr, 
-				     &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+	    if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa, 
+				     (struct sockaddr_in6 *)ifa->ifa_addr)) {
 		found_ifa = ifa;
 		break;
 	    }
@@ -768,75 +769,79 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 {
-    struct msghdr msg;
-    struct iovec iov;
-    int flags;
-    size_t length;
-    errno_t error;
-    struct rt_msghdr *rt_msg;
-    char rt_buffer[1024];
+	struct msghdr msg;
+	struct iovec iov;
+	size_t length;
+	errno_t error;
+	struct rt_msghdr *rt_msg;
+	char rt_buffer[1024];
 
-    /* setup the receive iovec and msghdr */
-    iov.iov_base = rt_buffer;
-    iov.iov_len = sizeof(rt_buffer);
-    bzero(&msg, sizeof(msg));
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    flags = 0;
-    length = 0;
-    /* read the routing socket */
-    error = sock_receive(rt_sock, &msg, flags, &length);
-    if (error != 0) {
-	printf("Routing socket read error: length %d, errno %d\n",
-	       (int)length, error);
-	return;
-    }
-    if (length == 0) {
-	printf("Routing socket closed.\n");
-	return;
-    }
+	/* setup the receive iovec and msghdr */
+	iov.iov_base = rt_buffer;
+	iov.iov_len = sizeof(rt_buffer);
+	bzero(&msg, sizeof(msg));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	length = 0;
+	/* read the routing socket */
+	error = sock_receive(rt_sock, &msg, 0, &length);
+	if (error) {
+		printf("Routing socket read error: length %d, errno %d\n", (int)length, error);
+		return;
+	}
+	if (length == 0) {
+		printf("Routing socket closed.\n");
+		return;
+	}
 
-    /* process the routing event */
-    rt_msg = (struct rt_msghdr *)rt_buffer;
-    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, (unsigned int)length);
-    switch (rt_msg->rtm_type) {
-    case RTM_DELADDR:
-    case RTM_NEWADDR:
-	sctp_handle_ifamsg((struct ifa_msghdr *)rt_buffer);
-	break;
-    default:
-	/* ignore this routing event */
-	break;
-    }
+	/* process the routing event */
+	rt_msg = (struct rt_msghdr *)rt_buffer;
+	/*
+	printf("Got routing event 0x%x, %d bytes\n", rt_msg->rtm_type, (int)length);
+	*/
+	switch (rt_msg->rtm_type) {
+	case RTM_DELADDR:
+	case RTM_NEWADDR:
+		sctp_handle_ifamsg((struct ifa_msghdr *)rt_buffer);
+		break;
+	default:
+		/* ignore this routing event */
+		break;
+	}
 }
 
 void sctp_address_monitor_start(void)
 {
-    errno_t error;
+	errno_t error;
 
-    /* open an in kernel routing socket client */
-    error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb,
-			NULL, &sctp_address_monitor_so);
-    if (error < 0) {
-	printf("Failed to create routing socket\n");
-	/* FIX ME: try again later?? */
-    }
+	if (sctp_address_monitor_so) {
+		sock_close(sctp_address_monitor_so);
+		sctp_address_monitor_so = NULL;
+	}
+
+	error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb, NULL, &sctp_address_monitor_so);
+	if (error) {
+		printf("Failed to create routing socket\n");
+	}
 }
 
 void sctp_address_monitor_destroy(void)
 {
-    if (sctp_address_monitor_so != NULL) {
-	sock_close(sctp_address_monitor_so);
-	sctp_address_monitor_so = 0;
-    }
+	if (sctp_address_monitor_so) {
+		sock_close(sctp_address_monitor_so);
+		sctp_address_monitor_so = NULL;
+	}
+	return;
 }
 #else
 void sctp_address_monitor_start(void)
 {
+	return;
 }
 
 void sctp_address_monitor_destroy(void)
 {
+	return;
 }
 #endif
 
@@ -889,7 +894,7 @@ void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
 		return;
 	}
 	if ((cmsg->cmsg_level == IPPROTO_IP) &&
-	    (cmsg->cmsg_type == IP_RECVDSTADDR)){
+	    (cmsg->cmsg_type == IP_RECVDSTADDR)) {
 		dst.sin_family = AF_INET;
 		dst.sin_len = sizeof(struct sockaddr_in);
 		dst.sin_port = htons(sctp_udp_tunneling_port);
@@ -926,7 +931,7 @@ void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
 	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
 }
 
-socket_t sctp_over_udp_so = 0;
+socket_t sctp_over_udp_so = NULL;
 
 errno_t
 sctp_over_udp_start(void)
@@ -935,9 +940,9 @@ sctp_over_udp_start(void)
 	struct sockaddr_in addr;
 	const int on = 1;
 	
-	if (sctp_over_udp_so != 0) {
+	if (sctp_over_udp_so) {
 		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = 0;
+		sctp_over_udp_so = NULL;
 	}
 
 	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_cb, NULL, &sctp_over_udp_so);
@@ -949,7 +954,7 @@ sctp_over_udp_start(void)
 	error = sock_setsockopt(sctp_over_udp_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
 	if (error) {
 		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = 0;
+		sctp_over_udp_so = NULL;
 		printf("Failed to setsockopt() on SCTP/UDP tunneling socket: errno = %d.\n", error);
 		return error;
 	}
@@ -957,12 +962,12 @@ sctp_over_udp_start(void)
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_len         = sizeof(struct sockaddr_in);
 	addr.sin_family      = AF_INET;
-	addr.sin_port	     = htons(sctp_udp_tunneling_port);
+	addr.sin_port        = htons(sctp_udp_tunneling_port);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	error = sock_bind(sctp_over_udp_so, (const struct sockaddr *)&addr);
 	if (error) {
 		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = 0;
+		sctp_over_udp_so = NULL;
 		printf("Failed to bind SCTP/UDP tunneling socket: errno = %d.\n", error);
 		return error;
 	}
@@ -971,10 +976,10 @@ sctp_over_udp_start(void)
 
 void sctp_over_udp_stop(void)
 {
-	if (sctp_over_udp_so == 0) {
-		return;
+	if (sctp_over_udp_so) {
+		sock_close(sctp_over_udp_so);
+		sctp_over_udp_so = NULL;
 	}
-	sock_close(sctp_over_udp_so);
-	sctp_over_udp_so = 0;
+	return;
 }
 

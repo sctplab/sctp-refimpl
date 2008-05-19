@@ -901,7 +901,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_pf = (uint8_t) sctp_cmt_pf;
 	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #else
 	asoc->default_tos = m->inp_ip_tos;
@@ -960,6 +960,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 	    sctp_select_initial_TSN(&m->sctp_ep);
+	asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 	/* we are optimisitic here */
 	asoc->peer_supports_pktdrop = 1;
 
@@ -1155,6 +1156,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	TAILQ_INIT(&asoc->free_chunks);
 	TAILQ_INIT(&asoc->out_wheel);
 	TAILQ_INIT(&asoc->control_send_queue);
+	TAILQ_INIT(&asoc->asconf_send_queue);
 	TAILQ_INIT(&asoc->send_queue);
 	TAILQ_INIT(&asoc->sent_queue);
 	TAILQ_INIT(&asoc->reasmqueue);
@@ -4239,8 +4241,8 @@ sctp_cmpaddr(struct sockaddr *sa1, struct sockaddr *sa2)
 
 		sin6_1 = (struct sockaddr_in6 *)sa1;
 		sin6_2 = (struct sockaddr_in6 *)sa2;
-		return (SCTP6_ARE_ADDR_EQUAL(&sin6_1->sin6_addr,
-		    &sin6_2->sin6_addr));
+		return (SCTP6_ARE_ADDR_EQUAL(sin6_1,
+		    sin6_2));
 	}
 #endif
 	case AF_INET:
@@ -4946,8 +4948,8 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 		}
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &laddr->ifa->address.sin6.sin6_addr)) {
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
+						 &laddr->ifa->address.sin6)) {
 				/* found him. */
 				if (holds_lock == 0) {
 					SCTP_INP_RUNLOCK(inp);
@@ -5042,8 +5044,8 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 		}
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
-			if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)addr)->sin6_addr,
-						 &sctp_ifap->address.sin6.sin6_addr)) {
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
+						 &sctp_ifap->address.sin6)) {
 				/* found him. */
 				if (holds_lock == 0)
 					SCTP_IPI_ADDR_RUNLOCK();
@@ -6625,7 +6627,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
-#if !defined(__Panda__)            
+#if !(defined(__Panda__) || defined(__Windows__))
 		if (p == NULL) {
 			/* Can't get proc for Net/Open BSD */
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);

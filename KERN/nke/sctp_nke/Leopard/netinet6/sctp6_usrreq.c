@@ -842,12 +842,12 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	inp->sctp_flags |= SCTP_PCB_FLAGS_BOUND_V6;	/* I'm v6! */
 	inp6 = (struct in6pcb *)inp;
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	inp6->inp_vflag |= INP_IPV6;
 #else
 	inp->inp_vflag |= INP_IPV6;
 #endif
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !defined(__Panda__)
 	inp6->in6p_hops = -1;	/* use kernel default */
 	inp6->in6p_cksum = -1;	/* just to be sure */
 #endif
@@ -857,7 +857,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	 * socket as well, because the socket may be bound to an IPv6
 	 * wildcard address, which may match an IPv4-mapped IPv6 address.
 	 */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	inp6->inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -919,7 +919,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 	}
 	inp6 = (struct in6pcb *)inp;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	inp6->inp_vflag &= ~INP_IPV4;
 	inp6->inp_vflag |= INP_IPV6;
 #else
@@ -929,7 +929,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	if ((addr != NULL) && (SCTP_IPV6_V6ONLY(inp6) == 0)) {
 		if (addr->sa_family == AF_INET) {
 			/* binding v4 addr to v6 socket, so reset flags */
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 			inp6->inp_vflag |= INP_IPV4;
 			inp6->inp_vflag &= ~INP_IPV6;
 #else
@@ -942,7 +942,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 			sin6_p = (struct sockaddr_in6 *)addr;
 
 			if (IN6_IS_ADDR_UNSPECIFIED(&sin6_p->sin6_addr)) {
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 				inp6->inp_vflag |= INP_IPV4;
 #else
 				inp->inp_vflag |= INP_IPV4;
@@ -951,7 +951,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 				struct sockaddr_in sin;
 
 				in6_sin6_2_sin(&sin, sin6_p);
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 				inp6->inp_vflag |= INP_IPV4;
 				inp6->inp_vflag &= ~INP_IPV6;
 #else

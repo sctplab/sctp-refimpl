@@ -57,6 +57,7 @@
 #include <net/route.h>
 
 #include <netinet/in.h>
+#include <netinet/in_pcb.h>
 #include <netinet/sctp_constants.h>
 #include <netinet6/in6.h>
 
@@ -325,9 +326,7 @@ in_broadcast(struct in_addr in, struct ifnet *ifp)
 typedef void (*sctp_timeout_t)(void *);
 
 typedef struct sctp_os_timer {
-	BOOLEAN initialized;
-	BOOLEAN pending;
-	BOOLEAN active;
+	int pending;
 	KTIMER tmr;
 	KSPIN_LOCK lock;
 	KDPC dpc;
@@ -338,39 +337,45 @@ typedef struct sctp_os_timer {
 
 VOID CustomTimerDpc(IN struct _KDPC *, IN PVOID, IN PVOID, IN PVOID);
 
-#define SCTP_OS_TIMER_INIT(_tmr) RtlZeroMemory((_tmr), sizeof(*(_tmr)))
-
+__inline void
+SCTP_OS_TIMER_INIT(sctp_os_timer_t *tmr)
+{
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_INIT - enter\n");
+	RtlZeroMemory(tmr, sizeof(sctp_os_timer_t));
+	KeInitializeSpinLock(&tmr->lock);
+	KeInitializeDpc(&tmr->dpc, CustomTimerDpc, tmr);
+	KeInitializeTimer(&tmr->tmr);
+	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_INIT - leave\n");
+}
+    
 __inline void
 SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *arg)
 {
 	LARGE_INTEGER ExpireTime;
-	BOOLEAN blnDequeued = FALSE;
+	BOOLEAN blnCanceled = FALSE;
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - enter\n");
 
-	if (tmr->initialized == FALSE) {
-		tmr->func = func;
-		tmr->arg = arg;
-		KeInitializeSpinLock(&tmr->lock);
-		KeInitializeDpc(&tmr->dpc, CustomTimerDpc, tmr);
-		KeInitializeTimer(&tmr->tmr);
-		tmr->initialized = TRUE;
-	}
-
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: Try to acquire spin lock, tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_START: Try to Acquire spin lock, tmr=%p,pending=%d,ticks=%d\n",
+	    tmr, tmr->pending, ticks);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
-	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: KeRemoveQueueDpc=%d, tmr=%p, ticks=%d\n",
-	    blnDequeued, tmr, ticks);
+	/* Make sure that there is no pending timer before. */
+	blnCanceled = KeCancelTimer(&tmr->tmr);
+	if (blnCanceled) {
+		tmr->pending--;
+	}
 
-	/* the unit of ticks is millisecond, the unit of ExpireTime is 100-nanosecond */
-	tmr->ticks = ticks;
-	ExpireTime.QuadPart = -(LONGLONG)(10000)*ticks;
+	tmr->func = func;
+	tmr->arg = arg;
+	tmr->ticks = ticks; 
+	tmr->pending++;
+	ExpireTime.QuadPart = -(LONGLONG)(10000)*ticks; /* millisecond (ticks) v.s. 100-nanosecond (ExpireTime) */
 	KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_START: release spin lock, tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_START: Release spin lock, tmr=%p,pending=%d,blnCanceled=%d\n",
+	    tmr, tmr->pending, blnCanceled);
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - leave\n");
 }
@@ -378,25 +383,31 @@ SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *
 __inline void
 SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
 	BOOLEAN blnCanceled = FALSE;
-	BOOLEAN blnDequeued = FALSE;
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - enter\n");
 
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: Try to acquire spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_STOP: Try to Acquire spin lock, tmr=%p,pending=%d\n",
+	    tmr, tmr->pending);
 	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
 
 	blnCanceled = KeCancelTimer(&tmr->tmr);
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: KeCancelTimer=%d, tmr=%p\n", blnCanceled, tmr);
-	blnDequeued = KeRemoveQueueDpc(&tmr->dpc);
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: KeRemoveQueueDpc=%d, tmr=%p\n", blnDequeued, tmr);
+	if (blnCanceled) {
+		tmr->pending--;
+	}
 
 	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_TIMER1, "SCTP_OS_TIMER_STOP: release spin lock,tmr=%p\n", tmr);
+	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_STOP: Release spin lock, tmr=%p,pending=%d,blnCanceled=%d\n",
+	    tmr, tmr->pending, blnCanceled);
 
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - leave\n");
 }
 
-#define SCTP_OS_TIMER_PENDING(tmr)	FALSE
+__inline BOOLEAN
+SCTP_OS_TIMER_PENDING(sctp_os_timer_t *tmr) {
+	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_PENDING: tmr=%p,pending=%d\n", tmr, tmr->pending);
+	return (tmr->pending > 0);
+}
+
 #define SCTP_OS_TIMER_ACTIVE(tmr)	TRUE
 #define SCTP_OS_TIMER_DEACTIVATE(tmr)
 
@@ -408,73 +419,9 @@ sctp_get_tick_count(void)
 	return tickCount.QuadPart;
 }
 
-struct inpcb {
-	struct route	inp_route;
-	uint16_t	inp_fport;
-	uint16_t	inp_lport;
-	int		inp_flags;
-	struct socket	*inp_socket;
-	u_char		inp_ip_tos;
-	struct mbuf	*inp_options;
-	VOID 		*inp_moptions;
-	struct mbuf	*in6p_options;
-	VOID		*in6p_outputopts;
-	VOID		*in6p_moptions;
-	uint32_t	in6p_flowinfo;
-};
-#define in6pcb	inpcb
-#define	ip_freemoptions(a)
-#define	ip6_freepcbopts(a)
-#define sotoinpcb(so)	((struct inpcb *)(so)->so_pcb)
-#define sotoin6pcb(so)	sotoinpcb(so)
-
-/* flags in inp_flags: */
-#define	INP_RECVOPTS		0x01	/* receive incoming IP options */
-#define	INP_RECVRETOPTS		0x02	/* receive IP options for reply */
-#define	INP_RECVDSTADDR		0x04	/* receive IP dst address */
-#define	INP_HDRINCL		0x08	/* user supplies entire IP header */
-#define	INP_HIGHPORT		0x10	/* user wants "high" port binding */
-#define	INP_LOWPORT		0x20	/* user wants "low" port binding */
-#define	INP_ANONPORT		0x40	/* port chosen for user */
-#define	INP_RECVIF		0x80	/* receive incoming interface */
-#define	INP_MTUDISC		0x100	/* user can do MTU discovery */
-#define	INP_FAITH		0x200	/* accept FAITH'ed connections */
-#define	INP_RECVTTL		0x400	/* receive incoming IP TTL */
-#define	INP_DONTFRAG		0x800	/* don't fragment packet */
-
-#define IN6P_IPV6_V6ONLY	0x008000 /* restrict AF_INET6 socket for v6 */
-
-#define	IN6P_PKTINFO		0x010000 /* receive IP6 dst and I/F */
-#define	IN6P_HOPLIMIT		0x020000 /* receive hoplimit */
-#define	IN6P_HOPOPTS		0x040000 /* receive hop-by-hop options */
-#define	IN6P_DSTOPTS		0x080000 /* receive dst options after rthdr */
-#define	IN6P_RTHDR		0x100000 /* receive routing header */
-#define	IN6P_RTHDRDSTOPTS	0x200000 /* receive dstoptions before rthdr */
-#define	IN6P_TCLASS		0x400000 /* receive traffic class value */
-#define	IN6P_AUTOFLOWLABEL	0x800000 /* attach flowlabel automatically */
-#define	IN6P_RFC2292		0x40000000 /* used RFC2292 API on the socket */
-#define	IN6P_MTU		0x80000000 /* receive path MTU */
-
-#define	INP_CONTROLOPTS		(INP_RECVOPTS|INP_RECVRETOPTS|INP_RECVDSTADDR|\
-				 INP_RECVIF|INP_RECVTTL|\
-				 IN6P_PKTINFO|IN6P_HOPLIMIT|IN6P_HOPOPTS|\
-				 IN6P_DSTOPTS|IN6P_RTHDR|IN6P_RTHDRDSTOPTS|\
-				 IN6P_TCLASS|IN6P_AUTOFLOWLABEL|IN6P_RFC2292|\
-				 IN6P_MTU)
-#define	INP_UNMAPPABLEOPTS	(IN6P_HOPOPTS|IN6P_DSTOPTS|IN6P_RTHDR|\
-				 IN6P_TCLASS|IN6P_AUTOFLOWLABEL)
-
- /* for KAME src sync over BSD*'s */
-#define	IN6P_HIGHPORT		INP_HIGHPORT
-#define	IN6P_LOWPORT		INP_LOWPORT
-#define	IN6P_ANONPORT		INP_ANONPORT
-#define	IN6P_RECVIF		INP_RECVIF
-#define	IN6P_MTUDISC		INP_MTUDISC
-#define	IN6P_FAITH		INP_FAITH
-#define	IN6P_CONTROLOPTS INP_CONTROLOPTS
 
 /* is the endpoint v6only? */
-#define SCTP_IPV6_V6ONLY(inp)	(((struct inpcb *)inp)->inp_flags & IN6P_IPV6_V6ONLY)
+#define SCTP_IPV6_V6ONLY(in6p)	(((struct in6pcb *)in6p)->in6p_flags & IN6P_IPV6_V6ONLY)
 /* is the socket non-blocking? */
 #define SCTP_SO_IS_NBIO(so)	((so)->so_state & SS_NBIO)
 #define SCTP_SET_SO_NBIO(so)	((so)->so_state |= SS_NBIO)

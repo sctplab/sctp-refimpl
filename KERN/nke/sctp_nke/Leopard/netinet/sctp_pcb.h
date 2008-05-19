@@ -190,6 +190,7 @@ struct sctp_epinfo {
 	sctp_zone_t ipi_zone_chunk;
 	sctp_zone_t ipi_zone_readq;
 	sctp_zone_t ipi_zone_strmoq;
+	sctp_zone_t ipi_zone_asconf;
 	sctp_zone_t ipi_zone_asconf_ack;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -449,7 +450,7 @@ struct sctp_inpcb {
 #endif
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 #ifndef INP_IPV6
 #define INP_IPV6	0x1
 #endif
@@ -597,7 +598,7 @@ struct sctp_tcb {
 extern struct sctp_epinfo sctppcbinfo;
 
 #ifdef INET6
-int SCTP6_ARE_ADDR_EQUAL(struct in6_addr *a, struct in6_addr *b);
+int SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b);
 #endif
 
 void sctp_fill_pcbinfo(struct sctp_pcbinfo *);

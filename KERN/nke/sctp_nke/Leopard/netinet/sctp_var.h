@@ -392,7 +392,9 @@ int sctp_disconnect(struct socket *so);
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
+void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
 void sctp_input __P((struct mbuf *, int));
+void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
 #else
 #if defined(__Panda__)
 void sctp_input __P((pakhandle_type i_pak));

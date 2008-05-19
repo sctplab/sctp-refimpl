@@ -72,7 +72,6 @@
 #define	WANTPARENT	0x0010	/* want parent vnode returned */
 #endif
 
-
 #ifdef BSD_KERNEL_PRIVATE
 
 /* VFS Supports "/..namedfork/rsrc" access. */
