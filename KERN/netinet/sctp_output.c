@@ -3520,7 +3520,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net) {
 			tos_value = net->tos_flowlabel & 0x000000ff;
 		} else {
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 			tos_value = inp->ip_inp.inp.inp_ip_tos;
 #else
 			tos_value = inp->inp_ip_tos;
@@ -3545,7 +3545,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		ip->ip_id = SCTP_IP_ID(inp)++;
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 		ip->ip_ttl = inp->ip_inp.inp.inp_ip_ttl;
 #else
 		ip->ip_ttl = inp->inp_ip_ttl;

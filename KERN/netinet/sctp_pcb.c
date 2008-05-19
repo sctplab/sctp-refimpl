@@ -2322,7 +2322,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	}
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -3611,7 +3611,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	sctp_log_closing(inp, NULL, 5);
 #endif
 
-#if !defined(__Panda__)
+#if !(defined(__Panda__) || defined(__Windows__))
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
@@ -3673,7 +3673,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 #endif
 
-#ifndef __Panda__
+#if !(defined(__Panda__) || defined(__Windows__))
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	if (rt) {
 		RTFREE(rt);
@@ -3691,7 +3691,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 
 #ifdef INET6
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 	if (inp->inp_vflag & INP_IPV6) {
 #else
 	if (ip_pcb->inp_vflag & INP_IPV6) {
@@ -3699,12 +3699,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		struct in6pcb *in6p;
 
 		in6p = (struct in6pcb *)inp;
-#ifndef __Panda__
+#if !(defined(__Panda__) || defined(__Windows__))
 		ip6_freepcbopts(in6p->in6p_outputopts);
 #endif
 	}
 #endif				/* INET6 */
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 	inp->inp_vflag = 0;
 #else
 	ip_pcb->inp_vflag = 0;
@@ -3884,6 +3884,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				addr_inscope = 0;
 			}
 		}
+#ifdef INET6
 	} else if (newaddr->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 
@@ -3933,6 +3934,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				addr_inscope = 0;
 			}
 		}
+#endif
 	} else {
 		/* not supported family type */
 		return (-1);
@@ -5281,13 +5283,13 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 	}
 	/* NOTE: all "scope" checks are done when local addresses are added */
 	if (destaddr->sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 		answer = inp->inp_vflag & INP_IPV6;
 #else
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV6;
 #endif
 	} else if (destaddr->sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 		answer = inp->inp_vflag & INP_IPV4;
 #else
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
@@ -5308,7 +5310,7 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 	struct sctp_laddr *laddr;
 
 	/* first clear the flag */
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 	inp->inp_vflag = 0;
 #else
 	inp->ip_inp.inp.inp_vflag = 0;
@@ -5325,13 +5327,13 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 			continue;
 		}
 		if (laddr->ifa->address.sa.sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 			inp->inp_vflag |= INP_IPV6;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (laddr->ifa->address.sa.sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 			inp->inp_vflag |= INP_IPV4;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
@@ -5378,13 +5380,13 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 		inp->laddr_count++;
 		/* update inp_vflag flags */
 		if (ifa->address.sa.sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 			inp->inp_vflag |= INP_IPV6;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (ifa->address.sa.sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 			inp->inp_vflag |= INP_IPV4;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
