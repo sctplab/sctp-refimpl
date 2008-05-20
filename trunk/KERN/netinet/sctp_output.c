@@ -2735,6 +2735,10 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 			if (sin6.sin6_scope_id != lsa6.sin6_scope_id) {
 				continue;
 			}
+			if (dest_is_loop) {
+			        /* we don't give out fe80::1, we must use ::1 */
+			        continue;
+			}
 		}
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */
 #endif	/* INET6 */
