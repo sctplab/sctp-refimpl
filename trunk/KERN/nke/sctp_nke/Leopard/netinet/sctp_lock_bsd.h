@@ -93,10 +93,10 @@ extern int sctp_logoff_stuff;
       }  while (0) 
 #else
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
-        if(rw_wowned(sctppcbinfo.ipi_ep_mtx)) { \
+        if(rw_wowned(&sctppcbinfo.ipi_ep_mtx)) { \
              rw_wunlock(&sctppcbinfo.ipi_ep_mtx); \
         } \
-        rw_destroy(sctppcbinfo.ipi_ep_mtx); \
+        rw_destroy(&sctppcbinfo.ipi_ep_mtx); \
       }  while (0) 
 #endif
 
@@ -150,17 +150,17 @@ extern int sctp_logoff_stuff;
 
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_DESTROY() do  { \
-        if(mtx_owned(sctppcbinfo.ipi_addr_mtx)) { \
+        if(mtx_owned(&sctppcbinfo.ipi_addr_mtx)) { \
              mtx_unlock(&sctppcbinfo.ipi_addr_mtx); \
         } \
-	mtx_destroy(&sctppcbinfo.ipi_addr_mtx) \
+	mtx_destroy(&sctppcbinfo.ipi_addr_mtx); \
       }  while (0) 
 #else
 #define SCTP_IPI_ADDR_DESTROY() do  { \
-        if(rw_wowned(sctppcbinfo.ipi_addr_mtx)) { \
+        if(rw_wowned(&sctppcbinfo.ipi_addr_mtx)) { \
              rw_wunlock(&sctppcbinfo.ipi_addr_mtx); \
         } \
-	rw_destroy(&sctppcbinfo.ipi_addr_mtx) \
+	rw_destroy(&sctppcbinfo.ipi_addr_mtx); \
       }  while (0) 
 #endif
 

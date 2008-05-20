@@ -509,6 +509,8 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	return error;
 }
 
+
+
 #define RANGECHK(var, min, max) \
 	if ((var) < (min)) { (var) = (min); } \
 	else if ((var) > (max)) { (var) = (max); }

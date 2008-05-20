@@ -2231,9 +2231,16 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, &ifa->address.sa);
 	/* Ok the address may be ok */
 	if (fam == AF_INET6) {
-		/* ok to use deprecated addresses? */
+		/* ok to use deprecated addresses? no lets not! */
 		if (ifa->localifa_flags & SCTP_ADDR_IFA_UNUSEABLE) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:1\n");
+			return (NULL);
+		}
+		if (ifa->src_is_priv && ifa->src_is_loop) {
+  		    /* don't allow fe80::1 to be a src on loop ::1, we don't list it
+			 * to the peer so we will get an abort.
+			 */
+		    SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:2a\n");
 			return (NULL);
 		}
 		if (ifa->src_is_priv && !ifa->src_is_loop) {
@@ -2734,6 +2741,10 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 #endif  /* SCTP_KAME */
 			if (sin6.sin6_scope_id != lsa6.sin6_scope_id) {
 				continue;
+			}
+			if (dest_is_loop) {
+			        /* we don't give out fe80::1, we must use ::1 */
+			        continue;
 			}
 		}
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */

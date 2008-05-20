@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.74 2008/04/16 17:24:18 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.75 2008/05/20 09:51:36 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6963,4 +6963,20 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 	sctp_log.entry[saveindex].params[5] = f;
 }
 
+#endif
+#ifdef __FreeBSD__
+/* We will need to add support
+ * to bind the ports and such here
+ * so we can do UDP tunneling. In
+ * the mean-time, we return error
+ */
+
+void sctp_over_udp_stop(void)
+{
+         return;
+}
+int sctp_over_udp_start(void)
+{
+         return(-1);
+}
 #endif
