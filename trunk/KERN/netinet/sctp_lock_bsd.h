@@ -70,7 +70,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.10 2007/09/18 15:16:38 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_lock_bsd.h,v 1.11 2008/05/20 13:47:45 rrs Exp $");
 #endif
 
 
