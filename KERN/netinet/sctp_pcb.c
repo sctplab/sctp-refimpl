@@ -4441,7 +4441,11 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 			SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: primary dst is deleting\n");
 			if (asoc->deleted_primary != NULL) {
 				SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: deleted primary may be already stored\n");
+#if !defined(__Windows__)
 				goto leave;
+#else
+				goto out;
+#endif
 			}
 			asoc->deleted_primary = net;
 			atomic_add_int(&net->ref_count, 1);
@@ -4452,7 +4456,11 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED, 
 					 stcb->sctp_ep, stcb, NULL);
 		}
+#if !defined(__Windows__)
 leave:
+#else
+out:
+#endif
 		/* Try to find a confirmed primary */
 		asoc->primary_destination = sctp_find_alternate_net(stcb, lnet, 0);
 	}
