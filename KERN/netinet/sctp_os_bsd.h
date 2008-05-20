@@ -248,13 +248,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 /*
  * zone allocation functions
  */
-#if __FreeBSD_version >= 500000
 #include <vm/uma.h>
-#else
-#include <vm/vm_zone.h>
-#endif
+
 /* SCTP_ZONE_INIT: initialize the zone */
-#if __FreeBSD_version >= 500000
 typedef struct uma_zone *sctp_zone_t;
 #define UMA_ZFLAG_FULL	0x0020
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
@@ -262,29 +258,17 @@ typedef struct uma_zone *sctp_zone_t;
 		UMA_ZFLAG_FULL); \
 	uma_zone_set_max(zone, number); \
 }
-#else
-typedef struct vm_zone *sctp_zone_t;
-#define SCTP_ZONE_INIT(zone, name, size, number) \
-	zone = zinit(name, size, number, ZONE_INTERRUPT, 0);
-#endif
+
+#define SCTP_ZONE_DESTROY(zone) uma_zdestroy(zone)
 
 /* SCTP_ZONE_GET: allocate element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_GET(zone, type) \
 	(type *)uma_zalloc(zone, M_NOWAIT);
-#else
-#define SCTP_ZONE_GET(zone, type) \
-	(type *)zalloci(zone);
-#endif
 
 /* SCTP_ZONE_FREE: free element from the zone */
-#if __FreeBSD_version >= 500000
 #define SCTP_ZONE_FREE(zone, element) \
 	uma_zfree(zone, element);
-#else
-#define SCTP_ZONE_FREE(zone, element) \
-	zfreei(zone, element);
-#endif
+
 #if __FreeBSD_version >= 603000
 #define SCTP_HASH_INIT(size, hashmark) hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
 #else
@@ -306,11 +290,8 @@ void *sctp_hashinit_flags(int elements, struct malloc_type *type,
 #include <sys/callout.h>
 typedef struct callout sctp_os_timer_t;
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+
 #define SCTP_OS_TIMER_INIT(tmr)	callout_init(tmr, 1)
-#else
-#define SCTP_OS_TIMER_INIT	callout_init
-#endif
 #define SCTP_OS_TIMER_START	callout_reset
 #define SCTP_OS_TIMER_STOP	callout_stop
 #define SCTP_OS_TIMER_STOP_DRAIN callout_drain
@@ -487,11 +468,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
  */
 #define HAVE_SHA2
 
-#if (__FreeBSD_version < 500000)
-#define SCTP_READ_RANDOM(buf, len)	read_random_unlimited(buf, len)
-#else
 #define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
-#endif
 
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>

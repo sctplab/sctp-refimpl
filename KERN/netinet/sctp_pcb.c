@@ -55,6 +55,8 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.67 2008/04/16 17:24:18 rrs Ex
 #define APPLE_FILE_NO 4
 #endif
 
+void sctp_pcb_finish(void);
+     
 struct sctp_epinfo sctppcbinfo;
 
 /* FIX: we don't handle multiple link local scopes */
@@ -5840,7 +5842,6 @@ sctp_pcb_init()
 #endif
 }
 
-#if defined(__APPLE__) || defined(__Windows__) || defined(__FreeBSD__)
 /*
  * Assumes that the sctppcbinfo lock is NOT held.
  */
@@ -5912,7 +5913,7 @@ sctp_pcb_finish(void)
 	}
 	/* free the vrf hashes */
 	SCTP_HASH_FREE(sctppcbinfo.sctp_vrfhash, sctppcbinfo.hashvrfmark);
-	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.hash_ifn_hashmark);
+	SCTP_HASH_FREE(sctppcbinfo.vrf_ifn_hash, sctppcbinfo.vrf_ifn_hashmark);
 
 	/* free the locks and mutexes */
 #if defined(__APPLE__)
@@ -5949,7 +5950,6 @@ sctp_pcb_finish(void)
 #endif
 }
 
-#endif
 
 int
 sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,

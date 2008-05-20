@@ -6964,3 +6964,19 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 }
 
 #endif
+#ifdef __FreeBSD__
+/* We will need to add support
+ * to bind the ports and such here
+ * so we can do UDP tunneling. In
+ * the mean-time, we return error
+ */
+
+void sctp_over_udp_stop(void)
+{
+         return;
+}
+int sctp_over_udp_start(void)
+{
+         return(-1);
+}
+#endif
