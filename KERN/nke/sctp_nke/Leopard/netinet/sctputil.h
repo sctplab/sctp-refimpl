@@ -325,6 +325,11 @@ do { \
 	} \
 } while (0)
 
+#ifdef __FreeBSD__
+/* new functions to start/stop udp tunneling */
+void sctp_over_udp_stop(void);
+int sctp_over_udp_start(void);
+#endif
 
 int
 sctp_soreceive(struct socket *so, struct sockaddr **psa,

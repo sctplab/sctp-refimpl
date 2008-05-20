@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29 2007/09/18 15:16:39 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.30 2008/05/20 09:51:36 rrs Exp $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -44,14 +44,19 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29 2007/09/18 15:16:39 rrs Ex
 #endif
 
 #if !(defined(__Windows__))
-#if !(defined(_KERNEL))
+#if ! defined(_KERNEL)
 #include <stdint.h>
 #endif
-#endif
-#if defined(__Windows__) && defined(_KERNEL)
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
+#if defined(__Windows__)
+#if defined(_KERNEL)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
 #endif
 
 typedef uint32_t sctp_assoc_t;
@@ -518,6 +523,7 @@ struct sctp_authkey {
 
 /* SCTP_HMAC_IDENT */
 struct sctp_hmacalgo {
+	uint32_t shmac_number_of_idents;
 	uint16_t shmac_idents[0];
 };
 
@@ -1058,6 +1064,7 @@ sctp_sorecvmsg(struct socket *so,
  */
 #if !(defined(_KERNEL))
 #if !defined(__Windows__)
+
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
 int sctp_bindx __P((int, struct sockaddr *, int, int));
@@ -1090,6 +1097,7 @@ ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
     socklen_t *, struct sctp_sndrcvinfo *, int *));
 
 __END_DECLS
+
 #else
 int sctp_peeloff __P((SOCKET, sctp_assoc_t));
 int sctp_bindx __P((SOCKET, struct sockaddr *, int, int));

@@ -2470,7 +2470,7 @@ sctp_is_addr_pending(struct sctp_tcb *stcb, struct sctp_ifa *sctp_ifa)
 	struct sctp_tmit_chunk *chk, *nchk;
 	unsigned int offset, asconf_limit;
 	struct sctp_asconf_chunk *acp;
-	struct sctp_asconf_paramhdr *aph, *naph;
+	struct sctp_asconf_paramhdr *aph;
 	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
 	struct sctp_ipv6addr_param *p_addr;
 	int add_cnt, del_cnt;

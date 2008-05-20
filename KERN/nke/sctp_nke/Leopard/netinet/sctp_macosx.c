@@ -857,7 +857,7 @@ sctp_print_mbuf_chain(mbuf_t m)
 	}  
 }
 
-void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
+void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 {
 	errno_t error;
 	size_t length;
@@ -931,43 +931,49 @@ void sctp_over_udp_cb(socket_t udp_sock, void *cookie, int watif)
 	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
 }
 
-socket_t sctp_over_udp_so = NULL;
+socket_t sctp_over_udp_ipv4_so = NULL;
+socket_t sctp_over_udp_ipv6_so = NULL;
 
 errno_t
 sctp_over_udp_start(void)
 {
 	errno_t error;
-	struct sockaddr_in addr;
+	struct sockaddr_in addr_ipv4;
 	const int on = 1;
 	
-	if (sctp_over_udp_so) {
-		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = NULL;
+	if (sctp_over_udp_ipv4_so) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
 	}
 
-	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_cb, NULL, &sctp_over_udp_so);
+	if (sctp_over_udp_ipv6_so) {
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+	}
+
+	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
 	if (error) {
 		printf("Failed to create SCTP/UDP tunneling socket: errno = %d.\n", error);
 		return error;
 	}
 	
-	error = sock_setsockopt(sctp_over_udp_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
+	error = sock_setsockopt(sctp_over_udp_ipv4_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
 	if (error) {
-		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = NULL;
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
 		printf("Failed to setsockopt() on SCTP/UDP tunneling socket: errno = %d.\n", error);
 		return error;
 	}
 	
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_len         = sizeof(struct sockaddr_in);
-	addr.sin_family      = AF_INET;
-	addr.sin_port        = htons(sctp_udp_tunneling_port);
-	addr.sin_addr.s_addr = htonl(INADDR_ANY);
-	error = sock_bind(sctp_over_udp_so, (const struct sockaddr *)&addr);
+	memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
+	addr_ipv4.sin_len         = sizeof(struct sockaddr_in);
+	addr_ipv4.sin_family      = AF_INET;
+	addr_ipv4.sin_port        = htons(sctp_udp_tunneling_port);
+	addr_ipv4.sin_addr.s_addr = htonl(INADDR_ANY);
+	error = sock_bind(sctp_over_udp_ipv4_so, (const struct sockaddr *)&addr_ipv4);
 	if (error) {
-		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = NULL;
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
 		printf("Failed to bind SCTP/UDP tunneling socket: errno = %d.\n", error);
 		return error;
 	}
@@ -976,9 +982,13 @@ sctp_over_udp_start(void)
 
 void sctp_over_udp_stop(void)
 {
-	if (sctp_over_udp_so) {
-		sock_close(sctp_over_udp_so);
-		sctp_over_udp_so = NULL;
+	if (sctp_over_udp_ipv4_so) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+	}
+	if (sctp_over_udp_ipv6_so) {
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
 	}
 	return;
 }
