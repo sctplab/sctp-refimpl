@@ -2236,13 +2236,6 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 			SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:1\n");
 			return (NULL);
 		}
-		if (ifa->src_is_priv && ifa->src_is_loop) {
-  		    /* don't allow fe80::1 to be a src on loop ::1, we don't list it
-			 * to the peer so we will get an abort.
-			 */
-		    SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:2a\n");
-			return (NULL);
-		}
 		if (ifa->src_is_priv && !ifa->src_is_loop) {
 			if (dest_is_loop) {
 				SCTPDBG(SCTP_DEBUG_OUTPUT3, "NO:2\n");
@@ -2728,6 +2721,14 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 		if (sifa == NULL)
 			continue;
 #ifdef INET6
+		if (fam == AF_INET6 &&
+		    dest_is_loop &&
+		    sifa->src_is_loop && sifa->src_is_priv) {
+			/* don't allow fe80::1 to be a src on loop ::1, we don't list it
+			 * to the peer so we will get an abort.
+			 */
+			continue;
+		}
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 		if (fam == AF_INET6 &&
 		    IN6_IS_ADDR_LINKLOCAL(&sifa->address.sin6.sin6_addr) &&
@@ -2741,10 +2742,6 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 #endif  /* SCTP_KAME */
 			if (sin6.sin6_scope_id != lsa6.sin6_scope_id) {
 				continue;
-			}
-			if (dest_is_loop) {
-			        /* we don't give out fe80::1, we must use ::1 */
-			        continue;
 			}
 		}
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */
