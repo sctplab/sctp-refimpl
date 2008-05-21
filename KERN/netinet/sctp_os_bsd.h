@@ -146,6 +146,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_CTR6 CTR6
 #endif
 
+#define SCTP_BASE_INFO  (type) system_base_info.sctppcbinfo.type
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT (elem)     system_base_info.sctpstat.elm
 
 /*
  *

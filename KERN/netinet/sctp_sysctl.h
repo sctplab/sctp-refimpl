@@ -478,8 +478,6 @@ extern uint32_t sctp_udp_tunneling_port;
 extern uint32_t sctp_debug_on;
 #endif
 
-extern struct sctpstat sctpstat;
-
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #if defined(SYSCTL_DECL)
 SYSCTL_DECL(_net_inet_sctp);

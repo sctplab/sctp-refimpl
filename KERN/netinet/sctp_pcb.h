@@ -142,6 +142,15 @@ struct sctp_tagblock {
 	struct sctp_timewait vtag_block[SCTP_NUMBER_IN_VTAG_BLOCK];
 };
 
+
+struct sctp_base_info {
+  /* All static structures that
+   * anchor the system must be here. 
+   */
+  struct sctp_epinfo sctppcbinfo;
+  struct sctpstat    sctpstat;
+};
+
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
@@ -595,7 +604,11 @@ struct sctp_tcb {
 
 #if defined(_KERNEL)
 
-extern struct sctp_epinfo sctppcbinfo;
+/* Attention Julian, this is the extern that
+ * goes with the base info. sctp_pcb.c has
+ * the real definition.
+ */
+extern struct sctp_base_info system_base_info;
 
 #ifdef INET6
 int SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b);
