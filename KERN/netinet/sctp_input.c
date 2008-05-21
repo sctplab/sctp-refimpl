@@ -1672,7 +1672,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		LIST_REMOVE(stcb, sctp_asocs);
 		/* re-insert to new vtag position */
 		head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
-								    SCTP_BASE_INFO(hashasocmark)];
+								    SCTP_BASE_INFO(hashasocmark))];
 		/*
 		 * put it in the bucket in the vtag hash of assoc's for the
 		 * system

@@ -125,7 +125,7 @@ void
 sctp_pcbinfo_cleanup(void)
 {
 	/* free the hash tables */
-	if (SCTP_BASE_INFO(sctp_asochash != NULL)
+	if (SCTP_BASE_INFO(sctp_asochash) != NULL)
 		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_asochash), SCTP_BASE_INFO(hashasocmark));
 	if (SCTP_BASE_INFO(sctp_ephash) != NULL)
 		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_ephash), SCTP_BASE_INFO(hashmark));

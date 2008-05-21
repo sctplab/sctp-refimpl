@@ -34,6 +34,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.18 2008/05/20 13:47:45 rrs
 #endif
 
 #include <netinet/sctp_os.h>
+#include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
@@ -879,7 +880,7 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
 #endif
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
-	      &sctpstat, sctpstat,
+			  &SCTP_BASE_STATS, sctpstat ,
 	      "SCTP statistics (struct sctp_stat)");
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
