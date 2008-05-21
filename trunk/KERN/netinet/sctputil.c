@@ -1423,7 +1423,7 @@ sctp_timeout_handler(void *t)
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
-	int did_output;
+	int did_output, type;
 	struct sctp_iterator *it = NULL;
 
 	tmr = (struct sctp_timer *)t;
@@ -1463,6 +1463,7 @@ sctp_timeout_handler(void *t)
 		it = (struct sctp_iterator *)inp;
 		inp = NULL;
 	}
+	type = tmr->type;
 	if (inp) {
 		SCTP_INP_INCR_REF(inp);
 		if ((inp->sctp_socket == 0) && 
@@ -1847,6 +1848,7 @@ sctp_timeout_handler(void *t)
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
+		inp = NULL;
 		goto out_no_decr;
 	default:
 		SCTPDBG(SCTP_DEBUG_TIMER1, "sctp_timeout_handler:unknown timer %d\n",
@@ -1880,9 +1882,7 @@ out_decr:
 
 out_no_decr:
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer now complete (type %d)\n",
-		tmr->type);
-	if (inp) {
-	}
+			  type);
 }
 
 void
