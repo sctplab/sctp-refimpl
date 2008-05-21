@@ -4010,7 +4010,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 		lsa6->sin6_port = inp->sctp_lport;
 
-		if (ro->ro_rt == NUL)) {
+		if (ro->ro_rt == NULL) {
 			/*
 			 * src addr selection failed to find a route (or
 			 * valid source addr), so we can't get there from
@@ -4982,12 +4982,11 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sctp_prsctp_supported_param *prsctp;
 	struct sctp_ecn_nonce_supported_param *ecn_nonce;
 	struct sctp_supported_chunk_types_param *pr_supported;
-	union sctp_sockstore store, store1;
+	union sctp_sockstore store, store1, *over_addr;
 	struct sockaddr_in *sin, *to_sin;
 #ifdef INET6
 	struct sockaddr_in6 *sin6, *to_sin6;
 #endif
-	sctp_route_t *ro;
 	struct ip *iph;
 #ifdef INET6
 	struct ip6_hdr *ip6;
@@ -5102,7 +5101,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	/* establish the to_addr's */
 	switch (iph->ip_v) {
 	case IPVERSION:
-		  to_sin->sin_port = sh->dst_port;
+		  to_sin->sin_port = sh->dest_port;
 		  to_sin->sin_family = AF_INET;
 #if !defined(__Windows__)
 		  to_sin->sin_len = sizeof(struct sockaddr_in);
@@ -5112,9 +5111,9 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef INET6
 	case IPV6_VERSION >> 4:
 		  ip6 = mtod(init_pkt, struct ip6_hdr *);
-		  to_sin6->sin6_addr = ip6->ip6_dest;
+		  to_sin6->sin6_addr = ip6->ip6_dst;
 		  to_sin6->sin6_scope_id = 0;
-		  to_sin6->sin6_port = sh->dst_port;
+		  to_sin6->sin6_port = sh->dest_port;
 		  to_sin6->sin6_family = AF_INET6;
 #if !defined(__Windows__)
 		  to_sin6->sin6_len = sizeof(struct sockaddr_in6);
@@ -5131,9 +5130,6 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		switch (iph->ip_v) {
 		case IPVERSION:
 		{
-			struct sctp_ifa *addr;
-			sctp_route_t iproute;
-
 			sin->sin_family = AF_INET;
 #if !defined(__Windows__)
 			sin->sin_len = sizeof(struct sockaddr_in);
@@ -5641,8 +5637,15 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		p_len += padval;
 	}
+	if (stc.loopback_scope) {
+	  over_addr = &store1;
+	} else {
+	  over_addr = NULL;
+
+	}
+	
 	(void)sctp_lowlevel_chunk_output(inp, NULL, NULL, to, m, 0, NULL, 0, 0,
-				   NULL, 0, port, SCTP_SO_NOT_LOCKED, &store1);
+				   NULL, 0, port, SCTP_SO_NOT_LOCKED, over_addr);
 	SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 }
 
