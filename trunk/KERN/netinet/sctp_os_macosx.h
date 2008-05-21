@@ -120,9 +120,9 @@ extern struct fileops socketops;
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
 
 
-#define SCTP_BASE_INFO  (type) system_base_info.sctppcbinfo.type
+#define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STAT (elem)     system_base_info.sctpstat.elm
+#define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elm
 
 
 /*

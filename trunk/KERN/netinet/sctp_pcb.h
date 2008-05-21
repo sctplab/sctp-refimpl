@@ -143,14 +143,6 @@ struct sctp_tagblock {
 };
 
 
-struct sctp_base_info {
-  /* All static structures that
-   * anchor the system must be here. 
-   */
-  struct sctp_epinfo sctppcbinfo;
-  struct sctpstat    sctpstat;
-};
-
 struct sctp_epinfo {
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
@@ -307,6 +299,15 @@ struct sctp_epinfo {
 #ifdef _SCTP_NEEDS_CALLOUT_
 	struct calloutlist callqueue;
 #endif
+};
+
+
+struct sctp_base_info {
+  /* All static structures that
+   * anchor the system must be here. 
+   */
+  struct sctp_epinfo sctppcbinfo;
+  struct sctpstat    sctpstat;
 };
 
 /*-

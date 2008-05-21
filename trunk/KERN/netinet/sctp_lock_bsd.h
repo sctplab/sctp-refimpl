@@ -87,80 +87,80 @@ extern int sctp_logoff_stuff;
 #if __FreeBSD_version <= 602000
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
         if(mtx_owned(SCTP_BASE_INFO(ipi_ep_mtx)) { \
-             mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx); \
+             mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx)); \
         } \
-        mtx_destroy(SCTP_BASE_INFO(ipi_ep_mtx); \
+        mtx_destroy(SCTP_BASE_INFO(ipi_ep_mtx)); \
       }  while (0) 
 #else
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
-        if(rw_wowned(&SCTP_BASE_INFO(ipi_ep_mtx)) { \
-             rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx); \
+        if(rw_wowned(&SCTP_BASE_INFO(ipi_ep_mtx))) { \
+             rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx)); \
         } \
-        rw_destroy(&SCTP_BASE_INFO(ipi_ep_mtx); \
+        rw_destroy(&SCTP_BASE_INFO(ipi_ep_mtx)); \
       }  while (0) 
 #endif
 
 #if __FreeBSD_version <= 602000
 #define SCTP_INP_INFO_LOCK_INIT() \
-        mtx_init(&SCTP_BASE_INFO(ipi_ep_mtx, "sctp-info","inp_info",MTX_DEF);
+        mtx_init(&SCTP_BASE_INFO(ipi_ep_mtx), "sctp-info","inp_info",MTX_DEF);
 #else
 #define SCTP_INP_INFO_LOCK_INIT() \
-        rw_init(&SCTP_BASE_INFO(ipi_ep_mtx, "sctp-info");
+        rw_init(&SCTP_BASE_INFO(ipi_ep_mtx), "sctp-info");
 #endif
 
 
 #if __FreeBSD_version <= 602000
 #define SCTP_INP_INFO_RLOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_ep_mtx);                         \
+             mtx_lock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 #else
 #define SCTP_INP_INFO_RLOCK()	do { 					\
-             rw_rlock(&SCTP_BASE_INFO(ipi_ep_mtx);                         \
+             rw_rlock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 #endif
 
 
 #if __FreeBSD_version <= 602000
 #define SCTP_INP_INFO_WLOCK()	do { 					\
-            mtx_lock(&SCTP_BASE_INFO(ipi_ep_mtx);                         \
+            mtx_lock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 #else
 #define SCTP_INP_INFO_WLOCK()	do { 					\
-            rw_wlock(&SCTP_BASE_INFO(ipi_ep_mtx);                         \
+            rw_wlock(&SCTP_BASE_INFO(ipi_ep_mtx));                         \
 } while (0)
 #endif
 
 
 #if __FreeBSD_version <= 602000
-#define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx)
-#define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx))
+#define SCTP_INP_INFO_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx))
 #else
-#define SCTP_INP_INFO_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_ep_mtx)
-#define SCTP_INP_INFO_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx)
+#define SCTP_INP_INFO_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_ep_mtx))
+#define SCTP_INP_INFO_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx))
 #endif
 
 
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_INIT() \
-        mtx_init(&SCTP_BASE_INFO(ipi_addr_mtx, "sctp-addr","sctp_addr",MTX_DEF)
+        mtx_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr","sctp_addr",MTX_DEF)
 #else
 #define SCTP_IPI_ADDR_INIT() \
-        rw_init(&SCTP_BASE_INFO(ipi_addr_mtx, "sctp-addr")
+        rw_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr")
 #endif
 
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_DESTROY() do  { \
-        if(mtx_owned(&SCTP_BASE_INFO(ipi_addr_mtx)) { \
-             mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx); \
+        if(mtx_owned(&SCTP_BASE_INFO(ipi_addr_mtx))) { \
+             mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx)); \
         } \
-	mtx_destroy(&SCTP_BASE_INFO(ipi_addr_mtx); \
+	    mtx_destroy(&SCTP_BASE_INFO(ipi_addr_mtx)); \
       }  while (0) 
 #else
 #define SCTP_IPI_ADDR_DESTROY() do  { \
-        if(rw_wowned(&SCTP_BASE_INFO(ipi_addr_mtx)) { \
-             rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx); \
+        if(rw_wowned(&SCTP_BASE_INFO(ipi_addr_mtx))) { \
+             rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx)); \
         } \
-	rw_destroy(&SCTP_BASE_INFO(ipi_addr_mtx); \
+	rw_destroy(&SCTP_BASE_INFO(ipi_addr_mtx)); \
       }  while (0) 
 #endif
 
@@ -168,59 +168,59 @@ extern int sctp_logoff_stuff;
 
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx);                         \
+             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
 #else
 #define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             rw_rlock(&SCTP_BASE_INFO(ipi_addr_mtx);                         \
+             rw_rlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
 #endif
 
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_WLOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx);                         \
+             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
 #else
 #define SCTP_IPI_ADDR_WLOCK()	do { 					\
-             rw_wlock(&SCTP_BASE_INFO(ipi_addr_mtx);                         \
+             rw_wlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
 #endif
 
 
 #if __FreeBSD_version <= 602000
-#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx)
-#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx)
+#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
+#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
 #else
-#define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_addr_mtx)
-#define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx)
+#define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_addr_mtx))
+#define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx))
 #endif
 
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-        mtx_init(&SCTP_BASE_INFO(ipi_iterator_wq_mtx, "sctp-it-wq", "sctp_it_wq", MTX_DEF)
+        mtx_init(&SCTP_BASE_INFO(ipi_iterator_wq_mtx), "sctp-it-wq", "sctp_it_wq", MTX_DEF)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	mtx_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_mtx)
+	mtx_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx);                \
+             mtx_lock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx));                \
 } while (0)
 
-#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx)
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
 
 
 #define SCTP_IP_PKTLOG_INIT() \
-        mtx_init(&SCTP_BASE_INFO(ipi_pktlog_mtx, "sctp-pktlog", "packetlog", MTX_DEF)
+        mtx_init(&SCTP_BASE_INFO(ipi_pktlog_mtx), "sctp-pktlog", "packetlog", MTX_DEF)
 
 
 #define SCTP_IP_PKTLOG_LOCK()	do { 			\
-             mtx_lock(&SCTP_BASE_INFO(ipi_pktlog_mtx);     \
+             mtx_lock(&SCTP_BASE_INFO(ipi_pktlog_mtx));     \
 } while (0)
 
-#define SCTP_IP_PKTLOG_UNLOCK()	mtx_unlock(&SCTP_BASE_INFO(ipi_pktlog_mtx)
+#define SCTP_IP_PKTLOG_UNLOCK()	mtx_unlock(&SCTP_BASE_INFO(ipi_pktlog_mtx))
 
 #define SCTP_IP_PKTLOG_DESTROY() \
-	mtx_destroy(&SCTP_BASE_INFO(ipi_pktlog_mtx)
+	mtx_destroy(&SCTP_BASE_INFO(ipi_pktlog_mtx))
 
 
 
@@ -248,7 +248,7 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_INP_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_mtx, "sctp-inp", "inp", MTX_DEF | MTX_DUPOK)
-#define SCTP_SOC_CREATE_LOCK_INIT(_inp) \
+#define SCTP_ASOC_CREATE_LOCK_INIT(_inp) \
 	mtx_init(&(_inp)->inp_create_mtx, "sctp-create", "inp_create", \
 		 MTX_DEF | MTX_DUPOK)
 

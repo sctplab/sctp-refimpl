@@ -57,7 +57,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.68 2008/05/20 13:47:45 rrs Ex
 
 void sctp_pcb_finish(void);
 
-struct sctp_base_info system_base_info
+struct sctp_base_info system_base_info;
 
 
 /* FIX: we don't handle multiple link local scopes */
@@ -5680,7 +5680,7 @@ sctp_pcb_init()
 #endif
 	(void)SCTP_GETTIME_TIMEVAL(&tv);
 	SCTP_BASE_STAT(sctps_discontinuitytime).tv_sec = (uint32_t)tv.tv_sec;
-	SCTP_BASE_STAT(sctps_discontinuitytime)tv_usec = (uint32_t)tv.tv_usec;
+	SCTP_BASE_STAT(sctps_discontinuitytime).tv_usec = (uint32_t)tv.tv_usec;
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&SCTP_BASE_INFO(listhead));
 #if defined(__APPLE__)
@@ -5706,7 +5706,7 @@ sctp_pcb_init()
 #endif
 #endif
 	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((sctp_hashtblsize * 31),
-						   &SCTP_BASE_INFO(hashasocmark);
+						   &SCTP_BASE_INFO(hashasocmark));
 	SCTP_BASE_INFO(sctp_ephash) = SCTP_HASH_INIT(sctp_hashtblsize,
 						 &SCTP_BASE_INFO(hashmark));
 	SCTP_BASE_INFO(sctp_tcpephash) = SCTP_HASH_INIT(sctp_hashtblsize,
@@ -5806,7 +5806,7 @@ sctp_pcb_init()
 	SCTP_BASE_INFO(ipi_count_strmoq) = 0;
 
 	SCTP_BASE_INFO(ipi_free_strmoq) = 0;
-	SCTP_BASE_INFO(ipi_free_chunks = 0;
+	SCTP_BASE_INFO(ipi_free_chunks) = 0;
 
 	SCTP_OS_TIMER_INIT(&SCTP_BASE_INFO(addr_wq_timer.timer));
 
