@@ -1846,6 +1846,9 @@ sctp_timeout_handler(void *t)
 		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 				SCTP_CALLED_DIRECTLY_NOCMPSET);
 #if defined(__APPLE__)
+		/* Michael? Fix Me? should this be before the inpcb_free
+		 * since the inp will be free when you deref it below.
+		 */
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
 		inp = NULL;
