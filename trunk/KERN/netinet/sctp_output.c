@@ -3654,6 +3654,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sctp_free_ifa(_lsrc);
 		  } else {
 			    ip->ip_src = over_addr->sin.sin_addr;
+				SCTP_RTALLOC((&ro->ro_rt), vrf_id);
 		  }
 		}
 		if (port) {
