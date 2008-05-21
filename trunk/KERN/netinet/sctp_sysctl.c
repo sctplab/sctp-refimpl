@@ -110,7 +110,6 @@ uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 #if defined(__APPLE__)
 uint32_t sctp_main_timer = SCTPCTL_MAIN_TIMER_DEFAULT;
 #endif
-struct sctpstat sctpstat;
 
 #if defined (__APPLE__) || defined (__FreeBSD__)
 
@@ -340,7 +339,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 
 	SCTP_INP_INFO_RLOCK();
 	if (req->oldptr == USER_ADDR_NULL) {
-		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 			SCTP_INP_RLOCK(inp);
 			number_of_endpoints++;
 			number_of_local_addresses += number_of_addresses(inp);
@@ -370,7 +369,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		return EPERM;
 	}
 
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+	LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 		SCTP_INP_RLOCK(inp);
 		xinpcb.last                   = 0;
 		xinpcb.local_port             = ntohs(inp->sctp_lport);

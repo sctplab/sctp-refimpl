@@ -118,21 +118,21 @@ sctp_finish(void)
 
 
 /*
- * cleanup of the sctppcbinfo structure.
- * Assumes that the sctppcbinfo lock is held.
+ * cleanup of the SCTP_BASE_INFO() structure.
+ * Assumes that the SCTP_BASE_INFO() lock is held.
  */
 void
 sctp_pcbinfo_cleanup(void)
 {
 	/* free the hash tables */
-	if (sctppcbinfo.sctp_asochash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_asochash, sctppcbinfo.hashasocmark);
-	if (sctppcbinfo.sctp_ephash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_ephash, sctppcbinfo.hashmark);
-	if (sctppcbinfo.sctp_tcpephash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_tcpephash, sctppcbinfo.hashtcpmark);
-	if (sctppcbinfo.sctp_restarthash != NULL)
-		SCTP_HASH_FREE(sctppcbinfo.sctp_restarthash, sctppcbinfo.hashrestartmark);
+	if (SCTP_BASE_INFO(sctp_asochash != NULL)
+		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_asochash), SCTP_BASE_INFO(hashasocmark));
+	if (SCTP_BASE_INFO(sctp_ephash) != NULL)
+		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_ephash), SCTP_BASE_INFO(hashmark));
+	if (SCTP_BASE_INFO(sctp_tcpephash) != NULL)
+		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_tcpephash), SCTP_BASE_INFO(hashtcpmark));
+	if (SCTP_BASE_INFO(sctp_restarthash) != NULL)
+		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_restarthash), SCTP_BASE_INFO(hashrestartmark));
 }
 
 

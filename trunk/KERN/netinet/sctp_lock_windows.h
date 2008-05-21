@@ -66,7 +66,7 @@
  * When working with the global SCTP lists we lock and unlock the INP_INFO
  * lock. So when we go to lookup an association we will want to do a
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
- * the sctppcbinfo list's we will do a SCTP_INP_INFO_WLOCK().
+ * the SCTP_BASE_INFO() list's we will do a SCTP_INP_INFO_WLOCK().
  */
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;
@@ -91,7 +91,7 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_INP_INFO_LOCK_INIT() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_LOCK_INIT: %s[%d]\n", __FILE__, __LINE__); \
-	KeInitializeSpinLock(&sctppcbinfo.ipi_ep_lock); \
+	KeInitializeSpinLock(&SCTP_BASE_INFO(ipi_ep_lock)); \
 } while (0)
 
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
@@ -100,28 +100,28 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_INP_INFO_RLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_RLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_ep_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(ipi_ep_lock)); \
 } while (0)
 
 #define SCTP_INP_INFO_WLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_WLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_ep_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(ipi_ep_lock)); \
 } while (0)
 
 #define SCTP_INP_INFO_RUNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_RUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_ep_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(ipi_ep_lock)); \
 } while (0)
 
 #define SCTP_INP_INFO_WUNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_INP_INFO_WUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_ep_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(ipi_ep_lock)); \
 } while (0)
 
 
 #define SCTP_IPI_ADDR_INIT() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_INIT: %s[%d]\n", __FILE__, __LINE__); \
-	KeInitializeSpinLock(&sctppcbinfo.ipi_addr_lock); \
+	KeInitializeSpinLock(&SCTP_BASE_INFO(ipi_addr_lock)); \
 } while (0)
 
 #define SCTP_IPI_ADDR_DESTROY() do { \
@@ -130,28 +130,28 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_IPI_ADDR_RLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_RLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(ipi_addr_lock)); \
 } while (0)
 
 #define SCTP_IPI_ADDR_WLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_WLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(ipi_addr_lock)); \
 } while (0)
 
 #define SCTP_IPI_ADDR_RUNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_RUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(ipi_addr_lock)); \
 } while (0)
 
 
 #define SCTP_IPI_ADDR_WUNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ADDR_WUNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_addr_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(ipi_addr_lock)); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ITERATOR_WQ_INIT: %s[%d]\n", __FILE__, __LINE__); \
-	KeInitializeSpinLock(&sctppcbinfo.ipi_iterator_wq_lock); \
+	KeInitializeSpinLock(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() do { \
@@ -160,12 +160,12 @@ extern LARGE_INTEGER zero_timeout;
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ITERATOR_WQ_LOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.ipi_iterator_wq_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_IPI_ITERATOR_WQ_UNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.ipi_iterator_wq_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
 } while (0)
 
 
@@ -393,7 +393,7 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 
 #define SCTP_ITERATOR_LOCK_INIT() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ITERATOR_LOCK_INIT: %s[%d]\n", __FILE__, __LINE__); \
-	KeInitializeSpinLock(&sctppcbinfo.it_lock); \
+	KeInitializeSpinLock(&SCTP_BASE_INFO(it_lock)); \
 } while (0)
 
 #define SCTP_ITERATOR_LOCK_DESTROY() do { \
@@ -404,75 +404,75 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 #ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ITERATOR_LOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.it_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(it_lock)); \
 } while (0)
 #else
 #define SCTP_ITERATOR_LOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ITERATOR_LOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeAcquireSpinLockAtDpcLevel(&sctppcbinfo.it_lock); \
+	KeAcquireSpinLockAtDpcLevel(&SCTP_BASE_INFO(it_lock)); \
 } while (0)
 #endif
 
 #define SCTP_ITERATOR_UNLOCK() do { \
 	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_ITERATOR_UNLOCK: %s[%d]\n", __FILE__, __LINE__); \
-	KeReleaseSpinLockFromDpcLevel(&sctppcbinfo.it_lock); \
+	KeReleaseSpinLockFromDpcLevel(&SCTP_BASE_INFO(it_lock)); \
 } while (0)
 
 #define SCTP_INCR_EP_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_ep, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
 } while (0)
 #define SCTP_DECR_EP_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_ep, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
 } while (0)
 #define SCTP_INCR_ASOC_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_asoc, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
 } while (0)
 #define SCTP_DECR_ASOC_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_asoc, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
 } while (0)
 #define SCTP_INCR_LADDR_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_laddr, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
 } while (0)
 #define SCTP_DECR_LADDR_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_laddr, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
 } while (0)
 #define SCTP_INCR_RADDR_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_raddr, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr), 1); \
 } while (0)
 #define SCTP_DECR_RADDR_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_raddr, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_raddr), 1); \
 } while (0)
 #define SCTP_INCR_CHK_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_chun)k, 1); \
 } while (0)
 #define SCTP_DECR_CHK_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_chunk, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 } while (0)
 #define SCTP_INCR_READQ_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_readq, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq), 1); \
 } while (0)
 #define SCTP_DECR_READQ_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_readq, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_readq), 1); \
 } while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
 } while (0)
 #define SCTP_DECR_STRMOQ_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
 } while (0)
 
 #define SCTP_INCR_FREE_STRMOQ_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_free_strmoq), 1); \
 } while (0)
 #define SCTP_DECR_FREE_STRMOQ_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_free_strmoq, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_strmoq), 1); \
 } while (0)
 
 #define SCTP_INCR_FREE_CHK_COUNT() do { \
-	atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	atomic_add_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
 } while (0)
 #define SCTP_DECR_FREE_CHK_COUNT() do { \
-	atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
 } while (0)
 #endif

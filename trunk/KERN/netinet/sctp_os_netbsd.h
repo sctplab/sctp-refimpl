@@ -103,6 +103,10 @@
 #endif
 #endif
 
+#define SCTP_BASE_INFO  (type) system_base_info.sctppcbinfo.type
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT (elem)     system_base_info.sctpstat.elm
+
 
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
