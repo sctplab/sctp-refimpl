@@ -184,8 +184,6 @@ extern struct fileops socketops;
 #define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) (ro)->ro_rt->rt_ifp->if_index
 #define SCTP_ROUTE_HAS_VALID_IFN(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifp)
 
-/* The packed define for 64 bit platforms */
-#define SCTP_PACKED __attribute__((packed))
 #define SCTP_UNUSED __attribute__((unused))
 
 /* 
