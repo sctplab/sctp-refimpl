@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.70 2008/05/20 09:51:36 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_input.c,v 1.71 2008/05/20 13:47:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1671,8 +1671,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* pull from vtag hash */
 		LIST_REMOVE(stcb, sctp_asocs);
 		/* re-insert to new vtag position */
-		head = &sctppcbinfo.sctp_asochash[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
-								    sctppcbinfo.hashasocmark)];
+		head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
+								    SCTP_BASE_INFO(hashasocmark))];
 		/*
 		 * put it in the bucket in the vtag hash of assoc's for the
 		 * system
@@ -1682,8 +1682,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* Is this the first restart? */
 		if (stcb->asoc.in_restart_hash == 0) {
 			/* Ok add it to assoc_id vtag hash */
-			head = &sctppcbinfo.sctp_restarthash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-									       sctppcbinfo.hashrestartmark)];
+			head = &SCTP_BASE_INFO(sctp_restarthash)[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
+									       SCTP_BASE_INFO(hashrestartmark))];
 			LIST_INSERT_HEAD(head, stcb, sctp_tcbrestarhash);
 			stcb->asoc.in_restart_hash = 1;
 		}

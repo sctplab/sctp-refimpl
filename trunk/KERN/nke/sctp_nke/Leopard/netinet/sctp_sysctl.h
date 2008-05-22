@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.13 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.14 2008/05/20 13:47:45 rrs Exp $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -477,8 +477,6 @@ extern uint32_t sctp_udp_tunneling_port;
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;
 #endif
-
-extern struct sctpstat sctpstat;
 
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #if defined(SYSCTL_DECL)

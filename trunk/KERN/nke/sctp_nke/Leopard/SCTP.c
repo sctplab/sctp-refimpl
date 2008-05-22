@@ -391,22 +391,22 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	struct inpcb *inp;
 	int err;
 	
-	if (!lck_rw_try_lock_exclusive(sctppcbinfo.ipi_ep_mtx)) {
+	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))) {
 		printf("SCTP NKE: Someone else holds the lock\n");
 		return KERN_FAILURE;
 	}
-	if (!LIST_EMPTY(&sctppcbinfo.listhead)) {
+	if (!LIST_EMPTY(&SCTP_BASE_INFO(listhead))) {
 		printf("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return KERN_FAILURE;
 	}
 
-	if (!LIST_EMPTY(&sctppcbinfo.inplisthead)) {
+	if (!LIST_EMPTY(&SCTP_BASE_INFO(inplisthead))) {
 		printf("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
-		LIST_FOREACH(inp, &sctppcbinfo.inplisthead, inp_list) {
+		LIST_FOREACH(inp, &SCTP_BASE_INFO(inplisthead), inp_list) {
 			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
-		lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return KERN_FAILURE;
 	}
 	sctp_over_udp_stop();
@@ -501,7 +501,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	/* cleanup */
 	sctp_pcbinfo_cleanup();
 
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	sctp_finish();
 #ifdef INET6
 	lck_mtx_unlock(inet6domain.dom_mtx);

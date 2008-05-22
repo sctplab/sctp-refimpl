@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.33 2007/10/16 14:05:51 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_timer.c,v 1.34 2008/05/20 13:47:45 rrs Exp $");
 #endif
 
 #define _IP_VHL
@@ -1825,7 +1825,7 @@ sctp_iterator_timer(struct sctp_iterator *it)
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
 		SCTP_INP_INFO_WLOCK();
-		TAILQ_REMOVE(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+		TAILQ_REMOVE(&SCTP_BASE_INFO(iteratorhead), it, sctp_nxt_itr);
 		/* stopping the callout is not needed, in theory */
 		SCTP_INP_INFO_WUNLOCK();
 		(void)SCTP_OS_TIMER_STOP(&it->tmr.timer);

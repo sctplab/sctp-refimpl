@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.75 2008/05/20 09:51:36 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctputil.c,v 1.77 2008/05/21 16:51:21 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -344,9 +344,9 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 		sctp_clog.x.lock.create_lock = SCTP_LOCK_UNKNOWN;
 	}
 #if (defined(__FreeBSD__) && __FreeBSD_version <= 602000)
-	sctp_clog.x.lock.info_lock = mtx_owned(&sctppcbinfo.ipi_ep_mtx);
+	sctp_clog.x.lock.info_lock = mtx_owned(&SCTP_BASE_INFO(ipi_ep_mtx));
 #else
-	sctp_clog.x.lock.info_lock = rw_wowned(&sctppcbinfo.ipi_ep_mtx);
+	sctp_clog.x.lock.info_lock = rw_wowned(&SCTP_BASE_INFO(ipi_ep_mtx));
 #endif
 	if (inp->sctp_socket) {
 		sctp_clog.x.lock.sock_lock = mtx_owned(&(inp->sctp_socket->so_rcv.sb_mtx));
@@ -1347,22 +1347,22 @@ sctp_iterator_worker(void)
 
 	/* This function is called with the WQ lock in place */
 
-	sctppcbinfo.iterator_running = 1;
+	SCTP_BASE_INFO(iterator_running) = 1;
  again:
-	it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);
+	it = TAILQ_FIRST(&SCTP_BASE_INFO(iteratorhead));
 	while (it) {
 		/* now lets work on this one */
-		TAILQ_REMOVE(&sctppcbinfo.iteratorhead, it, sctp_nxt_itr);
+		TAILQ_REMOVE(&SCTP_BASE_INFO(iteratorhead), it, sctp_nxt_itr);
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		sctp_iterator_work(it);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
         /*sa_ignore FREED_MEMORY*/
-		it = TAILQ_FIRST(&sctppcbinfo.iteratorhead);
+		it = TAILQ_FIRST(&SCTP_BASE_INFO(iteratorhead));
 	}
-	if (TAILQ_FIRST(&sctppcbinfo.iteratorhead)) {
+	if (TAILQ_FIRST(&SCTP_BASE_INFO(iteratorhead))) {
 		goto again;
 	}
-	sctppcbinfo.iterator_running = 0;
+	SCTP_BASE_INFO(iterator_running) = 0;
 	return;
 }
 #endif
@@ -1388,12 +1388,12 @@ sctp_handle_addr_wq(void)
 	LIST_INIT(&asc->list_of_work);
 	asc->cnt = 0;
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	wi = LIST_FIRST(&sctppcbinfo.addr_wq);
+	wi = LIST_FIRST(&SCTP_BASE_INFO(addr_wq));
 	while (wi != NULL) {
 		LIST_REMOVE(wi, sctp_nxt_addr);
 		LIST_INSERT_HEAD(&asc->list_of_work, wi, sctp_nxt_addr);
 		asc->cnt++;
-		wi = LIST_FIRST(&sctppcbinfo.addr_wq);
+		wi = LIST_FIRST(&SCTP_BASE_INFO(addr_wq));
 	}
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 	if(asc->cnt == 0) {
@@ -1423,7 +1423,7 @@ sctp_timeout_handler(void *t)
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
-	int did_output;
+	int did_output, type;
 	struct sctp_iterator *it = NULL;
 
 	tmr = (struct sctp_timer *)t;
@@ -1463,6 +1463,7 @@ sctp_timeout_handler(void *t)
 		it = (struct sctp_iterator *)inp;
 		inp = NULL;
 	}
+	type = tmr->type;
 	if (inp) {
 		SCTP_INP_INCR_REF(inp);
 		if ((inp->sctp_socket == 0) && 
@@ -1847,6 +1848,7 @@ sctp_timeout_handler(void *t)
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
+		inp = NULL;
 		goto out_no_decr;
 	default:
 		SCTPDBG(SCTP_DEBUG_TIMER1, "sctp_timeout_handler:unknown timer %d\n",
@@ -1880,9 +1882,7 @@ out_decr:
 
 out_no_decr:
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer now complete (type %d)\n",
-		tmr->type);
-	if (inp) {
-	}
+			  type);
 }
 
 void
@@ -1912,7 +1912,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		/* Only 1 tick away :-) */
-		tmr = &sctppcbinfo.addr_wq_timer;
+		tmr = &SCTP_BASE_INFO(addr_wq_timer);
 		to_ticks = SCTP_ADDRESS_TICK_DELAY;
 		break;
 	case SCTP_TIMER_TYPE_ITERATOR:
@@ -2272,7 +2272,7 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &inp->sctp_ep.zero_copy_sendq_timer;
 		break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
-		tmr = &sctppcbinfo.addr_wq_timer;
+		tmr = &SCTP_BASE_INFO(addr_wq_timer);
 		break;
 	case SCTP_TIMER_TYPE_EARLYFR:
 		if ((stcb == NULL) || (net == NULL)) {
@@ -6203,7 +6203,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	/* Now that we have the ifa we must awaken the
 	 * iterator with this message.
 	 */
-	wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr, struct sctp_laddr);
+	wi = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_laddr), struct sctp_laddr);
 	if (wi == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
 		return (ENOMEM);
@@ -6222,7 +6222,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	 * Should this really be a tailq? As it is we will process the
 	 * newest first :-0
 	 */
-	LIST_INSERT_HEAD(&sctppcbinfo.addr_wq, wi, sctp_nxt_addr);
+	LIST_INSERT_HEAD(&SCTP_BASE_INFO(addr_wq), wi, sctp_nxt_addr);
 	sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 			 (struct sctp_inpcb *)NULL,
 			 (struct sctp_tcb *)NULL,

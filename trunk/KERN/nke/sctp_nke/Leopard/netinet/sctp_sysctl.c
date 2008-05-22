@@ -30,10 +30,11 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.17 2008/04/16 17:24:18 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.c,v 1.18 2008/05/20 13:47:45 rrs Exp $");
 #endif
 
 #include <netinet/sctp_os.h>
+#include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_pcb.h>
@@ -110,7 +111,6 @@ uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 #if defined(__APPLE__)
 uint32_t sctp_main_timer = SCTPCTL_MAIN_TIMER_DEFAULT;
 #endif
-struct sctpstat sctpstat;
 
 #if defined (__APPLE__) || defined (__FreeBSD__)
 
@@ -340,7 +340,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 
 	SCTP_INP_INFO_RLOCK();
 	if (req->oldptr == USER_ADDR_NULL) {
-		LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+		LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 			SCTP_INP_RLOCK(inp);
 			number_of_endpoints++;
 			number_of_local_addresses += number_of_addresses(inp);
@@ -370,7 +370,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		return EPERM;
 	}
 
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+	LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 		SCTP_INP_RLOCK(inp);
 		xinpcb.last                   = 0;
 		xinpcb.local_port             = ntohs(inp->sctp_lport);
@@ -880,7 +880,7 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
 #endif
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
-	      &sctpstat, sctpstat,
+			  &SCTP_BASE_STATS, sctpstat ,
 	      "SCTP statistics (struct sctp_stat)");
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,

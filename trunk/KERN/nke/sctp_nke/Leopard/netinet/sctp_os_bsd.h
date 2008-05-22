@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.34 2008/05/09 23:02:57 julian Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_os_bsd.h,v 1.35 2008/05/20 13:47:45 rrs Exp $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -146,6 +146,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_CTR6 CTR6
 #endif
 
+#define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
 
 /*
  *
@@ -427,7 +430,11 @@ typedef struct callout sctp_os_timer_t;
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
+#if __FreeBSD_version >= 800037
 #define SCTP_RTALLOC(ro, vrf_id) in_rtalloc_ign((struct route *)ro, 0UL, vrf_id)
+#else
+#define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
+#endif
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
