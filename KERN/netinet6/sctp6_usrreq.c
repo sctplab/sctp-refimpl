@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: src/sys/netinet6/sctp6_usrreq.c,v 1.44 2008/05/20 13:47:46 r
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/udp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 9
@@ -139,7 +140,7 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 
 int
 #if defined(__APPLE__)
-sctp6_input(struct mbuf **i_pak, int *offp)
+sctp6_input_with_port(struct mbuf **i_pak, int *offp, uint16_t port)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type *i_pak)
 #else
@@ -164,6 +165,9 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	int off = *offp;
 #else
 	int off;
+#endif
+#if !defined(__APPLE__)
+	uint16_t port = 0;
 #endif
 #ifdef __Panda__
 	/*-
@@ -250,6 +254,12 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 			calc_check, check, m, mlen, iphlen);
 		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 						 sh, ch, &in6p, &net, vrf_id);
+		if ((net) && (port)) {
+			if (net->port == 0) {
+				sctp_pathmtu_adjustment(in6p, stcb, net, net->mtu - sizeof(struct udphdr));
+			}
+			net->port = port;
+		}
 		/* in6p's ref-count increased && stcb locked */
 		if ((in6p) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
@@ -271,6 +281,12 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	 */
 	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 					 sh, ch, &in6p, &net, vrf_id);
+	if ((net) && (port)) {
+		if (net->port == 0) {
+			sctp_pathmtu_adjustment(in6p, stcb, net, net->mtu - sizeof(struct udphdr));
+		}
+		net->port = port;
+	}
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
@@ -291,7 +307,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
-			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id, 0);
+			sctp_send_shutdown_complete2(m, iphlen, sh, vrf_id, port);
  			goto bad;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
@@ -299,7 +315,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		}
 
 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id, 0);
+			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id, port);
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
@@ -332,7 +348,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 
 	/*sa_ignore NO_NULL_CHK*/
 	sctp_common_input_processing(&m, iphlen, offset, length, sh, ch,
-				     in6p, stcb, net, ecn_bits, vrf_id, 0);
+				     in6p, stcb, net, ecn_bits, vrf_id, port);
 	/* inp's ref-count reduced && stcb unlocked */
 	/* XXX this stuff below gets moved to appropriate parts later... */
 	if (m)
@@ -361,6 +377,13 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	return IPPROTO_DONE;
 }
 
+#if defined(__APPLE__)
+int
+sctp6_input(struct mbuf **i_pak, int *offp)
+{
+	return (sctp6_input_with_port(i_pak, offp, 0));
+}
+#endif
 
 #if defined(__Panda__)
 void
