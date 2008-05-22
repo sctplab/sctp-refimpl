@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.35 2008/04/16 17:24:18 rrs Exp $");
+__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.c,v 1.36 2008/05/20 13:47:44 rrs Exp $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -690,7 +690,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			if (ack->data != NULL) {
 				sctp_m_freem(ack->data);
 			}
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_asconf_ack, ack);
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_asconf_ack), ack);
 			ack = ack_next;
 		}
 	}
@@ -838,7 +838,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
  send_reply:
 	ack_cp->ch.chunk_length = htons(ack_cp->ch.chunk_length);
 	/* save the ASCONF-ACK reply */
-	ack = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_asconf_ack,
+	ack = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_asconf_ack),
 	    struct sctp_asconf_ack);
 	if (ack == NULL) {
 		sctp_m_freem(m_ack);
@@ -2380,7 +2380,7 @@ sctp_asconf_iterator_end(void *ptr, uint32_t val)
 			ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 		}
 		sctp_free_ifa(ifa);
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, l);
+		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_laddr), l);
 		SCTP_DECR_LADDR_COUNT();
 		l = l_next;
 	}
@@ -2437,7 +2437,7 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 	struct sctp_inpcb *inp;
 
 	/* go through all our PCB's */
-	LIST_FOREACH(inp, &sctppcbinfo.listhead, sctp_list) {
+	LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 		struct sctp_tcb *stcb;
 
 		/* process for all associations for this endpoint */
@@ -3254,7 +3254,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_ASCONF, ENOMEM);
 			return (ENOMEM);
 		}
-		wi = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_laddr,
+		wi = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_laddr),
 				   struct sctp_laddr);
 		if (wi == NULL) {
 			SCTP_FREE(asc, SCTP_M_ASC_IT);
@@ -3269,7 +3269,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 			if (inp->laddr_count < 2) {
 				/* can't delete the last local address */
 				SCTP_FREE(asc, SCTP_M_ASC_IT);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_laddr, wi);
+				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_laddr), wi);
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_ASCONF, EINVAL);
 				return (EINVAL);
 			}

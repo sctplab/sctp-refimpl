@@ -65,6 +65,7 @@
 #include <sys/socketvar.h>
 #include <net/route.h>
 #include <netinet/ip.h>
+#include <net/if_dl.h>
 #ifdef INET6
 #include <netinet/ip6.h>
 #endif
@@ -589,9 +590,9 @@ sctp_slowtimo()
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 
-	inp = LIST_FIRST(&sctppcbinfo.inplisthead);
+	inp = LIST_FIRST(&SCTP_BASE_INFO(inplisthead));
 	while (inp) {
 		inp_next = LIST_NEXT(inp, inp_list);
 #ifdef SCTP_DEBUG
@@ -606,15 +607,15 @@ sctp_slowtimo()
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
-				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
 			}
 		}
 		inp = inp_next;
 	}
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
 	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
 		printf("sctp_slowtimo: inps: %u\n", n);
@@ -857,7 +858,8 @@ sctp_print_mbuf_chain(mbuf_t m)
 	}  
 }
 
-void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
+void
+sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 {
 	errno_t error;
 	size_t length;
@@ -873,7 +875,6 @@ void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	bzero((void *)&src, sizeof(struct sockaddr_in));
 	bzero((void *)&dst, sizeof(struct sockaddr_in));
 	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in_addr)));
-	cmsg = (struct cmsghdr *)cmsgbuf;
 	
 	msg.msg_name = (void *)&src;
 	msg.msg_namelen = sizeof(struct sockaddr_in);
@@ -889,16 +890,20 @@ void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 		printf("sock_receivembuf returned error %d.\n", error);
 		return;
 	}
+	if (length == 0) {
+		return;
+	}
 	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
 		mbuf_freem(packet);
 		return;
 	}
-	if ((cmsg->cmsg_level == IPPROTO_IP) &&
-	    (cmsg->cmsg_type == IP_RECVDSTADDR)) {
-		dst.sin_family = AF_INET;
-		dst.sin_len = sizeof(struct sockaddr_in);
-		dst.sin_port = htons(sctp_udp_tunneling_port);
-		memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
+			dst.sin_family = AF_INET;
+			dst.sin_len = sizeof(struct sockaddr_in);
+			dst.sin_port = htons(sctp_udp_tunneling_port);
+			memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
+		}
 	}
 	
 	ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
@@ -916,7 +921,6 @@ void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + length;
 	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
 	SCTP_BUF_NEXT(ip_m) = packet;
-
 	/*
 	printf("Received a UDP packet of length %d from ", (int)length);
 	print_address((struct sockaddr *)&src);
@@ -929,6 +933,83 @@ void sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	sctp_print_mbuf_chain(ip_m);
 	*/
 	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
+	return;
+}
+
+void 
+sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
+{
+	errno_t error;
+	size_t length;
+	mbuf_t packet;
+	struct msghdr msg;
+	struct sockaddr_in6 src, dst;
+	char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct ip6_hdr *ip6;
+	struct mbuf *ip6_m;
+
+	bzero((void *)&msg, sizeof(struct msghdr));
+	bzero((void *)&src, sizeof(struct sockaddr_in6));
+	bzero((void *)&dst, sizeof(struct sockaddr_in6));
+	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in6_pktinfo)));
+	
+	msg.msg_name = (void *)&src;
+	msg.msg_namelen = sizeof(struct sockaddr_in6);
+	msg.msg_iov = NULL;
+	msg.msg_iovlen = 0;
+	msg.msg_control = (void *)cmsgbuf;
+	msg.msg_controllen = CMSG_LEN(sizeof (struct in6_pktinfo));
+	msg.msg_flags = 0;
+	
+	length = (1<<16);
+	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	if (error) {
+		printf("sock_receivembuf returned error %d.\n", error);
+		return;
+	}
+	if (length == 0) {
+		return;
+	}
+	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(packet);
+		return;
+	}
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_PKTINFO)) {
+			dst.sin6_family = AF_INET6;
+			dst.sin6_len = sizeof(struct sockaddr_in6);
+			dst.sin6_port = htons(sctp_udp_tunneling_port);
+			memcpy((void *)&dst.sin6_addr, (const void *)(&((struct in6_pktinfo *)CMSG_DATA(cmsg))->ipi6_addr), sizeof(struct in6_addr));
+		}
+	}
+	ip6_m = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr), 1, M_DONTWAIT, 1, MT_DATA);
+	if (ip6_m == NULL) {
+		mbuf_freem(packet);
+		return;
+	}
+	ip6_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
+	ip6 = mtod(ip6_m, struct ip6_hdr *);
+	bzero((void *)ip6, sizeof(struct ip6_hdr));
+	ip6->ip6_vfc = IPV6_VERSION;
+	ip6->ip6_plen = length;
+	ip6->ip6_src = src.sin6_addr;
+	ip6->ip6_dst = dst.sin6_addr;
+	SCTP_HEADER_LEN(ip6_m) = sizeof(struct ip6_hdr) + length;
+	SCTP_BUF_LEN(ip6_m) = sizeof(struct ip6_hdr);
+	SCTP_BUF_NEXT(ip6_m) = packet;
+	/*
+	printf("Received a UDP packet of length %d from ", (int)length);
+	print_address((struct sockaddr *)&src);
+	printf(" to ");
+	print_address((struct sockaddr *)&dst);
+	printf(".\n");
+	printf("packet = \n");
+	sctp_print_mbuf_chain(packet);
+	printf("ip_m = \n");
+	sctp_print_mbuf_chain(ip_m);
+	*/
+	sctp_input_with_port(ip6_m, sizeof(struct ip), src.sin6_port);
 }
 
 socket_t sctp_over_udp_ipv4_so = NULL;
@@ -939,6 +1020,7 @@ sctp_over_udp_start(void)
 {
 	errno_t error;
 	struct sockaddr_in addr_ipv4;
+	struct sockaddr_in6 addr_ipv6;
 	const int on = 1;
 	
 	if (sctp_over_udp_ipv4_so) {
@@ -953,7 +1035,8 @@ sctp_over_udp_start(void)
 
 	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
 	if (error) {
-		printf("Failed to create SCTP/UDP tunneling socket: errno = %d.\n", error);
+		sctp_over_udp_ipv4_so = NULL;
+		printf("Failed to create SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return error;
 	}
 	
@@ -961,7 +1044,7 @@ sctp_over_udp_start(void)
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
-		printf("Failed to setsockopt() on SCTP/UDP tunneling socket: errno = %d.\n", error);
+		printf("Failed to setsockopt() on SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return error;
 	}
 	
@@ -974,9 +1057,54 @@ sctp_over_udp_start(void)
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
-		printf("Failed to bind SCTP/UDP tunneling socket: errno = %d.\n", error);
+		printf("Failed to bind SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return error;
 	}
+	
+	error = sock_socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv6_cb, NULL, &sctp_over_udp_ipv6_so);
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to create SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_V6ONLY, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_PKTINFO, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	memset((void *)&addr_ipv6, 0, sizeof(struct sockaddr_in6));
+	addr_ipv6.sin6_len    = sizeof(struct sockaddr_in6);
+	addr_ipv6.sin6_family = AF_INET6;
+	addr_ipv6.sin6_port   = htons(sctp_udp_tunneling_port);
+	addr_ipv6.sin6_addr   = in6addr_any;
+	error = sock_bind(sctp_over_udp_ipv6_so, (const struct sockaddr *)&addr_ipv6);
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to bind SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
 	return (0);
 }
 

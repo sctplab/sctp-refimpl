@@ -90,9 +90,9 @@ void
 sctp_wakeup_iterator(void)
 {
 #if !defined(__Windows__)
-	wakeup(&sctppcbinfo.iterator_running);
+	wakeup(&SCTP_BASE_INFO(iterator_running));
 #else
-	KeSetEvent(&sctppcbinfo.iterator_wakeup[0],
+	KeSetEvent(&SCTP_BASE_INFO(iterator_wakeup)[0],
 		   IO_NO_INCREMENT,
 		   FALSE);
 #endif
@@ -109,22 +109,22 @@ sctp_iterator_thread(void *v)
 	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 #endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	sctppcbinfo.iterator_running = 0;
+	SCTP_BASE_INFO(iterator_running) = 0;
 	while (1) {
 #if !defined(__Windows__)
-		msleep(&sctppcbinfo.iterator_running,
+		msleep(&SCTP_BASE_INFO(iterator_running),
 #if defined(__FreeBSD__)
-		       &sctppcbinfo.ipi_iterator_wq_mtx,
+		       &SCTP_BASE_INFO(ipi_iterator_wq_mtx),
 #elif defined(__APPLE__)
-		       sctppcbinfo.ipi_iterator_wq_mtx,
+		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
 #endif
 	 	       0, "waiting_for_work", 0);
 #else
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		KeLowerIrql(oldIrql);
 
-		events[0] = &sctppcbinfo.iterator_wakeup[0];
-		events[1] = &sctppcbinfo.iterator_wakeup[1];
+		events[0] = &SCTP_BASE_INFO(iterator_wakeup[0]);
+		events[1] = &SCTP_BASE_INFO(iterator_wakeup[1]);
 		status = KeWaitForMultipleObjects(2,
 					       events,
 					       WaitAny,
@@ -157,22 +157,22 @@ sctp_startup_iterator(void)
 	ret = kproc_create(sctp_iterator_thread,
 #endif
 			   (void *)NULL,
-			   &sctppcbinfo.thread_proc,
+			   &SCTP_BASE_INFO(thread_proc),
 			   RFPROC,
 			   SCTP_KTHREAD_PAGES, 
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-	sctppcbinfo.thread_proc = IOCreateThread(sctp_iterator_thread,
+	SCTP_BASE_INFO(thread_proc) = IOCreateThread(sctp_iterator_thread,
 						 (void *)NULL);
 #elif defined(__Windows__)
 	NTSTATUS status = STATUS_SUCCESS;
 	OBJECT_ATTRIBUTES objectAttributes;
 	HANDLE iterator_thread_handle;
 
-	KeInitializeEvent(&sctppcbinfo.iterator_wakeup[0],
+	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[0]),
 			  SynchronizationEvent,
 			  FALSE);
-	KeInitializeEvent(&sctppcbinfo.iterator_wakeup[1],
+	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[1]),
 			  SynchronizationEvent,
 			  FALSE);
 	InitializeObjectAttributes(&objectAttributes,
@@ -192,11 +192,11 @@ sctp_startup_iterator(void)
 					  THREAD_ALL_ACCESS,
 					  NULL,
 					  KernelMode,
-					  (PVOID)&sctppcbinfo.iterator_thread_obj,
+					  (PVOID)&SCTP_BASE_INFO(iterator_thread_obj),
 					  NULL);
 		ZwClose(iterator_thread_handle);
 	} else {
-		sctppcbinfo.iterator_thread_obj = NULL;
+		SCTP_BASE_INFO(iterator_thread_obj) = NULL;
 	}
 #endif
 }
