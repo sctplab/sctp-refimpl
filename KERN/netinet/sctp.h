@@ -403,18 +403,18 @@ struct sctp_error_unrecognized_chunk {
 					 * in sat */
 
 /* Data Chuck Specific Flags */
-#define SCTP_DATA_FRAG_MASK	0x03
-#define SCTP_DATA_MIDDLE_FRAG	0x00
-#define SCTP_DATA_LAST_FRAG	0x01
-#define SCTP_DATA_FIRST_FRAG	0x02
-#define SCTP_DATA_NOT_FRAG	0x03
-#define SCTP_DATA_UNORDERED	0x04
-
+#define SCTP_DATA_FRAG_MASK        0x03
+#define SCTP_DATA_MIDDLE_FRAG      0x00
+#define SCTP_DATA_LAST_FRAG        0x01
+#define SCTP_DATA_FIRST_FRAG       0x02
+#define SCTP_DATA_NOT_FRAG         0x03
+#define SCTP_DATA_UNORDERED        0x04
+#define SCTP_DATA_SACK_IMMEDIATELY 0x08
 /* ECN Nonce: SACK Chunk Specific Flags */
-#define SCTP_SACK_NONCE_SUM     0x01
+#define SCTP_SACK_NONCE_SUM        0x01
 
 /* CMT DAC algorithm SACK flag */
-#define SCTP_SACK_CMT_DAC       0x80
+#define SCTP_SACK_CMT_DAC          0x80
 
 /*
  * PCB flags (in sctp_flags bitmask).
