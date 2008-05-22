@@ -4133,8 +4133,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				stcb->asoc.maxrto = new_max;
 				stcb->asoc.minrto = new_min;
 			} else {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EDOM);
-				error = EDOM;
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
@@ -4156,8 +4156,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				inp->sctp_ep.sctp_maxrto = new_max;
 				inp->sctp_ep.sctp_minrto = new_min;
 			} else {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EDOM);
-				error = EDOM;
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
 			}
 			SCTP_INP_WUNLOCK(inp);
 		}
