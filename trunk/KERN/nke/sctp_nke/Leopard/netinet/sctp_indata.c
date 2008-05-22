@@ -1464,6 +1464,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
 	chunk_flags = ch->ch.chunk_flags;
+	if ((chunk_flags & SCTP_DATA_SACK_IMMEDIATELY) == SCTP_DATA_SACK_IMMEDIATELY) {
+		asoc->send_sack = 1;
+	}
 	protocol_id = ch->dp.protocol_id;
 	ordered = ((ch->ch.chunk_flags & SCTP_DATA_UNORDERED) == 0);
 	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
