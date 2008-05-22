@@ -998,6 +998,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	SCTP_HEADER_LEN(ip6_m) = sizeof(struct ip6_hdr) + length;
 	SCTP_BUF_LEN(ip6_m) = sizeof(struct ip6_hdr);
 	SCTP_BUF_NEXT(ip6_m) = packet;
+	
 	/*
 	printf("Received a UDP packet of length %d from ", (int)length);
 	print_address((struct sockaddr *)&src);
@@ -1007,7 +1008,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	printf("packet = \n");
 	sctp_print_mbuf_chain(packet);
 	printf("ip_m = \n");
-	sctp_print_mbuf_chain(ip_m);
+	sctp_print_mbuf_chain(ip6_m);
 	*/
 	sctp_input_with_port(ip6_m, sizeof(struct ip), src.sin6_port);
 }
