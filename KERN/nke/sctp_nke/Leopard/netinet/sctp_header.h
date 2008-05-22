@@ -45,6 +45,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_header.h,v 1.6 2007/08/24 00:53:51 rrs 
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
+#define SCTP_PACKED __attribute__((packed))
 
 /*
  * Parameter structures
@@ -586,4 +587,5 @@ struct sctp_auth_invalid_hmac {
 #if defined(__Windows__)
 #include <packoff.h>
 #endif
+#undef SCTP_PACKED
 #endif				/* !__sctp_header_h__ */

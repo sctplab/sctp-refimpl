@@ -73,7 +73,6 @@ struct proc {
 #define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elm
 
 
-#define SCTP_PACKED
 #define SCTP_UNUSED
 
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
