@@ -1092,19 +1092,19 @@ static void
 print_event_map(struct sctp_cwnd_log *log) 
 {
 	if(log->from == SCTP_MAP_SLIDE_FROM) {
-		printf("%s: Slide From:%d Slide to:%d lgap:%d\n",
+		printf("%s: Slide From:%u Slide to:%u lgap:%u - SLIDE FROM\n",
 		       from_str[log->from],
 		       (int)log->x.map.base,
 		       (int)log->x.map.cum,
 		       (int)log->x.map.high);
 	} else if(log->from == SCTP_MAP_SLIDE_NONE) {
-		printf("%s: (distance:%d + slide_from:%d) > array_size:%d (TSNH :-0)\n",
+		printf("%s: (distance:%u + slide_from:%u) > array_size:%u (TSNH :-0) - NONE\n",
 		       from_str[log->from],
 		       (int)log->x.map.base,
 		       (int)log->x.map.cum,
 		       (int)log->x.map.high);
 	} else if(log->from == SCTP_MAP_TSN_ENTERS) {
-		printf("%s: tsn:%d  cumack:%d highest:%d\n",
+		printf("%s: tsn:%u  cumack:%u highest:%u - TSN_IN\n",
 		       from_str[log->from],
 		       (int)log->x.map.base,
 		       (int)log->x.map.cum,
