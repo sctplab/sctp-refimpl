@@ -627,9 +627,6 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 
 
 #if defined(SCTP_LOCAL_TRACE_BUF)
-SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_INT|CTLFLAG_RW,
-            &sctp_log, 0, sysctl_sctp_cleartrace, "IU",
-			"Clear SCTDP Logging buffer");
 static int
 #if defined (__APPLE__)
 sysctl_sctp_check SYSCTL_HANDLER_ARGS
@@ -637,12 +634,10 @@ sysctl_sctp_check SYSCTL_HANDLER_ARGS
 sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 #endif
 {
-  memset(sctp_log, 0, sizeof(sctp_log));
+  memset(&sctp_log, 0, sizeof(sctp_log));
   sctp_log.index = 0;
   return (0);
 }
-
-
 #endif
 
 
