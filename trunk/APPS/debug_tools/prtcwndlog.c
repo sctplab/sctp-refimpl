@@ -173,7 +173,7 @@ static char *from_str[]= {
 	/* 116 */ "log sack normal",
 	/* 117 */ "log sack express",
 	/* 118 */ "tsn enters",
-	/* 119 */ "clear threshold",
+	/* 119 */ "Tsn Enters in_data",
 	/* 120 */ "increment threshold",
 	/* 121 */ "max"
 
