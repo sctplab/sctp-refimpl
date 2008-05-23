@@ -624,6 +624,29 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
+
+
+#if defined(SCTP_LOCAL_TRACE_BUF)
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_INT|CTLFLAG_RW,
+            &sctp_log, 0, sysctl_sctp_cleartrace, "IU",
+			"Clear SCTDP Logging buffer");
+static int
+#if defined (__APPLE__)
+sysctl_sctp_check SYSCTL_HANDLER_ARGS
+#else
+sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
+#endif
+{
+  memset(sctp_log, 0, sizeof(sctp_log));
+  sctp_log.index = 0;
+  return (0);
+}
+
+
+#endif
+
+
+
 /*
  * sysctl definitions
  */
@@ -857,7 +880,14 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, mobility_fasthandoff, CTLTYPE_INT|CTLFLAG_
 #if defined(SCTP_LOCAL_TRACE_BUF)
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
 	      &sctp_log, sctp_log,
-	      "SCTP logging (struct sctp_log)");
+			  "SCTP logging (struct sctp_log)");
+
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_INT|CTLFLAG_RW,
+            &sctp_log, 0, sysctl_sctp_cleartrace, "IU",
+			"Clear SCTDP Logging buffer");
+
+
+
 #endif
 
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLTYPE_INT|CTLFLAG_RW,
