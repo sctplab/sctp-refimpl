@@ -2300,6 +2300,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 #else
 		SCTP_PRINTF("huh, cumack 0x%x greater than high-tsn 0x%x in map - should panic?\n",
 			    asoc->cumulative_tsn, asoc->highest_tsn_inside_map);
+		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+			sctp_log_map(0, 6, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+		}
 		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 #endif
 	}
