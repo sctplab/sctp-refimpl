@@ -877,9 +877,9 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
 	      &sctp_log, sctp_log,
 			  "SCTP logging (struct sctp_log)");
 
-SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_OPAQUE|CTLFLAG_RW,
             &sctp_log, 0, sysctl_sctp_cleartrace, "IU",
-			"Clear SCTDP Logging buffer");
+			"Clear SCTP Logging buffer");
 
 
 
