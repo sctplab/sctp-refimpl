@@ -2331,7 +2331,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		 * now calculate the ceiling of the move using our highest
 		 * TSN value
 		 */
-		if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
+		if (compare_with_wrap(asoc->highest_tsn_inside_map,
+							  asoc->mapping_array_base_tsn, MAX_TSN) ||
+			(asoc->highest_tsn_inside_map == asoc->mapping_array_base_tsn)) {
 			lgap = asoc->highest_tsn_inside_map -
 			    asoc->mapping_array_base_tsn;
 		} else {
@@ -2347,6 +2349,15 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			return;
 #endif
 		}
+		if (slide_end > asoc->mapping_array_size) {
+#ifdef INVARIANTS
+		    panic("would overrun buffer");
+#else
+			printf("Gak, would have overrun map end:%d slide_end:%d\n",
+				   asoc->mapping_array_size, slide_end);
+			slide_end = asoc->mapping_array_size;
+#endif			
+		} 
 		distance = (slide_end - slide_from) + 1;
 		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(old_base, old_cumack, old_highest,
