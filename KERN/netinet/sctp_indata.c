@@ -2331,9 +2331,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		 * now calculate the ceiling of the move using our highest
 		 * TSN value
 		 */
-		if (compare_with_wrap(asoc->highest_tsn_inside_map,
-							  asoc->mapping_array_base_tsn, MAX_TSN) ||
-			(asoc->highest_tsn_inside_map == asoc->mapping_array_base_tsn)) {
+		if (asoc->highest_tsn_inside_map >=  asoc->mapping_array_base_tsn) {
 			lgap = asoc->highest_tsn_inside_map -
 			    asoc->mapping_array_base_tsn;
 		} else {
