@@ -6840,6 +6840,9 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
 				/* found the new highest */
 				asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn + gap;
+				if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+				  sctp_log_map(0, 8, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+				}
 				break;
 			}
 			gap--;
@@ -6849,6 +6852,10 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 			asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
+			if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+			  sctp_log_map(0, 9, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+			}
+
 		}
 		asoc->last_revoke_count = cnt;
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
