@@ -629,7 +629,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #if defined(SCTP_LOCAL_TRACE_BUF)
 static int
 #if defined (__APPLE__)
-sysctl_sctp_check SYSCTL_HANDLER_ARGS
+sysctl_sctp_cleartrace SYSCTL_HANDLER_ARGS
 #else
 sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 #endif
