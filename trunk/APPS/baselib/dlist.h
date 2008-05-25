@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/dlist.h,v 1.2 2008-05-08 14:10:51 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/dlist.h,v 1.3 2008-05-25 09:06:17 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -37,14 +37,6 @@ $Header: /usr/sctpCVS/APPS/baselib/dlist.h,v 1.2 2008-05-08 14:10:51 randall Exp
 the SCTP reference implementation  is distributed in the hope that it 
 will be useful, but WITHOUT ANY WARRANTY; without even the implied warranty of
                 ************************
-MERCHANTABILITY or FITNESS FOR A PARTICULAR PURPOSE.  See the
-GNU Library General Public License for more details.
-
-You should have received a copy of the GNU Library General Public License
-along with GNU CC; see the file COPYING.  If not, write to
-the Free Software Foundation, 59 Temple Place - Suite 330,
-Boston, MA 02111-1307, USA.  
-
 Please send any bug reports or fixes you make to one of the following email
 addresses:
 
