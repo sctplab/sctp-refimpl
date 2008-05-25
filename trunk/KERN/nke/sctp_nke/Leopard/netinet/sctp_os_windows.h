@@ -68,9 +68,9 @@ struct proc {
 
 #define SCTP_PROCESS_STRUCT struct proc *
 
-#define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
+#define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elm
+#define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
 
 
 #define SCTP_UNUSED

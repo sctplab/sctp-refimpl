@@ -2251,7 +2251,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 * 1) Did we move the cum-ack point?
 	 */
 	struct sctp_association *asoc;
-	int i, at;
+	int at;
 	int last_all_ones=0;
 	int slide_from, slide_end, lgap, distance;
 	uint32_t old_cumack, old_base, old_highest;
@@ -2275,14 +2275,14 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 * offset of the current cum-ack as the starting point.
 	 */
 	at = 0;
-	for (i = 0; i < stcb->asoc.mapping_array_size; i++) {
+	for (slide_from = 0; slide_from < stcb->asoc.mapping_array_size; slide_from++) {
 
-		if (asoc->mapping_array[i] == 0xff) {
+		if (asoc->mapping_array[slide_from] == 0xff) {
 			at += 8;
 			last_all_ones = 1;
 		} else {
 			/* there is a 0 bit */
-			at += sctp_map_lookup_tab[asoc->mapping_array[i]];
+			at += sctp_map_lookup_tab[asoc->mapping_array[slide_from]];
 			last_all_ones = 0;
 			break;
 		}
@@ -2300,6 +2300,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 #else
 		SCTP_PRINTF("huh, cumack 0x%x greater than high-tsn 0x%x in map - should panic?\n",
 			    asoc->cumulative_tsn, asoc->highest_tsn_inside_map);
+		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+			sctp_log_map(0, 6, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+		}
 		asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 #endif
 	}
@@ -2325,13 +2328,13 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		}
 	} else if (at >= 8) {
 		/* we can slide the mapping array down */
-		/* Calculate the new byte postion we can move down */
-		slide_from = at >> 3;
+		/* slide_from holds where we hit the first NON 0xff byte */
+
 		/*
 		 * now calculate the ceiling of the move using our highest
 		 * TSN value
 		 */
-		if (asoc->highest_tsn_inside_map >= asoc->mapping_array_base_tsn) {
+		if (asoc->highest_tsn_inside_map >=  asoc->mapping_array_base_tsn) {
 			lgap = asoc->highest_tsn_inside_map -
 			    asoc->mapping_array_base_tsn;
 		} else {
@@ -2347,6 +2350,15 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			return;
 #endif
 		}
+		if (slide_end > asoc->mapping_array_size) {
+#ifdef INVARIANTS
+		    panic("would overrun buffer");
+#else
+			printf("Gak, would have overrun map end:%d slide_end:%d\n",
+				   asoc->mapping_array_size, slide_end);
+			slide_end = asoc->mapping_array_size;
+#endif			
+		} 
 		distance = (slide_end - slide_from) + 1;
 		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(old_base, old_cumack, old_highest,
