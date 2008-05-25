@@ -3306,6 +3306,10 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 						return (1);
 					}
 					stcb->asoc.highest_tsn_inside_map = (ntohl(resp->senders_next_tsn) - 1);
+					if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+					  sctp_log_map(0, 7, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+					}
+
 					stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
 					stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
 					memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
@@ -3409,6 +3413,9 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 			return (1);
 		}
 		stcb->asoc.highest_tsn_inside_map += SCTP_STREAM_RESET_TSN_DELTA;
+		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+		  sctp_log_map(0, 10, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+		}
 		stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
 		stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
