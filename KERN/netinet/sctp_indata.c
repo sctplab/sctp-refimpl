@@ -68,7 +68,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 uint32_t 
 sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	uint32_t calc=0, calc_save=0, result=0;
+	uint32_t calc=0;
 
 	/*
 	 * This is really set wrong with respect to a 1-2-m socket. Since
@@ -83,8 +83,7 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    asoc->size_on_reasm_queue == 0 &&
 	    asoc->size_on_all_streams == 0) {
 		/* Full rwnd granted */
-		calc = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
-		    SCTP_MINIMAL_RWND);
+		calc = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket), SCTP_MINIMAL_RWND);
 		return (calc);
 	}
 	/* get actual space */
@@ -101,28 +100,16 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		/* out of space */
 		return (calc);
 	}
+
 	/* what is the overhead of all these rwnd's */
 	calc = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
-	calc_save = calc;
-
-	result = calc;
-	if ((result == 0) && 
-	    (calc < stcb->asoc.my_rwnd_control_len)) {
-		/*-
-		 * If our rwnd == 0 && the overhead is greater than the 
- 		 * data onqueue, we clamp the rwnd to 1. This lets us 
- 		 * still accept inbound segments, but hopefully will shut 
- 		 * the sender down when he finally gets the message. This
-		 * hopefully will gracefully avoid discarding packets.
- 		 */
-		result = 1;
+	/* If the window gets too small due to ctrl-stuff, reduce it
+	 * to 1, even it is 0. SWS engaged
+	 */
+	if (calc < stcb->asoc.my_rwnd_control_len) {
+		calc = 1;
 	}
-	if (result &&
-	    (result < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
-		/* SWS engaged, tell peer none left */
-		result = 1;
-	}
-	return (result);
+	return (calc);
 }
 
 
