@@ -61,62 +61,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.c,v 1.50 2008/05/20 13:47:45 rrs
 void 
 sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	uint32_t calc, calc_save;
-
-	/*
-	 * This is really set wrong with respect to a 1-2-m socket. Since
-	 * the sb_cc is the count that everyone as put up. When we re-write
-	 * sctp_soreceive then we will fix this so that ONLY this
-	 * associations data is taken into account.
-	 */
-	if(stcb->sctp_socket == NULL)
-		return;
-
-	if (stcb->asoc.sb_cc == 0 &&
-	    asoc->size_on_reasm_queue == 0 &&
-	    asoc->size_on_all_streams == 0) {
-		/* Full rwnd granted */
-		asoc->my_rwnd = max(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
-		    SCTP_MINIMAL_RWND);
-		return;
-	}
-	/* get actual space */
-	calc = (uint32_t) sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv);
-
-	/*
-	 * take out what has NOT been put on socket queue and we yet hold
-	 * for putting up.
-	 */
-	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_reasm_queue);
-	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_all_streams);
-
-	if (calc == 0) {
-		/* out of space */
-		asoc->my_rwnd = 0;
-		return;
-	}
-	/* what is the overhead of all these rwnd's */
-
-	calc = sctp_sbspace_sub(calc, stcb->asoc.my_rwnd_control_len);
-	calc_save = calc;
-
-	asoc->my_rwnd = calc;
-	if ((asoc->my_rwnd == 0) && 
-	    (calc < stcb->asoc.my_rwnd_control_len)) {
-		/*-
-		 * If our rwnd == 0 && the overhead is greater than the 
- 		 * data onqueue, we clamp the rwnd to 1. This lets us 
- 		 * still accept inbound segments, but hopefully will shut 
- 		 * the sender down when he finally gets the message. This
-		 * hopefully will gracefully avoid discarding packets.
- 		 */
-		asoc->my_rwnd = 1;
-	}
-	if (asoc->my_rwnd &&
-	    (asoc->my_rwnd < stcb->sctp_ep->sctp_ep.sctp_sws_receiver)) {
-		/* SWS engaged, tell peer none left */
-		asoc->my_rwnd = 1;
-	}
+	asoc->my_rwnd = sctp_calc_rwnd(stcb, asoc);
 }
 
 /* Calculate what the rwnd would be */
