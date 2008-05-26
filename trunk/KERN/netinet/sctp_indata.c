@@ -1545,9 +1545,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 
 	/* now do the tests */
-	if (((asoc->cnt_on_all_streams +
-	    asoc->cnt_on_reasm_queue +
-	    asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) ||
+	if (((asoc->cnt_on_all_streams + 
+	      asoc->cnt_on_reasm_queue + 
+	      asoc->cnt_msg_on_sb) >= sctp_max_chunks_on_queue) ||
 	    (((int)asoc->my_rwnd) <= 0)) {
 		/*
 		 * When we have NO room in the rwnd we check to make sure
@@ -1576,14 +1576,12 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #endif
 		}
 		/* now is it in the mapping array of what we have accepted? */
-		if (compare_with_wrap(tsn,
-		    asoc->highest_tsn_inside_map, MAX_TSN)) {
-
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 			/* Nope not in the valid range dump it */
 			sctp_set_rwnd(stcb, asoc);
 			if ((asoc->cnt_on_all_streams +
-			    asoc->cnt_on_reasm_queue +
-			    asoc->cnt_msg_on_sb) > sctp_max_chunks_on_queue) {
+			     asoc->cnt_on_reasm_queue +
+			     asoc->cnt_msg_on_sb) >= sctp_max_chunks_on_queue) {
 				SCTP_STAT_INCR(sctps_datadropchklmt);
 			} else {
 				SCTP_STAT_INCR(sctps_datadroprwnd);
