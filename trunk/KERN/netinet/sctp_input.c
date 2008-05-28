@@ -5061,6 +5061,12 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * and it changes our INP.
 			 */
  			inp = stcb->sctp_ep;
+			if ((net) && (port)) {
+				if (net->port == 0) {
+					sctp_pathmtu_adjustment(inp, stcb, net, net->mtu - sizeof(struct udphdr));
+				}
+				net->port = port;
+			}
 		}
 	} else {
 		/*
