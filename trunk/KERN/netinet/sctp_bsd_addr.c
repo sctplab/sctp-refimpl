@@ -257,6 +257,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_PPP:
 	case IFT_LOOP:
 	case IFT_SLIP:
+	case IFT_GIF:
 #if !defined(__APPLE__)
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
