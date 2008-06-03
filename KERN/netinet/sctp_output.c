@@ -6321,7 +6321,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		}
 	}
 	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-		   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+		   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 
 	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	    (stcb->asoc.total_flight > 0) &&
@@ -9638,8 +9638,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * flight we stop.
 			 */
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) 
-				    * sizeof(struct sctp_data_chunk)));
+					   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 			if((un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
 			   (stcb->asoc.total_flight > 0)){
 				break;
@@ -12627,7 +12626,7 @@ sctp_lower_sosend(struct socket *so,
 	asoc->ifp_had_enobuf = 0;
   } else {
 	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * sizeof(struct sctp_data_chunk)));
+			   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
   }
   /* Are we aborting? */
   if (srcv->sinfo_flags & SCTP_ABORT) {
@@ -13048,12 +13047,10 @@ sctp_lower_sosend(struct socket *so,
 		}
 		asoc->ifp_had_enobuf = 0;
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
-					sizeof(struct sctp_data_chunk)));
+				   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 	  } else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-				   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
-					sizeof(struct sctp_data_chunk)));
+				   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 		if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
 		  queue_only = 1;
 		  SCTP_STAT_INCR(sctps_send_burst_avoid);
@@ -13335,12 +13332,10 @@ sctp_lower_sosend(struct socket *so,
 	}
 	asoc->ifp_had_enobuf = 0;
 	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
-			    sizeof(struct sctp_data_chunk)));
+			   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
   } else {
 	un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			   ((stcb->asoc.chunks_on_out_queue - stcb->asoc.total_flight_count) * 
-			    sizeof(struct sctp_data_chunk)));
+			   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 	if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
 	  queue_only = 1;
 	  SCTP_STAT_INCR(sctps_send_burst_avoid);
