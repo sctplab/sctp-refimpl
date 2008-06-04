@@ -42,9 +42,17 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.h,v 1.3 2007/05/08 17:01:10 rrs
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 /* socket option peeloff */
 struct sctp_peeloff_opt {
+#if !defined(__Windows__)
 	int s;
+#else
+	HANDLE s;
+#endif
 	sctp_assoc_t assoc_id;
+#if !defined(__Windows__)
 	int new_sd;
+#else
+	HANDLE new_sd;
+#endif
 };
 
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
