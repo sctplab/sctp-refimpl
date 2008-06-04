@@ -369,13 +369,11 @@ sctp_start_main_timer(void) {
 	if ((int)sctp_main_timer <= 1000/hz)
 		sctp_main_timer = 1000/hz;
 	sctp_main_timer_ticks = MSEC_TO_TICKS(sctp_main_timer);
-/*  printf("start main timer: interval %d\n", sctp_main_timer_ticks); */
 	timeout(sctp_fasttim, NULL, sctp_main_timer_ticks);
 }
 
 void
 sctp_stop_main_timer(void) {
-/* printf("stop main timer\n"); */
 	untimeout(sctp_fasttim, NULL);
 }
 
@@ -689,83 +687,86 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
-    struct sockaddr *sa;
-    struct sockaddr *rti_info[RTAX_MAX];
-    struct ifnet *ifn, *found_ifn = NULL;
-    struct ifaddr *ifa, *found_ifa = NULL;
+	struct sockaddr *sa;
+	struct sockaddr *rti_info[RTAX_MAX];
+	struct ifnet *ifn, *found_ifn = NULL;
+	struct ifaddr *ifa, *found_ifa = NULL;
 
-    /* handle only the types we want */
-    if ((ifa_msg->ifam_type != RTM_NEWADDR) &&
-	(ifa_msg->ifam_type != RTM_DELADDR))
-	return;
-					  
-    /* parse the list of addreses reported */
-    sa = (struct sockaddr *)(ifa_msg + 1);
-    sctp_get_rtaddrs(ifa_msg->ifam_addrs, sa, rti_info);
-
-    /* we only want the interface address */
-    sa = rti_info[RTAX_IFA];
-
-/* tempy prints */
-    if (ifa_msg->ifam_type == RTM_NEWADDR)
-	printf("if_index %u: adding ", ifa_msg->ifam_index);
-    else
-	printf("if_index %u: deleting ", ifa_msg->ifam_index);
-    print_address(sa);
-    printf("\n");
-/* end tempy prints */
-
-    /*
-     * find the actual kernel ifa/ifn for this address.
-     * we need this primarily for the v6 case to get the ifa_flags.
-     */
-    TAILQ_FOREACH(ifn, &ifnet, if_list) {
-	/* find the interface by index */
-	if (ifa_msg->ifam_index == ifn->if_index) {
-	    found_ifn = ifn;
-	    break;
+	/* handle only the types we want */
+	if ((ifa_msg->ifam_type != RTM_NEWADDR) && (ifa_msg->ifam_type != RTM_DELADDR)) {
+		return;
 	}
-    }
-    if (found_ifn == NULL) {
-	/* TSNH */
-	printf("if_index %u not found?!", ifa_msg->ifam_index);
-	return;
-    }
+	
+	/* parse the list of addreses reported */
+	sa = (struct sockaddr *)(ifa_msg + 1);
+	sctp_get_rtaddrs(ifa_msg->ifam_addrs, sa, rti_info);
 
-    /* verify the address on the interface */
-    TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
-	if (ifa->ifa_addr == NULL)
-	    continue;
+	/* we only want the interface address */
+	sa = rti_info[RTAX_IFA];
 
+	/* tempy prints */
+	if (ifa_msg->ifam_type == RTM_NEWADDR) {
+		printf("if_index %u: adding ", ifa_msg->ifam_index);
+	} else {
+		printf("if_index %u: deleting ", ifa_msg->ifam_index);
+	}
+	print_address(sa);
+	printf("\n");
+	/* end tempy prints */
+
+	/*
+	 * find the actual kernel ifa/ifn for this address.
+	 * we need this primarily for the v6 case to get the ifa_flags.
+	 */
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+		/* find the interface by index */
+		if (ifa_msg->ifam_index == ifn->if_index) {
+			found_ifn = ifn;
+			break;
+		}
+	}
+	if (found_ifn == NULL) {
+		/* TSNH */
+		printf("if_index %u not found?!", ifa_msg->ifam_index);
+		return;
+	}
+
+	/* verify the address on the interface */
+	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
+		if (ifa->ifa_addr == NULL) {
+			continue;
+		}
+		switch (ifa->ifa_addr->sa_family) {
+		case AF_INET:
+			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
+				found_ifa = ifa;
+				break;
+			}
 #if defined(INET6)
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
-	    if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa, 
-				     (struct sockaddr_in6 *)ifa->ifa_addr)) {
-		found_ifa = ifa;
-		break;
-	    }
-	} else
+		case AF_INET6:
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
+				found_ifa = ifa;
+				break;
+			}
 #endif
-	if (ifa->ifa_addr->sa_family == AF_INET) {
-	    if (((struct sockaddr_in *)sa)->sin_addr.s_addr ==
-		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
-		found_ifa = ifa;
-		break;
-	    }
+		default:
+			/* TSNH */
+			printf("sctp_handle_ifamsgUnknown address family %d.\n", ifa->ifa_addr->sa_family);
+			return;
+		}
 	}
-    }
-    if (found_ifa == NULL) {
-	/* TSNH */
-	printf("ifa not found?!");
-	return;
-    }
+	if (found_ifa == NULL) {
+		/* TSNH */
+		printf("ifa not found?!");
+		return;
+	}
 
-    /* relay the appropriate address change to the base code */
-    if (ifa_msg->ifam_type == RTM_NEWADDR) {
-	sctp_addr_change(found_ifa, RTM_ADD);
-    } else {
-	sctp_addr_change(found_ifa, RTM_DELETE);
-    }
+	/* relay the appropriate address change to the base code */
+	if (ifa_msg->ifam_type == RTM_NEWADDR) {
+		sctp_addr_change(found_ifa, RTM_ADD);
+	} else {
+		sctp_addr_change(found_ifa, RTM_DELETE);
+	}
 }
 
 void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
@@ -949,6 +950,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	struct ip6_hdr *ip6;
 	struct mbuf *ip6_m;
 
+	I_AM_HERE;
 	bzero((void *)&msg, sizeof(struct msghdr));
 	bzero((void *)&src, sizeof(struct sockaddr_in6));
 	bzero((void *)&dst, sizeof(struct sockaddr_in6));
