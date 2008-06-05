@@ -1099,7 +1099,7 @@ ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
 __END_DECLS
 
 #else
-int sctp_peeloff __P((SOCKET, sctp_assoc_t));
+SOCKET sctp_peeloff __P((SOCKET, sctp_assoc_t));
 int sctp_bindx __P((SOCKET, struct sockaddr *, int, int));
 int sctp_connectx __P((SOCKET, const struct sockaddr *, int, sctp_assoc_t *));
 int sctp_getaddrlen __P((sa_family_t));

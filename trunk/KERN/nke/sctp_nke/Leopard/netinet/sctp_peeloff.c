@@ -238,7 +238,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
         newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 #ifdef SCTP_LOCK_LOGGING
 	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);

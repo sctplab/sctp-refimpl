@@ -327,93 +327,17 @@ in_broadcast(struct in_addr in, struct ifnet *ifp)
  * timers
  */
 
-typedef void (*sctp_timeout_t)(void *);
+#include <sys/callout.h>
+typedef struct callout sctp_os_timer_t;
 
-typedef struct sctp_os_timer {
-	int pending;
-	KTIMER tmr;
-	KSPIN_LOCK lock;
-	KDPC dpc;
-	int ticks;
-	sctp_timeout_t func;
-	void *arg;
-} sctp_os_timer_t;
 
-VOID CustomTimerDpc(IN struct _KDPC *, IN PVOID, IN PVOID, IN PVOID);
-
-__inline void
-SCTP_OS_TIMER_INIT(sctp_os_timer_t *tmr)
-{
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_INIT - enter\n");
-	RtlZeroMemory(tmr, sizeof(sctp_os_timer_t));
-	KeInitializeSpinLock(&tmr->lock);
-	KeInitializeDpc(&tmr->dpc, CustomTimerDpc, tmr);
-	KeInitializeTimer(&tmr->tmr);
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_INIT - leave\n");
-}
-    
-__inline void
-SCTP_OS_TIMER_START(sctp_os_timer_t *tmr, int ticks, sctp_timeout_t func, void *arg)
-{
-	LARGE_INTEGER ExpireTime;
-	BOOLEAN blnCanceled = FALSE;
-
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - enter\n");
-
-	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_START: Try to Acquire spin lock, tmr=%p,pending=%d,ticks=%d\n",
-	    tmr, tmr->pending, ticks);
-	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
-
-	/* Make sure that there is no pending timer before. */
-	blnCanceled = KeCancelTimer(&tmr->tmr);
-	if (blnCanceled) {
-		tmr->pending--;
-	}
-
-	tmr->func = func;
-	tmr->arg = arg;
-	tmr->ticks = ticks; 
-	tmr->pending++;
-	ExpireTime.QuadPart = -(LONGLONG)(10000)*ticks; /* millisecond (ticks) v.s. 100-nanosecond (ExpireTime) */
-	KeSetTimer(&tmr->tmr, ExpireTime, &tmr->dpc);
-
-	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_START: Release spin lock, tmr=%p,pending=%d,blnCanceled=%d\n",
-	    tmr, tmr->pending, blnCanceled);
-
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_START - leave\n");
-}
-
-__inline void
-SCTP_OS_TIMER_STOP(sctp_os_timer_t *tmr) {
-	BOOLEAN blnCanceled = FALSE;
-
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - enter\n");
-
-	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_STOP: Try to Acquire spin lock, tmr=%p,pending=%d\n",
-	    tmr, tmr->pending);
-	KeAcquireSpinLockAtDpcLevel(&tmr->lock);
-
-	blnCanceled = KeCancelTimer(&tmr->tmr);
-	if (blnCanceled) {
-		tmr->pending--;
-	}
-
-	KeReleaseSpinLockFromDpcLevel(&tmr->lock);
-	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_STOP: Release spin lock, tmr=%p,pending=%d,blnCanceled=%d\n",
-	    tmr, tmr->pending, blnCanceled);
-
-	SCTPDBG(SCTP_DEBUG_NOISY, "SCTP_OS_TIMER_STOP - leave\n");
-}
-
-__inline BOOLEAN
-SCTP_OS_TIMER_PENDING(sctp_os_timer_t *tmr) {
-	SCTPDBG(SCTP_DEBUG_TIMER3, "SCTP_OS_TIMER_PENDING: tmr=%p,pending=%d\n", tmr, tmr->pending);
-	return (tmr->pending > 0);
-}
-
-#define SCTP_OS_TIMER_ACTIVE(tmr)	TRUE
-#define SCTP_OS_TIMER_DEACTIVATE(tmr)
+#define	SCTP_OS_TIMER_INIT(tmr)	callout_init(tmr, 1)
+#define	SCTP_OS_TIMER_START	callout_reset
+#define	SCTP_OS_TIMER_STOP	callout_stop
+#define	SCTP_OS_TIMER_STOP_DRAIN callout_drain
+#define	SCTP_OS_TIMER_PENDING	callout_pending
+#define	SCTP_OS_TIMER_ACTIVE	callout_active
+#define	SCTP_OS_TIMER_DEACTIVATE callout_deactivate
 
 __inline uint64_t
 sctp_get_tick_count(void)
