@@ -301,18 +301,30 @@ sctp_init_ifns_for_vrf(int vrfid)
 	 * any IFA that exists as we float through the
 	 * list of IFA's
 	 */
+#if defined (__APPLE__)
+	errno_t error;
+	ifnet_t *ifnetlist;
+	uint32_t i, count;
+#endif
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	struct in6_ifaddr *ifa6;
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
 
-#if defined(__APPLE__)
-#if 0
-	ifnet_head_lock_shared();
-#endif
-#endif
+#if defined (__APPLE__)
+	ifnetlist = NULL;
+	count = 0;
+	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+	if (error != 0) {
+		printf("ifnet_list_get failed %d\n", error);
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		ifn = ifnetlist[i];
+#else
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+#endif
 #if defined(__APPLE__)
 		if (sctp_ignore_vmware_interfaces && sctp_is_vmware_interface(ifn)) {
 			continue;
@@ -366,11 +378,10 @@ sctp_init_ifns_for_vrf(int vrfid)
 		}
 	}
 #if defined(__APPLE__)
-#if 0
-	ifnet_head_done();
+out:
+	if (ifnetlist != 0)
+		ifnet_list_free(ifnetlist);
 #endif
-#endif
-
 }
 
 
@@ -398,7 +409,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
-	struct in6_ifaddr *ifa6;
 	/* BSD only has one VRF, if this changes
 	 * we will need to hook in the right 
 	 * things here to get the id to pass to
@@ -418,24 +428,20 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		return;
 	}
 
-	if(ifa->ifa_addr == NULL) {
+	if (ifa->ifa_addr == NULL) {
 		return;
 	}
-	if ((ifa->ifa_addr->sa_family != AF_INET) &&
-	    (ifa->ifa_addr->sa_family != AF_INET6)
-		) {
+	if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
 		/* non inet/inet6 skip */
 		return;
 	}
-	if(ifa->ifa_addr->sa_family == AF_INET6) {
-		ifa6 = (struct in6_ifaddr *)ifa;
-		ifa_flags = ifa6->ia6_flags;
+	if (ifa->ifa_addr->sa_family == AF_INET6) {
+		ifa_flags = ((struct in6_ifaddr *)ifa)->ia6_flags;
 		if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
 			/* skip unspecifed addresses */
 			return;
 		}
-
-	} else if (ifa->ifa_addr->sa_family == AF_INET) {
+	} else {
 		if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
 			return;
 		}
@@ -445,7 +451,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		/* non desired type */
 		return;
 	}
-	if(cmd == RTM_ADD) {
+	if (cmd == RTM_ADD) {
 		ifap = sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
 					    ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
 #ifdef __APPLE__
@@ -454,7 +460,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		                            ifa->ifa_ifp->if_xname,
 #endif
 					    (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
-	} else if (cmd == RTM_DELETE) {
+	} else {
 
 		sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr, 
 				       ifa->ifa_ifp->if_index,
@@ -473,15 +479,27 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 void
 sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 {
+#if defined (__APPLE__)
+	errno_t error;
+	ifnet_t *ifnetlist;
+	uint32_t i, count;
+#endif
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 
-#if defined(__APPLE__)
-#if 0
-	ifnet_head_lock_shared();
-#endif
-#endif
+#if defined (__APPLE__)
+	ifnetlist = NULL;
+	count = 0;
+	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+	if (error != 0) {
+		printf("ifnet_list_get failed %d\n", error);
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		ifn = ifnetlist[i];
+#else
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+#endif
 		if (!(*pred)(ifn)) {
 			continue;
 		}
@@ -490,9 +508,9 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 		}
 	}
 #if defined(__APPLE__)
-#if 0
-	ifnet_head_done();
-#endif
+out:
+	if (ifnetlist != 0)
+		ifnet_list_free(ifnetlist);
 #endif
 }
 
