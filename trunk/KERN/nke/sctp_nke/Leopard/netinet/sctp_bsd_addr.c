@@ -50,7 +50,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_bsd_addr.c,v 1.18 2008/04/16 17:24:18 r
 #include <netinet/sctp_indata.h>
 #include <sys/unistd.h>
 
-
 /* Declare all of our malloc named types */
 
 /* Note to Michael/Peter for mac-os, 
@@ -286,6 +285,14 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
         return (result);
 }
 
+#if defined(__APPLE__)
+int
+sctp_is_vmware_interface(struct ifnet *ifn)
+{
+	return (strncmp(ifn->if_name, "vmnet", 5) == 0);
+}
+#endif
+
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
@@ -300,63 +307,70 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
 
+#if defined(__APPLE__)
+#if 0
+	ifnet_head_lock_shared();
+#endif
+#endif
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+#if defined(__APPLE__)
+		if (sctp_ignore_vmware_interfaces && sctp_is_vmware_interface(ifn)) {
+			continue;
+		}
+#endif
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if(ifa->ifa_addr == NULL) {
 				continue;
 			}
-			if ((ifa->ifa_addr->sa_family != AF_INET) &&
-			    (ifa->ifa_addr->sa_family != AF_INET6)
-				) {
+			if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
 				/* non inet/inet6 skip */
 				continue;
 			}
-			if(ifa->ifa_addr->sa_family == AF_INET6) {
-				ifa6 = (struct in6_ifaddr *)ifa;
-				ifa_flags = ifa6->ia6_flags;
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
 				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
 					/* skip unspecifed addresses */
 					continue;
 				}
-
-			} else if (ifa->ifa_addr->sa_family == AF_INET) {
+			} else {
 				if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
 					continue;
 				}
 			}
-
 			if (sctp_is_desired_interface_type(ifa) == 0) {
 				/* non desired type */
 				continue;
 			}
 
-			if((ifa->ifa_addr->sa_family == AF_INET6) ||
-			   (ifa->ifa_addr->sa_family == AF_INET)) {
-				if (ifa->ifa_addr->sa_family == AF_INET6) {
-					ifa6 = (struct in6_ifaddr *)ifa;
-					ifa_flags = ifa6->ia6_flags;
-				} else {
-					ifa_flags = 0;
-				}
-				sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
-								(void *)ifn,
-								ifn->if_index, 
-								ifn->if_type,
-#ifdef __APPLE__
-								ifn->if_name,
-#else
-								ifn->if_xname,
-#endif
-								(void *)ifa,
-								ifa->ifa_addr,
-								ifa_flags, 0
-					);
-				if(sctp_ifa) {
-					sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
-				} 
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				ifa6 = (struct in6_ifaddr *)ifa;
+				ifa_flags = ifa6->ia6_flags;
+			} else {
+				ifa_flags = 0;
 			}
+			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+							(void *)ifn,
+							ifn->if_index, 
+							ifn->if_type,
+#if defined(__APPLE__)
+							ifn->if_name,
+#else
+							ifn->if_xname,
+#endif
+							(void *)ifa,
+							ifa->ifa_addr,
+							ifa_flags,
+							0);
+			if (sctp_ifa) {
+				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+			} 
 		}
 	}
+#if defined(__APPLE__)
+#if 0
+	ifnet_head_done();
+#endif
+#endif
+
 }
 
 
@@ -454,6 +468,32 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		 * the final delete will happen.
 		 */
  	}
+}
+
+void
+sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
+{
+	struct ifnet *ifn;
+	struct ifaddr *ifa;
+
+#if defined(__APPLE__)
+#if 0
+	ifnet_head_lock_shared();
+#endif
+#endif
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+		if (!(*pred)(ifn)) {
+			continue;
+		}
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sctp_addr_change(ifa, add ? RTM_ADD : RTM_DELETE);
+		}
+	}
+#if defined(__APPLE__)
+#if 0
+	ifnet_head_done();
+#endif
+#endif
 }
 
 struct mbuf *

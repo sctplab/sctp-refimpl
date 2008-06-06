@@ -704,7 +704,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	/* we only want the interface address */
 	sa = rti_info[RTAX_IFA];
 
-	/* tempy prints */
+	/*
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
 		printf("if_index %u: adding ", ifa_msg->ifam_index);
 	} else {
@@ -712,12 +712,14 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	print_address(sa);
 	printf("\n");
-	/* end tempy prints */
-
+	*/
 	/*
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
 	 */
+#if 0
+	ifnet_head_lock_shared();
+#endif	 
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 		/* find the interface by index */
 		if (ifa_msg->ifam_index == ifn->if_index) {
@@ -725,6 +727,9 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			break;
 		}
 	}
+#if 0
+	ifnet_head_done();
+#endif
 	if (found_ifn == NULL) {
 		/* TSNH */
 		printf("if_index %u not found?!", ifa_msg->ifam_index);
@@ -733,6 +738,9 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 	/* verify the address on the interface */
 	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
+		if (found_ifa) {
+			break;
+		}
 		if (ifa->ifa_addr == NULL) {
 			continue;
 		}
@@ -740,19 +748,17 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		case AF_INET:
 			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
 				found_ifa = ifa;
-				break;
-			}
+ 			}
+			break;
 #if defined(INET6)
 		case AF_INET6:
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
 				found_ifa = ifa;
-				break;
 			}
+			break;
 #endif
 		default:
-			/* TSNH */
-			printf("sctp_handle_ifamsgUnknown address family %d.\n", ifa->ifa_addr->sa_family);
-			return;
+			break;
 		}
 	}
 	if (found_ifa == NULL) {
@@ -768,6 +774,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 }
+
 
 void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 {
@@ -798,9 +805,7 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 
 	/* process the routing event */
 	rt_msg = (struct rt_msghdr *)rt_buffer;
-	/*
 	printf("Got routing event 0x%x, %d bytes\n", rt_msg->rtm_type, (int)length);
-	*/
 	switch (rt_msg->rtm_type) {
 	case RTM_DELADDR:
 	case RTM_NEWADDR:
