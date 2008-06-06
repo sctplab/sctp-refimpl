@@ -105,6 +105,7 @@ struct sctp_log sctp_log;
 #endif
 uint32_t sctp_udp_tunneling_for_client_enable = SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT;
 uint32_t sctp_udp_tunneling_port = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
+uint32_t sctp_enable_sack_immediately = SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT;
 #ifdef SCTP_DEBUG
 uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 #endif
@@ -639,6 +640,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 		RANGECHK(sctp_mobility_fasthandoff, SCTPCTL_MOBILITY_FASTHANDOFF_MIN, SCTPCTL_MOBILITY_FASTHANDOFF_MAX);
 #endif
 		RANGECHK(sctp_udp_tunneling_for_client_enable, SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MIN, SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MAX);
+		RANGECHK(sctp_enable_sack_immediately, SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN, SCTPCTL_SACK_IMMEDIATELY_ENABLE_MAX);
 #ifdef SCTP_DEBUG
 		RANGECHK(sctp_debug_on, SCTPCTL_DEBUG_MIN, SCTPCTL_DEBUG_MAX);
 #endif
@@ -917,6 +919,10 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLTYPE_I
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_port, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_udp_tunneling_port, 0, sysctl_sctp_udp_tunneling_check, "IU",
 	    SCTPCTL_UDP_TUNNELING_PORT_DESC);
+
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, enable_sack_immediately, CTLTYPE_INT|CTLFLAG_RW,
+	    &sctp_enable_sack_immediately, 0, sysctl_sctp_check, "IU",
+	    SCTPCTL_SACK_IMMEDIATELY_ENABLE_DESC);
 
 #ifdef SCTP_DEBUG
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,

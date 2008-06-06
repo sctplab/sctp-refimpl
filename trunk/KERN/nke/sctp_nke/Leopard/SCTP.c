@@ -115,6 +115,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_clear_trace;
 #endif
 extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_for_client_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_port;
+extern struct sysctl_oid sysctl__net_inet_sctp_enable_sack_immediately;
 #if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -375,6 +376,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
+	sysctl_register_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -476,6 +478,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
