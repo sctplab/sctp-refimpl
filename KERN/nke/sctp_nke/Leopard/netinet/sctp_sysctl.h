@@ -403,6 +403,11 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.14 2008/05/20 13:47:45 rrs
 #define SCTPCTL_MAIN_TIMER_MIN		1
 #define SCTPCTL_MAIN_TIMER_MAX		0xFFFFFFFF
 #define SCTPCTL_MAIN_TIMER_DEFAULT	10	
+
+#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC		"Ignore VMWare Interfaces"
+#define SCTPCTL_IGNORE_VMWARE_INTERFACES_MIN		0
+#define SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX		1
+#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT	SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX	
 #endif
 
 
@@ -477,7 +482,9 @@ extern uint32_t sctp_udp_tunneling_port;
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;
 #endif
-
+#if defined (__APPLE__)
+extern uint32_t sctp_ignore_vmware_interfaces;
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #if defined(SYSCTL_DECL)
 SYSCTL_DECL(_net_inet_sctp);
