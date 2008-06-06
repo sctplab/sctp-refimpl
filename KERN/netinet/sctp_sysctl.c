@@ -109,6 +109,7 @@ uint32_t sctp_udp_tunneling_port = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
 uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 #endif
 #if defined(__APPLE__)
+uint32_t sctp_ignore_vmware_interfaces = SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT;
 uint32_t sctp_main_timer = SCTPCTL_MAIN_TIMER_DEFAULT;
 #endif
 
@@ -541,6 +542,30 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
+#if defined (__APPLE__)
+int sctp_is_vmware_interface(struct ifnet *);
+
+static int
+sysctl_sctp_vmware_interfaces_check SYSCTL_HANDLER_ARGS
+{
+	int error;
+	uint32_t old_sctp_ignore_vmware_interfaces;
+
+	old_sctp_ignore_vmware_interfaces = sctp_ignore_vmware_interfaces;
+	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
+	if (error == 0) {
+		RANGECHK(sctp_ignore_vmware_interfaces, SCTPCTL_IGNORE_VMWARE_INTERFACES_MIN, SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX);
+		if (old_sctp_ignore_vmware_interfaces  && !sctp_ignore_vmware_interfaces) {
+			sctp_add_or_del_interfaces(sctp_is_vmware_interface, 1);
+		}
+		if (!old_sctp_ignore_vmware_interfaces  && sctp_ignore_vmware_interfaces) {
+			sctp_add_or_del_interfaces(sctp_is_vmware_interface, 0);
+		}
+	}
+	return (error);
+}
+#endif
+
 static int
 #if defined (__APPLE__)
 sysctl_sctp_check SYSCTL_HANDLER_ARGS
@@ -902,6 +927,10 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,
 #if defined(__APPLE__)
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
            &sctp_main_timer, 0, "Main timer interval in ms");
+
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, ignore_vmware_interfaces, CTLTYPE_INT|CTLFLAG_RW,
+	    &sctp_ignore_vmware_interfaces, 0, sysctl_sctp_vmware_interfaces_check, "IU",
+	    SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC);
 #endif
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
