@@ -76,6 +76,7 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
+#include <net/kpi_interface.h>
 
 #define APPLE_FILE_NO 5
 
@@ -687,6 +688,11 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
+#if defined (__APPLE__)
+	errno_t error;
+	ifnet_t *ifnetlist;
+	uint32_t i, count;
+#endif
 	struct sockaddr *sa;
 	struct sockaddr *rti_info[RTAX_MAX];
 	struct ifnet *ifn, *found_ifn = NULL;
@@ -717,23 +723,30 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
 	 */
-#if 0
-	ifnet_head_lock_shared();
-#endif	 
+#if defined (__APPLE__)
+	ifnetlist = NULL;
+	count = 0;
+	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+	if (error != 0) {
+		printf("ifnet_list_get failed %d\n", error);
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		ifn = ifnetlist[i];
+#else
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+#endif
 		/* find the interface by index */
 		if (ifa_msg->ifam_index == ifn->if_index) {
 			found_ifn = ifn;
 			break;
 		}
 	}
-#if 0
-	ifnet_head_done();
-#endif
+
 	if (found_ifn == NULL) {
 		/* TSNH */
 		printf("if_index %u not found?!", ifa_msg->ifam_index);
-		return;
+		goto out;
 	}
 
 	/* verify the address on the interface */
@@ -764,7 +777,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	if (found_ifa == NULL) {
 		/* TSNH */
 		printf("ifa not found?!");
-		return;
+		goto out;
 	}
 
 	/* relay the appropriate address change to the base code */
@@ -773,6 +786,11 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	} else {
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
+#if defined(__APPLE__)
+out:
+	if (ifnetlist != 0)
+		ifnet_list_free(ifnetlist);
+#endif
 }
 
 
