@@ -390,6 +390,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.14 2008/05/20 13:47:45 rrs
 #define SCTPCTL_UDP_TUNNELING_PORT_MAX		65535
 #define SCTPCTL_UDP_TUNNELING_PORT_DEFAULT	SCTP_OVER_UDP_TUNNELING_PORT
 
+/* Enable sending of the SACK-IMMEDIATELY bit */
+#define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DESC	"Enable sending of the SACK-IMMEDIATELY-bit."
+#define SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN	0
+#define SCTPCTL_SACK_IMMEDIATELY_ENABLE_MAX	1
+#define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT	SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN
+
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
@@ -479,6 +485,7 @@ extern struct sctp_log sctp_log;
 #endif
 extern uint32_t sctp_udp_tunneling_for_client_enable;
 extern uint32_t sctp_udp_tunneling_port;
+extern uint32_t sctp_enable_sack_immediately;
 #if defined(SCTP_DEBUG)
 extern uint32_t sctp_debug_on;
 #endif
