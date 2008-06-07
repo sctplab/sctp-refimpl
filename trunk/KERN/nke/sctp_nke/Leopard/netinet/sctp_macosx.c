@@ -972,8 +972,8 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	struct cmsghdr *cmsg;
 	struct ip6_hdr *ip6;
 	struct mbuf *ip6_m;
+	int offset;
 
-	I_AM_HERE;
 	bzero((void *)&msg, sizeof(struct msghdr));
 	bzero((void *)&src, sizeof(struct sockaddr_in6));
 	bzero((void *)&dst, sizeof(struct sockaddr_in6));
@@ -1017,7 +1017,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	ip6 = mtod(ip6_m, struct ip6_hdr *);
 	bzero((void *)ip6, sizeof(struct ip6_hdr));
 	ip6->ip6_vfc = IPV6_VERSION;
-	ip6->ip6_plen = length;
+	ip6->ip6_plen = htons(length);
 	ip6->ip6_src = src.sin6_addr;
 	ip6->ip6_dst = dst.sin6_addr;
 	SCTP_HEADER_LEN(ip6_m) = sizeof(struct ip6_hdr) + length;
@@ -1035,7 +1035,8 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	printf("ip_m = \n");
 	sctp_print_mbuf_chain(ip6_m);
 	*/
-	sctp_input_with_port(ip6_m, sizeof(struct ip), src.sin6_port);
+	offset = sizeof(struct ip6_hdr);
+	sctp6_input_with_port(&ip6_m, &offset, src.sin6_port);
 }
 
 socket_t sctp_over_udp_ipv4_so = NULL;
