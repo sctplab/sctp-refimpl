@@ -3662,7 +3662,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
-			udp->uh_sum = 0;
+			udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 		}
 
 		/*
@@ -3759,7 +3759,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_packet_log(m, packet_length);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
-
+		if (port) {
+			SCTP_ENABLE_UDP_CSUM(o_pak);
+		}
 		/* send it out.  table id is taken from stcb */
 		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb, vrf_id);
 
@@ -10400,7 +10402,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		udp->uh_sport = htons(sctp_udp_tunneling_port);
 		udp->uh_dport = port;
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
-		udp->uh_sum = 0;
+		udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 		offset_out += sizeof(struct udphdr);
 		comp_cp = (struct sctp_shutdown_complete_msg *)((caddr_t)comp_cp + sizeof(struct udphdr));
 	}
@@ -10441,7 +10443,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
-
+		if (port) {
+			SCTP_ENABLE_UDP_CSUM(o_pak);
+		}
 		/* out it goes */
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
 
@@ -11444,6 +11448,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip));
+			udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 		}
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, iph_out, &abm->sh);
@@ -11459,6 +11464,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
+		if (port) {
+			SCTP_ENABLE_UDP_CSUM(o_pak);
+		}
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11627,7 +11635,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			udp->uh_sport = htons(sctp_udp_tunneling_port);
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip));
-			udp->uh_sum = 0;
+ 			udp->uh_sum = in_pseudo(out->ip_src.s_addr, out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 		}
 
 #ifdef  SCTP_PACKET_LOGGING
@@ -11635,7 +11643,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-
+		if (port) {
+			SCTP_ENABLE_UDP_CSUM(o_pak);
+		}
 		SCTP_IP_OUTPUT(retcode, o_pak, &ro, stcb, vrf_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
