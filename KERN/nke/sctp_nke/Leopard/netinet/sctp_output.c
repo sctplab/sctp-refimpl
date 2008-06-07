@@ -4093,10 +4093,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_packet_log(m, packet_length);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
-
+		if (port) {
+			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), packet_length - sizeof(struct ip6_hdr))) == 0) {
+				udp->uh_sum = 0xffff;
+			}
+		}
 		/* send it out. table id is taken from stcb */
-		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp,
-				stcb, vrf_id);
+		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp, stcb, vrf_id);
 
 		if (net) {
 			/* for link local this must be done */
@@ -10465,6 +10468,12 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
+		if (port) {
+			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), 
+						     sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
+				udp->uh_sum = 0xffff;
+			}
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11480,6 +11489,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
+		if (port) {
+			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
+				udp->uh_sum = 0xffff;
+			}
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11696,6 +11710,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
+		if (port) {
+			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
+				udp->uh_sum = 0xffff;
+			}
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		SCTP_STAT_INCR(sctps_sendpackets);
