@@ -3477,7 +3477,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	int ret;
 	uint32_t vrf_id;
 	sctp_route_t *ro = NULL;
-	struct udphdr *udp;
+	struct udphdr *udp = NULL;
 
 #if defined(__APPLE__)
 	if (so_locked) {
@@ -10309,7 +10309,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 	struct mbuf *mout;
 	struct ip *iph, *iph_out;
-	struct udphdr *udp;
+	struct udphdr *udp = NULL;
 #ifdef INET6
 	struct ip6_hdr *ip6, *ip6_out;
 #endif
@@ -11527,7 +11527,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	struct sctphdr *ohdr;
 	struct sctp_chunkhdr *ophdr;
 	struct ip *iph;
-	struct udphdr *udp;
+	struct udphdr *udp = NULL;
 	struct mbuf *mout;
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
