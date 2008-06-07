@@ -358,7 +358,10 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
-
+#define SCTP_ENABLE_UDP_CSUM(m) do { \
+					m->m_pkthdr.csum_flags = CSUM_UDP; \
+					m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum); \
+				} while (0)
 static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
 	vrf_id = SCTP_DEFAULT_VRFID;
 	return (0);
