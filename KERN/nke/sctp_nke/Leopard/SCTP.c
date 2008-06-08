@@ -123,6 +123,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_stats;
 extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
 extern struct sysctl_oid sysctl__net_inet_sctp_main_timer;
 extern struct sysctl_oid sysctl__net_inet_sctp_ignore_vmware_interfaces;
+extern struct sysctl_oid sysctl__net_inet_sctp_output_unlocked;
 
 extern struct domain inetdomain;
 #ifdef INET6
@@ -384,7 +385,8 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sysctl_register_oid(&sysctl__net_inet_sctp_assoclist);
 	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
-	
+	sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
+
 	sctp_over_udp_start();
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
@@ -486,6 +488,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_assoclist);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_output_unlocked);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
 	lck_mtx_lock(inetdomain.dom_mtx);

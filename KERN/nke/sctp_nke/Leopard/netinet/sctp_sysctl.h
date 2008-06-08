@@ -416,6 +416,13 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_sysctl.h,v 1.14 2008/05/20 13:47:45 rrs
 #define SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT	SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX	
 #endif
 
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+#define SCTPCTL_OUTPUT_UNLOCKED_DESC	"Unlock socket when sending packets down to IP."
+#define SCTPCTL_OUTPUT_UNLOCKED_MIN	0
+#define SCTPCTL_OUTPUT_UNLOCKED_MAX	1
+#define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN	
+#endif
+
 
 #if defined(_KERNEL)
 
@@ -491,6 +498,9 @@ extern uint32_t sctp_debug_on;
 #endif
 #if defined (__APPLE__)
 extern uint32_t sctp_ignore_vmware_interfaces;
+#endif
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+extern uint32_t sctp_output_unlocked;
 #endif
 #if defined(__FreeBSD__) || defined(__APPLE__)
 #if defined(SYSCTL_DECL)
