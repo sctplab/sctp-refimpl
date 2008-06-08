@@ -54,6 +54,12 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.c,v 1.71 2008/05/21 16:51:21 rrs
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_input.h>
 #include <netinet/udp.h>
+#if defined(__APPLE__)
+#include <netinet/in.h>
+#endif
+#if defined(__FreeBSD__)
+#include <machine/in_cksum.h>
+#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
@@ -3482,7 +3488,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	struct socket *so = NULL;
 #endif
 
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+#if defined (__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(inp));
 		SCTP_TCB_LOCK_ASSERT(stcb);
