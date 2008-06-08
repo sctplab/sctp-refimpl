@@ -113,7 +113,9 @@ uint32_t sctp_debug_on = SCTPCTL_DEBUG_DEFAULT;
 uint32_t sctp_ignore_vmware_interfaces = SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT;
 uint32_t sctp_main_timer = SCTPCTL_MAIN_TIMER_DEFAULT;
 #endif
-
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+uint32_t sctp_output_unlocked = SCTPCTL_OUTPUT_UNLOCKED_DEFAULT;
+#endif
 #if defined (__APPLE__) || defined (__FreeBSD__)
 
 /* It returns an upper limit. No filtering is done here */
@@ -647,6 +649,9 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #if defined(__APPLE__)
 		RANGECHK(sctp_main_timer, SCTPCTL_MAIN_TIMER_MIN, SCTPCTL_MAIN_TIMER_MAX);
 #endif
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		RANGECHK(sctp_output_unlocked, SCTPCTL_OUTPUT_UNLOCKED_MIN, SCTPCTL_OUTPUT_UNLOCKED_MAX);
+#endif
 	}
 	return (error);
 }
@@ -937,6 +942,12 @@ SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, ignore_vmware_interfaces, CTLTYPE_INT|CTLFLAG_RW,
 	    &sctp_ignore_vmware_interfaces, 0, sysctl_sctp_vmware_interfaces_check, "IU",
 	    SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC);
+#endif
+
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, output_unlocked, CTLTYPE_INT|CTLFLAG_RW,
+	    &sctp_output_unlocked, 0, sysctl_sctp_check, "IU",
+	    SCTPCTL_OUTPUT_UNLOCKED_DESC);
 #endif
 
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,

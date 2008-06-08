@@ -3478,10 +3478,14 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	uint32_t vrf_id;
 	sctp_route_t *ro = NULL;
 	struct udphdr *udp = NULL;
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+	struct socket *so = NULL;
+#endif
 
-#if defined(__APPLE__)
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(inp));
+		SCTP_TCB_LOCK_ASSERT(stcb);
 	} else {
 		sctp_unlock_assert(SCTP_INP_SO(inp));
 	}
@@ -3763,8 +3767,22 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		}
 		/* send it out.  table id is taken from stcb */
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if ((sctp_output_unlocked) && (so_locked)) {
+			so = SCTP_INP_SO(inp);
+			SCTP_SOCKET_UNLOCK(so, 0);
+		}
+#endif		
 		SCTP_IP_OUTPUT(ret, o_pak, ro, stcb, vrf_id);
-
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if ((sctp_output_unlocked) && (so_locked)) {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 0);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		}
+#endif		
 		SCTP_STAT_INCR(sctps_sendpackets);
 		SCTP_STAT_INCR_COUNTER64(sctps_outpackets);
 		if (ret)
@@ -4101,8 +4119,22 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 		}
 		/* send it out. table id is taken from stcb */
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if ((sctp_output_unlocked) && (so_locked)) {
+			so = SCTP_INP_SO(inp);
+			SCTP_SOCKET_UNLOCK(so, 0);
+		}
+#endif		
 		SCTP_IP6_OUTPUT(ret, o_pak, (struct route_in6 *)ro, &ifp, stcb, vrf_id);
-
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if ((sctp_output_unlocked) && (so_locked)) {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 0);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+		}
+#endif		
 		if (net) {
 			/* for link local this must be done */
 			sin6->sin6_scope_id = prev_scope;
