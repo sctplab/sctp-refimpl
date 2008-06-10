@@ -42,9 +42,14 @@
 #include <netinet/sctp_timer.h>
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
-
 #endif
 #include <netinet/sctp.h>
+#include <netinet/udp.h>
+#include <netinet/udp_var.h>
+
+extern struct pr_usrreqs udp_usrreqs;
+extern struct pr_usrreqs udp6_usrreqs;
+extern struct inpcbinfo udbinfo;
 
 SYSCTL_DECL(_net_inet);
 #ifdef INET6
@@ -148,6 +153,15 @@ struct protosw *old_pr4;
 #ifdef INET6
 struct protosw *old_pr6;
 #endif
+
+static int
+soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
+{
+	if ((controlp) && (*controlp)) {
+		m_freem(*controlp);
+	}
+	return soreceive(so, psa, uio, mp0, controlp, flagsp);
+}
 
 kern_return_t 
 SCTP_start (kmod_info_t * ki, void * d)
@@ -388,6 +402,10 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
 
 	sctp_over_udp_start();
+	lck_rw_lock_exclusive(udbinfo.mtx);
+	udp_usrreqs.pru_soreceive = soreceive_fix;
+	udp6_usrreqs.pru_soreceive = soreceive_fix;
+	lck_rw_done(udbinfo.mtx);
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
 }
@@ -417,6 +435,12 @@ SCTP_stop (kmod_info_t * ki, void * d)
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return KERN_FAILURE;
 	}
+	
+	lck_rw_lock_exclusive(udbinfo.mtx);
+	udp_usrreqs.pru_soreceive = soreceive;
+	udp6_usrreqs.pru_soreceive = soreceive;
+	lck_rw_done(udbinfo.mtx);
+	
 	sctp_over_udp_stop();
 	sctp_stop_main_timer();
 
