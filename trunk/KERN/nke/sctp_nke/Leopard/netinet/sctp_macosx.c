@@ -823,7 +823,6 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 
 	/* process the routing event */
 	rt_msg = (struct rt_msghdr *)rt_buffer;
-	printf("Got routing event 0x%x, %d bytes\n", rt_msg->rtm_type, (int)length);
 	switch (rt_msg->rtm_type) {
 	case RTM_DELADDR:
 	case RTM_NEWADDR:
@@ -876,7 +875,7 @@ static void
 sctp_print_mbuf_chain(mbuf_t m)
 {
 	for(; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
+		printf("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 	}  
@@ -907,7 +906,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	msg.msg_control = (void *)cmsgbuf;
 	msg.msg_controllen = CMSG_LEN(sizeof (struct in_addr));
 	msg.msg_flags = 0;
-	
+
 	length = (1<<16);
 	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
 	if (error) {
@@ -921,6 +920,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 		mbuf_freem(packet);
 		return;
 	}
+
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
 			dst.sin_family = AF_INET;
@@ -945,6 +945,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + length;
 	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
 	SCTP_BUF_NEXT(ip_m) = packet;
+
 	/*
 	printf("Received a UDP packet of length %d from ", (int)length);
 	print_address((struct sockaddr *)&src);
@@ -956,6 +957,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	printf("ip_m = \n");
 	sctp_print_mbuf_chain(ip_m);
 	*/
+	
 	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
 	return;
 }
@@ -1035,6 +1037,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	printf("ip_m = \n");
 	sctp_print_mbuf_chain(ip6_m);
 	*/
+	
 	offset = sizeof(struct ip6_hdr);
 	sctp6_input_with_port(&ip6_m, &offset, src.sin6_port);
 }
@@ -1147,4 +1150,3 @@ void sctp_over_udp_stop(void)
 	}
 	return;
 }
-
