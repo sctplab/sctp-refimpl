@@ -277,7 +277,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}			/* end switch */
 
 	/* if 0.0.0.0/::0, add the source address instead */
-	if (zero_address && sctp_nat_friendly) {
+	if (zero_address && SCTP_BASE_SYSCTL(sctp_nat_friendly)) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
@@ -434,7 +434,7 @@ sctp_process_asconf_delete_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	}
 
 	/* if deleting 0.0.0.0/::0, delete all addresses except src addr */
-	if (zero_address && sctp_nat_friendly) {
+	if (zero_address && SCTP_BASE_SYSCTL(sctp_nat_friendly)) {
 		result = sctp_asconf_del_remote_addrs_except(stcb,
 		    (struct sockaddr *)&sa_source);
 
@@ -556,7 +556,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 	}
 
 	/* if 0.0.0.0/::0, use the source address instead */
-	if (zero_address && sctp_nat_friendly) {
+	if (zero_address && SCTP_BASE_SYSCTL(sctp_nat_friendly)) {
 		sa = (struct sockaddr *)&sa_source;
 		sctp_asconf_get_source_ip(m, sa);
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
@@ -1428,7 +1428,7 @@ sctp_asconf_queue_mgmt(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 
 	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 #ifdef SCTP_DEBUG
-	if (sctp_debug_on && SCTP_DEBUG_ASCONF2) {
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) && SCTP_DEBUG_ASCONF2) {
 		if (type == SCTP_ADD_IP_ADDRESS) {
 			SCTP_PRINTF("asconf_queue_mgmt: inserted asconf ADD_IP_ADDRESS: ");
 			SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, sa);
@@ -1516,7 +1516,7 @@ sctp_asconf_queue_add(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 			net->error_count = 0;
 		}
 		stcb->asoc.overall_error_count = 0;
-		if (sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 				       stcb->asoc.overall_error_count,
 				       0,

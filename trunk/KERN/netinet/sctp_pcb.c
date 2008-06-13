@@ -2367,17 +2367,17 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		return (EOPNOTSUPP);
 	}
-	if(sctp_default_frag_interleave == SCTP_FRAG_LEVEL_1) {
+	if (SCTP_BASE_SYSCTL(sctp_default_frag_interleave) == SCTP_FRAG_LEVEL_1) {
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
-	} else if (sctp_default_frag_interleave == SCTP_FRAG_LEVEL_2) {
+	} else if (SCTP_BASE_SYSCTL(sctp_default_frag_interleave) == SCTP_FRAG_LEVEL_2) {
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_on(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
-	} else if (sctp_default_frag_interleave == SCTP_FRAG_LEVEL_0) {
+	} else if (SCTP_BASE_SYSCTL(sctp_default_frag_interleave) == SCTP_FRAG_LEVEL_0) {
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE);
 		sctp_feature_off(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS);
 	}
-	inp->sctp_tcbhash = SCTP_HASH_INIT(sctp_pcbtblsize,
+	inp->sctp_tcbhash = SCTP_HASH_INIT(SCTP_BASE_SYSCTL(sctp_pcbtblsize),
 					   &inp->sctp_hashmark);
 	if (inp->sctp_tcbhash == NULL) {
 		SCTP_PRINTF("Out of SCTP-INPCB->hashinit - no resources\n");
@@ -2451,39 +2451,39 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	/* setup the base timeout information */
 	m->sctp_timeoutticks[SCTP_TIMER_SEND] = SEC_TO_TICKS(SCTP_SEND_SEC);	/* needed ? */
 	m->sctp_timeoutticks[SCTP_TIMER_INIT] = SEC_TO_TICKS(SCTP_INIT_SEC);	/* needed ? */
-	m->sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(sctp_delayed_sack_time_default);
-	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(sctp_heartbeat_interval_default);
-	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SEC_TO_TICKS(sctp_pmtu_raise_time_default);
-	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SEC_TO_TICKS(sctp_shutdown_guard_time_default);
-	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SEC_TO_TICKS(sctp_secret_lifetime_default);
+	m->sctp_timeoutticks[SCTP_TIMER_RECV] = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_delayed_sack_time_default));
+	m->sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_heartbeat_interval_default));
+	m->sctp_timeoutticks[SCTP_TIMER_PMTU] = SEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_pmtu_raise_time_default));
+	m->sctp_timeoutticks[SCTP_TIMER_MAXSHUTDOWN] = SEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_shutdown_guard_time_default));
+	m->sctp_timeoutticks[SCTP_TIMER_SIGNATURE] = SEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_secret_lifetime_default));
 	/* all max/min max are in ms */
-	m->sctp_maxrto = sctp_rto_max_default;
-	m->sctp_minrto = sctp_rto_min_default;
-	m->initial_rto = sctp_rto_initial_default;
-	m->initial_init_rto_max = sctp_init_rto_max_default;
-	m->sctp_sack_freq = sctp_sack_freq_default;
+	m->sctp_maxrto = SCTP_BASE_SYSCTL(sctp_rto_max_default);
+	m->sctp_minrto = SCTP_BASE_SYSCTL(sctp_rto_min_default);
+	m->initial_rto = SCTP_BASE_SYSCTL(sctp_rto_initial_default);
+	m->initial_init_rto_max = SCTP_BASE_SYSCTL(sctp_init_rto_max_default);
+	m->sctp_sack_freq = SCTP_BASE_SYSCTL(sctp_sack_freq_default);
 
 	m->max_open_streams_intome = MAX_SCTP_STREAMS;
 
-	m->max_init_times = sctp_init_rtx_max_default;
-	m->max_send_times = sctp_assoc_rtx_max_default;
-	m->def_net_failure = sctp_path_rtx_max_default;
+	m->max_init_times = SCTP_BASE_SYSCTL(sctp_init_rtx_max_default);
+	m->max_send_times = SCTP_BASE_SYSCTL(sctp_assoc_rtx_max_default);
+	m->def_net_failure = SCTP_BASE_SYSCTL(sctp_path_rtx_max_default);
 	m->sctp_sws_sender = SCTP_SWS_SENDER_DEF;
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
-	m->max_burst = sctp_max_burst_default;
+	m->max_burst = SCTP_BASE_SYSCTL(sctp_max_burst_default);
 #if !defined(__Windows__) /* XXX */
-	if ((sctp_default_cc_module >= SCTP_CC_RFC2581) && 
+	if ((SCTP_BASE_SYSCTL(sctp_default_cc_module) >= SCTP_CC_RFC2581) && 
 #else
 	if (1 &&
 #endif
-	    (sctp_default_cc_module <= SCTP_CC_HTCP)) {
-		m->sctp_default_cc_module = sctp_default_cc_module;
+	    (SCTP_BASE_SYSCTL(sctp_default_cc_module) <= SCTP_CC_HTCP)) {
+		m->sctp_default_cc_module = SCTP_BASE_SYSCTL(sctp_default_cc_module);
 	} else {
 		/* sysctl done with invalid value, set to 2581 */
 		m->sctp_default_cc_module = SCTP_CC_RFC2581;
 	}
 	/* number of streams to pre-open on a association */
-	m->pre_open_stream_count = sctp_nr_outgoing_streams_default;
+	m->pre_open_stream_count = SCTP_BASE_SYSCTL(sctp_nr_outgoing_streams_default);
 
 	/* Add adaptation cookie */
 	m->adaptation_layer_indicator = 0x504C5253;
@@ -2509,7 +2509,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	sctp_timer_start(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL);
 
 	/* How long is a cookie good for ? */
-	m->def_cookie_life = MSEC_TO_TICKS(sctp_valid_cookie_life_default);
+	m->def_cookie_life = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_valid_cookie_life_default));
 	/*
 	 * Initialize authentication parameters
 	 */
@@ -3084,14 +3084,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		/* binding to all addresses, so just set in the proper flags */
 		inp->sctp_flags |= SCTP_PCB_FLAGS_BOUNDALL;
 		/* set the automatic addr changes from kernel flag */
-		if (sctp_auto_asconf == 0) {
+		if (SCTP_BASE_SYSCTL(sctp_auto_asconf) == 0) {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		} else {
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DO_ASCONF);
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTO_ASCONF);
 		}
-		if (sctp_multiple_asconfs == 0) {
+		if (SCTP_BASE_SYSCTL(sctp_multiple_asconfs) == 0) {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_MULTIPLE_ASCONFS);
 		} else {
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_MULTIPLE_ASCONFS);
@@ -3099,7 +3099,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		/* set the automatic mobility_base from kernel 
 		   flag (by micchie) 
 		*/
-		if (sctp_mobility_base == 0) {
+		if (SCTP_BASE_SYSCTL(sctp_mobility_base) == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
@@ -3110,7 +3110,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		/* set the automatic mobility_fasthandoff from kernel 
 		   flag (by micchie) 
 		*/
-		if (sctp_mobility_fasthandoff == 0) {
+		if (SCTP_BASE_SYSCTL(sctp_mobility_fasthandoff) == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
@@ -3996,8 +3996,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	stcb->asoc.numnets++;
 	*(&net->ref_count) = 1;
 	net->tos_flowlabel = 0;
-	if (sctp_udp_tunneling_for_client_enable) {
-		net->port = htons(sctp_udp_tunneling_port);
+	if (SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)) {
+		net->port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 	} else {
 		net->port = 0;
 	}
@@ -5647,8 +5647,6 @@ sctp_del_local_addr_restricted(struct sctp_tcb *stcb, struct sctp_ifa *ifa)
 	return;
 }
 
-static char sctp_pcb_initialized = 0;
-
 #if defined(__FreeBSD__)
 /*
  * Temporarily remove for __APPLE__ until we use the Tiger equivalents
@@ -5668,15 +5666,14 @@ sctp_pcb_init()
 	int i;
 	struct timeval tv;
 	
-	if (sctp_pcb_initialized != 0) {
+	if (SCTP_BASE_VAR(sctp_pcb_initialized) != 0) {
 		/* error I was called twice */
 		return;
 	}
-	sctp_pcb_initialized = 1;
+	SCTP_BASE_VAR(sctp_pcb_initialized) = 1;
 
-	bzero(&SCTP_BASE_STATS, sizeof(struct sctpstat));
 #if defined(SCTP_LOCAL_TRACE_BUF)
-	bzero(&sctp_log, sizeof(struct sctp_log));
+	bzero(&SCTP_BASE_SYSCTL(sctp_log), sizeof(struct sctp_log));
 #endif
 	(void)SCTP_GETTIME_TIMEVAL(&tv);
 	SCTP_BASE_STAT(sctps_discontinuitytime).tv_sec = (uint32_t)tv.tv_sec;
@@ -5705,13 +5702,13 @@ sctp_pcb_init()
 	    sctp_chunkscale);
 #endif
 #endif
-	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((sctp_hashtblsize * 31),
+	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((SCTP_BASE_SYSCTL(sctp_hashtblsize) * 31),
 						   &SCTP_BASE_INFO(hashasocmark));
-	SCTP_BASE_INFO(sctp_ephash) = SCTP_HASH_INIT(sctp_hashtblsize,
+	SCTP_BASE_INFO(sctp_ephash) = SCTP_HASH_INIT(SCTP_BASE_SYSCTL(sctp_hashtblsize),
 						 &SCTP_BASE_INFO(hashmark));
-	SCTP_BASE_INFO(sctp_tcpephash) = SCTP_HASH_INIT(sctp_hashtblsize,
+	SCTP_BASE_INFO(sctp_tcpephash) = SCTP_HASH_INIT(SCTP_BASE_SYSCTL(sctp_hashtblsize),
 						    &SCTP_BASE_INFO(hashtcpmark));
-	SCTP_BASE_INFO(hashtblsize) = sctp_hashtblsize;
+	SCTP_BASE_INFO(hashtblsize) = SCTP_BASE_SYSCTL(sctp_hashtblsize);
 
 	/* init the small hash table we use to track restarted asoc's */
 	SCTP_BASE_INFO(sctp_restarthash) = SCTP_HASH_INIT(SCTP_STACK_VTAG_HASH_SIZE,
@@ -5817,8 +5814,7 @@ sctp_pcb_init()
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	(void)pthread_cond_init(&SCTP_BASE_INFO(iterator_wakeup),
-			  NULL);
+	(void)pthread_cond_init(&SCTP_BASE_INFO(iterator_wakeup), NULL);
 #endif
 	SCTP_BASE_INFO(iterator_running) = 0;
 	sctp_startup_iterator();
@@ -5838,9 +5834,6 @@ sctp_pcb_init()
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&SCTP_BASE_INFO(callqueue));
 #endif
-#if defined(__APPLE__)
-	sctp_address_monitor_start();
-#endif
 }
 
 /*
@@ -5853,10 +5846,12 @@ sctp_pcb_finish(void)
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *ifn;
 	struct sctp_ifa *ifa;
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block, *prev_twait_block;
+	int i;
 
 	/* FIXME MT */
 #if defined(__APPLE__)
-	sctp_address_monitor_destroy();
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	/* free the iterator worker thread */
 	if (SCTP_BASE_INFO(thread_proc) != THREAD_NULL) {
@@ -5915,6 +5910,23 @@ sctp_pcb_finish(void)
 	/* free the vrf hashes */
 	SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_vrfhash), SCTP_BASE_INFO(hashvrfmark));
 	SCTP_HASH_FREE(SCTP_BASE_INFO(vrf_ifn_hash), SCTP_BASE_INFO(vrf_ifn_hashmark));
+
+	/* free the TIMEWAIT list elements malloc'd in the function
+	 * sctp_add_vtag_to_timewait()...
+	 */
+	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE_A; i++) {
+		chain = &SCTP_BASE_INFO(vtag_timewait)[i];
+		if (!SCTP_LIST_EMPTY(chain)) {
+			prev_twait_block = NULL;
+			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+				if (prev_twait_block) {
+					SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+				}
+				prev_twait_block = twait_block;
+			}
+			SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+		}
+	}
 
 	/* free the locks and mutexes */
 #if defined(__APPLE__)
@@ -6510,7 +6522,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		/* peer does not support auth but sent a chunks list? */
 		return (-31);
 	}
-	if (!sctp_asconf_auth_nochk && stcb->asoc.peer_supports_asconf &&
+	if (!SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk) && stcb->asoc.peer_supports_asconf &&
 	    !stcb->asoc.peer_supports_auth) {
 		/* peer supports asconf but not auth? */
 		return (-32);
@@ -6718,7 +6730,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	/* We look for anything larger than the cum-ack + 1 */
 
 	SCTP_STAT_INCR(sctps_protocol_drain_calls);
-	if (sctp_do_drain == 0) {
+	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
 		return;
 	}
 	asoc = &stcb->asoc;
@@ -6840,7 +6852,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
 				/* found the new highest */
 				asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn + gap;
-				if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 				  sctp_log_map(0, 8, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 				}
 				break;
@@ -6852,7 +6864,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 			memset(asoc->mapping_array, 0, asoc->mapping_array_size);
 			asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 			asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
-			if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 			  sctp_log_map(0, 9, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 			}
 

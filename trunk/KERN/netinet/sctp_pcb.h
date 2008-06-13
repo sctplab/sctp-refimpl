@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.h,v 1.34 2008/05/20 13:47:45 rrs Ex
 #include <netinet/sctp_os.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
+#include <netinet/sctp_sysctl.h>
 
 LIST_HEAD(sctppcbhead, sctp_inpcb);
 LIST_HEAD(sctpasochead, sctp_tcb);
@@ -303,11 +304,22 @@ struct sctp_epinfo {
 
 
 struct sctp_base_info {
-  /* All static structures that
-   * anchor the system must be here. 
-   */
-  struct sctp_epinfo sctppcbinfo;
-  struct sctpstat    sctpstat;
+	/* All static structures that
+	 * anchor the system must be here. 
+	 */
+	struct sctp_epinfo sctppcbinfo;
+	struct sctpstat    sctpstat;
+	struct sctp_sysctl sctpsysctl;
+	uint8_t first_time;
+	char sctp_pcb_initialized;
+#if defined(SCTP_PACKET_LOGGING)
+	int packet_log_writers;
+	int packet_log_end;
+	uint8_t packet_log_buffer[SCTP_PACKET_LOG_SIZE];
+#endif
+#if defined(__APPLE__)
+	int sctp_main_timer_ticks;
+#endif
 };
 
 /*-
