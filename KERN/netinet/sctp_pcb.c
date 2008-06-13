@@ -5742,23 +5742,23 @@ sctp_pcb_init()
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_chunk), "sctp_chunk",
 	    sizeof(struct sctp_tmit_chunk),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_readq), "sctp_readq",
 	    sizeof(struct sctp_queued_to_read),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_strmoq), "sctp_stream_msg_out",
 	    sizeof(struct sctp_stream_queue_pending),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_asconf), "sctp_asconf",
 	    sizeof(struct sctp_asconf),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_asconf_ack), "sctp_asconf_ack",
 	    sizeof(struct sctp_asconf_ack),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 
 	/* Master Lock INIT for info structure */
@@ -5920,11 +5920,11 @@ sctp_pcb_finish(void)
 			prev_twait_block = NULL;
 			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 				if (prev_twait_block) {
-					SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+					SCTP_FREE(prev_twait_block, SCTP_M_TIMW);
 				}
 				prev_twait_block = twait_block;
 			}
-			SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+			SCTP_FREE(prev_twait_block, SCTP_M_TIMW);
 		}
 	}
 
