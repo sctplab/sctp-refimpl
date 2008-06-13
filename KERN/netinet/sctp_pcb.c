@@ -5690,16 +5690,16 @@ sctp_pcb_init()
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 440000
-	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &sctp_hashtblsize);
-	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", &sctp_pcbtblsize);
-	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", &sctp_chunkscale);
+	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &SCTP_BASE_INFO(sctp_hashtblsize));
+	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", &SCTP_BASE_INFO(sctp_pcbtblsize));
+	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", &SCTP_BASE_INFO(sctp_chunkscale));
 #else
 	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", SCTP_TCBHASHSIZE,
-	    sctp_hashtblsize);
+	    SCTP_BASE_INFO(sctp_hashtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", SCTP_PCBHASHSIZE,
-	    sctp_pcbtblsize);
+	   SCTP_BASE_INFO(sctp_pcbtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", SCTP_CHUNKQUEUE_SCALE,
-	    sctp_chunkscale);
+	    SCTP_BASE_INFO(sctp_chunkscale);
 #endif
 #endif
 	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((SCTP_BASE_SYSCTL(sctp_hashtblsize) * 31),
