@@ -408,9 +408,7 @@ int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
-#if defined(__APPLE__) || defined(__Windows__)
 void sctp_finish(void);
-#endif
 
 void sctp_pcbinfo_cleanup(void);
 #if defined(__FreeBSD__)

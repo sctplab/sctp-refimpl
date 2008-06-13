@@ -104,7 +104,7 @@ sctp_init(void)
 #endif
 
 	SCTP_BASE_VAR(first_time) = 0;
-	SCTP_BASE_VAR(sctp_pcb_initialized);
+	SCTP_BASE_VAR(sctp_pcb_initialized) = 0;
 	sctp_pcb_init();
 #if defined(SCTP_PACKET_LOGGING)
 	SCTP_BASE_VAR(packet_log_writers) = 0;
