@@ -55,10 +55,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.68 2008/05/20 13:47:45 rrs Ex
 #define APPLE_FILE_NO 4
 #endif
 
-void sctp_pcb_finish(void);
-
 struct sctp_base_info system_base_info;
-
 
 /* FIX: we don't handle multiple link local scopes */
 /* "scopeless" replacement IN6_ARE_ADDR_EQUAL */
