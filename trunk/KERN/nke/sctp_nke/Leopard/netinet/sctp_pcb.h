@@ -759,9 +759,7 @@ int sctp_del_remote_addr(struct sctp_tcb *, struct sockaddr *);
 
 void sctp_pcb_init(void);
 
-#if defined(__APPLE__) || defined(__Windows__)
 void sctp_pcb_finish(void);
-#endif
 
 void sctp_add_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);
 void sctp_del_local_addr_restricted(struct sctp_tcb *, struct sctp_ifa *);

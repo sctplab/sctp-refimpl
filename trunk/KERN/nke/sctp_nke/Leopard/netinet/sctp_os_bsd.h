@@ -149,6 +149,8 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
+#define SCTP_BASE_VAR(__m) system_base_info.__m
 
 /*
  *
@@ -160,7 +162,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -168,7 +170,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -176,7 +178,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTPDBG_PKT(level, iph, sh)					\
 {									\
     do {								\
-	    if (sctp_debug_on & level) {				\
+	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
 		    sctp_print_address_pkt(iph, sh);			\
 	    }								\
     } while (0);							\

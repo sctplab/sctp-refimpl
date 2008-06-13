@@ -133,7 +133,7 @@ extern struct fileops socketops;
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -141,7 +141,7 @@ extern struct fileops socketops;
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -149,7 +149,7 @@ extern struct fileops socketops;
 #define SCTPDBG_PKT(level, iph, sh)					\
 {									\
     do {								\
-	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {				\
+	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
 		    sctp_print_address_pkt(iph, sh);			\
 	    }								\
     } while (0);							\

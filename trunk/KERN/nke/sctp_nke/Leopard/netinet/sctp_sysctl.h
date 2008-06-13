@@ -507,5 +507,7 @@ SYSCTL_DECL(_net_inet_sctp);
 #endif
 #endif
 
+void sctp_init_sysctls(void);
+
 #endif /* _KERNEL */
 #endif /* __sctp_sysctl_h__ */

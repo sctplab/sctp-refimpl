@@ -55,10 +55,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_pcb.c,v 1.68 2008/05/20 13:47:45 rrs Ex
 #define APPLE_FILE_NO 4
 #endif
 
-void sctp_pcb_finish(void);
-
 struct sctp_base_info system_base_info;
-
 
 /* FIX: we don't handle multiple link local scopes */
 /* "scopeless" replacement IN6_ARE_ADDR_EQUAL */
@@ -5690,16 +5687,16 @@ sctp_pcb_init()
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 440000
-	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &sctp_hashtblsize);
-	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", &sctp_pcbtblsize);
-	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", &sctp_chunkscale);
+	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", &SCTP_BASE_SYSCTL(sctp_hashtblsize));
+	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", &SCTP_BASE_SYSCTL(sctp_pcbtblsize));
+	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", &SCTP_BASE_SYSCTL(sctp_chunkscale));
 #else
 	TUNABLE_INT_FETCH("net.inet.sctp.tcbhashsize", SCTP_TCBHASHSIZE,
-	    sctp_hashtblsize);
+	    SCTP_BASE_SYSCTL(sctp_hashtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.pcbhashsize", SCTP_PCBHASHSIZE,
-	    sctp_pcbtblsize);
+	   SCTP_BASE_SYSCTL(sctp_pcbtblsize);
 	TUNABLE_INT_FETCH("net.inet.sctp.chunkscale", SCTP_CHUNKQUEUE_SCALE,
-	    sctp_chunkscale);
+	    SCTP_BASE_SYSCTL(sctp_chunkscale);
 #endif
 #endif
 	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((SCTP_BASE_SYSCTL(sctp_hashtblsize) * 31),
@@ -5742,23 +5739,23 @@ sctp_pcb_init()
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_chunk), "sctp_chunk",
 	    sizeof(struct sctp_tmit_chunk),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_readq), "sctp_readq",
 	    sizeof(struct sctp_queued_to_read),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_strmoq), "sctp_stream_msg_out",
 	    sizeof(struct sctp_stream_queue_pending),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_asconf), "sctp_asconf",
 	    sizeof(struct sctp_asconf),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 	SCTP_ZONE_INIT(SCTP_BASE_INFO(ipi_zone_asconf_ack), "sctp_asconf_ack",
 	    sizeof(struct sctp_asconf_ack),
-	    (sctp_max_number_of_assoc * sctp_chunkscale));
+	    (sctp_max_number_of_assoc * SCTP_BASE_SYSCTL(sctp_chunkscale)));
 
 
 	/* Master Lock INIT for info structure */
@@ -5920,11 +5917,11 @@ sctp_pcb_finish(void)
 			prev_twait_block = NULL;
 			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 				if (prev_twait_block) {
-					SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+					SCTP_FREE(prev_twait_block, SCTP_M_TIMW);
 				}
 				prev_twait_block = twait_block;
 			}
-			SCTP_FREE(prev_twait_block, struct sctp_tagblock *);
+			SCTP_FREE(prev_twait_block, SCTP_M_TIMW);
 		}
 	}
 
