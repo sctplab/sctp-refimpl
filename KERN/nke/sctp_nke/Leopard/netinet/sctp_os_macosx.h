@@ -122,8 +122,9 @@ extern struct fileops socketops;
 
 #define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elem
-
+#define SCTP_BASE_STAT(elem) system_base_info.sctpstat.elem
+#define SCTP_BASE_SYSCTL(var) system_base_info.sctpsysctl.var
+#define SCTP_BASE_VAR(var) system_base_info.var
 
 /*
  * debug macro
@@ -132,7 +133,7 @@ extern struct fileops socketops;
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {					\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -140,7 +141,7 @@ extern struct fileops socketops;
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {					\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -148,7 +149,7 @@ extern struct fileops socketops;
 #define SCTPDBG_PKT(level, iph, sh)					\
 {									\
     do {								\
-	    if (sctp_debug_on & level) {				\
+	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {				\
 		    sctp_print_address_pkt(iph, sh);			\
 	    }								\
     } while (0);							\
@@ -544,15 +545,12 @@ extern int ticks;
 #define ifa_list	ifa_link
 
 /* MacOS specific timer functions */
-extern unsigned int sctp_main_timer;
-extern int sctp_main_timer_ticks;
-
 void sctp_start_main_timer(void);
 void sctp_stop_main_timer(void);
 
 /* address monitor thread */
 void sctp_address_monitor_start(void);
-void sctp_address_monitor_destroy(void);
+void sctp_address_monitor_stop(void);
 #define SCTP_PROCESS_STRUCT thread_t
 
 #endif

@@ -243,7 +243,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	if (sh->dest_port == 0)
 		goto bad;
 	check = sh->checksum;	/* save incoming checksum */
-	if ((check == 0) && (sctp_no_csum_on_loopback) &&
+	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))) {
 		goto sctp_skip_csum;
 	}
@@ -532,7 +532,7 @@ sctp6_notify(struct sctp_inpcb *inp,
 			 */
 			/* Add debug message here if destination is not in PF state. */
 			/* Stop any running T3 timers here? */
-			if (sctp_cmt_on_off && sctp_cmt_pf) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_pf)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
 				SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
 					net);
@@ -853,7 +853,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	}
 
 	if (so->so_snd.sb_hiwat == 0 || so->so_rcv.sb_hiwat == 0) {
-		error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
+		error = SCTP_SORESERVE(so, SCTP_BASE_SYSCTL(sctp_sendspace), SCTP_BASE_SYSCTL(sctp_recvspace));
 		if (error)
 			return error;
 	}

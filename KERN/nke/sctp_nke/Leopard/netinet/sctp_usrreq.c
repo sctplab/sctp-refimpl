@@ -67,21 +67,22 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_usrreq.c,v 1.55 2008/05/20 13:47:45 rrs
 void
 sctp_init(void)
 {
-	/* Init the SCTP pcb in sctp_pcb.c */
 #if !defined(__Panda__)
 	u_long sb_max_adj;
 #endif
 
-	sctp_pcb_init();
-
+	bzero(&SCTP_BASE_STATS, sizeof(struct sctpstat));
+	
+	/* Initialize and modify the sysctled variables */
+	sctp_init_sysctls();
 #if defined(__Panda__)
-	sctp_sendspace = SB_MAX;
-	sctp_recvspace = SB_MAX;
+	SCTP_BASE_SYSCTL(sctp_sendspace) = SB_MAX;
+	SCTP_BASE_SYSCTL(sctp_recvspace) = SB_MAX;
 #else
 
 #if !defined(__APPLE__)
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
-		sctp_max_chunks_on_queue = (nmbclusters / 8);
+		SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue) = (nmbclusters / 8);
 #endif
 	/*
 	 * Allow a user to take no more than 1/2 the number of clusters or
@@ -92,30 +93,46 @@ sctp_init(void)
 #else
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 #endif
-	sctp_sendspace = min(sb_max_adj,
+	SCTP_BASE_SYSCTL(sctp_sendspace) = min(sb_max_adj,
 	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
 	/*
 	 * Now for the recv window, should we take the same amount? or
 	 * should I do 1/2 the SB_MAX instead in the SB_MAX min above. For
 	 * now I will just copy.
 	 */
-	sctp_recvspace = sctp_sendspace;
+	SCTP_BASE_SYSCTL(sctp_recvspace) = SCTP_BASE_SYSCTL(sctp_sendspace);
 #endif
 
+	SCTP_BASE_VAR(first_time) = 0;
+	SCTP_BASE_VAR(sctp_pcb_initialized);
+	sctp_pcb_init();
+#if defined(SCTP_PACKET_LOGGING)
+	SCTP_BASE_VAR(packet_log_writers) = 0;
+	SCTP_BASE_VAR(packet_log_end) = 0;
+	bzero(&SCTP_BASE_VAR(packet_log_buffer), SCTP_PACKET_LOG_SIZE);
+#endif
 #if defined(__APPLE__)
-	/* start the main timer */
+	SCTP_BASE_VAR(sctp_main_timer_ticks) = 0;
+#endif
+
+
+#if defined(__APPLE__)
 	sctp_start_main_timer();
+	sctp_address_monitor_start();
+	sctp_over_udp_start();
 #endif
 }
 
-#if defined(__APPLE__) || defined(__Windows__)
 void
 sctp_finish(void)
 {
 	sctp_pcb_finish();
-}
+#if defined(__APPLE__)
+	sctp_over_udp_stop();
+	sctp_address_monitor_stop();
+	sctp_stop_main_timer();
 #endif
-
+}
 
 /*
  * cleanup of the SCTP_BASE_INFO() structure.
@@ -167,7 +184,7 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			}
 			chk->sent = SCTP_DATAGRAM_RESEND;
 			chk->rec.data.doing_fast_retransmit = 0;
-			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
 					       chk->whoTo->flight_size,
 					       chk->book_size, 
@@ -331,7 +348,7 @@ sctp_notify(struct sctp_inpcb *inp,
 			 */
 			/* Add debug message here if destination is not in PF state. */
 			/* Stop any running T3 timers here? */
-			if (sctp_cmt_on_off && sctp_cmt_pf) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_pf)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
 				SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
 					net);
@@ -630,7 +647,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return EINVAL;
 	}
-	error = SCTP_SORESERVE(so, sctp_sendspace, sctp_recvspace);
+	error = SCTP_SORESERVE(so, SCTP_BASE_SYSCTL(sctp_sendspace), SCTP_BASE_SYSCTL(sctp_recvspace));
 	if (error) {
 		return error;
 	}
@@ -1968,7 +1985,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		struct sctp_assoc_value *av;
 
 		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
-		if (sctp_cmt_on_off) {
+		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
 			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 			if (stcb) {
 				av->assoc_value = stcb->asoc.sctp_cmt_on_off;
@@ -3077,7 +3094,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		struct sctp_assoc_value *av;
 
 		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
-		if (sctp_cmt_on_off) {
+		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
 			SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 			if (stcb) {
 				stcb->asoc.sctp_cmt_on_off = (uint8_t) av->assoc_value;
@@ -4736,7 +4753,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 	SCTP_INP_RLOCK(inp);
 #ifdef SCTP_LOCK_LOGGING
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) {
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 	}
 #endif

@@ -140,11 +140,7 @@ sctp_fasttim(void)
 	s = splhigh();
 #if defined(__APPLE__)
 	/* update our tick count */
-	ticks += sctp_main_timer_ticks;
-/*
-printf("sctp_fasttim: ticks = %u (added %u)\n", (uint32_t)ticks,
-       (uint32_t)sctp_main_timer_ticks);
-*/
+	ticks += SCTP_BASE_VAR(sctp_main_timer_ticks);
 #endif
 
 	SCTP_TIMERQ_LOCK();

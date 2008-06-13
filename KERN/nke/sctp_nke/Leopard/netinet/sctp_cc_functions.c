@@ -57,7 +57,7 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
 	net->ssthresh = stcb->asoc.peers_rwnd;
 
-	if (sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
 	}
 }
@@ -72,7 +72,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -89,7 +89,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 					net->ssthresh = 2 * net->mtu;
 				}
 				net->cwnd = net->ssthresh;
-				if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 					sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 						SCTP_CWND_LOG_FROM_FR);
 				}
@@ -165,7 +165,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                     }
 		 }
 #endif
-		if (sctp_early_fr) {
+		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
 			 * So, first of all do we need to have a Early FR
 			 * timer running?
@@ -201,7 +201,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FROM_SACK);
 			}
 			continue;
@@ -231,10 +231,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
-					SCTP_ADDR_PF)) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * sctp_cmt_pf;
+				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -254,7 +255,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && sctp_cmt_on_off == 0) {
+		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -265,28 +266,28 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (sctp_cmt_on_off && net->new_pseudo_cumack)) {
+		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
 				if (net->flight_size + net->net_ack >= net->cwnd) {
-					if (net->net_ack > (net->mtu * sctp_L2_abc_variable)) {
-						net->cwnd += (net->mtu * sctp_L2_abc_variable);
-						if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+					if (net->net_ack > (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable))) {
+						net->cwnd += (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable));
+						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 							sctp_log_cwnd(stcb, net, net->mtu,
 								SCTP_CWND_LOG_FROM_SS);
 						}
 
 					} else {
 						net->cwnd += net->net_ack;
-						if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 							sctp_log_cwnd(stcb, net, net->net_ack,
 								SCTP_CWND_LOG_FROM_SS);
 						}
 
 					}
 				} else {
-					if (sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
 							SCTP_CWND_LOG_NOADV_SS);
 					}
@@ -302,19 +303,19 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                                     (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
 					net->cwnd += net->mtu;
-					if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
 								SCTP_CWND_LOG_FROM_CA);
 					}
 				} else {
-					if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
 							SCTP_CWND_LOG_NOADV_CA);
 					}
 				}
 			}
 		} else {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
 					SCTP_CWND_LOG_NO_CUMACK);
 			}
@@ -349,7 +350,7 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->cwnd = net->mtu;
 	net->partial_bytes_acked = 0;
 
-	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, net->cwnd - old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 	}
 }
@@ -367,7 +368,7 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net)
 		net->RTO <<= 1;
 	}
 	net->cwnd = net->ssthresh;
-	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 	}
 }
@@ -475,7 +476,7 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 	}
 	if (net->cwnd - old_cwnd != 0) {
 		/* log only changes */
-		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 				SCTP_CWND_LOG_FROM_SAT);
 		}
@@ -492,7 +493,7 @@ sctp_cwnd_update_after_output(struct sctp_tcb *stcb,
 		net->ssthresh = net->cwnd;
 	net->cwnd = (net->flight_size + (burst_limit * net->mtu));
 
-	if (sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
 	}
 }
@@ -513,7 +514,7 @@ sctp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 	if (net->cwnd < net->ssthresh)
 		/* still in SS move to CA */
 		net->ssthresh = net->cwnd - 1;
-	if (sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
 	}
 }
@@ -616,12 +617,12 @@ sctp_hs_cwnd_increase(struct sctp_tcb *stcb, struct sctp_nets *net)
 		/* normal mode */
 		if (net->net_ack > net->mtu) {
 			net->cwnd += net->mtu;
-			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu, SCTP_CWND_LOG_FROM_SS);
 			}
 		} else {
 			net->cwnd += net->net_ack;
-			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->net_ack, SCTP_CWND_LOG_FROM_SS);
 			}
 		}
@@ -635,7 +636,7 @@ sctp_hs_cwnd_increase(struct sctp_tcb *stcb, struct sctp_nets *net)
 		net->last_hs_used = indx;
 		incr = ((sctp_cwnd_adjust[indx].increase) << 10);
 		net->cwnd += incr;
-		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, incr, SCTP_CWND_LOG_FROM_SS);
 		}
 	}
@@ -677,7 +678,7 @@ sctp_hs_cwnd_decrease(struct sctp_tcb *stcb, struct sctp_nets *net)
 			net->last_hs_used = indx;
 		}
 	}
-	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_FR);
 	}
 }
@@ -692,7 +693,7 @@ sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -777,7 +778,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
                     }
 		 }
 #endif
-		if (sctp_early_fr) {
+		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
 			 * So, first of all do we need to have a Early FR
 			 * timer running?
@@ -813,7 +814,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FROM_SACK);
 			}
 			continue;
@@ -843,10 +844,11 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
-					SCTP_ADDR_PF)) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * sctp_cmt_pf;
+				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -866,7 +868,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && sctp_cmt_on_off == 0) {
+		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -877,7 +879,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (sctp_cmt_on_off && net->new_pseudo_cumack)) {
+		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -886,7 +888,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 					sctp_hs_cwnd_increase(stcb, net);
 
 				} else {
-					if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
 							SCTP_CWND_LOG_NOADV_SS);
 					}
@@ -898,19 +900,19 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				    (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
 					net->cwnd += net->mtu;
-					if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
 							SCTP_CWND_LOG_FROM_CA);
 					}
 				} else {
-					if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
 							SCTP_CWND_LOG_NOADV_CA);
 					}
 				}
 			}
 		} else {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
 					SCTP_CWND_LOG_NO_CUMACK);
 			}
@@ -1143,23 +1145,23 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
         if (net->cwnd <= net->ssthresh) {
 		/* We are in slow start */
 		if (net->flight_size + net->net_ack >= net->cwnd) {
-			if (net->net_ack > (net->mtu * sctp_L2_abc_variable)) {
-				net->cwnd += (net->mtu * sctp_L2_abc_variable);
-				if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			if (net->net_ack > (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable))) {
+				net->cwnd += (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable));
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 					sctp_log_cwnd(stcb, net, net->mtu,
 						SCTP_CWND_LOG_FROM_SS);
 				}
 
 			} else {
 				net->cwnd += net->net_ack;
-				if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 					sctp_log_cwnd(stcb, net, net->net_ack,
 						SCTP_CWND_LOG_FROM_SS);
 				}
 
 			}
 		} else {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->net_ack,
 					SCTP_CWND_LOG_NOADV_SS);
 			}
@@ -1179,13 +1181,13 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 			net->cwnd += net->mtu;
 			net->partial_bytes_acked = 0;
 			htcp_alpha_update(&net->htcp_ca);
-			if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
 					SCTP_CWND_LOG_FROM_CA);
 			}
 		} else {
 			net->partial_bytes_acked += net->net_ack;
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->net_ack,
 					SCTP_CWND_LOG_NOADV_CA);
 			}
@@ -1225,7 +1227,7 @@ sctp_htcp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->ssthresh = stcb->asoc.peers_rwnd;
 	htcp_init(stcb, net);
 
-	if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
 	}
 }
@@ -1255,7 +1257,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                     }
 		 }
 #endif
-		if (sctp_early_fr) {
+		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
 			 * So, first of all do we need to have a Early FR
 			 * timer running?
@@ -1291,7 +1293,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FROM_SACK);
 			}
 			continue;
@@ -1321,10 +1323,11 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (sctp_cmt_on_off && sctp_cmt_pf && ((net->dest_state & SCTP_ADDR_PF) ==
-					SCTP_ADDR_PF)) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * sctp_cmt_pf;
+				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -1344,7 +1347,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && sctp_cmt_on_off == 0) {
+		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -1355,11 +1358,11 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (sctp_cmt_on_off && net->new_pseudo_cumack)) {
+		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
 			htcp_cong_avoid(stcb, net);
 			measure_achieved_throughput(stcb, net);
 		} else {
-			if(sctp_logging_level & SCTP_CWND_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
 					SCTP_CWND_LOG_NO_CUMACK);
 			}
@@ -1395,7 +1398,7 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (sctp_cmt_on_off == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -1411,7 +1414,7 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 				htcp_reset(&net->htcp_ca);
 				net->ssthresh = htcp_recalc_ssthresh(stcb, net);
 				net->cwnd = net->ssthresh;
-				if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 					sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 						SCTP_CWND_LOG_FROM_FR);
 				}
@@ -1473,7 +1476,7 @@ sctp_htcp_cwnd_update_after_timeout(struct sctp_tcb *stcb,
 		net->ssthresh = htcp_recalc_ssthresh(stcb, net);
 		net->cwnd = net->mtu;
 		net->partial_bytes_acked = 0;
-		if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, net->cwnd - old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 		}
 }
@@ -1496,7 +1499,7 @@ sctp_htcp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 	if (net->cwnd < net->ssthresh)
 		/* still in SS move to CA */
 		net->ssthresh = net->cwnd - 1;
-	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
 	}
 }
@@ -1518,7 +1521,7 @@ sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
 		net->RTO <<= 1;
 	}
 	net->cwnd = net->ssthresh;
-	if(sctp_logging_level & SCTP_CWND_MONITOR_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 	}
 }
