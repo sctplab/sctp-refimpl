@@ -4010,10 +4010,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 				return (EINVAL);
 			  }
-
+#endif /* SCTP_EMBEDDED_V6_SCOPE */
 		    if (over_addr == NULL) {
 			    struct sctp_ifa *_lsrc;
-#endif /* SCTP_EMBEDDED_V6_SCOPE */
 				_lsrc = sctp_source_address_selection(inp, stcb, ro,
 													  net,
 													  out_of_asoc_ok,
