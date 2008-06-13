@@ -108,8 +108,8 @@ extern struct pr_usrreqs sctp_usrreqs;
                   sctp_free_remote_addr((_chk)->whoTo); \
                   (_chk)->whoTo = NULL; \
           } \
-          if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
-               (SCTP_BASE_INFO(ipi_free_chunks) > sctp_system_free_resc_limit)) { \
+          if (((_stcb)->asoc.free_chunk_cnt > SCTP_BASE_SYSCTL(sctp_asoc_free_resc_limit)) || \
+               (SCTP_BASE_INFO(ipi_free_chunks) > SCTP_BASE_SYSCTL(sctp_system_free_resc_limit))) { \
 	 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 	 	SCTP_DECR_CHK_COUNT(); \
 	  } else { \

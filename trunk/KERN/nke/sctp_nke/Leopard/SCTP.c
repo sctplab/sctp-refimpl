@@ -401,7 +401,6 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sysctl_register_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
 	sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
 
-	sctp_over_udp_start();
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;
 	udp6_usrreqs.pru_soreceive = soreceive_fix;
@@ -441,9 +440,6 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	udp6_usrreqs.pru_soreceive = soreceive;
 	lck_rw_done(udbinfo.mtx);
 	
-	sctp_over_udp_stop();
-	sctp_stop_main_timer();
-
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 #if defined(SCTP_APPLE_AUTO_ASCONF)

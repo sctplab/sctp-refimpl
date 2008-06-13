@@ -362,15 +362,14 @@ sctp_unlock_assert(struct socket *so)
 /*
  * timer functions
  */
-int sctp_main_timer_ticks = 0;
 
 void
 sctp_start_main_timer(void) {
 	/* bound the timer (in msec) */
-	if ((int)sctp_main_timer <= 1000/hz)
-		sctp_main_timer = 1000/hz;
-	sctp_main_timer_ticks = MSEC_TO_TICKS(sctp_main_timer);
-	timeout(sctp_fasttim, NULL, sctp_main_timer_ticks);
+	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) <= 1000/hz)
+		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
+	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
+	timeout(sctp_fasttim, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
 }
 
 void
@@ -616,7 +615,7 @@ sctp_slowtimo()
 	}
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
-	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		printf("sctp_slowtimo: inps: %u\n", n);
 	}
 #endif
@@ -849,7 +848,7 @@ void sctp_address_monitor_start(void)
 	}
 }
 
-void sctp_address_monitor_destroy(void)
+void sctp_address_monitor_stop(void)
 {
 	if (sctp_address_monitor_so) {
 		sock_close(sctp_address_monitor_so);
@@ -863,13 +862,11 @@ void sctp_address_monitor_start(void)
 	return;
 }
 
-void sctp_address_monitor_destroy(void)
+void sctp_address_monitor_stop(void)
 {
 	return;
 }
 #endif
-
-extern uint32_t sctp_udp_tunneling_port;
 
 static void
 sctp_print_mbuf_chain(mbuf_t m)
@@ -925,7 +922,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 		if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
 			dst.sin_family = AF_INET;
 			dst.sin_len = sizeof(struct sockaddr_in);
-			dst.sin_port = htons(sctp_udp_tunneling_port);
+			dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
 		}
 	}
@@ -1006,7 +1003,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 		if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_PKTINFO)) {
 			dst.sin6_family = AF_INET6;
 			dst.sin6_len = sizeof(struct sockaddr_in6);
-			dst.sin6_port = htons(sctp_udp_tunneling_port);
+			dst.sin6_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			memcpy((void *)&dst.sin6_addr, (const void *)(&((struct in6_pktinfo *)CMSG_DATA(cmsg))->ipi6_addr), sizeof(struct in6_addr));
 		}
 	}
@@ -1081,7 +1078,7 @@ sctp_over_udp_start(void)
 	memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
 	addr_ipv4.sin_len         = sizeof(struct sockaddr_in);
 	addr_ipv4.sin_family      = AF_INET;
-	addr_ipv4.sin_port        = htons(sctp_udp_tunneling_port);
+	addr_ipv4.sin_port        = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 	addr_ipv4.sin_addr.s_addr = htonl(INADDR_ANY);
 	error = sock_bind(sctp_over_udp_ipv4_so, (const struct sockaddr *)&addr_ipv4);
 	if (error) {
@@ -1123,7 +1120,7 @@ sctp_over_udp_start(void)
 	memset((void *)&addr_ipv6, 0, sizeof(struct sockaddr_in6));
 	addr_ipv6.sin6_len    = sizeof(struct sockaddr_in6);
 	addr_ipv6.sin6_family = AF_INET6;
-	addr_ipv6.sin6_port   = htons(sctp_udp_tunneling_port);
+	addr_ipv6.sin6_port   = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 	addr_ipv6.sin6_addr   = in6addr_any;
 	error = sock_bind(sctp_over_udp_ipv6_so, (const struct sockaddr *)&addr_ipv6);
 	if (error) {
