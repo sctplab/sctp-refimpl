@@ -271,7 +271,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
 
-			if(sctp_logging_level & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 			}
 
@@ -321,7 +321,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
-	if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 		sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 	}
 	/* This is the next one we expect */
@@ -450,7 +450,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		op_err = NULL;
 	}
 	/* extract the cookie and queue it to "echo" it back... */
-	if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 			       stcb->asoc.overall_error_count,
 			       0,
@@ -603,15 +603,16 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	 *  MTU's based on whether PF1 or PF2 is being used. If a T3 timer is running,
 	 *  for the destination, stop the timer because a PF-heartbeat was received.
 	 */
-	if (sctp_cmt_on_off && sctp_cmt_pf && (net->dest_state & SCTP_ADDR_PF) ==
-		SCTP_ADDR_PF) {
+	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+	    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+	    (net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
 		if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				stcb, net,
 				SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
 		}
 		net->dest_state &= ~SCTP_ADDR_PF;
-		net->cwnd = net->mtu * sctp_cmt_pf;
+		net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 			net, net->cwnd);
 	}
@@ -1170,7 +1171,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 		SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_ECHOED);
 
 		/* reset the RTO calc */
-		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 				       stcb->asoc.overall_error_count,
 				       0,
@@ -2214,7 +2215,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 #ifdef SCTP_MBUF_LOGGING
-	if (sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 		struct mbuf *mat;
 		mat = m_sig;
 		while (mat) {
@@ -2992,7 +2993,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					 stcb, tp1->whoTo);
 
 			/* fix counts and things */
-			if(sctp_logging_level & SCTP_FLIGHT_LOGGING_ENABLE) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PDRP,
 					       tp1->whoTo->flight_size,
 					       tp1->book_size, 
@@ -3306,7 +3307,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 						return (1);
 					}
 					stcb->asoc.highest_tsn_inside_map = (ntohl(resp->senders_next_tsn) - 1);
-					if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 					  sctp_log_map(0, 7, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 					}
 
@@ -3413,7 +3414,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 			return (1);
 		}
 		stcb->asoc.highest_tsn_inside_map += SCTP_STREAM_RESET_TSN_DELTA;
-		if(sctp_logging_level & SCTP_MAP_LOGGING_ENABLE) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 		  sctp_log_map(0, 10, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 		}
 		stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
@@ -3907,7 +3908,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		 * valid.
 		 */
 		if ((ch->chunk_type == SCTP_AUTHENTICATION) &&
-		    (stcb == NULL) && !sctp_auth_disable) {
+		    (stcb == NULL) &&
+		    !SCTP_BASE_SYSCTL(sctp_auth_disable)) {
 			/* save this chunk for later processing */
 			auth_skipped = 1;
 			auth_offset = *offset;
@@ -4060,7 +4062,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	     (ch->chunk_type == SCTP_HEARTBEAT_REQUEST)) &&
 	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		/* implied cookie-ack.. we must have lost the ack */
-		if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 			sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 				       stcb->asoc.overall_error_count,
 				       0,
@@ -4160,9 +4162,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif
 
 		/* check to see if this chunk required auth, but isn't */
-		if ((stcb != NULL) && !sctp_auth_disable &&
-		    sctp_auth_is_required_chunk(ch->chunk_type,
-						stcb->asoc.local_auth_chunks) &&
+		if ((stcb != NULL) &&
+		    !SCTP_BASE_SYSCTL(sctp_auth_disable) &&
+		    sctp_auth_is_required_chunk(ch->chunk_type, stcb->asoc.local_auth_chunks) &&
 		    !stcb->asoc.authenticated) {
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
@@ -4187,7 +4189,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			if ((chk_length > SCTP_LARGEST_INIT_ACCEPTED) ||
 			    (num_chunks > 1) ||
-			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
+			    (SCTP_BASE_SYSCTL(sctp_strict_init) && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4252,7 +4254,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			}
 			if ((num_chunks > 1) ||
-			    (sctp_strict_init && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
+			    (SCTP_BASE_SYSCTL(sctp_strict_init) && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -4352,7 +4354,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 							chk_length, *netp);
 
 				/* He's alive so give him credit */
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4373,7 +4375,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			/* He's alive so give him credit */
-			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 				sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 					       stcb->asoc.overall_error_count,
 					       0,
@@ -4454,7 +4456,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 			if ((stcb == NULL) && (inp->sctp_socket->so_qlen >= inp->sctp_socket->so_qlimit)) {
 				if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-				    (sctp_abort_if_one_2_one_hits_limit)) {
+				    (SCTP_BASE_SYSCTL(sctp_abort_if_one_2_one_hits_limit))) {
 					struct mbuf *oper;
 					struct sctp_paramhdr *phdr;
 
@@ -4567,7 +4569,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			/* He's alive so give him credit */
 			if ((stcb) && netp && *netp) {
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4590,7 +4592,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if(stcb) {
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4614,7 +4616,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				return (NULL);
 			}
 			if (stcb) {
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4647,7 +4649,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ASCONF\n");
 			/* He's alive so give him credit */
 			if (stcb) {
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4672,7 +4674,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			if ((stcb) && netp && *netp) {
 				/* He's alive so give him credit */
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4701,7 +4703,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if (stcb) {
 				int abort_flag = 0;
 				stcb->asoc.overall_error_count = 0;
-				if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
 						       0,
@@ -4732,7 +4734,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					*offset = length;
 					return (NULL);
 				} else {
-					if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 						sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 							       stcb->asoc.overall_error_count,
 							       0,
@@ -4810,7 +4812,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 		case SCTP_AUTHENTICATION:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_AUTHENTICATION\n");
-			if (sctp_auth_disable)
+			if (SCTP_BASE_SYSCTL(sctp_auth_disable))
 				goto unknown_chunk;
 
 			if (stcb == NULL) {
@@ -4874,7 +4876,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 									 M_DONTWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
 #ifdef SCTP_MBUF_LOGGING
-						if (sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 							struct mbuf *mat;
 							mat = SCTP_BUF_NEXT(mm);
 							while (mat) {
@@ -5079,9 +5081,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 * can't have authenticated without any AUTH (control)
 		 * chunks
 		 */
-		if ((stcb != NULL) && !sctp_auth_disable &&
-		    sctp_auth_is_required_chunk(SCTP_DATA,
-		    stcb->asoc.local_auth_chunks)) {
+		if ((stcb != NULL) &&
+		    !SCTP_BASE_SYSCTL(sctp_auth_disable) &&
+		    sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.local_auth_chunks)) {
 			/* "silently" ignore */
 			SCTP_STAT_INCR(sctps_recvauthmissing);
 			SCTP_TCB_UNLOCK(stcb);
@@ -5119,9 +5121,10 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	 * Rest should be DATA only.  Check authentication state if AUTH for
 	 * DATA is required.
 	 */
-	if ((length > offset) && (stcb != NULL) && !sctp_auth_disable &&
-	    sctp_auth_is_required_chunk(SCTP_DATA,
-	    stcb->asoc.local_auth_chunks) &&
+	if ((length > offset) &&
+	    (stcb != NULL) &&
+	    !SCTP_BASE_SYSCTL(sctp_auth_disable) &&
+	    sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.local_auth_chunks) &&
 	    !stcb->asoc.authenticated) {
 		/* "silently" ignore */
 		SCTP_STAT_INCR(sctps_recvauthmissing);
@@ -5144,7 +5147,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			 * shows us the cookie-ack was lost. Imply it was
 			 * there.
 			 */
-			if(sctp_logging_level & SCTP_THRESHOLD_LOGGING) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 				sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 					       stcb->asoc.overall_error_count,
 					       0,
@@ -5378,7 +5381,7 @@ sctp_input(i_pak, va_alist)
 
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
-	if(sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 		mat = m;
 		while(mat) {
 			if(SCTP_BUF_IS_EXTENDED(mat)) {
@@ -5389,7 +5392,7 @@ sctp_input(i_pak, va_alist)
 	}
 #endif
 #ifdef  SCTP_PACKET_LOGGING
-	if(sctp_logging_level & SCTP_LAST_PACKET_TRACING)
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING)
 		sctp_packet_log(m, mlen);
 #endif
 	/* Must take out the iphlen, since mlen expects this (only effect lb case) */
@@ -5431,7 +5434,7 @@ sctp_input(i_pak, va_alist)
 
 	/* validate SCTP checksum */
 	check = sh->checksum;	/* save incoming checksum */
-	if ((check == 0) && (sctp_no_csum_on_loopback) &&
+	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
 	     (SCTP_IS_IT_LOOPBACK(m)))
 		) {

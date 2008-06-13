@@ -326,7 +326,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	TAILQ_FOREACH(ifn, &ifnet, if_list) {
 #endif
 #if defined(__APPLE__)
-		if (sctp_ignore_vmware_interfaces && sctp_is_vmware_interface(ifn)) {
+		if (SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces) && sctp_is_vmware_interface(ifn)) {
 			continue;
 		}
 #endif
@@ -401,9 +401,6 @@ sctp_init_vrf_list(int vrfid)
 	sctp_init_ifns_for_vrf(vrfid); 
 }
 
-static uint8_t first_time=0;
-
-
 void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
@@ -417,9 +414,9 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 #if defined(__Windows__)
 	/* On Windows, anything not built yet when sctp_addr_change at first. */
 #else
-	if (first_time == 0) {
+	if (SCTP_BASE_VAR(first_time) == 0) {
 		/* Special test to see if my ::1 will showup with this */
-		first_time = 1;
+		SCTP_BASE_VAR(first_time) = 1;
 		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
 	}
 #endif
@@ -545,7 +542,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		SCTP_BUF_NEXT(m) = NULL;
 	}
 #ifdef SCTP_MBUF_LOGGING
-	if(sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 		if(SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IALLOC);
 		}
@@ -566,7 +563,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		return (NULL);
 	}
 	if(allonebuf == 0)
-		mbuf_threshold = sctp_mbuf_threshold_count;
+		mbuf_threshold = SCTP_BASE_SYSCTL(sctp_mbuf_threshold_count);
 	else
 		mbuf_threshold = 1;
 
@@ -608,7 +605,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_LEN(m) = 0;
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 #ifdef SCTP_MBUF_LOGGING
-	if(sctp_logging_level & SCTP_MBUF_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 		if(SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IALLOC);
 		}
@@ -620,12 +617,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 
 
 #ifdef SCTP_PACKET_LOGGING
-
-int packet_log_writers=0;
-int packet_log_end=0;
-uint8_t packet_log_buffer[SCTP_PACKET_LOG_SIZE];
-
-
 void
 sctp_packet_log(struct mbuf *m, int length)
 {
@@ -651,40 +642,40 @@ sctp_packet_log(struct mbuf *m, int length)
 		/* Can't log this packet I have not a buffer big enough */
 		return;
 	}
-	if (length < (SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk))) {
+	if (length < (int)(SCTP_MIN_V4_OVERHEAD + sizeof(struct sctp_cookie_ack_chunk))) {
 		return;
 	}
-	atomic_add_int(&packet_log_writers, 1);
+	atomic_add_int(&SCTP_BASE_VAR(packet_log_writers), 1);
  try_again:
-	if(packet_log_writers > SCTP_PKTLOG_WRITERS_NEED_LOCK) {
+	if (SCTP_BASE_VAR(packet_log_writers) > SCTP_PKTLOG_WRITERS_NEED_LOCK) {
 		SCTP_IP_PKTLOG_LOCK();
 		grabbed_lock = 1;
 	again_locked:
-		value = packet_log_end;
-		newval = packet_log_end + total_len;
+		value = SCTP_BASE_VAR(packet_log_end);
+		newval = SCTP_BASE_VAR(packet_log_end) + total_len;
 		if(newval >= SCTP_PACKET_LOG_SIZE) {
 			/* we wrapped */
 			thisbegin = 0;
 			thisend = total_len;
 		} else {
-			thisbegin = packet_log_end;
+			thisbegin = SCTP_BASE_VAR(packet_log_end);
 			thisend = newval;
 		}
-		if (!(atomic_cmpset_int(&packet_log_end, value, thisend))) {
+		if (!(atomic_cmpset_int(&SCTP_BASE_VAR(packet_log_end), value, thisend))) {
 			goto again_locked;
 		}
 	} else {
-		value = packet_log_end;
-		newval = packet_log_end + total_len;
+		value = SCTP_BASE_VAR(packet_log_end);
+		newval = SCTP_BASE_VAR(packet_log_end) + total_len;
 		if (newval >= SCTP_PACKET_LOG_SIZE) {
 			/* we wrapped */
 			thisbegin = 0;
 			thisend = total_len;
 		} else {
-			thisbegin = packet_log_end;
+			thisbegin = SCTP_BASE_VAR(packet_log_end);
 			thisend = newval;
 		}
-		if (!(atomic_cmpset_int(&packet_log_end, value, thisend))) {
+		if (!(atomic_cmpset_int(&SCTP_BASE_VAR(packet_log_end), value, thisend))) {
 			goto try_again;
 		}
 	}
@@ -693,14 +684,14 @@ sctp_packet_log(struct mbuf *m, int length)
 		printf("Insanity stops a log thisbegin:%d thisend:%d writers:%d lock:%d end:%d\n",
 		       thisbegin,
 		       thisend,
-		       packet_log_writers,
+		       SCTP_BASE_VAR(packet_log_writers),
 		       grabbed_lock,
-		       packet_log_end);
-		packet_log_end = 0;
+		       SCTP_BASE_VAR(packet_log_end));
+		SCTP_BASE_VAR(packet_log_end) = 0;
 		goto no_log;
 		       
 	}
-	lenat = (int *)&packet_log_buffer[thisbegin];
+	lenat = (int *)&SCTP_BASE_VAR(packet_log_buffer)[thisbegin];
 	*lenat = total_len;
 	lenat++;
 	*lenat = value;
@@ -710,7 +701,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	*tick_tock = sctp_get_tick_count();
 	copyto = (void *)lenat;
 	thisone = thisend - sizeof(int);
-	lenat = (int *)&packet_log_buffer[thisone];
+	lenat = (int *)&SCTP_BASE_VAR(packet_log_buffer)[thisone];
 	*lenat = thisbegin;
 	if (grabbed_lock) {
 		SCTP_IP_PKTLOG_UNLOCK();
@@ -721,7 +712,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	if (grabbed_lock) {
 		SCTP_IP_PKTLOG_UNLOCK();
 	}
-	atomic_subtract_int(&packet_log_writers, 1);
+	atomic_subtract_int(&SCTP_BASE_VAR(packet_log_writers), 1);
 }
 
 
@@ -737,14 +728,14 @@ sctp_copy_out_packet_log(uint8_t *target, int length)
 	int did_delay=0;
 
 	tocopy = length;
-	if(length < (2 * sizeof(int))) {
+	if (length < (int)(2 * sizeof(int))) {
 		/* not enough room */
 		return (0);
 	}
 	if (SCTP_PKTLOG_WRITERS_NEED_LOCK) {
-		atomic_add_int(&packet_log_writers, SCTP_PKTLOG_WRITERS_NEED_LOCK);
+		atomic_add_int(&SCTP_BASE_VAR(packet_log_writers), SCTP_PKTLOG_WRITERS_NEED_LOCK);
 	again:
-		if ((did_delay == 0) && (packet_log_writers != SCTP_PKTLOG_WRITERS_NEED_LOCK)) {
+		if ((did_delay == 0) && (SCTP_BASE_VAR(packet_log_writers) != SCTP_PKTLOG_WRITERS_NEED_LOCK)) {
 			/* we delay here for just a moment hoping the writer(s) that were
 			 * present when we entered will have left and we only have
 			 * locking ones that will contend with us for the lock. This
@@ -758,12 +749,12 @@ sctp_copy_out_packet_log(uint8_t *target, int length)
 	}
 	SCTP_IP_PKTLOG_LOCK();
 	lenat = (int *)target;
-	*lenat = packet_log_end;
+	*lenat = SCTP_BASE_VAR(packet_log_end);
 	lenat++;
 	this_copy = min((length - sizeof(int)), SCTP_PACKET_LOG_SIZE);
-	memcpy((void *)lenat, (void *)packet_log_buffer, this_copy);
+	memcpy((void *)lenat, (void *)SCTP_BASE_VAR(packet_log_buffer), this_copy);
 	if (SCTP_PKTLOG_WRITERS_NEED_LOCK) {
-		atomic_subtract_int(&packet_log_writers,
+		atomic_subtract_int(&SCTP_BASE_VAR(packet_log_writers),
 				    SCTP_PKTLOG_WRITERS_NEED_LOCK);
 	}
 	SCTP_IP_PKTLOG_UNLOCK();
