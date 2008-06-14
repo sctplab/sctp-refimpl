@@ -168,7 +168,7 @@
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_INP_RLOCK(_inp)	do { 					\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_INP);\
 	(void)pthread_mutex_lock(&(_inp)->inp_mtx);			\
 } while (0)
 
@@ -207,7 +207,7 @@
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_ASOC_CREATE_LOCK(_inp) do {				\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_CREATE); \
 	(void)pthread_mutex_lock(&(_inp)->inp_create_mtx);		\
 } while (0)
 #else
@@ -239,7 +239,7 @@
 
 #ifdef SCTP_LOCK_LOGGING
 #define SCTP_TCB_LOCK(_tcb)  do {					\
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);		\
+	if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) sctp_log_lock(_tcb->sctp_ep, _tcb, SCTP_LOG_LOCK_TCB);		\
 	(void)pthread_mutex_lock(&(_tcb)->tcb_mtx);			\
 } while (0)
 
