@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.9 2007/12/10 16:03:39 obrien Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_var.h 174510 2007-12-10 16:03:40Z obrien $");
 #endif
 
 #if defined(_KERNEL)
