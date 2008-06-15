@@ -5814,6 +5814,7 @@ sctp_pcb_init()
 	(void)pthread_cond_init(&SCTP_BASE_INFO(iterator_wakeup), NULL);
 #endif
 	SCTP_BASE_INFO(iterator_running) = 0;
+	SCTP_BASE_INFO(threads_must_exit) = 0;
 	sctp_startup_iterator();
 #endif
 
@@ -5873,6 +5874,11 @@ sctp_pcb_finish(void)
 
 		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 	}
+#elif defined(__Windows__)
+	SCTP_BASE_INFO(threads_must_exit) = 1;
+#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	/* Wake the thread up so it will exit now */
+	sctp_wakeup_iterator();
 #endif
 #endif
 	/*
