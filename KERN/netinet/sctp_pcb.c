@@ -5874,7 +5874,8 @@ sctp_pcb_finish(void)
 
 		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 	}
-#elif defined(__Windows__)
+#endif
+#elif defined(__FreeBSD__)
 	SCTP_BASE_INFO(threads_must_exit) = 1;
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 	/* Wake the thread up so it will exit now */
