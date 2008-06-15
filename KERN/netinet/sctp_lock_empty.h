@@ -45,10 +45,27 @@ __FBSDID("$FreeBSD$");
 #define SCTP_INP_INFO_WLOCK()
 #define SCTP_IPI_COUNT_INIT()
 
+
+#define SCTP_STATLOG_INIT_LOCK() 
+#define SCTP_STATLOG_LOCK()
+#define SCTP_STATLOG_UNLOCK()
+#define SCTP_STATLOG_DESTROY()
+
+#define SCTP_IPI_ITERATOR_WQ_INIT()
+#define SCTP_IPI_ITERATOR_WQ_LOCK()
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()
+
+
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
 #define SCTP_IPI_ADDR_LOCK()
 #define SCTP_IPI_ADDR_UNLOCK()
+
+/* address list locks */
+#define SCTP_IPI_ADDR_RLOCK() 						
+#define SCTP_IPI_ADDR_RUNLOCK() 
+#define SCTP_IPI_ADDR_WLOCK() 						
+#define SCTP_IPI_ADDR_WUNLOCK() 
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()

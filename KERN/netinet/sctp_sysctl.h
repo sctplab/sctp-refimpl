@@ -500,8 +500,8 @@ struct sctp_sysctl {
 #endif
 
 
-#if defined(_KERNEL)
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(_KERNEL) || defined(__Userspace__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 #if defined(SYSCTL_DECL)
 SYSCTL_DECL(_net_inet_sctp);
 #endif

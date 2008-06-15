@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.h 179157 2008-05-20 13:47:46Z r
 
 #include <netinet/sctp_header.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 struct mbuf *
@@ -71,7 +71,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			      sctp_route_t *ro, struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id);
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 int
 sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro);
 int
@@ -134,6 +134,7 @@ sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, PKTHREAD, int);
 #else
+/* sctp_output is called bu sctp_sendm. Not using sctp_sendm for __Userspace__ */
 int
 sctp_output(struct sctp_inpcb *,
 #if defined(__Panda__)
@@ -221,6 +222,9 @@ sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
 
 void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t, uint16_t);
 
+#endif /* _KERNEL || __Userspace__ */
+
+#if defined(_KERNEL) || defined (__Userspace__)
 int
 sctp_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -241,6 +245,7 @@ sctp_sosend(struct socket *so,
 #elif defined(__Windows__)
     PKTHREAD p
 #else
+    /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
     struct proc *p
 #endif
 #endif
@@ -248,3 +253,4 @@ sctp_sosend(struct socket *so,
 
 #endif
 #endif
+

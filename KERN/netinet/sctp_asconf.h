@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.h 179157 2008-05-20 13:47:46Z r
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 /*
  * function prototypes
@@ -83,7 +83,7 @@ extern void
 sctp_move_chunks_from_deleted_prim(struct sctp_tcb *, struct sctp_nets *);
 extern void
 sctp_assoc_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 extern void
 sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 #endif

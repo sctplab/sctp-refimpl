@@ -41,7 +41,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 179783 2008-06-14 07:58:05Z rrs 
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
 #ifdef INET6
+#if defined(__Userspace_os_FreeBSD)
 #include <netinet6/sctp6_var.h>
+#endif
 #endif
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_output.h>
@@ -901,7 +903,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_pf = (uint8_t) SCTP_BASE_SYSCTL(sctp_cmt_pf);
 	asoc->sctp_frag_point = m->sctp_frag_point;
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
 #else
 	asoc->default_tos = m->inp_ip_tos;
@@ -4149,6 +4151,7 @@ sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t * vtagfill)
 uint32_t
 sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
+    /*__Userspace__ Returning 1 here always */
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
 	struct sockaddr_in6 a, b;
 
@@ -4275,8 +4278,18 @@ sctp_print_address(struct sockaddr *sa)
 		struct sockaddr_in6 *sin6;
 
 		sin6 = (struct sockaddr_in6 *)sa;
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Userspace__)
 		SCTP_PRINTF("IPv6 address: %x:%x:%x:%x:%x:%x:%x:%x:port:%d scope:%u \n",
+#if defined(__Userspace_os_FreeBSD) || defined(__Userspace_os_Darwin)
+			    (uint32_t)sin6->sin6_addr.s6_addr[0],
+			    (uint32_t)sin6->sin6_addr.s6_addr[1],
+			    (uint32_t)sin6->sin6_addr.s6_addr[2],
+			    (uint32_t)sin6->sin6_addr.s6_addr[3],
+			    (uint32_t)sin6->sin6_addr.s6_addr[4],
+			    (uint32_t)sin6->sin6_addr.s6_addr[5],
+			    (uint32_t)sin6->sin6_addr.s6_addr[6],
+			    (uint32_t)sin6->sin6_addr.s6_addr[7],
+#else
 			    (uint32_t)sin6->sin6_addr.s6_addr16[0],
 			    (uint32_t)sin6->sin6_addr.s6_addr16[1],
 			    (uint32_t)sin6->sin6_addr.s6_addr16[2],
@@ -4285,6 +4298,7 @@ sctp_print_address(struct sockaddr *sa)
 			    (uint32_t)sin6->sin6_addr.s6_addr16[5],
 			    (uint32_t)sin6->sin6_addr.s6_addr16[6],
 			    (uint32_t)sin6->sin6_addr.s6_addr16[7],
+#endif
 			    ntohs(sin6->sin6_port),
 			    sin6->sin6_scope_id);
 #else
@@ -4326,14 +4340,14 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 		struct sockaddr_in lsa, fsa;
 
 		bzero(&lsa, sizeof(lsa));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		lsa.sin_len = sizeof(lsa);
 #endif
 		lsa.sin_family = AF_INET;
 		lsa.sin_addr = iph->ip_src;
 		lsa.sin_port = sh->src_port;
 		bzero(&fsa, sizeof(fsa));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		fsa.sin_len = sizeof(fsa);
 #endif
 		fsa.sin_family = AF_INET;
@@ -4353,14 +4367,14 @@ sctp_print_address_pkt(struct ip *iph, struct sctphdr *sh)
 
 		ip6 = (struct ip6_hdr *)iph;
 		bzero(&lsa6, sizeof(lsa6));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		lsa6.sin6_len = sizeof(lsa6);
 #endif
 		lsa6.sin6_family = AF_INET6;
 		lsa6.sin6_addr = ip6->ip6_src;
 		lsa6.sin6_port = sh->src_port;
 		bzero(&fsa6, sizeof(fsa6));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		fsa6.sin6_len = sizeof(fsa6);
 #endif
 		fsa6.sin6_family = AF_INET6;
@@ -4977,7 +4991,7 @@ sctp_get_ifa_hash_val(struct sockaddr *addr)
 		struct sockaddr_in6 *sin6;
 		uint32_t hash_of_addr;
 		sin6 = (struct sockaddr_in6 *)addr;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_FreeBSD) && !defined(__Userspace_os_Darwin)
 		hash_of_addr = (sin6->sin6_addr.s6_addr32[0] +
 				sin6->sin6_addr.s6_addr32[1] +
 				sin6->sin6_addr.s6_addr32[2] +
@@ -5228,7 +5242,7 @@ sctp_sorecvmsg(struct socket *so,
 		sctp_misc_ints(SCTP_SORECV_ENTER,
 			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version < 700000
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #endif
@@ -5251,7 +5265,7 @@ sctp_sorecvmsg(struct socket *so,
 		goto release_unlocked;
 	}
  restart:
-#if defined(__FreeBSD__) && __FreeBSD_version < 700000
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -5633,7 +5647,7 @@ sctp_sorecvmsg(struct socket *so,
 		struct sockaddr *to;
 
 #ifdef INET
-#if !defined(__Windows__)
+#if !( defined(__Windows__) || defined(__Userspace_os_Linux) )
 		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sin.sin_len);
 #else
 		cp_len = sizeof(struct sockaddr_in);
@@ -5662,18 +5676,19 @@ sctp_sorecvmsg(struct socket *so,
 			sin = (struct sockaddr_in *)to;
 			bzero(&sin6, sizeof(sin6));
 			sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !( defined(__Windows__) || defined (__Userspace_os_Linux) )
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
-			sin6.sin6_addr.s6_addr32[2] = ntohl(0x0000ffff);
+#endif
+#if defined(__Userspace_os_FreeBSD) || defined(__Userspace_os_Darwin)
+			sin6.sin6_addr.s6_addr[2] = (uint8_t) 0xffff;
 			bcopy(&sin->sin_addr,
-			      &sin6.sin6_addr.s6_addr32[3],
-			      sizeof(sin6.sin6_addr.s6_addr32[3]));
+			      &sin6.sin6_addr.s6_addr[3],
+			      sizeof(sin6.sin6_addr.s6_addr[3]));
 #else
-			sin6.sin6_addr.s6_addr16[3] = 0x0000;
-			sin6.sin6_addr.s6_addr16[4] = 0xffff;
+			sin6.sin6_addr.s6_addr16[2] = 0xffff;
 			bcopy(&sin->sin_addr,
-			      &sin6.sin6_addr.s6_addr16[6],
-			      sizeof(sin->sin_addr));
+			      &sin6.sin6_addr.s6_addr16[3],
+			      sizeof(sin6.sin6_addr.s6_addr16[3]));
 #endif
 			sin6.sin6_port = sin->sin_port;
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
@@ -6070,7 +6085,7 @@ sctp_sorecvmsg(struct socket *so,
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version < 700000
+#if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
 	if(hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
@@ -6231,9 +6246,9 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	return (0);
 }
 
+/* no sctp_soreceive or sctp_l_soreceive for __Userspace__ now */
 
-
-
+#if !defined(__Userspace__)
 int
 sctp_soreceive(	struct socket *so,
 		struct sockaddr **psa,
@@ -6431,6 +6446,97 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 }
 #endif
 
+#else /*  __Userspace__ ifdef above sctp_soreceive */
+/*
+ * __Userspace__ Defining sctp_hashinit_flags() and sctp_hashdestroy() for userland.
+ * NOTE: We don't want multiple definitions here. So sctp_hashinit_flags() above for
+ *__FreeBSD__ must be excluded.
+ * 
+ */
+
+void *
+sctp_hashinit_flags(int elements, struct malloc_type *type, 
+                    u_long *hashmask, int flags)
+{
+  long hashsize;
+  LIST_HEAD(generic, generic) *hashtbl;
+  int i;
+  
+  
+  if (elements <= 0) {
+#ifdef INVARIANTS
+    perror("hashinit: bad elements");
+    return (-1);
+#else
+    printf("hashinit: bad elements?");
+    elements = 1;
+#endif
+  }
+  for (hashsize = 1; hashsize <= elements; hashsize <<= 1)
+    continue;
+  hashsize >>= 1;
+  /*cannot use MALLOC here because it has to be declared or defined
+    using MALLOC_DECLARE or MALLOC_DEFINE first. */
+  if(flags & HASH_WAITOK)
+    hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl)); 
+  else if(flags & HASH_NOWAIT)
+    hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl));
+  else {
+#ifdef INVARIANTS
+    perror("flag incorrect in hashinit_flags");
+    return (-1);
+#else
+    return (NULL);
+#endif
+  }
+  for (i = 0; i < hashsize; i++)
+    LIST_INIT(&hashtbl[i]);
+  *hashmask = hashsize - 1;
+  return (hashtbl);
+}
+
+
+void
+sctp_hashdestroy(void *vhashtbl, struct malloc_type *type, u_long hashmask)
+{
+	LIST_HEAD(generic, generic) *hashtbl, *hp;
+
+	hashtbl = vhashtbl;
+	for (hp = hashtbl; hp <= &hashtbl[hashmask]; hp++)
+	  if (!LIST_EMPTY(hp)){
+			perror("hashdestroy: hash not empty");
+			return;
+	  }
+	FREE(hashtbl, type);
+}
+
+
+void
+sctp_hashfreedestroy(void *vhashtbl, struct malloc_type *type, u_long hashmask)
+{
+    LIST_HEAD(generic, generic) *hashtbl, *hp;
+    LIST_ENTRY(type) *start, *temp;
+        
+	hashtbl = vhashtbl;
+        /* Apparently temp is not dynamically allocated, so attempts to
+           free it results in error.
+	for (hp = hashtbl; hp <= &hashtbl[hashmask]; hp++)
+	  if (!LIST_EMPTY(hp)){
+              start = LIST_FIRST(hp);
+              while(start != NULL)
+                  {
+                      temp = start;
+                      start = start->le_next;
+                      printf("%s: %p \n", __func__, temp);
+                      FREE(temp, type);
+                  }
+	  }
+        */
+	FREE(hashtbl, type);
+}
+
+ 
+#endif
 
 
 int
@@ -6490,7 +6596,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 		if (sa->sa_family == AF_INET) {
 			(*num_v4) += 1;
 			incr = sizeof(struct sockaddr_in);
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			if(sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
@@ -6511,7 +6617,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			}
 			(*num_v6) += 1;
 			incr = sizeof(struct sockaddr_in6);
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			if(sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
@@ -6579,10 +6685,10 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	addr_touse = sa;
-#if defined(INET6)
+#if defined(INET6) && !defined(__Userspace__) /* TODO port in6_sin6_2_sin */
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -6610,7 +6716,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	if (sa->sa_family == AF_INET) {
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -6728,10 +6834,10 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	addr_touse = sa;
-#if defined(INET6)
+#if defined(INET6) && !defined(__Userspace__) /* TODO port in6_sin6_2_sin */
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -6759,7 +6865,7 @@ sctp_bindx_delete_address(struct socket *so, struct sctp_inpcb *inp,
 	}
 #endif
 	if (sa->sa_family == AF_INET) {
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -6873,6 +6979,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 						if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 							continue;
 						}
+#if !defined(__Userspace__) /* ignoring IPv6 for now... */
 						if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 							if (local_scope == 0)
 								continue;
@@ -6906,6 +7013,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 						    (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr))) {
 							continue;
 						}
+#endif /*  !defined(__Userspace__) */
 						/* count this one */
 						count++;
 					}

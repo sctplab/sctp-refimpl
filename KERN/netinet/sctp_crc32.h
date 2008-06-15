@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.h 169382 2007-05-08 17:01:12Z rr
 
 #ifndef SCTP_USE_ADLER32
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 uint32_t update_crc32(uint32_t, unsigned char *, unsigned int);
 
 uint32_t old_update_crc32(uint32_t, unsigned char *, unsigned int);

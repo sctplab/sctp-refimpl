@@ -896,6 +896,7 @@ sctp_get_hmac_block_len(uint16_t hmac_algo)
 	}			/* end switch */
 }
 
+/* __Userspace__ SHA1_Init is defined in libcrypto.a (libssl-dev on Ubuntu)*/
 static void
 sctp_hmac_init(uint16_t hmac_algo, sctp_hash_context_t *ctx)
 {
