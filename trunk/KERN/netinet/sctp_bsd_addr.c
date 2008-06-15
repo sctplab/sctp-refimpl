@@ -119,6 +119,9 @@ sctp_iterator_thread(void *v)
 #endif
 	 	       0, "waiting_for_work", 0);
 #else
+		if (SCTP_BASE_INFO(threads_must_exit)) {
+		      kthread_exit(0);
+		}
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		KeLowerIrql(oldIrql);
 
