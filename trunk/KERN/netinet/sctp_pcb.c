@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 179783 2008-06-14 07:58:05Z rrs 
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
+/* TODO what will __Userspace need? */
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
@@ -57,6 +58,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 179783 2008-06-14 07:58:05Z rrs 
 
 struct sctp_base_info system_base_info;
 
+#if defined(__Userspace__)
+struct ifaddrs *g_interfaces;
+#endif
 /* FIX: we don't handle multiple link local scopes */
 /* "scopeless" replacement IN6_ARE_ADDR_EQUAL */
 #ifdef INET6
@@ -102,8 +106,15 @@ SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
 #endif
 #else
+#if defined(__Userspace__)
+	/* FIX ME: __Userspace__ on FreeBSD 7 complains of struct sockaddr_in6
+         *   having no member named __u6_addr when using IN6_ARE_ADDR_EQUAL...
+         */
+        return 0;
+#else
 	/* FIX ME: we just #define this */
 	return (IN6_ARE_ADDR_EQUAL(a, b));
+#endif
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 }
 #endif
@@ -644,7 +655,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 	sctp_ifap->vrf_id = vrf_id;
 	sctp_ifap->ifa = ifa;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 #else
 	if (addr->sa_family == AF_INET) {
@@ -1784,12 +1795,12 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 
 	memset(&sin4, 0, sizeof(sin4));
 	memset(&sin6, 0, sizeof(sin6));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin4.sin_len = sizeof(sin4);
 #endif
 	sin4.sin_family = AF_INET;
 	sin4.sin_port = sh->src_port;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin6.sin6_len = sizeof(sin6);
 #endif
 	sin6.sin6_family = AF_INET6;
@@ -1960,7 +1971,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		from4 = (struct sockaddr_in *)&from_store;
 		bzero(from4, sizeof(*from4));
 		from4->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		from4->sin_len = sizeof(struct sockaddr_in);
 #endif
 		from4->sin_addr.s_addr = iph->ip_src.s_addr;
@@ -1978,7 +1989,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		from6 = (struct sockaddr_in6 *)&from_store;
 		bzero(from6, sizeof(*from6));
 		from6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		from6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		from6->sin6_addr = ip6->ip6_src;
@@ -2024,7 +2035,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		to4 = (struct sockaddr_in *)&to_store;
 		bzero(to4, sizeof(*to4));
 		to4->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		to4->sin_len = sizeof(struct sockaddr_in);
 #endif
 		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
@@ -2042,7 +2053,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 		to6 = (struct sockaddr_in6 *)&to_store;
 		bzero(to6, sizeof(*to6));
 		to6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		to6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		to6->sin6_addr = ip6->ip6_dst;
@@ -2148,7 +2159,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		/* its IPv4 */
 		sin = (struct sockaddr_in *)&local_store;
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = sh->dest_port;
@@ -2160,7 +2171,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6 = (struct sockaddr_in6 *)&local_store;
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = sh->dest_port;
@@ -2200,7 +2211,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		}
 		sin6 = (struct sockaddr_in6 *)&remote_store;
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = sh->src_port;
@@ -2228,7 +2239,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 		}
 		sin = (struct sockaddr_in *)&remote_store;
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = sh->src_port;
@@ -2322,7 +2333,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	}
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 	inp->ip_inp.inp.inp_ip_ttl = ip_defttl;
 #else
 	inp->inp_ip_ttl = ip_defttl;
@@ -2697,7 +2708,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 	return (0);
 }
 
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__))
 /*
  * Don't know why, but without this there is an unknown reference when
  * compiling NetBSD... hmm
@@ -2725,6 +2736,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	struct inpcb *ip_inp;
 	int bindall;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+        /* TODO does __Userspace__ need this? */
 	int prison = 0;
 #endif
 #ifdef SCTP_MVRF
@@ -2772,7 +2784,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
 			}
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			if (addr->sa_len != sizeof(*sin)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
@@ -2806,7 +2818,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			sin6 = (struct sockaddr_in6 *)addr;
 
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			if (addr->sa_len != sizeof(*sin6)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
@@ -2843,6 +2855,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 					return (error);
 				}
+#elif defined(__Userspace__)
+                                /* TODO IPv6 stuff for __Userspace__ */
 #else
 				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
@@ -2890,6 +2904,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #endif
 #elif defined(__APPLE__)
 				  suser(p->p_ucred, &p->p_acflag)
+#elif defined(__Userspace__) /* must be true to use raw socket */
+                                  1
 #else
 				  suser(p, 0)
 #endif
@@ -2909,7 +2925,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			}
 #endif
 		}
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 		if (p == NULL) {
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
@@ -2986,7 +3002,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		first = 1;
 		last = 0xffff;
 #else
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__Userspace__)
+                /* TODO ensure uid is 0, etc... */
+#elif defined(__FreeBSD__) || defined(__APPLE__)
                 if (ip_inp->inp_flags & INP_HIGHPORT) {
                         first = ipport_hifirstauto;
                         last  = ipport_hilastauto;
@@ -3284,7 +3302,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 
 	struct sctp_queued_to_read *sq;
 
-#ifndef __Panda__
+#if !defined(__Panda__) && !defined(__Userspace__)
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	sctp_rtentry_t *rt;
 #endif
@@ -3616,7 +3634,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	sctp_log_closing(inp, NULL, 5);
 #endif
 
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !(defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	rt = ip_pcb->inp_route.ro_rt;
 #endif
@@ -3678,7 +3696,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 #endif
 
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !(defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
 #if !defined(__FreeBSD__) || __FreeBSD_version < 500000
 	if (rt) {
 		RTFREE(rt);
@@ -3696,7 +3714,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 
 #ifdef INET6
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 	if (inp->inp_vflag & INP_IPV6) {
 #else
 	if (ip_pcb->inp_vflag & INP_IPV6) {
@@ -3704,12 +3722,12 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		struct in6pcb *in6p;
 
 		in6p = (struct in6pcb *)inp;
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !(defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
 		ip6_freepcbopts(in6p->in6p_outputopts);
 #endif
 	}
 #endif				/* INET6 */
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 	inp->inp_vflag = 0;
 #else
 	ip_pcb->inp_vflag = 0;
@@ -3871,7 +3889,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		memset(&sin->sin_zero, 0, sizeof(sin->sin_zero));
 
 		/* assure len is set */
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		if (set_scope) {
@@ -3899,7 +3917,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			return (-1);
 		}
 		/* assure len is set */
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		if (set_scope) {
@@ -3951,16 +3969,16 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	SCTP_INCR_RADDR_COUNT();
 	bzero(net, sizeof(*net));
 	(void)SCTP_GETTIME_TIMEVAL(&net->start_time);
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	memcpy(&net->ro._l_addr, newaddr, newaddr->sa_len);
 #endif
 	if (newaddr->sa_family == AF_INET) {
-#if defined(__Windows__)
+#if defined(__Windows__) || defined(__Userspace_os_Linux)
 		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_in));
 #endif
 		((struct sockaddr_in *)&net->ro._l_addr)->sin_port = stcb->rport;
 	} else if (newaddr->sa_family == AF_INET6) {
-#if defined(__Windows__)
+#if defined(__Windows__) || defined(__Userspace_os_Linux)
 		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_in6));
 #endif
 		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
@@ -4217,6 +4235,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #elif defined(__Windows__)
 		PKTHREAD p
 #else
+                /*  __Userspace__ NULL proc is going to be passed here. See sctp_lower_sosend */
 		struct proc *p
 #endif
 )
@@ -5312,15 +5331,16 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 	}
 	/* NOTE: all "scope" checks are done when local addresses are added */
 	if (destaddr->sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 		answer = inp->inp_vflag & INP_IPV6;
 #else
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV6;
 #endif
 	} else if (destaddr->sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 		answer = inp->inp_vflag & INP_IPV4;
 #else
+            /* TODO __Userspace__ (where is inp_vflag?) */
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
 #endif
 	} else {
@@ -5339,9 +5359,10 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 	struct sctp_laddr *laddr;
 
 	/* first clear the flag */
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 	inp->inp_vflag = 0;
 #else
+        /* TODO __Userspace__ (where is inp_vflag?) */
 	inp->ip_inp.inp.inp_vflag = 0;
 #endif
 	/* set the flag based on addresses on the ep list */
@@ -5356,13 +5377,14 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 			continue;
 		}
 		if (laddr->ifa->address.sa.sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV6;
 #else
-			inp->ip_inp.inp.inp_vflag |= INP_IPV6;
+		        /* TODO IPv6 __Userspace__ (where is inp_vflag?) */
+                        inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (laddr->ifa->address.sa.sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV4;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
@@ -5409,13 +5431,14 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 		inp->laddr_count++;
 		/* update inp_vflag flags */
 		if (ifa->address.sa.sa_family == AF_INET6) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV6;
 #else
+                        /* TODO IPv6 __Userspace__ (where is inp_vflag?) */
 			inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (ifa->address.sa.sa_family == AF_INET) {
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV4;
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
@@ -5827,10 +5850,15 @@ sctp_pcb_init()
 	sctp_init_vrf_list(SCTP_DEFAULT_VRF);
 #endif
 
-#if defined(_SCTP_NEEDS_CALLOUT_)
+#if defined(_SCTP_NEEDS_CALLOUT_) || defined(_USER_SCTP_NEEDS_CALLOUT_)
 	/* allocate the lock for the callout/timer queue */
 	SCTP_TIMERQ_LOCK_INIT();
 	TAILQ_INIT(&SCTP_BASE_INFO(callqueue));
+#endif
+#if defined(__Userspace__)
+        mbuf_init(NULL);
+        atomic_init();
+        RECV_THREAD_INIT();
 #endif
 }
 
@@ -5848,6 +5876,12 @@ sctp_pcb_finish(void)
 	struct sctp_tagblock *twait_block, *prev_twait_block;
 	int i;
 
+#if defined(__Userspace__)
+        SCTP_TIMERQ_LOCK_DESTROY();
+        SCTP_ZONE_DESTROY(zone_mbuf);
+        SCTP_ZONE_DESTROY(zone_clust);
+        SCTP_ZONE_DESTROY(zone_ext_refcnt);
+#elif defined(__APPLE__) || defined(__Windows__) 
 	/* FIXME MT */
 #if defined(__APPLE__)
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
@@ -5882,6 +5916,7 @@ sctp_pcb_finish(void)
 	sctp_wakeup_iterator();
 #endif
 #endif
+#endif   /* end __Userspace__*/
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
 	 * is destroyed first).
@@ -5914,6 +5949,10 @@ sctp_pcb_finish(void)
 	/* free the vrf hashes */
 	SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_vrfhash), SCTP_BASE_INFO(hashvrfmark));
 	SCTP_HASH_FREE(SCTP_BASE_INFO(vrf_ifn_hash), SCTP_BASE_INFO(vrf_ifn_hashmark));
+#if defined(__Userspace__)
+        /* free memory allocated by getifaddrs call */
+        freeifaddrs(g_interfaces);
+#endif
 
 	/* free the TIMEWAIT list elements malloc'd in the function
 	 * sctp_add_vtag_to_timewait()...
@@ -5933,7 +5972,7 @@ sctp_pcb_finish(void)
 	}
 
 	/* free the locks and mutexes */
-#if defined(__APPLE__)
+#if defined(__APPLE__) 
 	SCTP_TIMERQ_LOCK_DESTROY();
 #endif
 #ifdef SCTP_PACKET_LOGGING
@@ -5947,14 +5986,16 @@ sctp_pcb_finish(void)
 #endif
 	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_STATLOG_DESTROY();
+#if !defined(__Userspace__)
 	SCTP_INP_INFO_LOCK_DESTROY();
+#endif
 #if defined(__APPLE__)
 	lck_grp_attr_free(SCTP_BASE_INFO(mtx_grp_attr));
 	lck_grp_free(SCTP_BASE_INFO(mtx_grp));
 	lck_attr_free(SCTP_BASE_INFO(mtx_attr));
 #endif
 
-#if defined(__Windows__) || defined(__FreeBSD__)
+#if defined(__Windows__) || defined(__FreeBSD__) || defined(__Userspace__)
 	SCTP_ZONE_DESTROY(SCTP_BASE_INFO(ipi_zone_ep));
 	SCTP_ZONE_DESTROY(SCTP_BASE_INFO(ipi_zone_asoc));
 	SCTP_ZONE_DESTROY(SCTP_BASE_INFO(ipi_zone_laddr));
@@ -6021,13 +6062,13 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	memset(&sin6, 0, sizeof(sin6));
 
 	sin.sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin.sin_len = sizeof(sin);
 #endif
 	sin.sin_port = stcb->rport;
 
 	sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	sin6.sin6_port = stcb->rport;
@@ -6042,7 +6083,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sin_2 = (struct sockaddr_in *)(local_sa);
 			memset(sin_2, 0, sizeof(sin));
 			sin_2->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			sin_2->sin_len = sizeof(sin);
 #endif
 			sin_2->sin_port = sh->dest_port;
@@ -6062,7 +6103,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			sin6_2 = (struct sockaddr_in6 *)(local_sa);
 			memset(sin6_2, 0, sizeof(sin6));
 			sin6_2->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			sin6_2->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 			sin6_2->sin6_port = sh->dest_port;

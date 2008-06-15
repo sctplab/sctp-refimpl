@@ -1018,7 +1018,8 @@ struct sctp_log {
 /*
  * Kernel defined for sctp_send
  */
-#if defined(_KERNEL)
+/* __Userspace__ */
+#if defined(_KERNEL) || defined(__Userspace__)
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -1033,7 +1034,8 @@ sctp_lower_sosend(struct socket *so,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#if !defined(__Panda__)
+/* __Userspace__ does not need struct proc */
+#if !(defined(__Panda__) || defined (__Userspace__)) 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
 #elif defined(__Windows__)
@@ -1062,7 +1064,8 @@ sctp_sorecvmsg(struct socket *so,
 /*
  * API system calls
  */
-#if !(defined(_KERNEL))
+/* TODO __Userspace__ probably DOES NOT wants these lower functions (even though !_KERNEL...) */
+#if !(defined(_KERNEL)) && !(defined(__Userspace__))
 #if !defined(__Windows__)
 
 __BEGIN_DECLS

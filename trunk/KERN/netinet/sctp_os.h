@@ -62,6 +62,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os.h 171943 2007-08-24 00:53:53Z rrs $
 #include <netinet/sctp_os_bsd.h>
 #endif
 
+#if defined(__Userspace__)
+#include <netinet/sctp_os_userspace.h>
+#endif
+
 #if defined(__APPLE__)
 #include <netinet/sctp_os_macosx.h>
 #endif
@@ -73,7 +77,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os.h 171943 2007-08-24 00:53:53Z rrs $
 #if defined(__Windows__)
 #include <netinet/sctp_os_windows.h>
 #endif
-
 
 /* All os's must implement this address gatherer. If
  * no VRF's exist, then vrf 0 is the only one and all

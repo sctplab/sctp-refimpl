@@ -83,7 +83,12 @@ MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
 MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
 #endif
 
-
+/*__Userspace__ TODO if we use thread based iterator
+ * then the implementation of wakeup will need to change.
+ * Currently we are using timeo_cond for ident so_timeo
+ * but that is not sufficient if we need to use another ident
+ * like wakeup(&sctppcbinfo.iterator_running);
+ */
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_wakeup_iterator(void)
@@ -110,7 +115,7 @@ sctp_iterator_thread(void *v)
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	SCTP_BASE_INFO(iterator_running) = 0;
 	while (1) {
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
 		msleep(&SCTP_BASE_INFO(iterator_running),
 #if defined(__FreeBSD__)
 		       &SCTP_BASE_INFO(ipi_iterator_wq_mtx),
@@ -118,6 +123,8 @@ sctp_iterator_thread(void *v)
 		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
 #endif
 	 	       0, "waiting_for_work", 0);
+#elif defined(__Userspace__)
+                /* TODO msleep alternative */
 #else
 		if (SCTP_BASE_INFO(threads_must_exit)) {
 		      kthread_exit(0);
@@ -166,6 +173,8 @@ sctp_startup_iterator(void)
 #elif defined(__APPLE__)
 	SCTP_BASE_INFO(thread_proc) = IOCreateThread(sctp_iterator_thread,
 						 (void *)NULL);
+#elif defined(__Userspace__)
+                             /* TODO pthread_create or alternative to create a thread? */
 #elif defined(__Windows__)
 	NTSTATUS status = STATUS_SUCCESS;
 	OBJECT_ATTRIBUTES objectAttributes;
@@ -205,6 +214,17 @@ sctp_startup_iterator(void)
 #endif
 
 #ifdef INET6
+
+/* __Userspace__ TODO. struct in6_ifaddr is defined in sys/netinet6/in6_var.h
+   ip6_use_deprecated is defined as  int ip6_use_deprecated = 1; in /src/sys/netinet6/in6_proto.c
+ */
+#if defined(__Userspace__)
+void
+sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
+{
+    return; /* stub */
+}
+#else
 void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 {
@@ -230,12 +250,20 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 		ifa->localifa_flags &= ~SCTP_ADDR_IFA_UNUSEABLE;
 	}
 }
-#endif
+#endif /* __Userspace__ */
+#endif /* INET6 */
 
 
 static uint32_t
 sctp_is_desired_interface_type(struct ifaddr *ifa)
 {
+    /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
+     * This struct contains struct ifnet, which is also defined in
+     * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
+     */
+#if defined (__Userspace__)
+    return (1); /* __Userspace__ Is this what we want for ms1? */
+#else
         int result;
  
         /* check the interface type to see if it's one we care about */
@@ -286,6 +314,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
         }
 
         return (result);
+#endif /* #else of defined(__Userspace__) */
 }
 
 #if defined(__APPLE__)
@@ -299,6 +328,25 @@ sctp_is_vmware_interface(struct ifnet *ifn)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
+        /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
+     * This struct contains struct ifnet, which is also defined in
+     * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
+     */
+#if defined (__Userspace__)
+    int rc;
+    struct ifaddrs *ifa = NULL;
+    struct in6_ifaddr *ifa6;
+    struct sctp_ifa *sctp_ifa;
+    uint32_t ifa_flags;
+
+    rc = getifaddrs(&g_interfaces);
+    if(rc != 0) {
+        return;
+    }
+    
+#else
+
+    
 	/* Here we must apply ANY locks needed by the
 	 * IFN we access and also make sure we lock
 	 * any IFA that exists as we float through the
@@ -334,6 +382,11 @@ sctp_init_ifns_for_vrf(int vrfid)
 		}
 #endif
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+#endif
+#if defined(__Userspace__)
+                    for(ifa = g_interfaces; ifa; ifa = ifa->ifa_next) {
+#endif
+
 			if(ifa->ifa_addr == NULL) {
 				continue;
 			}
@@ -342,14 +395,28 @@ sctp_init_ifns_for_vrf(int vrfid)
 				continue;
 			}
 			if (ifa->ifa_addr->sa_family == AF_INET6) {
+#if defined(__Userspace__)
+                            /* skip IPv6 for now.  TODO find correct structs... */
+                            continue;
+#else
 				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
 					/* skip unspecifed addresses */
 					continue;
 				}
+#endif
 			} else {
 				if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
 					continue;
 				}
+#if defined(__Userspace__)
+    /* ifa type (ifaddrs) differs for __Userspace__ and no if_type field... also,
+     *  skipping IPv6 items for now...
+     */
+                                /* TODO get the if_index (& mtu?)... */
+                                struct ifreq;
+                                int fd;
+                                
+#else
 			}
 			if (sctp_is_desired_interface_type(ifa) == 0) {
 				/* non desired type */
@@ -360,9 +427,11 @@ sctp_init_ifns_for_vrf(int vrfid)
 				ifa6 = (struct in6_ifaddr *)ifa;
 				ifa_flags = ifa6->ia6_flags;
 			} else {
+#endif
 				ifa_flags = 0;
 			}
 			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+#if !defined(__Userspace__)
 							(void *)ifn,
 							ifn->if_index, 
 							ifn->if_type,
@@ -371,6 +440,12 @@ sctp_init_ifns_for_vrf(int vrfid)
 #else
 							ifn->if_xname,
 #endif
+#elif defined(__Userspace__)
+                                                        ifa,
+                                                        if_nametoindex(ifa->ifa_name),
+                                                        0,
+                                                        ifa->ifa_name,
+#endif
 							(void *)ifa,
 							ifa->ifa_addr,
 							ifa_flags,
@@ -378,8 +453,10 @@ sctp_init_ifns_for_vrf(int vrfid)
 			if (sctp_ifa) {
 				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 			} 
+#if !defined(__Userspace__)
 		}
-	}
+#endif
+  }
 #if defined(__APPLE__)
 out:
 	if (ifnetlist != 0)
@@ -407,6 +484,9 @@ sctp_init_vrf_list(int vrfid)
 void
 sctp_addr_change(struct ifaddr *ifa, int cmd)
 {
+#if defined(__Userspace__)
+        return;
+#else
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
 	/* BSD only has one VRF, if this changes
@@ -474,8 +554,10 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		 * the final delete will happen.
 		 */
  	}
+#endif
 }
 
+#if !defined(__Userspace__)
 void
 sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 {
@@ -513,13 +595,63 @@ out:
 		ifnet_list_free(ifnetlist);
 #endif
 }
-
+#endif
+        
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
 		      int how, int allonebuf, int type)
 {
-	struct mbuf *m = NULL;
-#if defined(__FreeBSD__) && __FreeBSD_version > 602000
+    struct mbuf *m = NULL;
+#if defined(__Userspace__)
+
+  /* 
+   * __Userspace__
+   * Using m_clget, which creates and mbuf and a cluster and
+   * hooks those together.
+   * TODO: This does not yet have functionality for jumbo packets.
+   *
+   */
+
+	int mbuf_threshold;
+	if (want_header) {
+		MGETHDR(m, how, type);
+	} else {
+		MGET(m, how, type);
+	}
+	if (m == NULL) {
+		return (NULL);
+	}
+	if(allonebuf == 0)
+                mbuf_threshold = SCTP_BASE_SYSCTL(sctp_mbuf_threshold_count);
+	else
+		mbuf_threshold = 1;
+
+
+	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
+		MCLGET(m, how);
+		if (m == NULL) {
+			return (NULL);
+		}
+		
+		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
+		  sctp_m_freem(m);
+		  return (NULL);
+		}
+	}
+	SCTP_BUF_LEN(m) = 0;
+	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
+
+	/* __Userspace__ 
+	 * Check if anything need to be done to ensure logging works 
+	 */
+#ifdef SCTP_MBUF_LOGGING
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
+		if(SCTP_BUF_IS_EXTENDED(m)) {
+			sctp_log_mb(m, SCTP_MBUF_IALLOC);
+		}
+	}
+#endif
+#elif defined(__FreeBSD__) && __FreeBSD_version > 602000        
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
 	if(m == NULL) {
 		/* bad, no memory */

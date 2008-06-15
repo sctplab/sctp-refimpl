@@ -37,7 +37,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.h 179783 2008-06-14 07:58:05Z
 #define __sctp_bsd_addr_h__
 #include <netinet/sctp_pcb.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void sctp_wakeup_iterator(void);

@@ -1082,11 +1082,16 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 179157 2008-05-20 13:47:46
      (((uint8_t *)&(a)->s_addr)[2] == 0) && \
      (((uint8_t *)&(a)->s_addr)[3] == 1))
 
-
+#if defined (__Userspace__)
+#define SCTP_GETTIME_TIMEVAL(x)	gettimeofday(x, NULL)
+#define SCTP_GETPTIME_TIMEVAL(x)  /* this doesn't seem to ever be used.. */
+#endif
+     
 #if defined(_KERNEL)
 
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
+#endif
 /*#if defined(__FreeBSD__) || defined(__APPLE__)*/
 /*#define SCTP_GETTIME_TIMEVAL(x) { \*/
 /*	(x)->tv_sec = ticks / 1000; \*/
@@ -1097,6 +1102,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 179157 2008-05-20 13:47:46
 /*#define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))*/
 /*#endif				 __FreeBSD__ */
 
+#if defined(_KERNEL) || defined(__Userspace__)
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1106,7 +1112,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 #define sctp_sowwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1137,7 +1143,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1148,7 +1154,7 @@ do { \
 	} \
 } while (0)
 #else
-/* FIXME */
+
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1160,5 +1166,5 @@ do { \
 } while (0)
 #endif
 
-#endif				/* _KERNEL */
+#endif				/* _KERNEL || __Userspace__*/
 #endif

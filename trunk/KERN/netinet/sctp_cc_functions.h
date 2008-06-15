@@ -35,7 +35,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.h 172118 2007-09-10 17:06
 #ifndef __sctp_cc_functions_h__
 #define __sctp_cc_functions_h__
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 void
 sctp_set_initial_cc_param(struct sctp_tcb *stcb,
