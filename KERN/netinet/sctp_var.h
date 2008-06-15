@@ -410,7 +410,6 @@ void sctp_init __P((void));
 
 void sctp_finish(void);
 
-void sctp_pcbinfo_cleanup(void);
 #if defined(__FreeBSD__)
 int sctp_flush(struct socket *, int);
 #endif
