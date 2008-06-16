@@ -533,7 +533,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	if (cp->heartbeat.hb_info.addr_family == AF_INET &&
 	    cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in)) {
 		sin->sin_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__)
+#if ! (defined(__Windows__) || defined(__Userspace_os_Linux))
 		sin->sin_len = cp->heartbeat.hb_info.addr_len;
 #endif
 		sin->sin_port = stcb->rport;
@@ -542,7 +542,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	} else if (cp->heartbeat.hb_info.addr_family == AF_INET6 &&
 	    cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in6)) {
 		sin6->sin6_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__)
+#if !(defined(__Windows__) || defined(__Userspace_os_Linux))
 		sin6->sin6_len = cp->heartbeat.hb_info.addr_len;
 #endif
 		sin6->sin6_port = stcb->rport;
@@ -1828,6 +1828,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #elif defined(__Windows__)
 			       (PKTHREAD)NULL
 #else
+                               /* proc is NULL for __Userspace__  */
 			       (struct proc *)NULL
 #endif
 			       );
@@ -1990,7 +1991,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin = (struct sockaddr_in *)initack_src;
 		memset(sin, 0, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_addr.s_addr = cookie->laddress[0];
@@ -1999,7 +2000,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin6 = (struct sockaddr_in6 *)initack_src;
 		memset(sin6, 0, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6->sin6_scope_id = cookie->scope_id;
@@ -2144,7 +2145,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin = (struct sockaddr_in *)(localep_sa);
 		memset(lsin, 0, sizeof(*lsin));
 		lsin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		lsin->sin_len = sizeof(*lsin);
 #endif
 		lsin->sin_port = sh->dest_port;
@@ -2162,7 +2163,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin6 = (struct sockaddr_in6 *)(localep_sa);
 		memset(lsin6, 0, sizeof(*lsin6));
 		lsin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		lsin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		ip6 = mtod(m, struct ip6_hdr *);
@@ -2306,6 +2307,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	/* Expire time is in Ticks, so we convert to seconds */
 	time_expires.tv_sec = cookie->time_entered.tv_sec + TICKS_TO_SEC(cookie->cookie_life);
 	time_expires.tv_usec = cookie->time_entered.tv_usec;
+        /* TODO sctp_constants.h needs alternative time macros when
+         *  _KERNEL is undefined.
+         */
 #ifndef __FreeBSD__
 	if (timercmp(&now, &time_expires, >))
 #else
@@ -2360,7 +2364,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (cookie->addr_type == SCTP_IPV6_ADDRESS) {
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6.sin6_len = sizeof(sin6);
 #endif
 		sin6.sin6_port = sh->src_port;
@@ -2371,7 +2375,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	} else if (cookie->addr_type == SCTP_IPV4_ADDRESS) {
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin.sin_len = sizeof(sin);
 #endif
 		sin.sin_port = sh->src_port;
@@ -5295,6 +5299,12 @@ sctp_trim_mbuf(struct mbuf *m)
 }
 #endif
 
+#if defined(__Userspace__)
+void
+sctp_input(i_pak, off)
+        struct mbuf *i_pak;
+        int off;
+#else
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 sctp_input_with_port(i_pak, off, port)
@@ -5317,6 +5327,7 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 #endif
+#endif        
 {
 #ifdef SCTP_MBUF_LOGGING
 	struct mbuf *mat;
@@ -5356,7 +5367,7 @@ sctp_input(i_pak, va_alist)
 	}
 
 	mlen = SCTP_HEADER_LEN(i_pak);
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
 	int off;
 	va_list ap;
 
@@ -5475,7 +5486,7 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate mbuf chain length with IP payload length */
-	if (mlen < (ip->ip_len - iphlen)) {
+	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
@@ -5548,6 +5559,14 @@ sctp_input(i_pak, va_alist)
 	 */
 #if defined(__FreeBSD__)  || defined(__APPLE__)
 	length = ip->ip_len + iphlen;
+#elif defined(__Userspace__)
+        
+#if defined(__Userspace_os_Linux)
+        length = SCTP_GET_IPV4_LENGTH(ip);
+#else
+	length = SCTP_GET_IPV4_LENGTH(ip) + iphlen;
+#endif
+        
 #else
 	length = ip->ip_len;
 #endif

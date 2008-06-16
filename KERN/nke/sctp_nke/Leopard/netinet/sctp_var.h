@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 179783 2008-06-14 07:58:05Z rrs 
 
 #include <netinet/sctp_uio.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 extern struct pr_usrreqs sctp_usrreqs;
@@ -382,7 +382,7 @@ struct sctp_tcb;
 struct sctphdr;
 
 
-#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void sctp_close(struct socket *so);
 #else
 int sctp_detach(struct socket *so);
@@ -398,6 +398,8 @@ void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct
 #else
 #if defined(__Panda__)
 void sctp_input __P((pakhandle_type i_pak));
+#elif defined(__Userspace__)
+void sctp_input __P((struct mbuf *, int));
 #else
 void sctp_input __P((struct mbuf *,...));
 #endif
@@ -410,7 +412,6 @@ void sctp_init __P((void));
 
 void sctp_finish(void);
 
-void sctp_pcbinfo_cleanup(void);
 #if defined(__FreeBSD__)
 int sctp_flush(struct socket *, int);
 #endif
@@ -453,11 +454,13 @@ int sctp_listen(struct socket *, struct thread *);
 #endif
 #elif defined(__Windows__)
 int sctp_listen(struct socket *, int, PKTHREAD);
+#elif defined(__Userspace__)
+int sctp_listen(struct socket *, int, struct proc *);
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 int sctp_accept(struct socket *, struct sockaddr **);
 #elif defined(__Panda__)
 int sctp_accept(struct socket *, struct sockaddr *, int *, void *, int *);

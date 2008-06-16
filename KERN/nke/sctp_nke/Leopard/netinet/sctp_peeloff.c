@@ -155,6 +155,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
+    /* if __Userspace__ chooses to originally not support peeloff, put it here... */
 #if defined(__Panda__)
 	SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EINVAL);
 	*error = EINVAL;
@@ -179,6 +180,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	}
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
+        /* TODO __Userspace__ sonewconn (and locking/unlocking) alternative? */
 	newso = sonewconn(head, SS_ISCONNECTED
 #if defined(__APPLE__)
 	    , NULL
@@ -238,7 +240,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
         newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 #ifdef SCTP_LOCK_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) {
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);

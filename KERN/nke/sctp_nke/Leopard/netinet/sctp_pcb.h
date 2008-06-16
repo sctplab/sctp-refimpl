@@ -183,7 +183,7 @@ struct sctp_epinfo {
 	struct inpcbhead inplisthead;
 #endif
 	struct sctpiterators iteratorhead;
-
+    int threads_must_exit;
 	/* ep zone info */
 	sctp_zone_t ipi_zone_ep;
 	sctp_zone_t ipi_zone_asoc;
@@ -244,6 +244,8 @@ struct sctp_epinfo {
 	KSPIN_LOCK ipi_iterator_wq_lock;
 	KSPIN_LOCK ipi_addr_lock;
 	KSPIN_LOCK ipi_pktlog_mtx;
+#elif defined(__Userspace__)
+    /* TODO decide on __Userspace__ locks */
 #endif
 	uint32_t ipi_count_ep;
 
@@ -297,7 +299,7 @@ struct sctp_epinfo {
 #endif
 	struct sctp_timer addr_wq_timer;
 
-#ifdef _SCTP_NEEDS_CALLOUT_
+#if defined(_SCTP_NEEDS_CALLOUT_) || defined(_USER_SCTP_NEEDS_CALLOUT_)
 	struct calloutlist callqueue;
 #endif
 };
@@ -472,7 +474,7 @@ struct sctp_inpcb {
 #endif
 	struct mbuf *pkt, *pkt_last;
 	struct mbuf *control;
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 #ifndef INP_IPV6
 #define INP_IPV6	0x1
 #endif
@@ -480,8 +482,9 @@ struct sctp_inpcb {
 #define INP_IPV4	0x2
 #endif
 	uint8_t inp_vflag;
+                               /* TODO __Userspace__ where is our inp_vlag going to be? */
 	uint8_t inp_ip_ttl;
-	uint8_t inp_ip_tos;
+        uint8_t inp_ip_tos;    /* defined as macro in user_inpcb.h */
 	uint8_t inp_ip_resv;
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 503000
@@ -506,6 +509,9 @@ struct sctp_inpcb {
 	KSPIN_LOCK inp_lock;
 	KSPIN_LOCK inp_create_lock;
 	KSPIN_LOCK inp_rdata_lock;
+	int32_t refcount;
+#elif defined(__Userspace__)
+    /* TODO decide on __Userspace__ locks */
 	int32_t refcount;
 #endif
 #if defined(__APPLE__)
@@ -580,6 +586,8 @@ struct sctp_tcb {
 #elif defined(__Windows__)
 	KSPIN_LOCK tcb_lock;
 	KSPIN_LOCK tcb_send_lock;
+#elif defined(__Userspace__)
+    /* TODO decide on __Userspace__ locks */
 #endif
 #if defined(__APPLE__)
 	uint32_t caller1;
@@ -608,6 +616,10 @@ struct sctp_tcb {
 
 #include <netinet/sctp_lock_windows.h>
 
+#elif defined(__Userspace__)
+
+#include <netinet/sctp_lock_userspace.h>
+
 #else
 /*
  * Pre-5.x FreeBSD, and others.
@@ -615,7 +627,8 @@ struct sctp_tcb {
 #include <netinet/sctp_lock_empty.h>
 #endif
 
-#if defined(_KERNEL)
+/* TODO where to put non-_KERNEL things for __Userspace__? */
+#if defined(_KERNEL) || defined(__Userspace__)
 
 /* Attention Julian, this is the extern that
  * goes with the base info. sctp_pcb.c has
@@ -677,6 +690,7 @@ int sctp_inpcb_bind(struct socket *, struct sockaddr *,
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct sctp_ifa *,PKTHREAD);
 #else
+/* struct proc is a dummy for __Userspace__ */
 int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
 		    struct sctp_ifa *, struct proc *);
 #endif
@@ -728,6 +742,7 @@ struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
     int, int *, uint32_t, uint32_t, PKTHREAD);
 #else
+/* proc will be NULL for __Userspace__ */
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
     int, int *, uint32_t, uint32_t, struct proc *);

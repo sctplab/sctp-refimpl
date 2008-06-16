@@ -529,10 +529,6 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	err |= net_del_proto(sctp6_seqpacket.pr_type, sctp6_seqpacket.pr_protocol, &inet6domain);
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
 #endif
-
-	/* cleanup */
-	sctp_pcbinfo_cleanup();
-
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	sctp_finish();
 #ifdef INET6

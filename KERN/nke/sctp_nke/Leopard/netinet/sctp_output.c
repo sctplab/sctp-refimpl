@@ -37,6 +37,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 179783 2008-06-14 07:58:05Z r
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
+/* TODO what does __Userspace__ need? */
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
@@ -2753,6 +2754,7 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */
 #endif	/* INET6 */
 
+                /* __Userspace avoids IPv6 for now... */
 #if defined(__FreeBSD__) || defined(__APPLE__) 
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted 
@@ -3563,14 +3565,14 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net) {
 			tos_value = net->tos_flowlabel & 0x000000ff;
 		} else {
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 			tos_value = inp->ip_inp.inp.inp_ip_tos;
 #else
 			tos_value = inp->inp_ip_tos;
 #endif
 		}
-		if ((nofragment_flag) && (port == 0)) {
-#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || defined(__APPLE__)
+                if ((nofragment_flag) && (port == 0)) {                
+#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 			ip->ip_off = IP_DF;
 #else
 			ip->ip_off = htons(IP_DF);
@@ -3584,11 +3586,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #elif defined(RANDOM_IP_ID)
 		/* Apple has RANDOM_IP_ID switch */
 		ip->ip_id = htons(ip_randomid());
+#elif defined(__Userspace__)
+                ip->ip_id = htons(SCTP_IP_ID(inp)++);
 #else
 		ip->ip_id = SCTP_IP_ID(inp)++;
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 		ip->ip_ttl = inp->ip_inp.inp.inp_ip_ttl;
 #else
 		ip->ip_ttl = inp->inp_ip_ttl;
@@ -3615,7 +3619,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			ro = &iproute;
 			memset(&iproute, 0, sizeof(iproute));
-#if !defined(__Windows__)
+#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
 			memcpy(&ro->ro_dst, to, to->sa_len);
 #else
 			memcpy(&ro->ro_dst, to, sizeof(struct sockaddr_in));
@@ -3668,11 +3672,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		  }
 		}
 		if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(ip + 1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
 			udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#endif
 		}
 
 		/*
@@ -3832,8 +3838,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	else if (to->sa_family == AF_INET6) {
 		uint32_t flowlabel;
 		struct ip6_hdr *ip6h;
+#if defined(__Userspace__)
+		sctp_route_t ip6route;
+#else
 		struct route_in6 ip6route;
-#if defined(__Panda__)
+#endif
+#if defined(__Panda__) || defined(__Userspace__)
 		void *ifp;
 #else
 		struct ifnet *ifp;
@@ -3907,7 +3917,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
 			ro = (sctp_route_t *)&ip6route;
-#if !defined(__Windows__)
+#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
 			memcpy(&ro->ro_dst, sin6, sin6->sin6_len);
 #else
 			memcpy(&ro->ro_dst, sin6, sizeof(struct sockaddr_in6));
@@ -3943,7 +3953,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 */
 		bzero(&lsa6_tmp, sizeof(lsa6_tmp));
 		lsa6_tmp.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
 		lsa6_tmp.sin6_len = sizeof(lsa6_tmp);
 #endif
 		lsa6 = &lsa6_tmp;
@@ -4075,11 +4085,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		ip6h->ip6_src = lsa6->sin6_addr;
 
 		if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(ip6h + 1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip6_hdr));	
 			udp->uh_sum = 0;
+#endif
 		}
 
 		/*
@@ -4118,11 +4130,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sctp_packet_log(m, packet_length);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
+#if !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), packet_length - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
 		}
+#endif
 		/* send it out. table id is taken from stcb */
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		if ((SCTP_BASE_SYSCTL(sctp_output_unlocked)) && (so_locked)) {
@@ -4181,7 +4195,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 					net->mtu = mtu;
 				}
 			}
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 			else if (ifp) {
 #if defined(__APPLE__)
 #if !defined(APPLE_LEOPARD)
@@ -4874,12 +4888,12 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 	memset(&sin6, 0, sizeof(sin6));
 #endif
 	sin4.sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin4.sin_len = sizeof(sin4);
 #endif
 #ifdef INET6
 	sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin6.sin6_len = sizeof(sin6);
 #endif
 #endif
@@ -5146,7 +5160,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case IPVERSION:
 		  to_sin->sin_port = sh->dest_port;
 		  to_sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		  to_sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		  to_sin->sin_addr = iph->ip_dst;
@@ -5158,7 +5172,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		  to_sin6->sin6_scope_id = 0;
 		  to_sin6->sin6_port = sh->dest_port;
 		  to_sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		  to_sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		  break;
@@ -5174,7 +5188,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		case IPVERSION:
 		{
 			sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 			sin->sin_port = sh->src_port;
@@ -5214,7 +5228,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		{
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 			sin6->sin6_port = sh->src_port;
@@ -5911,6 +5925,9 @@ sctp_set_prsctp_policy(struct sctp_tcb *stcb,
 			(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 			tv.tv_sec = sp->timetolive / 1000;
 			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
+                        /* TODO sctp_constants.h needs alternative time macros when
+                         *  _KERNEL is undefined.
+                         */
 #ifndef __FreeBSD__
 			timeradd(&sp->ts, &tv,
 				 &sp->ts);
@@ -7657,7 +7674,7 @@ again_one_more_time:
 		} else {
 			skip_data_for_this_net = 0;
 		}
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !(defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
 		if ((net->ro.ro_rt) && (net->ro.ro_rt->rt_ifp)) {
 			/*
 			 * if we have a route and an ifp check to see if we
@@ -10414,6 +10431,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		    (caddr_t)iph_out + offset_out);
 		break;
 #ifdef INET6
+#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
 	case IPV6_VERSION >> 4:
 		ip6 = (struct ip6_hdr *)iph;
 		ip6_out = mtod(mout, struct ip6_hdr *);
@@ -10435,18 +10453,21 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		offset_out += sizeof(*ip6_out);
 		comp_cp = (struct sctp_shutdown_complete_msg *)(
 		    (caddr_t)ip6_out + offset_out);
+#endif /* ! __Userspace__ */
 		break;
-#endif
+#endif /* INET6 */
 	default:
 		/* Currently not supported. */
 		return;
 	}
 	if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 		udp = (struct udphdr *)comp_cp;
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
 		udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#endif
 		offset_out += sizeof(struct udphdr);
 		comp_cp = (struct sctp_shutdown_complete_msg *)((caddr_t)comp_cp + sizeof(struct udphdr));
 	}
@@ -10477,7 +10498,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		ro._l_addr.sa.sa_family = AF_INET;
 #endif
 		/* set IPv4 length */
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 		iph_out->ip_len = mlen;
 #else
 		iph_out->ip_len = htons(mlen);
@@ -10499,7 +10520,11 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	}
 #ifdef INET6
 	if (ip6_out != NULL) {
+#if defined(__Userspace__)
+		sctp_route_t ro;
+#else
 		struct route_in6 ro;
+#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
@@ -10516,12 +10541,14 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
+#if !defined(__Userspace__) /* UDP __Userspace__ missing Linux fields */
 		if (port) {
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), 
 						     sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
 		}
+#endif
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -10693,7 +10720,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 	/* Did our user request this one, put it in */
 	hb->heartbeat.hb_info.user_req = user_req;
 	hb->heartbeat.hb_info.addr_family = sin->sin_family;
-#if !defined(__Windows__)
+#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
 	hb->heartbeat.hb_info.addr_len = sin->sin_len;
 #else
 	hb->heartbeat.hb_info.addr_len = sizeof(struct sockaddr_in);
@@ -10865,6 +10892,13 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* IPv4 */
 #if defined(__FreeBSD__) || defined(__APPLE__)
 		len = chk->send_size = iph->ip_len;
+#elif defined(__Userspace__)
+#if defined(__Userspace_os_FreeBSD)
+                len = chk->send_size = SCTP_GET_IPV4_LENGTH(iph);
+#else
+                len = chk->send_size = (SCTP_GET_IPV4_LENGTH(iph) - iphlen);
+                extra = iphlen;
+#endif
 #else
 		len = chk->send_size = (iph->ip_len - iphlen);
 		extra = iphlen;
@@ -11398,6 +11432,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		abm = (struct sctp_abort_msg *)((caddr_t)iph_out + iphlen_out);
 		break;
 #ifdef INET6
+#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
 	case IPV6_VERSION >> 4:
 		ip6 = (struct ip6_hdr *)iph;
 		ip6_out = mtod(mout, struct ip6_hdr *);
@@ -11416,7 +11451,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iphlen_out = sizeof(*ip6_out);
 		abm = (struct sctp_abort_msg *)((caddr_t)ip6_out + iphlen_out);
 		break;
-#endif
+#endif /* ! __Userspace__ */
+#endif /* INET6 */
 	default:
 		/* Currently not supported */
 		if (err_cause)
@@ -11427,10 +11463,12 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 	udp = (struct udphdr *)abm;
 	if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
 		/* set udp->uh_ulen later */	
 		udp->uh_sum = 0;
+#endif
 		iphlen_out += sizeof(struct udphdr);
 		abm = (struct sctp_abort_msg *)((caddr_t)abm + sizeof(struct udphdr));
 	}
@@ -11490,14 +11528,16 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #if defined(__Panda__)
 		ro._l_addr.sa.sa_family = AF_INET;
 #endif
+#if !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 			udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 		}
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, iph_out, &abm->sh);
 		/* set IPv4 length */
-#if defined(__FreeBSD__) || defined (__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 		iph_out->ip_len = len;
 #else
 		iph_out->ip_len = htons(len);
@@ -11519,7 +11559,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 #ifdef INET6
 	if (ip6_out != NULL) {
+#if defined(__Userspace__)
+		sctp_route_t ro;
+#else
 		struct route_in6 ro;
+#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
@@ -11530,9 +11574,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #if defined(__Panda__)
 		ro._l_addr.sa.sa_family = AF_INET6;
 #endif
+#if !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 		}
+#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip6_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
@@ -11541,11 +11587,13 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
+#if !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
 		}
+#endif
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11669,17 +11717,19 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out->ip_sum = 0;
 		out->ip_src = iph->ip_dst;
 		out->ip_dst = iph->ip_src;
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 		out->ip_len = len;
 #else
 		out->ip_len = htons(len);
 #endif
 		if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(out+1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip));
  			udp->uh_sum = in_pseudo(out->ip_src.s_addr, out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#endif
 		}
 
 #ifdef  SCTP_PACKET_LOGGING
@@ -11703,7 +11753,12 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	case IPV6_VERSION >> 4:
 	{
 		/* V6 */
+#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
+#if defined(__Userspace__)
+		sctp_route_t ro;
+#else
 		struct route_in6 ro;
+#endif
 		int ret;
 		struct sctp_tcb *stcb = NULL;
 #if !defined(__Panda__)
@@ -11733,21 +11788,23 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out6->ip6_dst = in6->ip6_src;
 		out6->ip6_plen = len - sizeof(struct ip6_hdr);
 		if (port) {
+#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(out6+1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 			udp->uh_sum = 0;
+#endif
 		}
 #ifdef SCTP_DEBUG
 		bzero(&lsa6, sizeof(lsa6));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		lsa6.sin6_len = sizeof(lsa6);
 #endif
 		lsa6.sin6_family = AF_INET6;
 		lsa6.sin6_addr = out6->ip6_src;
 		bzero(&fsa6, sizeof(fsa6));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		fsa6.sin6_len = sizeof(fsa6);
 #endif
 		fsa6.sin6_family = AF_INET6;
@@ -11776,9 +11833,10 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
 			RTFREE(ro.ro_rt);
+#endif  /* __Userspace__ */
 		break;
 	}
-#endif
+#endif  /* INET6 */
 	default:
 		/* TSNH */
 		break;
@@ -12072,6 +12130,7 @@ sctp_sosend(struct socket *so,
 #elif defined(__Windows__)
     PKTHREAD p
 #else
+    /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
     struct proc *p
 #endif
 #endif
@@ -12111,7 +12170,7 @@ sctp_sosend(struct socket *so,
 #endif
 				  flags,
 				  use_rcvinfo, &srcv
-#ifndef __Panda__
+#if !( defined(__Panda__) || defined(__Userspace__) )
 				  , p
 #endif
 		);
@@ -12136,7 +12195,7 @@ sctp_lower_sosend(struct socket *so,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#ifndef __Panda__
+#if !(defined( __Panda__) || defined(__Userspace__))
     ,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     struct thread *p
@@ -12235,7 +12294,7 @@ sctp_lower_sosend(struct socket *so,
   SCTPDBG(SCTP_DEBUG_OUTPUT1, "Send called addr:%p send length %d\n",
 		  addr,
 		  sndlen);
-#if !defined(__Windows__)
+#if !( defined(__Windows__) || defined(__Userspace_os_Linux) )
   /*-
    * Pre-screen address, if one is given the sin-len
    * must be set correctly!
@@ -12452,7 +12511,7 @@ sctp_lower_sosend(struct socket *so,
 	  }
 #endif
 	  stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
-#ifndef __Panda__
+#if !( defined( __Panda__) || defined(__Userspace__) )
 							 p
 #else
 							 (struct proc *)NULL
@@ -12659,7 +12718,7 @@ sctp_lower_sosend(struct socket *so,
 	}
   }
   /* Ok, we will attempt a msgsnd :> */
-#if !(defined(__Panda__) || defined(__Windows__))
+#if !(defined(__Panda__) || defined(__Windows__) || defined(__Userspace__))
   if (p) {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 603000
 	p->td_ru.ru_msgsnd++;
@@ -13667,7 +13726,7 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 	     pfxrtr->pfr_next) {
 		memset(&gw6, 0, sizeof(struct sockaddr_in6));
 		gw6.sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		gw6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		memcpy(&gw6.sin6_addr, &pfxrtr->router->rtaddr, 
@@ -13716,4 +13775,17 @@ sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
 	}
 	return(0);
 }
+#elif defined(__Userspace__)
+/* TODO __Userspace__ versions of sctp_vXsrc_match_nexthop(). */
+int
+sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
+{
+    return 0;
+}
+int
+sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
+{
+    return 0;
+}
+
 #endif
