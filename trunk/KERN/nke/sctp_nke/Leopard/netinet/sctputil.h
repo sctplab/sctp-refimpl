@@ -39,7 +39,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 179157 2008-05-20 13:47:46Z rrs 
 #define __sctputil_h__
 
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 #ifdef SCTP_ASOCLOG_OF_TSNS 
@@ -430,5 +430,5 @@ void sctp_audit_log(uint8_t, uint8_t);
 	} while (/* CONSTCOND */ 0)
 #endif				/* SCTP_BASE_FREEBSD */
 
-#endif				/* _KERNEL */
+#endif				/* _KERNEL */ 
 #endif

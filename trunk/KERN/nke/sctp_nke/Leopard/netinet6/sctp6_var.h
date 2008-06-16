@@ -37,6 +37,7 @@
 __FBSDID("$FreeBSD: head/sys/netinet6/sctp6_var.h 174510 2007-12-10 16:03:40Z obrien $");
 #endif
 
+/* TODO __Userspace__ IPv6 stuff... */
 #if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || (__APPLE__) || defined(__Windows__)

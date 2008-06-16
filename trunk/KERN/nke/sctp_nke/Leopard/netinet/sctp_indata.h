@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.h 170992 2007-06-22 13:50:56Z r
 #ifndef __sctp_indata_h__
 #define __sctp_indata_h__
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 struct sctp_queued_to_read *
 sctp_build_readq_entry(struct sctp_tcb *stcb,

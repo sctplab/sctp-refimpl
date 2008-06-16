@@ -39,7 +39,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 179783 2008-06-14 07:58:05Z rr
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #ifdef INET6
+#if defined(__Userspace_os_FreeBSD)
 #include <netinet6/sctp6_var.h>
+#endif
 #endif
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
@@ -391,7 +393,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				}
 				if (this_random % 2 == 1) {
 					max_cwnd_net = mnet;
-					max_cwnd = mnet->cwnd; // Useless?
+					max_cwnd = mnet->cwnd; /* Useless? */
 				}
 			}
 		}

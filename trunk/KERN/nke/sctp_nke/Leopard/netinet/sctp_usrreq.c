@@ -42,7 +42,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 179783 2008-06-14 07:58:05Z r
 #include <netinet/sctp_header.h>
 #include <netinet/sctp_var.h>
 #if defined(INET6)
+#if defined(__Userspace_os_FreeBSD)
 #include <netinet6/sctp6_var.h>
+#endif
 #endif
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_output.h>
@@ -67,7 +69,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 179783 2008-06-14 07:58:05Z r
 void
 sctp_init(void)
 {
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 	u_long sb_max_adj;
 #endif
 
@@ -75,11 +77,17 @@ sctp_init(void)
 	
 	/* Initialize and modify the sysctled variables */
 	sctp_init_sysctls();
-#if defined(__Panda__)
+#if defined(__Userspace__)
+        srandom(getpid()); /* so inp->sctp_ep.random_numbers are truly random... */
+#endif
+#if defined(__Panda__) 
+	sctp_sendspace = SB_MAX;
+	sctp_recvspace = SB_MAX;
+        
+#elif defined(__Userspace__)
 	SCTP_BASE_SYSCTL(sctp_sendspace) = SB_MAX;
-	SCTP_BASE_SYSCTL(sctp_recvspace) = SB_MAX;
+	SCTP_BASE_SYSCTL(sctp_recvspace) = SB_RAW;        
 #else
-
 #if !defined(__APPLE__)
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
 		SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue) = (nmbclusters / 8);
@@ -134,23 +142,6 @@ sctp_finish(void)
 #endif
 }
 
-/*
- * cleanup of the SCTP_BASE_INFO() structure.
- * Assumes that the SCTP_BASE_INFO() lock is held.
- */
-void
-sctp_pcbinfo_cleanup(void)
-{
-	/* free the hash tables */
-	if (SCTP_BASE_INFO(sctp_asochash) != NULL)
-		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_asochash), SCTP_BASE_INFO(hashasocmark));
-	if (SCTP_BASE_INFO(sctp_ephash) != NULL)
-		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_ephash), SCTP_BASE_INFO(hashmark));
-	if (SCTP_BASE_INFO(sctp_tcpephash) != NULL)
-		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_tcpephash), SCTP_BASE_INFO(hashtcpmark));
-	if (SCTP_BASE_INFO(sctp_restarthash) != NULL)
-		SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_restarthash), SCTP_BASE_INFO(hashrestartmark));
-}
 
 
 void
@@ -390,8 +381,8 @@ sctp_notify(struct sctp_inpcb *inp,
 	}
 }
 
-#if !defined(__Panda__)
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if !defined(__Panda__) && !defined(__Userspace__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) 
 void
 #else
 void *
@@ -408,7 +399,7 @@ sctp_ctlinput(cmd, sa, vip)
 	vrf_id = SCTP_DEFAULT_VRFID;
 	if (sa->sa_family != AF_INET ||
 	    ((struct sockaddr_in *)sa)->sin_addr.s_addr == INADDR_ANY) {
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) 
 		return;
 #else
 		return (NULL);
@@ -417,7 +408,7 @@ sctp_ctlinput(cmd, sa, vip)
 	if (PRC_IS_REDIRECT(cmd)) {
 		ip = 0;
 	} else if ((unsigned)cmd >= PRC_NCMDS || inetctlerrmap[cmd] == 0) {
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) 
 		return;
 #else
 		return (NULL);
@@ -477,7 +468,7 @@ sctp_ctlinput(cmd, sa, vip)
 			}
 		}
 	}
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) 
 	return;
 #else
 	return (NULL);
@@ -557,7 +548,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif				/* #if defined(__FreeBSD__) */
 
 
-#if defined(__Panda__) || defined(__Windows__)
+#if defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 int
 #elif defined(__FreeBSD__) && __FreeBSD_version > 690000
 static void
@@ -618,14 +609,14 @@ sctp_abort(struct socket *so)
 #endif
 }
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined (__Userspace__)
 int
 #else
 static int
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 sctp_attach(struct socket *so, int proto, struct thread *p)
-#elif defined(__Panda__)
+#elif defined(__Panda__) || defined(__Userspace__)
 sctp_attach(struct socket *so, int proto, uint32_t vrf_id)
 #elif defined(__Windows__)
 sctp_attach(struct socket *so, int proto, PKTHREAD p)
@@ -636,7 +627,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct inpcb *ip_inp;
 	int error;
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 	uint32_t vrf_id = SCTP_DEFAULT_VRFID;
 #endif
 #ifdef IPSEC
@@ -659,7 +650,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	SCTP_INP_WLOCK(inp);
 	inp->sctp_flags &= ~SCTP_PCB_FLAGS_BOUND_V6;	/* I'm not v6! */
 	ip_inp = &inp->ip_inp.inp;
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 	ip_inp->inp_vflag |= INP_IPV4;
 	ip_inp->inp_ip_ttl = ip_defttl;
 #else
@@ -700,7 +691,8 @@ sctp_bind(struct socket *so, struct sockaddr *addr, struct thread *p)
 #elif defined(__FreeBSD__) || defined(__APPLE__)
 static int
 sctp_bind(struct socket *so, struct sockaddr *addr, struct proc *p) {
-#elif defined(__Panda__)
+#elif defined(__Panda__) || defined(__Userspace__)
+/* proc* p is NULL for  __Userspace__ */
 int
 sctp_bind(struct socket *so, struct sockaddr *addr) {
 	void *p = NULL;
@@ -724,7 +716,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		return EINVAL;
 	}
 #endif				/* INET6 */
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	if(addr && (addr->sa_len != sizeof(struct sockaddr_in))) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return EINVAL;
@@ -741,7 +733,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
-#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void
 sctp_close(struct socket *so)
 {
@@ -866,6 +858,7 @@ sctp_detach(struct socket *so)
 
 #endif
 
+/* __Userspace__ is not calling sctp_sendm */
 #if !(defined(__Panda__) || defined(__Windows__))
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -1199,6 +1192,7 @@ sctp_shutdown(struct socket *so)
 	/* For UDP model this is a invalid call */
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* Restore the flags that the soshutdown took away. */
+            /* TODO do we use sb_state or so_state for __Userspace__? */
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 502115) || defined(__Windows__)
 		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
 #else
@@ -1335,7 +1329,7 @@ sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
 	    &lsa6);
 #endif
 #endif
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	memcpy(ss, sa, sa->sa_len);
 #else
 	if (sa->sa_family == AF_INET) {
@@ -1524,7 +1518,8 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 		}
 	} else {
 		struct sctp_laddr *laddr;
-#if defined(__Windows__)
+                /* TODO will addr have sa_len field in __Userspace__ ? */
+#if defined(__Windows__) || defined(__Userspace_os_Linux)
 		uint32_t sa_len = 0;
 #endif
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -1544,7 +1539,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 			}
 #endif
 			((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			sas = (struct sockaddr_storage *)((caddr_t)sas +
 							  laddr->ifa->address.sa.sa_len);
 			actual += laddr->ifa->address.sa.sa_len;
@@ -1855,7 +1850,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	} \
       } 
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Userspace__)
 int
 #else
 static int
@@ -2552,7 +2547,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			paddrp->spp_assoc_id = (sctp_assoc_t) 0;
 			/* get inp's default */
 #ifdef INET
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 			paddrp->spp_ipv4_tos = inp->ip_inp.inp.inp_ip_tos;
 #else
 			paddrp->spp_ipv4_tos = inp->inp_ip_tos;
@@ -2664,7 +2659,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		sstat->sstat_instrms = stcb->asoc.streamincnt;
 		sstat->sstat_outstrms = stcb->asoc.streamoutcnt;
 		sstat->sstat_fragmentation_point = sctp_get_frag_point(stcb, &stcb->asoc);
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		memcpy(&sstat->sstat_primary.spinfo_address,
 		       &stcb->asoc.primary_destination->ro._l_addr,
 		       ((struct sockaddr *)(&stcb->asoc.primary_destination->ro._l_addr))->sa_len);
@@ -2788,7 +2783,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			/* simply copy out the sockaddr_storage... */
 			int len;
 			len = *optsize;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 			if(len > stcb->asoc.primary_destination->ro._l_addr.sa.sa_len)
 				len = stcb->asoc.primary_destination->ro._l_addr.sa.sa_len;
 #else
@@ -2958,7 +2953,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	return (error);
 }
 
-#if defined(__Panda__)
+#if defined(__Panda__) || defined(__Userspace__)
 int
 #else
 static int
@@ -4290,7 +4285,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #ifdef SCTP_MVRF
 		int i, fnd=0;
 #endif
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
 #if defined(__APPLE__)
 		struct proc *proc;
 #endif
@@ -4389,6 +4384,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_getaddresses *addrs;
 		size_t sz;
+                /* TODO __Userspace__ pthread? prison?  jailed? */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		struct thread *td;
 		int prison = 0;
@@ -4406,6 +4402,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
+                        /* TODO __Userspace__ pthread? prison?  jailed? */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			if(prison && prison_ip(td->td_ucred, 0, &(((struct sockaddr_in *)(addrs->addr))->sin_addr.s_addr))) {
 				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
@@ -4432,6 +4429,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_getaddresses *addrs;
 		size_t sz;
+                /* TODO __Userspace__ pthread? prison?  jailed? */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 		struct thread *td;
 		int prison = 0;
@@ -4448,6 +4446,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
+                        /* TODO __Userspace__ pthread? prison?  jailed? */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			if (prison && prison_ip(td->td_ucred, 0, &(((struct sockaddr_in *)(addrs->addr))->sin_addr.s_addr))) {
 				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
@@ -4491,7 +4490,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	return (error);
 }
 
-
+/* TODO __Userspace__ needs sctp_ctloutput() ? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 int
 sctp_ctloutput(struct socket *so, struct sockopt *sopt)
@@ -4531,6 +4530,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 			goto out;
 		}
 	}
+        /* TODO __Userspace__ has sopt-> sopt_td or sopt_p? */
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 500000) || defined(__Windows__)
 	p = (void *)sopt->sopt_td;
 #else
@@ -4565,7 +4565,8 @@ sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
 static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct proc *p)
 {
-#elif defined(__Panda__)
+/* proc p is NULL in  __Userspace__ args to sctp_connect as for __Panda__ */
+#elif defined(__Panda__) || defined(__Userspace__)
 int
 sctp_connect(struct socket *so, struct sockaddr *addr)
 {
@@ -4602,7 +4603,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return EINVAL;
 	}
 
-#if !defined(__Windows__)
+        /* TODO __Userspace__ falls into this code for IPv6 stuff at the moment... */
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	if ((addr->sa_family == AF_INET6) && (addr->sa_len != sizeof(struct sockaddr_in6))) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
@@ -4729,6 +4731,8 @@ sctp_listen(struct socket *so, struct thread *p)
 #endif
 #elif defined(__Windows__)
 sctp_listen(struct socket *so, int backlog, PKTHREAD p)
+#elif defined(__Userspace__)
+sctp_listen(struct socket *so, int backlog, struct proc *p)
 #else
 sctp_listen(struct socket *so, struct proc *p)
 #endif
@@ -4758,7 +4762,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 #endif
 	SOCK_LOCK(so);
-#if defined(__FreeBSD__) && __FreeBSD_version > 500000
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Userspace__)
 	error = solisten_proto_check(so);
 	if (error) {
 		SOCK_UNLOCK(so);
@@ -4784,7 +4788,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		}
 		SOCK_LOCK(so);
 	} else {
-#if (defined(__FreeBSD__) && __FreeBSD_version >= 700000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version >= 700000) || defined(__Windows__) || defined(__Userspace__)
 		if(backlog != 0) {
 			inp->sctp_flags |= SCTP_PCB_FLAGS_LISTENING;
 		} else {
@@ -4793,8 +4797,8 @@ sctp_listen(struct socket *so, struct proc *p)
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
-#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
-#if __FreeBSD_version >= 700000 || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__) || defined(__Userspace__)
+#if __FreeBSD_version >= 700000 || defined(__Windows__) || defined(__Userspace__)
 	/* It appears for 7.0 and on, we must always call this. */
 	solisten_proto(so, backlog);
 #else
@@ -4807,7 +4811,8 @@ sctp_listen(struct socket *so, struct proc *p)
 		/* remove the ACCEPTCONN flag for one-to-many sockets */
 		so->so_options &= ~SO_ACCEPTCONN;
 	}
-#if __FreeBSD_version >= 700000 || defined(__Windows__)
+        
+#if __FreeBSD_version >= 700000 || defined(__Windows__) || defined(__Userspace__)
 	if (backlog == 0) {
 		/* turning off listen */
 		so->so_options &= ~SO_ACCEPTCONN;
@@ -4820,7 +4825,7 @@ sctp_listen(struct socket *so, struct proc *p)
 static int sctp_defered_wakeup_cnt = 0;
 
 int
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 sctp_accept(struct socket *so, struct sockaddr **addr)
 {
 #elif defined(__Panda__)
@@ -4873,19 +4878,20 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	{
 		struct sockaddr_in *sin;
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+                /* __Userspace__ */
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #else
 		sin = (struct sockaddr_in *)addr;
 		bzero((caddr_t)sin, sizeof(*sin));
 #endif
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = ((struct sockaddr_in *)&store)->sin_port;
 		sin->sin_addr = ((struct sockaddr_in *)&store)->sin_addr;
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		*addr = (struct sockaddr *)sin;
 #elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin);
@@ -4897,14 +4903,14 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	{
 		struct sockaddr_in6 *sin6;
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
 		bzero((caddr_t)sin6, sizeof(*sin6));
 #endif
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
@@ -4927,7 +4933,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			sin6->sin6_scope_id = 0;	/* XXX */
 #endif /* SCTP_KAME */
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-#if defined(__FreeBSD__) || defined (__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined (__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		*addr = (struct sockaddr *)sin6;
 #elif !defined(__Panda__)
 		SCTP_BUF_LEN(nam) = sizeof(*sin6);
@@ -4948,7 +4954,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			SCTP_INP_WUNLOCK(inp);
 			SOCKBUF_LOCK(&inp->sctp_socket->so_snd);
 			if (sowriteable(inp->sctp_socket)) {
-#if defined(__FreeBSD__) || defined(__Windows__)
+                            /*__Userspace__ calling sowwakup_locked because of SOCKBUF_LOCK above. */
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 				sowwakeup_locked(inp->sctp_socket);
 #else
 #if defined(__APPLE__)
@@ -4967,7 +4974,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 			SOCKBUF_LOCK(&inp->sctp_socket->so_rcv);
 			if (soreadable(inp->sctp_socket)) {
 				sctp_defered_wakeup_cnt++;
-#if defined(__FreeBSD__) || defined(__Windows__)
+                                /*__Userspace__ calling sorwakup_locked because of SOCKBUF_LOCK above */
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 				sorwakeup_locked(inp->sctp_socket);
 #else
 #if defined(__APPLE__)
@@ -5006,20 +5014,22 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	/*
 	 * Do the malloc first in case it blocks.
 	 */
+        /* TODO __Userspace__ SCTP_MALLOC_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #elif defined(__Panda__)
 	bzero(sin, sizeof(*sin));
 #else
-	SCTP_BUF_LEN(nam)n = sizeof(*sin);
+	SCTP_BUF_LEN(nam) = sizeof(*sin);
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin->sin_len = sizeof(*sin);
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (!inp) {
+                /* TODO __Userspace__ calls SCTP_FREE_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5091,6 +5101,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 			}
 		}
 		if (!fnd) {
+                        /* TODO __Userspace__ calls SCTP_FREE_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 			SCTP_FREE_SONAME(sin);
 #endif
@@ -5100,12 +5111,14 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 		}
 	}
 	SCTP_INP_RUNLOCK(inp);
+        /* TODO __Userspace__, once again, depends on args... */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
 	return (0);
 }
 
+/* TODO __Userspace__ args to sctp_peeraddr? */
 int
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_peeraddr(struct socket *so, struct sockaddr **addr)
@@ -5136,6 +5149,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 		return (ENOTCONN);
 	}
 
+        /* TODO __Userspace__ calls SCTP_MALLOC_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
 #elif defined(__Panda__)
@@ -5145,13 +5159,14 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 	sin->sin_len = sizeof(*sin);
 #endif
 
 	/* We must recapture incase we blocked */
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (!inp) {
+                /* TODO __Userspace__ calls SCTP_FREE_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5165,6 +5180,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 	SCTP_INP_RUNLOCK(inp);
 	if (stcb == NULL) {
+                /* TODO __Userspace__ calls SCTP_FREE_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
@@ -5184,18 +5200,21 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	SCTP_TCB_UNLOCK(stcb);
 	if (!fnd) {
 		/* No IPv4 address */
+                /* TODO __Userspace__ calls SCTP_FREE_SONAME? */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin);
 #endif
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOENT);
 		return ENOENT;
 	}
+        /* TODO __Userspace__ behavior depends on args again... */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	(*addr) = (struct sockaddr *)sin;
 #endif
 	return (0);
 }
 
+/* TODO __Userspace__ must decide how to export methods... */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 struct pr_usrreqs sctp_usrreqs = {
 #if __FreeBSD_version >= 600000
@@ -5260,7 +5279,7 @@ struct pr_usrreqs sctp_usrreqs = {
 #endif
 #endif
 };
-#elif !defined(__Panda__)
+#elif !defined(__Panda__) && !defined(__Userspace__)
 int
 sctp_usrreq(so, req, m, nam, control)
 	struct socket *so;

@@ -262,11 +262,20 @@
  * common locks
  */
 /* socket locks */
+
+#if defined(__Userspace__)
+#define SOCKBUF_LOCK_ASSERT(_so_buf) assert(pthread_mutex_trylock(SOCKBUF_MTX(_so_buf)) == EBUSY)
+#define SOCKBUF_LOCK(_so_buf)   pthread_mutex_lock(SOCKBUF_MTX(_so_buf))
+#define SOCKBUF_UNLOCK(_so_buf) pthread_mutex_unlock(SOCKBUF_MTX(_so_buf))
+#define	SOCK_LOCK(_so)		SOCKBUF_LOCK(&(_so)->so_rcv)
+#define	SOCK_UNLOCK(_so)	SOCKBUF_UNLOCK(&(_so)->so_rcv)
+#else
 #define SOCK_LOCK(_so)
 #define SOCK_UNLOCK(_so)
 #define SOCKBUF_LOCK(_so_buf)
 #define SOCKBUF_UNLOCK(_so_buf)
 #define SOCKBUF_LOCK_ASSERT(_so_buf)
+#endif
 
 #define SCTP_STATLOG_INIT_LOCK() 
 #define SCTP_STATLOG_LOCK()
