@@ -231,7 +231,7 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 	struct in6_ifaddr *ifa6;
 	ifa6 = (struct in6_ifaddr *)ifa->ifa;
 	ifa->flags = ifa6->ia6_flags;
-	if (!ip6_use_deprecated) {
+	if (!MODULE_GLOBAL(MOD_INET6, ip6_use_deprecated)) {
 		if (ifa->flags &
 		    IN6_IFF_DEPRECATED) {
 			ifa->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
@@ -374,7 +374,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #else
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
 #endif
 #if defined(__APPLE__)
 		if (SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces) && sctp_is_vmware_interface(ifn)) {
@@ -580,7 +580,7 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #else
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
 #endif
 		if (!(*pred)(ifn)) {
 			continue;
