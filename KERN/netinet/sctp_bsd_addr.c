@@ -453,16 +453,13 @@ sctp_init_ifns_for_vrf(int vrfid)
 			if (sctp_ifa) {
 				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 			} 
-#if defined(__Userspace__)
-		}
-#endif
   	}
 #if defined(__APPLE__)
   }
 out:
 	if (ifnetlist != 0)
 		ifnet_list_free(ifnetlist);
-#else
+#elif !defined(__Userspace__)
   }
 #endif
 }
