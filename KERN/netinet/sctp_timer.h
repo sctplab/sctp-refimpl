@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 172156 2007-09-13 10:36:43Z rr
 #ifndef __sctp_timer_h__
 #define __sctp_timer_h__
 
-/* TODO __Userspace__ timers? */
 #if defined(_KERNEL) || defined(__Userspace__)
 
 #define SCTP_RTT_SHIFT 3

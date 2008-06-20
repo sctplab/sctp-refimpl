@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 179783 2008-06-14 07:58:05Z rrs 
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
-/* TODO what will __Userspace need? */
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
@@ -2736,7 +2735,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	struct inpcb *ip_inp;
 	int bindall;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__Userspace__)
         /* TODO does __Userspace__ need this? */
+#endif
 	int prison = 0;
 #endif
 #ifdef SCTP_MVRF
@@ -4235,7 +4236,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 #elif defined(__Windows__)
 		PKTHREAD p
 #else
+#if defined(__Userspace__)
                 /*  __Userspace__ NULL proc is going to be passed here. See sctp_lower_sosend */
+#endif
 		struct proc *p
 #endif
 )
@@ -5340,7 +5343,6 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 		answer = inp->inp_vflag & INP_IPV4;
 #else
-            /* TODO __Userspace__ (where is inp_vflag?) */
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
 #endif
 	} else {
@@ -5362,7 +5364,6 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 	inp->inp_vflag = 0;
 #else
-        /* TODO __Userspace__ (where is inp_vflag?) */
 	inp->ip_inp.inp.inp_vflag = 0;
 #endif
 	/* set the flag based on addresses on the ep list */
@@ -5380,7 +5381,6 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV6;
 #else
-		        /* TODO IPv6 __Userspace__ (where is inp_vflag?) */
                         inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (laddr->ifa->address.sa.sa_family == AF_INET) {
@@ -5434,7 +5434,6 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__))
 			inp->inp_vflag |= INP_IPV6;
 #else
-                        /* TODO IPv6 __Userspace__ (where is inp_vflag?) */
 			inp->ip_inp.inp.inp_vflag |= INP_IPV6;
 #endif
 		} else if (ifa->address.sa.sa_family == AF_INET) {

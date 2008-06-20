@@ -155,7 +155,9 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
+#if defined(__Userspace__)
     /* if __Userspace__ chooses to originally not support peeloff, put it here... */
+#endif
 #if defined(__Panda__)
 	SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EINVAL);
 	*error = EINVAL;
@@ -180,7 +182,6 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	}
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	SCTP_TCB_UNLOCK(stcb);
-        /* TODO __Userspace__ sonewconn (and locking/unlocking) alternative? */
 	newso = sonewconn(head, SS_ISCONNECTED
 #if defined(__APPLE__)
 	    , NULL
