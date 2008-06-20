@@ -134,7 +134,9 @@ sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, PKTHREAD, int);
 #else
+#if defined(__Userspace__)
 /* sctp_output is called bu sctp_sendm. Not using sctp_sendm for __Userspace__ */
+#endif
 int
 sctp_output(struct sctp_inpcb *,
 #if defined(__Panda__)
@@ -245,7 +247,9 @@ sctp_sosend(struct socket *so,
 #elif defined(__Windows__)
     PKTHREAD p
 #else
+#if defined(__Userspace__)
     /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
+#endif
     struct proc *p
 #endif
 #endif

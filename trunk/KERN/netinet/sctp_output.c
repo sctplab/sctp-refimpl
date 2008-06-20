@@ -37,7 +37,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 179783 2008-06-14 07:58:05Z r
 
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
-/* TODO what does __Userspace__ need? */
 #include <sys/proc.h>
 #endif
 #include <netinet/sctp_var.h>
@@ -2754,7 +2753,9 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */
 #endif	/* INET6 */
 
+#if defined(__Userspace__)
                 /* __Userspace avoids IPv6 for now... */
+#endif
 #if defined(__FreeBSD__) || defined(__APPLE__) 
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted 
@@ -12130,7 +12131,9 @@ sctp_sosend(struct socket *so,
 #elif defined(__Windows__)
     PKTHREAD p
 #else
-    /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
+#if defined(__Userspace__)
+            /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
+#endif
     struct proc *p
 #endif
 #endif

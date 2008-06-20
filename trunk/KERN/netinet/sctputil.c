@@ -4151,7 +4151,9 @@ sctp_is_there_an_abort_here(struct mbuf *m, int iphlen, uint32_t * vtagfill)
 uint32_t
 sctp_is_same_scope(struct sockaddr_in6 *addr1, struct sockaddr_in6 *addr2)
 {
+#if defined(__Userspace__)
     /*__Userspace__ Returning 1 here always */
+#endif
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
 	struct sockaddr_in6 a, b;
 
@@ -6246,7 +6248,9 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	return (0);
 }
 
+#if defined(__Userspace__)
 /* no sctp_soreceive or sctp_l_soreceive for __Userspace__ now */
+#endif
 
 #if !defined(__Userspace__)
 int

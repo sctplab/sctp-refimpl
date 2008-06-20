@@ -1828,7 +1828,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #elif defined(__Windows__)
 			       (PKTHREAD)NULL
 #else
-                               /* proc is NULL for __Userspace__  */
 			       (struct proc *)NULL
 #endif
 			       );

@@ -7,7 +7,8 @@ all:
 	echo "Created libuserspace.a within the directory named build. See Application.make for an example build script to create applications."
 
 clean:
-	rm -rf build
+#	rm -rf build
+	(cd build && ls -1 | grep -v CVS | xargs rm -rf)
 
 destroy: clean
 	(cd umem-1.0 && make distclean)
