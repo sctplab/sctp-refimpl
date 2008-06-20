@@ -83,12 +83,14 @@ MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
 MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
 #endif
 
+#if defined(__Userspace__)
 /*__Userspace__ TODO if we use thread based iterator
  * then the implementation of wakeup will need to change.
  * Currently we are using timeo_cond for ident so_timeo
  * but that is not sufficient if we need to use another ident
  * like wakeup(&sctppcbinfo.iterator_running);
  */
+#endif
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 void
 sctp_wakeup_iterator(void)
@@ -215,10 +217,10 @@ sctp_startup_iterator(void)
 
 #ifdef INET6
 
+#if defined(__Userspace__)
 /* __Userspace__ TODO. struct in6_ifaddr is defined in sys/netinet6/in6_var.h
    ip6_use_deprecated is defined as  int ip6_use_deprecated = 1; in /src/sys/netinet6/in6_proto.c
  */
-#if defined(__Userspace__)
 void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 {
@@ -231,7 +233,7 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 	struct in6_ifaddr *ifa6;
 	ifa6 = (struct in6_ifaddr *)ifa->ifa;
 	ifa->flags = ifa6->ia6_flags;
-	if (!ip6_use_deprecated) {
+	if (!MODULE_GLOBAL(MOD_INET6, ip6_use_deprecated)) {
 		if (ifa->flags &
 		    IN6_IFF_DEPRECATED) {
 			ifa->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
@@ -257,11 +259,11 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 static uint32_t
 sctp_is_desired_interface_type(struct ifaddr *ifa)
 {
+#if defined (__Userspace__)
     /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
      * This struct contains struct ifnet, which is also defined in
      * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
      */
-#if defined (__Userspace__)
     return (1); /* __Userspace__ Is this what we want for ms1? */
 #else
         int result;
@@ -328,11 +330,11 @@ sctp_is_vmware_interface(struct ifnet *ifn)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
-        /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
+#if defined (__Userspace__)
+    /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
      * This struct contains struct ifnet, which is also defined in
      * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
      */
-#if defined (__Userspace__)
     int rc;
     struct ifaddrs *ifa = NULL;
     struct in6_ifaddr *ifa6;
@@ -374,7 +376,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #else
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
 #endif
 #if defined(__APPLE__)
 		if (SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces) && sctp_is_vmware_interface(ifn)) {
@@ -453,14 +455,14 @@ sctp_init_ifns_for_vrf(int vrfid)
 			if (sctp_ifa) {
 				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 			} 
-#if !defined(__Userspace__)
-		}
-#endif
-  }
+  	}
 #if defined(__APPLE__)
+  }
 out:
 	if (ifnetlist != 0)
 		ifnet_list_free(ifnetlist);
+#elif !defined(__Userspace__)
+  }
 #endif
 }
 
@@ -580,7 +582,7 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #else
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
 #endif
 		if (!(*pred)(ifn)) {
 			continue;
@@ -641,9 +643,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_LEN(m) = 0;
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 
+#if defined(__Userspace__)
 	/* __Userspace__ 
 	 * Check if anything need to be done to ensure logging works 
 	 */
+#endif
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 		if(SCTP_BUF_IS_EXTENDED(m)) {
