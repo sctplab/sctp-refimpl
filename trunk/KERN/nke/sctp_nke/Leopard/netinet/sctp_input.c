@@ -1828,7 +1828,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 #elif defined(__Windows__)
 			       (PKTHREAD)NULL
 #else
-                               /* proc is NULL for __Userspace__  */
 			       (struct proc *)NULL
 #endif
 			       );
@@ -5548,7 +5547,7 @@ sctp_input(i_pak, va_alist)
 	 * idea, so I will leave it in place.
 	 */
 	if (inp && ipsec4_in_reject(m, &inp->ip_inp.inp)) {
-                ipsec4stat.in_polvio++;
+                MODULE_GLOBAL(MOD_IPSEC, ipsec4stat).in_polvio++;
 		SCTP_STAT_INCR(sctps_hdrops);
 		goto bad;
 	}
