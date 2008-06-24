@@ -110,7 +110,7 @@
 /* Begin PBXFileReference section */
 		089C167EFE841241C02AAC07 /* English */ = {isa = PBXFileReference; fileEncoding = 10; lastKnownFileType = text.plist.strings; name = English; path = English.lproj/InfoPlist.strings; sourceTree = "<group>"; };
 		1A224C3CFF42312311CA2CB7 /* SCTP.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; path = SCTP.c; sourceTree = "<group>"; };
-		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.xml; path = Info.plist; sourceTree = "<group>"; };
+		32A4FEC30562C75700D090E7 /* Info.plist */ = {isa = PBXFileReference; lastKnownFileType = text.plist.xml; path = Info.plist; sourceTree = "<group>"; };
 		32A4FEC40562C75800D090E7 /* SCTP.kext */ = {isa = PBXFileReference; explicitFileType = wrapper.cfbundle; includeInIndex = 0; path = SCTP.kext; sourceTree = BUILT_PRODUCTS_DIR; };
 		500CFAD10AF33FEC002D28C1 /* sctp_lock_apple_fg.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_lock_apple_fg.h; sourceTree = "<group>"; };
 		500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_sys_calls.c; sourceTree = "<group>"; };
