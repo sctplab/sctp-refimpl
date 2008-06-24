@@ -76,6 +76,22 @@
 #include <sys/cdefs.h>
 #include <machine/_param.h>
 
+#if !defined(__DARWIN_ALIGNBYTES)
+#define	__DARWIN_ALIGNBYTES	(sizeof(__darwin_size_t) - 1)
+#endif
+
+#if !defined(__DARWIN_ALIGN)
+#define	__DARWIN_ALIGN(p)	((__darwin_size_t)((char *)(uintptr_t)(p) + __DARWIN_ALIGNBYTES) &~ __DARWIN_ALIGNBYTES)
+#endif
+
+#if !defined(__DARWIN_ALIGNBYTES32)
+#define __DARWIN_ALIGNBYTES32     (sizeof(__uint32_t) - 1)
+#endif
+
+#if !defined(__DARWIN_ALIGN32)
+#define __DARWIN_ALIGN32(p)       ((__darwin_size_t)((char *)(uintptr_t)(p) + __DARWIN_ALIGNBYTES32) &~ __DARWIN_ALIGNBYTES32)
+#endif
+
 /*
  * Definitions related to sockets: types, address families, options.
  */
@@ -193,6 +209,7 @@ struct iovec {
 #define SO_REUSESHAREUID	0x1025		/* APPLE: Allow reuse of port/socket by different userids */
 #ifdef __APPLE_API_PRIVATE
 #define SO_NOTIFYCONFLICT	0x1026	/* APPLE: send notification if there is a bind on a port which is already in use */
+#define	SO_UPCALLCLOSEWAIT	0x1027	/* APPLE: block on close until an upcall returns */
 #endif
 #define SO_LINGER_SEC	0x1080          /* linger on close if data present (in seconds) */
 #define SO_RESTRICTIONS	0x1081	/* APPLE: deny inbound/outbound/both/flag set */
@@ -596,25 +613,25 @@ struct cmsgcred {
 
 /* given pointer to struct cmsghdr, return pointer to data */
 #define	CMSG_DATA(cmsg)		((unsigned char *)(cmsg) + \
-				 __DARWIN_ALIGN(sizeof(struct cmsghdr)))
+				 __DARWIN_ALIGN32(sizeof(struct cmsghdr)))
 
 /* given pointer to struct cmsghdr, return pointer to next cmsghdr */
 #define	CMSG_NXTHDR(mhdr, cmsg)	\
-	(((unsigned char *)(cmsg) + __DARWIN_ALIGN((__darwin_intptr_t)(cmsg)->cmsg_len) + \
-	  __DARWIN_ALIGN(sizeof(struct cmsghdr)) > \
+	(((unsigned char *)(cmsg) + __DARWIN_ALIGN32((__darwin_intptr_t)(cmsg)->cmsg_len) + \
+	  __DARWIN_ALIGN32(sizeof(struct cmsghdr)) > \
 	    (unsigned char *)(mhdr)->msg_control + (mhdr)->msg_controllen) ? \
 	    (struct cmsghdr *)0L /* NULL */ : \
-	    (struct cmsghdr *)((unsigned char *)(cmsg) + __DARWIN_ALIGN((__darwin_intptr_t)(cmsg)->cmsg_len)))
+	    (struct cmsghdr *)((unsigned char *)(cmsg) + __DARWIN_ALIGN32((__darwin_intptr_t)(cmsg)->cmsg_len)))
 
 #define	CMSG_FIRSTHDR(mhdr)	((struct cmsghdr *)(mhdr)->msg_control)
 
 #if !defined(_POSIX_C_SOURCE) || defined(_DARWIN_C_SOURCE)
 /* RFC 2292 additions */
-#define	CMSG_SPACE(l)		(__DARWIN_ALIGN(sizeof(struct cmsghdr)) + __DARWIN_ALIGN(l))
-#define	CMSG_LEN(l)		(__DARWIN_ALIGN(sizeof(struct cmsghdr)) + (l))
+#define	CMSG_SPACE(l)		(__DARWIN_ALIGN32(sizeof(struct cmsghdr)) + __DARWIN_ALIGN32(l))
+#define	CMSG_LEN(l)		(__DARWIN_ALIGN32(sizeof(struct cmsghdr)) + (l))
 
 #ifdef KERNEL
-#define	CMSG_ALIGN(n)	__DARWIN_ALIGN(n)
+#define	CMSG_ALIGN(n)	__DARWIN_ALIGN32(n)
 #endif
 #endif	/* (!_POSIX_C_SOURCE || _DARWIN_C_SOURCE) */
 
