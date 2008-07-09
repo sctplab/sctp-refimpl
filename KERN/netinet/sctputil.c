@@ -3120,7 +3120,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 #endif
     )
 {
-	struct mbuf *m_notify;
+	struct mbuf *m_notify, *tt;
 	struct sctp_send_failed *ssf;
 	struct sctp_queued_to_read *control;
 	int length;
@@ -3136,11 +3136,12 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
-	length = sizeof(struct sctp_send_failed) + chk->send_size;
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	length = sizeof(struct sctp_send_failed) + chk->send_size;
+	length -= sizeof(struct sctp_data_chunk);
 	SCTP_BUF_LEN(m_notify) = 0;
 	ssf = mtod(m_notify, struct sctp_send_failed *);
 	ssf->ssf_type = SCTP_SEND_FAILED;
@@ -3159,36 +3160,18 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_context = chk->rec.data.context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
-	
-	if (SCTP_BUF_LEN(chk->data) >= sizeof(struct sctp_data_chunk)) {
-	  /* Trim off the data chunk header, so its just data */
-	  SCTP_BUF_RESV_UF(chk->data, sizeof(struct sctp_data_chunk));
-	  SCTP_BUF_LEN(chk->data) -= sizeof(struct sctp_data_chunk);
-	} else {
-	  /* Hard way to trim */
-	  struct mbuf *x;
-	  int sz, take;
-	  sz = 0;
-	  while (sz < sizeof(struct sctp_data_chunk)) {
-	    x = chk->data;
-	    take = sizeof(struct sctp_data_chunk) - sz;
-	    if (take > SCTP_BUF_LEN(x)) {
-	      take = SCTP_BUF_LEN(x);
-	    }
-	    sz += (take);
-	    if (take == SCTP_BUF_LEN(x)) {
-	      /* we take it all */
-	      chk->data = SCTP_BUF_NEXT(x);
-	      SCTP_BUF_NEXT(x) = NULL;
-	      sctp_m_freem(x);
-	    } else {
-	      /* We are done now */
-	      SCTP_BUF_RESV_UF(chk->data, take);
-	      SCTP_BUF_LEN(chk->data) -= take;
-	      break;
-	    }
-	  }
+
+	/* Take off the chunk header */
+	m_adj(chk->data, sizeof(struct sctp_data_chunk));
+
+	/* trim out any 0 len mbufs */
+	while(SCTP_BUF_LEN(chk->data) == 0) {
+	  tt = chk->data;
+	  chk->data = SCTP_BUF_NEXT(tt);
+	  SCTP_BUF_NEXT(tt) = NULL;
+	  sctp_m_freem(tt);
 	}
+
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
 
