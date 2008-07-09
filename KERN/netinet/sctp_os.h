@@ -62,7 +62,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os.h 171943 2007-08-24 00:53:53Z rrs $
 #include <netinet/sctp_os_bsd.h>
 #else
 #define MODULE_GLOBAL(_A, _B) (_B)
-#define SCTP_NO_MOD_GLOBAL 1
 #endif
 
 #if defined(__Userspace__)

@@ -3906,11 +3906,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-		  if (sa6_embedscope(sin6) != 0)
-#else		  
-		  if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)) != 0)
-#endif
+		  if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -3979,11 +3975,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-				if (sa6_embedscope(sin6) != 0)
-#else
-				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)) != 0)
-#endif
+				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -4021,11 +4013,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 			if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-			if (sa6_embedscope(sin6) != 0)
-#else
-			if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)) != 0)
-#endif
+			if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 			if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -5266,11 +5254,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-				sa6_embedscope(sin6);
-#else
-				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
-#endif				
+				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
@@ -5315,11 +5299,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-				sa6_embedscope(sin6);
-#else
-				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
-#endif				
+				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
 #endif

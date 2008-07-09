@@ -83,25 +83,13 @@ SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	struct sockaddr_in6 tmp_a, tmp_b;
 
 	memcpy(&tmp_a, a, sizeof(struct sockaddr_in6));
-#ifdef SCTP_NO_MOD_GLOBAL
-	if (sa6_embedscope(&tmp_a) != 0) {
+	if (sa6_embedscope(&tmp_a, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone))) != 0) {
 		return 0;
 	}
-#else
-	if (sa6_embedscope(&tmp_a, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon))) != 0) {
-		return 0;
-	}
-#endif	
 	memcpy(&tmp_b, b, sizeof(struct sockaddr_in6));
-#ifdef SCTP_NO_MOD_GLOBAL
-	if (sa6_embedscope(&tmp_b) != 0) {
+	if (sa6_embedscope(&tmp_b, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone))) != 0) {
 		return 0;
 	}
-#else
-	if (sa6_embedscope(&tmp_b, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon))) != 0) {
-		return 0;
-	}
-#endif	
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a.sin6_addr, &tmp_b.sin6_addr));
 #else
 	struct in6_addr tmp_a, tmp_b;
@@ -2010,11 +1998,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
 		(void)sa6_recoverscope(from6);
-#ifdef SCTP_NO_MOD_GLOBAL
-		sa6_embedscope(from6);
-#else
-		sa6_embedscope(from6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)));
-#endif		
+		sa6_embedscope(from6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)));
 #else
 		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
@@ -2078,11 +2062,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
 		(void)sa6_recoverscope(to6);
-#ifdef SCTP_NO_MOD_GLOBAL
-		sa6_embedscope(to6);
-#else
-		sa6_embedscope(to6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)));
-#endif
+		sa6_embedscope(to6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)));
 #else
 		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
@@ -2860,18 +2840,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 				/* KAME hack: embed scopeid */
 #if defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-				if (sa6_embedscope(sin6) != 0) {
+				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return (EINVAL);
 				}
-
-#else
-				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon)) != 0) {
-					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
-					return (EINVAL);
-				}
-#endif				
 #elif defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
 						   ip_inp, NULL) != 0) {
@@ -2879,7 +2851,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					return (EINVAL);
 				}
 #elif defined(__FreeBSD__)
-				error = scope6_check_id(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
+				error = scope6_check_id(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 				if (error != 0) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 					return (error);
@@ -4070,11 +4042,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		(void)in6_embedscope(&sin6->sin6_addr, sin6,
 		    &stcb->sctp_ep->ip_inp.inp, NULL);
 #elif defined(SCTP_KAME)
-#ifdef SCTP_NO_MOD_GLOBAL
-		(void)sa6_embedscope(sin6);
-#else
-		(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
-#endif		
+		(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 		(void)in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
