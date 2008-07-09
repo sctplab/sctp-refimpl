@@ -3159,6 +3159,36 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_context = chk->rec.data.context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
+	
+	if (SCTP_BUF_LEN(chk->data) >= sizeof(struct sctp_data_chunk)) {
+	  /* Trim off the data chunk header, so its just data */
+	  SCTP_BUF_RESV_UF(chk->data, sizeof(struct sctp_data_chunk));
+	  SCTP_BUF_LEN(chk->data) -= sizeof(struct sctp_data_chunk);
+	} else {
+	  /* Hard way to trim */
+	  struct mbuf *x;
+	  int sz, take;
+	  sz = 0;
+	  while (sz < sizeof(struct sctp_data_chunk)) {
+	    x = chk->data;
+	    take = sizeof(struct sctp_data_chunk) - sz;
+	    if (take > SCTP_BUF_LEN(x)) {
+	      take = SCTP_BUF_LEN(x);
+	    }
+	    sz += (take);
+	    if (take == SCTP_BUF_LEN(x)) {
+	      /* we take it all */
+	      chk->data = SCTP_BUF_NEXT(x);
+	      SCTP_BUF_NEXT(x) = NULL;
+	      sctp_m_freem(x);
+	    } else {
+	      /* We are done now */
+	      SCTP_BUF_RESV_UF(chk->data, take);
+	      SCTP_BUF_LEN(chk->data) -= take;
+	      break;
+	    }
+	  }
+	}
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
 
@@ -3231,7 +3261,11 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = sp->stream;
 	ssf->ssf_info.sinfo_ssn = sp->strseq;
-	ssf->ssf_info.sinfo_flags = sp->sinfo_flags;
+	if (sp->some_taken) {
+	  ssf->ssf_info.sinfo_flags = SCTP_DATA_LAST_FRAG;
+	} else {
+	  ssf->ssf_info.sinfo_flags = SCTP_DATA_NOT_FRAG;
+	}
 	ssf->ssf_info.sinfo_ppid = sp->ppid;
 	ssf->ssf_info.sinfo_context = sp->context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
