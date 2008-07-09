@@ -904,7 +904,13 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 #ifdef SCTP_KAME
 			/* we probably don't need these operations */
 			(void)sa6_recoverscope(from6);
-			sa6_embedscope(from6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
+#ifdef SCTP_NO_MOD_GLOBAL
+			sa6_embedscope(from6);
+#else			
+			sa6_embedscope(from6,
+			       MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
+#endif
+			
 #else
 			(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
