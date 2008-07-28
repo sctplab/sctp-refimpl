@@ -49,9 +49,6 @@ __FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.14 2007/07/24 20:06:01
 
 #include <net/if_dl.h>
 
-
-
-
 #ifndef IN6_IS_ADDR_V4MAPPED
 #define IN6_IS_ADDR_V4MAPPED(a)		      \
 	((*(const uint32_t *)(const void *)(&(a)->s6_addr[0]) == 0) &&	\
