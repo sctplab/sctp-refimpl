@@ -3120,7 +3120,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 #endif
     )
 {
-	struct mbuf *m_notify;
+	struct mbuf *m_notify, *tt;
 	struct sctp_send_failed *ssf;
 	struct sctp_queued_to_read *control;
 	int length;
@@ -3136,11 +3136,12 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
-	length = sizeof(struct sctp_send_failed) + chk->send_size;
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
 		return;
+	length = sizeof(struct sctp_send_failed) + chk->send_size;
+	length -= sizeof(struct sctp_data_chunk);
 	SCTP_BUF_LEN(m_notify) = 0;
 	ssf = mtod(m_notify, struct sctp_send_failed *);
 	ssf->ssf_type = SCTP_SEND_FAILED;
@@ -3159,6 +3160,18 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_context = chk->rec.data.context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
+
+	/* Take off the chunk header */
+	m_adj(chk->data, sizeof(struct sctp_data_chunk));
+
+	/* trim out any 0 len mbufs */
+	while(SCTP_BUF_LEN(chk->data) == 0) {
+	  tt = chk->data;
+	  chk->data = SCTP_BUF_NEXT(tt);
+	  SCTP_BUF_NEXT(tt) = NULL;
+	  sctp_m_freem(tt);
+	}
+
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
 
@@ -3231,7 +3244,11 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	bzero(&ssf->ssf_info, sizeof(ssf->ssf_info));
 	ssf->ssf_info.sinfo_stream = sp->stream;
 	ssf->ssf_info.sinfo_ssn = sp->strseq;
-	ssf->ssf_info.sinfo_flags = sp->sinfo_flags;
+	if (sp->some_taken) {
+	  ssf->ssf_info.sinfo_flags = SCTP_DATA_LAST_FRAG;
+	} else {
+	  ssf->ssf_info.sinfo_flags = SCTP_DATA_NOT_FRAG;
+	}
 	ssf->ssf_info.sinfo_ppid = sp->ppid;
 	ssf->ssf_info.sinfo_context = sp->context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
@@ -5687,10 +5704,10 @@ sctp_sorecvmsg(struct socket *so,
 			      &sin6.sin6_addr.s6_addr[3],
 			      sizeof(sin6.sin6_addr.s6_addr[3]));
 #else
-			sin6.sin6_addr.s6_addr16[2] = 0xffff;
+			sin6.sin6_addr.s6_addr32[2] = htonl(0xffff);
 			bcopy(&sin->sin_addr,
-			      &sin6.sin6_addr.s6_addr16[3],
-			      sizeof(sin6.sin6_addr.s6_addr16[3]));
+			      &sin6.sin6_addr.s6_addr32[3],
+			      sizeof(sin6.sin6_addr.s6_addr32[3]));
 #endif
 			sin6.sin6_port = sin->sin_port;
 			memcpy(from, (caddr_t)&sin6, sizeof(sin6));
