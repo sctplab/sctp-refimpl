@@ -287,9 +287,6 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			*ippp = htonl(SCTP_FROM_SCTP_TIMER+SCTP_LOC_1);
 		}
 		inp->last_abort_code = SCTP_FROM_SCTP_TIMER+SCTP_LOC_1;
-		printf("Aborting association threshold:%d overall error count:%d\n", 
-		       threshold, 
-		       stcb->asoc.overall_error_count);
 		sctp_abort_an_association(inp, stcb, SCTP_FAILED_THRESHOLD, oper, SCTP_SO_NOT_LOCKED);
 		return (1);
 	}
@@ -1700,7 +1697,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 					(void)in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL);
 #elif defined(SCTP_KAME)
-                			(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzon));
+                			(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
                 			(void)in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
