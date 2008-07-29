@@ -6248,7 +6248,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	   * assoc? straighten out locks.
 	   */
 	  if (stcb_tmp) {
-	    if (stcb_tmp->state & SCTP_STATE_COOKIE_WAIT) {
+	    if (SCTP_GET_STATE(&stcb_tmp->asoc) & SCTP_STATE_COOKIE_WAIT) {
 	      /* in setup state we abort this guy */
 	      sctp_abort_an_association(stcb_tmp->sctp_ep, sctp_tmp, 1, NULL, 0);
 	      goto add_it_now;
@@ -6329,7 +6329,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	   * assoc? straighten out locks.
 	   */
 	  if (stcb_tmp)
-	    if (stcb_tmp->state & SCTP_STATE_COOKIE_WAIT) {
+	    if (SCTP_GET_STATE(&stcb_tmp->asoc) & SCTP_STATE_COOKIE_WAIT) {
 	      /* in setup state we abort this guy */
 	      sctp_abort_an_association(stcb_tmp->sctp_ep, sctp_tmp, 1, NULL, 0);
 	      goto add_it_now6;
