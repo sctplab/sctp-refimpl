@@ -125,12 +125,12 @@ sctp_iterator_thread(void *v)
 		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
 #endif
 	 	       0, "waiting_for_work", 0);
-#elif defined(__Userspace__)
-                /* TODO msleep alternative */
-#else
 		if (SCTP_BASE_INFO(threads_must_exit)) {
 		      kthread_exit(0);
 		}
+#elif defined(__Userspace__)
+                /* TODO msleep alternative */
+#else
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
 		KeLowerIrql(oldIrql);
 

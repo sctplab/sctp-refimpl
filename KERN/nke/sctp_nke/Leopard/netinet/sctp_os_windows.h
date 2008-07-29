@@ -71,6 +71,9 @@ struct proc {
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
+#define SCTP_BASE_VAR(__m) system_base_info.__m
+
 
 
 #define SCTP_UNUSED
@@ -295,6 +298,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
+#define SCTP_ENABLE_UDP_CSUM(m)
 
 #define SCTP_GET_PKT_VRFID(m, vrf_id)  ((vrf_id = SCTP_DEFAULT_VRFID) != SCTP_DEFAULT_VRFID)
 
