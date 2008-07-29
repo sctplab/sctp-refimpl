@@ -386,8 +386,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 179157 2008-05-20 13:47:46
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
-#define SCTP_DATAGRAM_INBOUND		10011
-#define SCTP_READY_TO_TRANSMIT		10012
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 

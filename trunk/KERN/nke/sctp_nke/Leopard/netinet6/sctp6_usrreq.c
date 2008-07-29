@@ -71,7 +71,7 @@ extern struct protosw inetsw[];
 #ifdef __Panda__
 int ip6_v6only=0;
 #endif
-#if !(defined(__FreeBSD__) || defined(__APPLE__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
 extern void 
 in6_sin_2_v4mapsin6(struct sockaddr_in *sin,
     struct sockaddr_in6 *sin6);
@@ -88,16 +88,10 @@ void
 in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 {
 	bzero(sin, sizeof(*sin));
-#if !defined(__Windows__)
 	sin->sin_len = sizeof(struct sockaddr_in);
-#endif
 	sin->sin_family = AF_INET;
 	sin->sin_port = sin6->sin6_port;
-#if !defined(__Windows__)
 	sin->sin_addr.s_addr = sin6->sin6_addr.s6_addr32[3];
-#else
-	memcpy(&sin->sin_addr, &sin6->sin6_addr.s6_addr[12], sizeof(struct in_addr));
-#endif
 }
 
 /* Convert sockaddr_in to sockaddr_in6 in v4 mapped addr format. */
@@ -105,22 +99,13 @@ void
 in6_sin_2_v4mapsin6(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 {
 	bzero(sin6, sizeof(*sin6));
-#if !defined(__Windows__)
 	sin6->sin6_len = sizeof(struct sockaddr_in6);
-#endif
 	sin6->sin6_family = AF_INET6;
 	sin6->sin6_port = sin->sin_port;
-#if !defined(__Windows__)
 	sin6->sin6_addr.s6_addr32[0] = 0;
 	sin6->sin6_addr.s6_addr32[1] = 0;
 	sin6->sin6_addr.s6_addr32[2] = IPV6_ADDR_INT32_SMP;
 	sin6->sin6_addr.s6_addr32[3] = sin->sin_addr.s_addr;
-#else
-	*(uint32_t *)&sin6->sin6_addr.s6_addr[0] = 0;
-	*(uint32_t *)&sin6->sin6_addr.s6_addr[4] = 0;
-	*(uint32_t *)&sin6->sin6_addr.s6_addr[8] = IPV6_ADDR_INT32_SMP;
-	*(uint32_t *)&sin6->sin6_addr.s6_addr[12] = sin->sin_addr.s_addr;
-#endif
 }
 
 /* Convert sockaddr_in6 into sockaddr_in. */
