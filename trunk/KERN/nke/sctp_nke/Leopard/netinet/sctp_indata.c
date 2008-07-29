@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 179783 2008-06-14 07:58:05Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1828,9 +1828,7 @@ failed_express_del:
 	/* Now queue it where it belongs */
 	if (control != NULL) {
 		/* First a sanity check */
-	        printf("control is != NULL flags:%x\n", chunk_flags);
 		if (asoc->fragmented_delivery_inprogress) {
-		
 			/*
 			 * Ok, we have a fragmented delivery in progress if
 			 * this chunk is next to deliver OR belongs in our
@@ -1967,9 +1965,6 @@ failed_express_del:
 		/* ok, if we reach here we have passed the sanity checks */
 		if (chunk_flags & SCTP_DATA_UNORDERED) {
 			/* queue directly into socket buffer */
-			printf("adding a unordered data to the read queue flags:%x control:%p\n",
-			       chunk_flags,
-			       control);
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			    control,
 			    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
@@ -2025,7 +2020,6 @@ failed_express_del:
 					}
 				}
 			} else {
-				printf("control message queued\n");
 				sctp_queue_data_to_stream(stcb, asoc, control, abort_flag);
 				if (*abort_flag) {
 					return (0);
@@ -2034,7 +2028,6 @@ failed_express_del:
 		}
 	} else {
 		/* Into the re-assembly queue */
-	        printf("Queue data for reassembly chk-flags:0x%x\n", chk->rec.data.rcv_flags);
 		sctp_queue_data_for_reasm(stcb, asoc, chk, abort_flag);
 		if (*abort_flag) {
 			/*
