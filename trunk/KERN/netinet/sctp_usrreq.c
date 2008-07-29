@@ -1880,8 +1880,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_DISABLE_FRAGMENTS:
 	case SCTP_I_WANT_MAPPED_V4_ADDR:
 	case SCTP_USE_EXT_RCVINFO:
+	case SCTP_REUSE_PORT:
 		SCTP_INP_RLOCK(inp);
 		switch (optname) {
+		  case SCTP_REUSE_PORT:
+		    val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
 		case SCTP_DISABLE_FRAGMENTS:
 			val = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NO_FRAGMENT);
 			break;
@@ -3048,6 +3051,25 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		SCTP_INP_WUNLOCK(inp);
 		break;
+	case SCTP_REUSE_PORT:
+	  {
+	    SCTP_CHECK_AND_CAST(mopt, optval, uint32_t, optsize);
+	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND)  == 0) {
+	      /* Can't set it after we are bound */
+	      error = EINVAL;
+	      break;
+	    }
+	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
+	      /* Can't do this for a 1-m socket */
+	      error = EINVAL;
+	      break;
+	    }
+	    if (optval) 
+	      sctp_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
+	    else
+	      sctp_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE);	      
+	  }
+	  break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 	{
 		uint32_t *value;
