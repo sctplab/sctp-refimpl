@@ -6250,7 +6250,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	  if (stcb_tmp) {
 	    if (SCTP_GET_STATE(&stcb_tmp->asoc) & SCTP_STATE_COOKIE_WAIT) {
 	      /* in setup state we abort this guy */
-	      sctp_abort_an_association(stcb_tmp->sctp_ep, sctp_tmp, 1, NULL, 0);
+	      sctp_abort_an_association(stcb_tmp->sctp_ep,
+					stcb_tmp, 1, NULL, 0);
 	      goto add_it_now;
 	    }
 	    SCTP_TCB_UNLOCK(stcb_tmp);
@@ -6331,7 +6332,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	  if (stcb_tmp)
 	    if (SCTP_GET_STATE(&stcb_tmp->asoc) & SCTP_STATE_COOKIE_WAIT) {
 	      /* in setup state we abort this guy */
-	      sctp_abort_an_association(stcb_tmp->sctp_ep, sctp_tmp, 1, NULL, 0);
+	      sctp_abort_an_association(stcb_tmp->sctp_ep,
+					stcb_tmp, 1, NULL, 0);
 	      goto add_it_now6;
 	    }
 	    SCTP_TCB_UNLOCK(stcb_tmp);
