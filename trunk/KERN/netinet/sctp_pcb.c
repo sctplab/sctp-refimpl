@@ -1716,7 +1716,6 @@ sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp)
 	/* For 1-2-1 with port reuse */
 	struct sctppcbhead *head;
 	struct sctp_inpcb *tinp;
-	int fnd=0;
 
 	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE)) {
 		/* only works with port reuse on */
