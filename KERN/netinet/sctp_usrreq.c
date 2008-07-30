@@ -4808,7 +4808,10 @@ sctp_listen(struct socket *so, struct proc *p)
 	      if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		  (tinp != inp)) {
 		/* we have a listener already and its not this inp. */
+		SCTP_INP_DECR_REF(inp);
 		return (EADDRINUSE);
+	      } else {
+		SCTP_INP_DECR_REF(inp);
 	      }
 	    }
 	  } else {
@@ -4830,7 +4833,10 @@ sctp_listen(struct socket *so, struct proc *p)
 	    if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		(tinp != inp)) {
 	      /* we have a listener already and its not this inp. */
+	      SCTP_INP_DECR_REF(inp);
 	      return (EADDRINUSE);
+	    } else {
+	      SCTP_INP_DECR_REF(inp);
 	    }
 	  }
 	}

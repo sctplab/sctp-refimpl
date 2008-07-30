@@ -1725,7 +1725,7 @@ sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp)
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
 		return (0);
 	}
-	SCTP_INP_RUNLOCK(inp);      
+	SCTP_INP_RUNLOCK(inp);
 	head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(inp->sctp_lport,
 	                                    SCTP_BASE_INFO(hashmark))];
 	/* Kick out all non-listeners to the TCP cash */
@@ -1738,10 +1738,6 @@ sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp)
 		}
 		SCTP_INP_WLOCK(tinp);
 		LIST_REMOVE(tinp, sctp_hash);
-    
-		if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
-			return (-1);
-		}
 		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(tinp->sctp_lport, SCTP_BASE_INFO(hashtcpmark))];
 		tinp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
 		LIST_INSERT_HEAD(head, tinp, sctp_hash);
@@ -1813,7 +1809,6 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	if (have_lock == 0) {
 		SCTP_INP_INFO_RUNLOCK();
 	}
-
 	return (inp);
 }
 
