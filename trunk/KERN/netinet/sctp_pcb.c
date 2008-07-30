@@ -4324,7 +4324,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		return (NULL);
 	}
 	SCTP_INP_RLOCK(inp);
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) &&
+	    ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE)) ||
+	     (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
 		/*
 		 * If its in the TCP pool, its NOT allowed to create an
 		 * association. The parent listener needs to call
