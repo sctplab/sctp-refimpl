@@ -4804,7 +4804,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	    struct sctp_laddr *laddr;
 	    LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 	      sp = &laddr->ifa->address;
-	      tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->vrf_id);
+	      tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 	      if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		  (tinp != inp)) {
 		/* we have a listener already and its not this inp. */
@@ -4826,7 +4826,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	      store.sa.sa_family = AF_INET;
 	      store.sa.sa_len = sizeof(struct sockaddr_in);
 	    }
-	    tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->vrf_id);
+	    tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 	    if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		(tinp != inp)) {
 	      /* we have a listener already and its not this inp. */

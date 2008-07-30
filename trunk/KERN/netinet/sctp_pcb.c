@@ -1804,16 +1804,8 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	 * further code to look at all TCP models.
 	 */
 	if (inp == NULL && find_tcp_pool) {
-		unsigned int i;
-
-		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(tinp->lport,SCTP_BASE_INFO(hashtcpmark))];
-		if (LIST_FIRST(head)) {
-		  inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
-		  if (inp) {
-		    /* Found one */
-		    break;
-		  }
-		}
+		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(lport,SCTP_BASE_INFO(hashtcpmark))];
+		inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
 	}
 	if (inp) {
 		SCTP_INP_INCR_REF(inp);
