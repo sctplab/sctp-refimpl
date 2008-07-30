@@ -793,7 +793,7 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *, int);
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
 
-int sctp_swap_inpcb_for_listen(sctp_inpcb *inp, union sctp_sockstore *);
+int sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp);
 
 /*-
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last arg

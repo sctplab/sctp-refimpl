@@ -4796,14 +4796,14 @@ sctp_listen(struct socket *so, struct proc *p)
 	}
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) {
 	  /* See if we have a listener */
-	  sctp_inpcb *tinp;
+	  struct sctp_inpcb *tinp;
 	  union sctp_sockstore store, *sp;
 	  
 	  if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 	    /* not bound all */
 	    struct sctp_laddr *laddr;
 	    LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-	      sp = &laddr->address;
+	      sp = &laddr->ifa->address;
 	      tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->vrf_id);
 	      if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		  (tinp != inp)) {
@@ -4857,7 +4857,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	   * - We must move this guy (the listener) to the main slot
 	   * - We must then move the guy that was listener to the TCP Pool.
 	   */
-	  if (sctp_swap_inpcb_for_listen(inp, sp)) {
+	  if (sctp_swap_inpcb_for_listen(inp)) {
 	    goto in_use;
 	  }
 	}
