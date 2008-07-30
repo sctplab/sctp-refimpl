@@ -1688,7 +1688,9 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRINUSE);
 		return (EADDRINUSE);
 	}
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) &&
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE))){
 		SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return(EINVAL);
 	}
@@ -1760,6 +1762,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 
 	/* FIX ME: do we want to pass in a vrf on the connect call? */
 	vrf_id = inp->def_vrf_id;
+	
 
 	/* We are GOOD to go */
 	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id, 
@@ -4678,12 +4681,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		}
 	}
 	/* Now do we connect? */
-	if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) &&
+	    (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE))){
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		error = EINVAL;
 		goto out_now;
 	}
-
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
@@ -4696,7 +4699,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
 		SCTP_INP_RUNLOCK(inp);
 	} else {
-		/* We increment here since sctp_findassociation_ep_addr() wil
+		/* We increment here since sctp_findassociation_ep_addr() will
 		 * do a decrement if it finds the stcb as long as the locked
 		 * tcb (last argument) is NOT a TCB.. aka NULL.
 		 */
@@ -4783,12 +4786,53 @@ sctp_listen(struct socket *so, struct proc *p)
 
 	int error = 0;
 	struct sctp_inpcb *inp;
-
+	int vrf_id;
+	
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
 		/* I made the same as TCP since we are not setup? */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (ECONNRESET);
+	}
+	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) {
+	  /* See if we have a listener */
+	  sctp_inpcb *tinp;
+	  union sctp_sockstore store, *sp;
+	  
+	  if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
+	    /* not bound all */
+	    struct sctp_laddr *laddr;
+	    LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+	      sp = &laddr->address;
+	      tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->vrf_id);
+	      if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
+		  (tinp != inp)) {
+		/* we have a listener already and its not this inp. */
+		return (EADDRINUSE);
+	      }
+	    }
+	  } else {
+	    sp = &store;
+	    /* Setup a local addr bound all */
+	    memset(&store, 0, sizeof(store));
+	    store.sin.sin_port = inp->sctp_lport;
+#ifdef INET6
+	    if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
+	      store.sa.sa_family = AF_INET6;
+	      store.sa.sa_len = sizeof(struct sockaddr_in6);
+	    }
+#endif
+	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+	      store.sa.sa_family = AF_INET;
+	      store.sa.sa_len = sizeof(struct sockaddr_in);
+	    }
+	    tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->vrf_id);
+	    if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
+		(tinp != inp)) {
+	      /* we have a listener already and its not this inp. */
+	      return (EADDRINUSE);
+	    }
+	  }
 	}
 	SCTP_INP_RLOCK(inp);
 #ifdef SCTP_LOCK_LOGGING
@@ -4805,9 +4849,24 @@ sctp_listen(struct socket *so, struct proc *p)
 		return (error);
 	}
 #endif
+	if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+	  /* The unlucky case
+	   * - We are in the tcp pool with this guy.
+	   * - Someone else is in the main inp slot.
+	   * - We must move this guy (the listener) to the main slot
+	   * - We must then move the guy that was listener to the TCP Pool.
+	   */
+	  if (sctp_swap_inpcb_for_listen(inp, sp)) {
+	    goto in_use;
+	  }
+	}
+
+
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
 	    (inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED)) {
 		/* We are already connected AND the TCP model */
+	in_use:
 		SCTP_INP_RUNLOCK(inp);
 		SOCK_UNLOCK(so);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EADDRINUSE);
@@ -4832,6 +4891,7 @@ sctp_listen(struct socket *so, struct proc *p)
 #endif
 		SCTP_INP_RUNLOCK(inp);
 	}
+	
 #if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__) || defined(__Userspace__)
 #if __FreeBSD_version >= 700000 || defined(__Windows__) || defined(__Userspace__)
 	/* It appears for 7.0 and on, we must always call this. */
