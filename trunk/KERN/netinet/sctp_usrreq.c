@@ -4786,7 +4786,6 @@ sctp_listen(struct socket *so, struct proc *p)
 
 	int error = 0;
 	struct sctp_inpcb *inp;
-	int vrf_id;
 	
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == 0) {
