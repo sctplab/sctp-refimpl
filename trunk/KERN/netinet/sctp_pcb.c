@@ -2985,8 +2985,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					 */
 					SCTP_INP_DECR_REF(inp_tmp);
 					/* unlock info */
-					if ((sctp_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
-					    (sctp_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
+					if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
+					    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
 					  /* Ok, must be one-2-one and allowing port re-use */
 					  port_reuse_active = 1;
 					  goto continue_anyway;
@@ -3011,8 +3011,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				 */
 				SCTP_INP_DECR_REF(inp_tmp);
 				/* unlock info */
-				if ((sctp_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
-				    (sctp_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
+				if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
+				    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
 				  /* Ok, must be one-2-one and allowing port re-use */
 				  port_reuse_active = 1;
 				  goto continue_anyway;
@@ -3031,8 +3031,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		      (inp_tmp = sctp_isport_inuse(inp, lport, vrf_id))
 		       ) {
 				/* Sorry someone already has this one bound */
-				if ((sctp_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
-				    (sctp_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
+				if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
+				    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
 				  port_reuse_active = 1;
 				} else {
 				  SCTP_INP_DECR_REF(inp);
