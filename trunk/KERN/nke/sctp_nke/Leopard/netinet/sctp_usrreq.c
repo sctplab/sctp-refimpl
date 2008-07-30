@@ -1949,6 +1949,19 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 #endif
 		break;
 	}
+	case SCTP_REUSE_PORT:
+	{
+		uint32_t *value;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
+			/* Can't do this for a 1-m socket */
+			error = EINVAL;
+			break;
+		}
+		SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
+		*value = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
+		*optsize = sizeof(uint32_t);
+	}
+	break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 	{
 		uint32_t *value;
@@ -3048,6 +3061,25 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		SCTP_INP_WUNLOCK(inp);
 		break;
+	case SCTP_REUSE_PORT:
+	  {
+	    SCTP_CHECK_AND_CAST(mopt, optval, uint32_t, optsize);
+	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND)  == 0) {
+	      /* Can't set it after we are bound */
+	      error = EINVAL;
+	      break;
+	    }
+	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
+	      /* Can't do this for a 1-m socket */
+	      error = EINVAL;
+	      break;
+	    }
+	    if (optval) 
+	      sctp_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
+	    else
+	      sctp_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE);	      
+	  }
+	  break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 	{
 		uint32_t *value;
