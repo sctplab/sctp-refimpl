@@ -1711,51 +1711,51 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 
 
 int
-sctp_swap_inpcb_for_listen(sctp_inpcb *inp)
+sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp)
 {
-  /* For 1-2-1 with port reuse */
-  struct sctppcbhead *head;
-  struct sctp_inpcb *tinp;
-  int fnd=0;
-  if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE)) {
-    /* only works with port reuse on */
-    return(-1);
-  }
-  if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
-    return (0);
-  }
-  SCTP_INP_RUNLOCK(inp);      
-  head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport,
-							   SCTP_BASE_INFO(hashmark))];
-  /* Kick out all non-listeners to the TCP cash */
-  LIST_FOREACH(tinp, head, sctp_hash) {
-    if (tinp->sctp_lport != lport) {
-      continue;
-    }
-    if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
-      continue;
-    }
-    SCTP_INP_WLOCK(tinp)
-    LIST_REMOVE(tinp, sctp_hash);
+	/* For 1-2-1 with port reuse */
+	struct sctppcbhead *head;
+	struct sctp_inpcb *tinp;
+	int fnd=0;
+
+	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_PORTREUSE)) {
+		/* only works with port reuse on */
+		return(-1);
+	}
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) {
+		return (0);
+	}
+	SCTP_INP_RUNLOCK(inp);      
+	head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(inp->sctp_lport,
+	                                    SCTP_BASE_INFO(hashmark))];
+	/* Kick out all non-listeners to the TCP cash */
+	LIST_FOREACH(tinp, head, sctp_hash) {
+		if (tinp->sctp_lport != inp->sctp_lport) {
+			continue;
+		}
+		if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
+			continue;
+		}
+		SCTP_INP_WLOCK(tinp);
+		LIST_REMOVE(tinp, sctp_hash);
     
-    if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
-      return (-1);
-    }
-    head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(tinp->lport, SCTP_BASE_INFO(hashtcpmark))];
-    tinp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
-    LIST_INSERT_HEAD(head, tinp, sctp_hash);
-    SCTP_INP_WUNLOCK(tinp)
-  }
-  SCTP_INP_WLOCK(inp);
-  /* Pull from where he was */
-  LIST_REMOVE(inp, sctp_hash);
-  inp->sctp_flags ~= SCTP_PCB_FLAGS_IN_TCPPOOL;
-  head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport,
-							   SCTP_BASE_INFO(hashmark))];
-  LIST_INSERT_HEAD(head, inp, sctp_hash);
-  SCTP_INP_WUNLOCK(inp);
-  SCTP_INP_RLOCK(inp);
-  return (0);
+		if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
+			return (-1);
+		}
+		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(tinp->sctp_lport, SCTP_BASE_INFO(hashtcpmark))];
+		tinp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
+		LIST_INSERT_HEAD(head, tinp, sctp_hash);
+		SCTP_INP_WUNLOCK(tinp);
+	}
+	SCTP_INP_WLOCK(inp);
+	/* Pull from where he was */
+	LIST_REMOVE(inp, sctp_hash);
+	inp->sctp_flags &= ~SCTP_PCB_FLAGS_IN_TCPPOOL;
+	head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(inp->sctp_lport, SCTP_BASE_INFO(hashmark))];
+	LIST_INSERT_HEAD(head, inp, sctp_hash);
+	SCTP_INP_WUNLOCK(inp);
+	SCTP_INP_RLOCK(inp);
+	return (0);
 }
 
 
