@@ -1961,6 +1961,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		*value = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
 		*optsize = sizeof(uint32_t);
 	}
+	break;
 	case SCTP_PARTIAL_DELIVERY_POINT:
 	{
 		uint32_t *value;
