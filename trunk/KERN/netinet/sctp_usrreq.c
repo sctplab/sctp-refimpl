@@ -2847,8 +2847,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			break;
 		}
 		/* copy in the list */
-		for (i = 0; i < hmaclist->num_algo; i++)
+		shmac->shmac_number_of_idents = hmaclist->num_algo;
+		for (i = 0; i < hmaclist->num_algo; i++) {
 			shmac->shmac_idents[i] = hmaclist->hmac[i];
+		}
 		SCTP_INP_RUNLOCK(inp);
 		*optsize = size;
 		break;
@@ -3505,20 +3507,27 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_hmacalgo *shmac;
 		sctp_hmaclist_t *hmaclist;
-		uint32_t hmacid;
-		size_t size, i, found;
+		uint16_t hmacid;
+		uint32_t i;
+		
+		size_t found;
 
 		SCTP_CHECK_AND_CAST(shmac, optval, struct sctp_hmacalgo, optsize);
-		size = (optsize - sizeof(*shmac)) / sizeof(shmac->shmac_idents[0]);
-		hmaclist = sctp_alloc_hmaclist(size);
+		if (optsize < sizeof(struct sctp_hmacalgo) + shmac->shmac_number_of_idents * sizeof(uint16_t)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
+			break;
+		}
+		
+		hmaclist = sctp_alloc_hmaclist(shmac->shmac_number_of_idents);
 		if (hmaclist == NULL) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOMEM);
 			error = ENOMEM;
 			break;
 		}
-		for (i = 0; i < size; i++) {
+		for (i = 0; i < shmac->shmac_number_of_idents; i++) {
 			hmacid = shmac->shmac_idents[i];
-			if (sctp_auth_add_hmacid(hmaclist, (uint16_t) hmacid)) {
+			if (sctp_auth_add_hmacid(hmaclist, hmacid)) {
 				/* invalid HMACs were found */;
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 				error = EINVAL;
