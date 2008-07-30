@@ -81,38 +81,40 @@ sctp_bind(int fd, in_addr_t address, in_port_t port)
 	return (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)));
 }
 
-int 
-sctp_one2one(unsigned short port, int should_listen, int bindall)
+int
+sctp_connect(int fd, in_addr_t address, in_port_t port)
 {
-	int fd;
 	struct sockaddr_in addr;
-
-	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
-		return -1;
-
+	
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_family      = AF_INET;
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
 #endif
 	addr.sin_port        = htons(port);
-	if (bindall) {
-		addr.sin_addr.s_addr = 0;
-	} else {
-		addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	}
+	addr.sin_addr.s_addr = htonl(address);
+	return (connect(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)));
+}
+	
+int 
+sctp_one2one(unsigned short port, int should_listen, int bindall)
+{
+	int fd;
 
-	if (bind(fd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
+		return -1;
+
+	if (sctp_bind(fd, bindall?INADDR_ANY:INADDR_LOOPBACK, 0) < 0) {
 		close(fd);
 		return -1;
 	}
-	if(should_listen) {
+	if (should_listen) {
 		if (listen(fd, 1) < 0) {
 			close(fd);
 			return -1;
 		}
 	}
-	return(fd);
+	return fd;
 }
 
 
@@ -262,6 +264,20 @@ int sctp_abort(int fd) {
     	return -1;
     return close(fd);
  }
+
+int sctp_enable_reuse_port(int fd)
+{
+	const int on = 1;
+
+	return setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&on, sizeof(int));
+}
+
+int sctp_disable_reuse_port(int fd)
+{
+	const int off = 0;
+
+	return setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&off, sizeof(int));
+}
 
 int sctp_enable_non_blocking(int fd)
 {
