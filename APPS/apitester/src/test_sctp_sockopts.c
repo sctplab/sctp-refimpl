@@ -686,7 +686,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_1)
 	if (!result)
 		return "Can set RTO.init smaller than RTO.min";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -720,7 +720,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_2)
 	if (!result)
 		return "Can set RTO.init greater than RTO.max";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -753,7 +753,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 	if (!result)
 		return "Can set RTO.min greater than RTO.init";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -786,7 +786,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 	if (!result)
 		return "Can set RTO.min greater than RTO.max";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -819,7 +819,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 	if (!result)
 		return "Can set RTO.max smaller than RTO.init";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -852,7 +852,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 	if (!result)
 		return "Can set RTO.max smaller than RTO.min";
 	
-	if (errno != EDOM)
+	if (errno != EINVAL)
 		return strerror(errno);
 	
 	return NULL;
@@ -11437,54 +11437,57 @@ DEFINE_APITEST(authchk, sso_1_M)
  */
 DEFINE_APITEST(hmacid, sso_1_1)
 {
-	int result, fd, i;
+	int result, fd;
 	socklen_t len;
 	int check=2;
-	uint16_t ary[2];
-	uint16_t ary2[100];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2one(0, 1, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2one(0, 1, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	if (result < 0) {
 		/* no sha256, retry with just sha1 */
-		ary[0] = SCTP_AUTH_HMAC_ID_SHA1;
-		check = 1;
-		len = sizeof(uint16_t);
-		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-				    algo, len);
+		algo->shmac_number_of_idents = 1;
+		algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA1;
+		len = sizeof(struct sctp_hmacalgo) + 1 * sizeof(uint16_t);
+		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 		if (result < 0) {
 			close (fd);
-			return(strerror(errno));
+			return strerror(errno);
 		}
+		check = 1;
 	}
-	memset(ary2, 0, sizeof(ary2));
-	algo = (struct sctp_hmacalgo *)ary2;
-	len = sizeof(ary2);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, &len);
+	memset(buffer, 0, sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t));
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, &len);
 	if (result < 0) {
 		close (fd);
-		return(strerror(errno));
+		return strerror(errno);
 	}
 	close (fd);
-	for (i=0; i<check; i++) {
-		if(ary[i] != ary2[i]) {
-			return "Did not get back the expected list";
-		}
-	}
-	
-	if((len/sizeof(uint16_t)) != check) {
+	if (algo->shmac_number_of_idents != check) {
 		return "Did not get back the expected list - size wrong";
+	}
+	if (check == 1) {
+		if (algo->shmac_idents[0] != SCTP_AUTH_HMAC_ID_SHA1) {
+			return "Wrong list";
+		}
+	} else {
+		if (algo->shmac_idents[0] != SCTP_AUTH_HMAC_ID_SHA256) {
+			return "Wrong list";
+		}
+		if (algo->shmac_idents[1] != SCTP_AUTH_HMAC_ID_SHA1) {
+			return "Wrong list";
+		}
 	}
 	return NULL;
 }
@@ -11498,54 +11501,54 @@ DEFINE_APITEST(hmacid, sso_1_1)
  */
 DEFINE_APITEST(hmacid, sso_1_M)
 {
-	int result, fd, i;
+	int result, fd;
 	socklen_t len;
 	int check=2;
-	uint16_t ary[2];
-	uint16_t ary2[100];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2many(0, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2many(0, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	if (result < 0) {
 		/* no sha256, retry with just sha1 */
-		ary[0] = SCTP_AUTH_HMAC_ID_SHA1;
-		check = 1;
-		len = sizeof(uint16_t);
-		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-				    algo, len);
+		algo->shmac_number_of_idents = 1;
+		algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA1;
+		len = sizeof(struct sctp_hmacalgo) + 1 * sizeof(uint16_t);
+		result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 		if (result < 0) {
 			close (fd);
-			return(strerror(errno));
+			return strerror(errno);
 		}
+		check = 1;
 	}
-	memset(ary2, 0, sizeof(ary2));
-	algo = (struct sctp_hmacalgo *)ary2;
-	len = sizeof(ary2);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, &len);
+	memset(buffer, 0, sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t));
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, &len);
 	if (result < 0) {
 		close (fd);
-		return(strerror(errno));
+		return strerror(errno);
 	}
 	close (fd);
-	for (i=0; i<check; i++) {
-		if(ary[i] != ary2[i]) {
-			return "Did not get back the expected list";
+	if (check == 1) {
+		if (algo->shmac_idents[0] != SCTP_AUTH_HMAC_ID_SHA1) {
+			return "Wrong list";
 		}
-	}
-	
-	if((len/sizeof(uint16_t)) != check) {
-		return "Did not get back the expected list - size wrong";
+	} else {
+		if (algo->shmac_idents[0] != SCTP_AUTH_HMAC_ID_SHA256) {
+			return "Wrong list";
+		}
+		if (algo->shmac_idents[1] != SCTP_AUTH_HMAC_ID_SHA1) {
+			return "Wrong list";
+		}
 	}
 	return NULL;
 }
@@ -11560,21 +11563,21 @@ DEFINE_APITEST(hmacid, sso_bad_1_1)
 {
 	int result, fd;
 	socklen_t len;
-	uint16_t ary[2];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = 2960;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2one(0, 1, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2one(0, 1, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = 1960;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close(fd);
+	
 	if (result >= 0) {
 		return "was able to set bogus hmac id 2960";
 	}
@@ -11591,21 +11594,21 @@ DEFINE_APITEST(hmacid, sso_bad_1_M)
 {
 	int result, fd;
 	socklen_t len;
-	uint16_t ary[2];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = 2960;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2many(0, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2many(0, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = 1960;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close(fd);
+	
 	if (result >= 0) {
 		return "was able to set bogus hmac id 2960";
 	}
@@ -11623,35 +11626,32 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_1)
 {
 	int result, fd;
 	socklen_t len;
-	uint16_t ary[2];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2one(0, 1, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2one(0, 1, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	if (result < 0) {
 		/* no sha256, retry with just sha1 */
 		close (fd);
 		return "Can't run test SHA256 not supported";
 	}
-	ary[1] = 0;
-	len = sizeof(uint16_t);
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+	algo->shmac_number_of_idents = 1;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	len = sizeof(struct sctp_hmacalgo) + 1 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close (fd);
 	if (result >= 0) {
 		return "Was allowed to set only SHA256";
 	}
 	return NULL;
-
 }
 
 /*
@@ -11665,29 +11665,27 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_M)
 {
 	int result, fd;
 	socklen_t len;
-	uint16_t ary[2];
+	char buffer[sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t)];
 	struct sctp_hmacalgo *algo;
-	algo = (struct sctp_hmacalgo *)ary;
-	/* First try 256 */
-	ary[0] = SCTP_AUTH_HMAC_ID_SHA256;
-	ary[1] = SCTP_AUTH_HMAC_ID_SHA1;
-	len = sizeof(ary);
 
-	fd = sctp_one2many(0, 1);
-	if (fd < 0) {
+	if ((fd = sctp_one2many(0, 1)) < 0) {
 		return(strerror(errno));
 	}
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+	algo = (struct sctp_hmacalgo *)buffer;
+	algo->shmac_number_of_idents = 2;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	algo->shmac_idents[1] = SCTP_AUTH_HMAC_ID_SHA1;
+	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	if (result < 0) {
 		/* no sha256, retry with just sha1 */
 		close (fd);
 		return "Can't run test SHA256 not supported";
 	}
-	ary[1] = 0;
-	len = sizeof(uint16_t);
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT,
-			    algo, len);
+	algo->shmac_number_of_idents = 1;
+	algo->shmac_idents[0] = SCTP_AUTH_HMAC_ID_SHA256;
+	len = sizeof(struct sctp_hmacalgo) + 1 * sizeof(uint16_t);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close (fd);
 	if (result >= 0) {
 		return "Was allowed to set only SHA256";
@@ -15654,3 +15652,527 @@ DEFINE_APITEST(read, auth_l_chklist)
 	return NULL;
 }
 
+DEFINE_APITEST(reuseport, set_1_to_M)
+{
+	int fd, result;
+	const int on = 1;
+	socklen_t optlen;
+	
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	optlen = (socklen_t)sizeof(int);	
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&on, optlen);
+	
+	close(fd);
+
+	if (!result)
+		return "setsockopt was successful";
+
+	if (errno != EINVAL)
+		return strerror(errno);
+	
+	return NULL;
+}
+
+DEFINE_APITEST(reuseport, get_1_to_M)
+{
+	int fd, result;
+	int opt;
+	socklen_t optlen;
+	
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+	
+	optlen = (socklen_t)sizeof(int);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
+	
+	close(fd);
+
+	if (!result) {
+		return "getsockopt was successful";
+	} else if (errno != EINVAL) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, set_before_bind)
+{
+	int fd, result;
+	const int on = 1;
+	socklen_t optlen;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	optlen = (socklen_t)sizeof(int);	
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&on, optlen);
+	
+	close(fd);
+
+	if (result) {
+		return strerror(errno);
+	} else {	
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, get_default)
+{
+	int fd, result;
+	int opt;
+	socklen_t optlen;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	opt = 1;
+	optlen = (socklen_t)sizeof(int);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
+	
+	close(fd);
+
+	if (result) {
+		return strerror(errno);
+	} else if (opt) {
+		return "SCTP_REUSE_PORT enabled by default";
+	} else {	
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, get_after_set)
+{
+	int fd, result;
+	int opt;
+	socklen_t optlen;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
+		return strerror(errno);
+
+	if (sctp_enable_reuse_port(fd) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	
+	opt = 0;
+	optlen = (socklen_t)sizeof(int);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
+	
+	close(fd);
+
+	if (result) {
+		return strerror(errno);
+	} else if (!opt) {
+		return "SCTP_REUSE_PORT not enabled";
+	} else {	
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, set_after_bind)
+{
+	int fd, result;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_bind(fd, INADDR_LOOPBACK, 0) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+	result = sctp_enable_reuse_port(fd);
+	close(fd);
+
+	if (!result) {
+		return "setsockopt() was successful";
+	} else if (errno != EINVAL) {
+		return strerror(errno);
+	} else { 
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, set_after_bindx)
+{
+	int fd, result;
+	struct sockaddr_in addr;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	addr.sin_family      = AF_INET;
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_port        = htons(0);
+	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	if (sctp_bindx(fd, (struct sockaddr *)&addr, 1, SCTP_BINDX_ADD_ADDR) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
+
+	result = sctp_enable_reuse_port(fd);	
+	close(fd);
+
+	if (!result) {
+		return "setsockopt() was successful";
+	} else if (errno != EINVAL) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, bind_twice)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd1) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd2) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));	
+	close(fd1);
+	close(fd2);
+
+	if (result) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, bind_twice_illegal_1)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd2) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));	
+	
+	close(fd1);
+	close(fd2);
+
+	if (!result) {
+		return "bind() was successful";
+	} else if (errno != EADDRINUSE) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, bind_twice_illegal_2)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd1) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));		
+	close(fd1);
+	close(fd2);
+
+	if (!result) {
+		return "bind() was successful";
+	} else if (errno != EADDRINUSE) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+DEFINE_APITEST(reuseport, bind_twice_listen)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd1) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd2) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1)) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = listen(fd1, 1);	
+	close(fd1);
+	close(fd2);
+
+	if (result) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, bind_subset)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd1) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}	
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd2) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = sctp_bind(fd2, INADDR_ANY, sctp_get_local_port(fd1));		
+	close(fd1);
+	close(fd2);
+
+	if (result) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, listen_twice)
+{
+	int fd1, fd2, result;
+	
+	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd1) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_enable_reuse_port(fd2) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd1, INADDR_LOOPBACK, 0) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1)) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (listen(fd1, 1) < 0) {
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	result = listen(fd2, 1);	
+
+	close(fd1);
+	close(fd2);
+
+	if (!result) {
+		return "listen() was successful";
+	} else if (errno != EADDRINUSE) {
+		return strerror(errno);
+	} else {
+		return NULL;
+	}
+}
+
+static int
+sctp_bound_socket(in_addr_t address, in_port_t port)
+{
+	int fd;
+	
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		return -1;
+	}
+	if (sctp_enable_reuse_port(fd) < 0) {
+		close(fd);
+		return -1;
+	}
+	if (sctp_bind(fd, address, port) < 0) {
+		close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+static int
+sctp_listening_socket(in_addr_t address, in_port_t port)
+{
+	int fd;
+	
+	if ((fd = sctp_bound_socket(address, port)) < 0) {
+		return -1;
+	}
+	if (listen(fd, 1) < 0) {
+		close(fd);
+		return -1;
+	}
+	return fd;
+}
+
+DEFINE_APITEST(reuseport, accept_inheritage)
+{
+	int fd, lfd, cfd, result;
+	int opt;
+	socklen_t optlen;
+	
+	if ((lfd = sctp_listening_socket(INADDR_LOOPBACK, 0)) < 0) {
+		return strerror(errno);
+	}
+	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
+		close(lfd);
+		return strerror(errno);
+	}
+	if (sctp_connect(fd, INADDR_LOOPBACK, sctp_get_local_port(lfd)) < 0) {
+		close(lfd);
+		close(fd);
+		return strerror(errno);
+	}
+	if ((cfd = accept(lfd, NULL, NULL)) < 0) {
+		close(lfd);
+		close(fd);
+		return strerror(errno);
+	}		
+	opt = 0;
+	optlen = (socklen_t)sizeof(int);
+	result = getsockopt(cfd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
+
+	close(lfd);
+	close(fd);
+	close(cfd);
+	
+	if (result) {
+		return strerror(errno);
+	} else if (!opt) {
+		return "SCTP_REUSE_PORT not enabled";
+	} else {	
+		return NULL;
+	}
+}
+
+DEFINE_APITEST(reuseport, connect)
+{
+	int fd1, fd2, lfd1,lfd2;
+	
+	if ((lfd1 = sctp_listening_socket(INADDR_LOOPBACK, 0)) < 0) {
+		return strerror(errno);
+	}
+	if ((lfd2 = sctp_listening_socket(INADDR_LOOPBACK, 0)) < 0) {
+		close(lfd1);
+		return strerror(errno);
+	}
+	if ((fd1 = sctp_bound_socket(INADDR_LOOPBACK, 0)) < 0) {
+		close(lfd1);
+		close(lfd2);
+		return strerror(errno);
+	}
+	if ((fd2 = sctp_bound_socket(INADDR_LOOPBACK, sctp_get_local_port(fd1))) < 0) {
+		close(lfd1);
+		close(lfd2);
+		close(fd1);
+		return strerror(errno);
+	}
+	if (sctp_connect(fd1, INADDR_LOOPBACK, sctp_get_local_port(lfd1)) < 0) {
+		close(lfd1);
+		close(lfd2);
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	if (sctp_connect(fd2, INADDR_LOOPBACK, sctp_get_local_port(lfd2)) < 0) {
+		close(lfd1);
+		close(lfd2);
+		close(fd1);
+		close(fd2);
+		return strerror(errno);
+	}
+	close(lfd1);
+	close(lfd2);
+	close(fd1);
+	close(fd2);
+	
+	return NULL;
+}
