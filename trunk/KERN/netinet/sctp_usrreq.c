@@ -1950,16 +1950,17 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		break;
 	}
 	case SCTP_REUSE_PORT:
-	  {
-	    if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
-	      /* Can't do this for a 1-m socket */
-	      error = EINVAL;
-	      break;
-	    }
-	    SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
-	    *value = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
-	    *optsize = sizeof(uint32_t);
-	  }
+	{
+		uint32_t *value;
+		if ((inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
+			/* Can't do this for a 1-m socket */
+			error = EINVAL;
+			break;
+		}
+		SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
+		*value = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE);
+		*optsize = sizeof(uint32_t);
+	}
 	case SCTP_PARTIAL_DELIVERY_POINT:
 	{
 		uint32_t *value;
