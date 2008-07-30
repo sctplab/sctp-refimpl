@@ -4798,11 +4798,13 @@ sctp_listen(struct socket *so, struct proc *p)
 	  struct sctp_inpcb *tinp;
 	  union sctp_sockstore store, *sp;
 	  
+	  sp = &store;
 	  if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 	    /* not bound all */
 	    struct sctp_laddr *laddr;
 	    LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-	      sp = &laddr->ifa->address;
+	      memcpy(&store, &laddr->ifa->address, sizeof(store));
+	      sp->sin.sin_port = inp->sctp_lport;
 	      tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 	      if (tinp && (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) &&
 		  (tinp != inp)) {
@@ -4814,7 +4816,6 @@ sctp_listen(struct socket *so, struct proc *p)
 	      }
 	    }
 	  } else {
-	    sp = &store;
 	    /* Setup a local addr bound all */
 	    memset(&store, 0, sizeof(store));
 	    store.sin.sin_port = inp->sctp_lport;
