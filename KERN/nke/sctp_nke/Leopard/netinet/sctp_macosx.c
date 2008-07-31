@@ -137,7 +137,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	if (error) {
 		if (error == EOPNOTSUPP)
 			error = ENOTSOCK;
-		return (error);
+		goto out;
 	}
 	if (head == NULL) {
 		error = EBADF;
@@ -150,7 +150,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-		return (error);
+		goto out;
 	}
 
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
