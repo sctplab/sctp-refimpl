@@ -1094,6 +1094,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 		close(cfd);
 		return strerror(errno);
 	}
+	sctp_delay(SCTP_SLEEP_MS);
 	if ((afd = accept(lfd, NULL, 0)) < 0) {
 		close(lfd);
 		close(cfd);
