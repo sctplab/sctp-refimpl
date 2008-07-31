@@ -1050,32 +1050,19 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	
 	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
 	   	return strerror(errno);
-
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(lfd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+	if (sctp_bind(lfd, INADDR_LOOPBACK, 0) < 0) {
 		close(lfd);
 		return strerror(errno);
 	}
-
 	if (listen(lfd, 1) < 0) {
 		close(lfd);
 		return strerror(errno);
 	}
-	
 	if ((cfd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 		close(lfd);
 		return strerror(errno);
 	}
-
 	result = sctp_get_rto_info(cfd, 0, &init, &max, &min);
-	
 	if (result) {
 		close(lfd);
 		close(cfd);
@@ -1085,49 +1072,34 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	init *= 2;
 	min  *= 2;
 	max  *= 2;
-	
 	result = sctp_set_rto_info(cfd, 0, init, max, min);
-
 	if (result) {
 		close(lfd);
 		close(cfd);
 		return strerror(errno);
 	}
-
-	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
-	addr.sin_family      = AF_INET;
-#ifdef HAVE_SIN_LEN
-	addr.sin_len         = sizeof(struct sockaddr_in);
-#endif
-	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-
-	if (bind(cfd, (struct sockaddr *)&addr, (socklen_t)sizeof(struct sockaddr_in)) < 0) {
+	if (sctp_bind(cfd, INADDR_LOOPBACK, 0) < 0) {
 		close(lfd);
 		close(cfd);
 		return strerror(errno);
 	}
-
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	if (getsockname (lfd, (struct sockaddr *) &addr, &addr_len) < 0) {
 		close(lfd);
 		close(cfd);
 		return strerror(errno);
 	}
-
 	if (sctp_connectx(cfd, (struct sockaddr *) &addr, 1, &assoc_id) < 0) {
 		close(lfd);
 		close(cfd);
 		return strerror(errno);
 	}
-
 	if ((afd = accept(lfd, NULL, 0)) < 0) {
 		close(lfd);
 		close(cfd);
 		return strerror(errno);
 	}
 	close(lfd);
-
 	if ((pfd = sctp_peeloff(cfd, assoc_id)) < 0) {
 		close(afd);
 		close(cfd);
@@ -1136,7 +1108,6 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	close(cfd);
 
 	result = sctp_get_rto_info(pfd, 0, &new_init, &new_max, &new_min);
-	
 	close(afd);
 	close(pfd);
 
@@ -1145,7 +1116,6 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 
 	if ((init != new_init) || (min != new_min) || (max != new_max))
 		return "Values are not inherited correctly";
-
 	return NULL;
 }
 
@@ -12540,6 +12510,7 @@ DEFINE_APITEST(actkey, sso_inhdef_1_1)
 	}
 	result = sctp_get_active_key(fd, 0, &keyid);
 	if (result < 0) {
+		close(fd);
 		return "was unable to get active key";
 	}
 	result = sctp_socketpair_reuse(fd, fds, 1);
@@ -12549,6 +12520,8 @@ DEFINE_APITEST(actkey, sso_inhdef_1_1)
 	}
 	result = sctp_get_active_key(fds[1], 0, &a_keyid);
 	close(fd);
+	close(fds[0]);
+	close(fds[1]);
 	if (result < 0) {
 		return "was unable to get assoc active key";
 	}
@@ -12578,6 +12551,7 @@ DEFINE_APITEST(actkey, sso_inhdef_1_M)
 	}
 	result = sctp_get_active_key(fds[0], 0, &keyid);
 	if (result < 0) {
+		close(fds[0]);
 		return "was unable to get ep active key";
 	}
 
@@ -16046,10 +16020,8 @@ DEFINE_APITEST(reuseport, listen_twice)
 		return strerror(errno);
 	}
 	result = listen(fd2, 1);	
-
 	close(fd1);
 	close(fd2);
-
 	if (!result) {
 		return "listen() was successful";
 	} else if (errno != EADDRINUSE) {

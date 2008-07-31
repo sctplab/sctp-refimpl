@@ -39,3 +39,8 @@ struct test {
 	char *suite_name;
 	char *(*func)(void);
 };
+
+#define I_AM_HERE \
+                do { \
+			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
+		} while (0)
