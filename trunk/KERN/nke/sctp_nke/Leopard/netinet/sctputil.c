@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 180955 2008-07-29 09:06:35Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 181054 2008-07-31 11:08:30Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6794,7 +6794,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			 * are binding. No remove going on
 			 * here.
 			 */
-			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_DECR_REF(lep);
 		}
 		if (lep == inp) {
 			/* already bound to it.. ok */
