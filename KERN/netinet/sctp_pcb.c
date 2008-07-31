@@ -1727,12 +1727,18 @@ sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp)
 	SCTP_INP_RUNLOCK(inp);
 	head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(inp->sctp_lport,
 	                                    SCTP_BASE_INFO(hashmark))];
-	/* Kick out all non-listeners to the TCP cash */
+	/* Kick out all non-listeners to the TCP hash */
 	LIST_FOREACH(tinp, head, sctp_hash) {
 		if (tinp->sctp_lport != inp->sctp_lport) {
 			continue;
 		}
-		if (tinp->sctp_flags & SCTP_PCB_FLAGS_LISTENING) {
+		if (tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			continue;
+		}
+		if (tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			continue;
+		}
+		if (tinp->sctp_socket->so_qlimit) {
 			continue;
 		}
 		SCTP_INP_WLOCK(tinp);
