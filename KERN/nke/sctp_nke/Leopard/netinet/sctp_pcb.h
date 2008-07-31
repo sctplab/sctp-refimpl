@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 181054 2008-07-31 11:08:30Z rrs $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -792,6 +792,8 @@ int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *, int);
 /* void sctp_drain(void); */
 
 int sctp_destination_is_reachable(struct sctp_tcb *, struct sockaddr *);
+
+int sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp);
 
 /*-
  * Null in last arg inpcb indicate run on ALL ep's. Specific inp in last arg
