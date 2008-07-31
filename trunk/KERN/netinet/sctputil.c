@@ -6794,7 +6794,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			 * are binding. No remove going on
 			 * here.
 			 */
-			SCTP_INP_DECR_REF(inp);
+			SCTP_INP_DECR_REF(lep);
 		}
 		if (lep == inp) {
 			/* already bound to it.. ok */

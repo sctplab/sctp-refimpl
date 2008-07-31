@@ -4812,10 +4812,10 @@ sctp_listen(struct socket *so, struct proc *p)
 				    ((tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 				    (tinp->sctp_socket->so_qlimit)) {
 					/* we have a listener already and its not this inp. */
-					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_DECR_REF(tinp);
 					return (EADDRINUSE);
-				} else {
-					SCTP_INP_DECR_REF(inp);
+				} else if (tinp) {
+					SCTP_INP_DECR_REF(tinp);
 				}
 			}
 		} else {
@@ -4838,9 +4838,9 @@ sctp_listen(struct socket *so, struct proc *p)
 			    ((tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) == 0) &&
 			    (tinp->sctp_socket->so_qlimit)) {
 				/* we have a listener already and its not this inp. */
-				SCTP_INP_DECR_REF(inp);
+				SCTP_INP_DECR_REF(tinp);
 				return (EADDRINUSE);
-			} else {
+			} else if (tinp) {
 				SCTP_INP_DECR_REF(inp);
 			}
 		}
