@@ -3680,6 +3680,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
 #if !defined(__Windows__)
 			udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -4134,7 +4136,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 		if (port) {
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ - missing Linux fields */
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), packet_length - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
@@ -10471,6 +10475,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
 #if !defined(__Windows__)
 		udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+		udp->uh_sum = 0;
 #endif
 #endif
 		offset_out += sizeof(struct udphdr);
@@ -10546,14 +10552,16 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ missing Linux fields */
 		if (port) {
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), 
 						     sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
-		}
 #endif
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11538,6 +11546,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__)
 			udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -11594,13 +11604,15 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
-		}
 #endif
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11737,6 +11749,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__)
  			udp->uh_sum = in_pseudo(out->ip_src.s_addr, out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+ 			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -11835,6 +11849,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
+#else
+			udp->uh_sum = 0;
 #endif
 		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
