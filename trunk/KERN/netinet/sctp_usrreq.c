@@ -4825,12 +4825,16 @@ sctp_listen(struct socket *so, struct proc *p)
 #ifdef INET6
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				store.sa.sa_family = AF_INET6;
+#if !defined(__Windows__)
 				store.sa.sa_len = sizeof(struct sockaddr_in6);
+#endif
 			}
 #endif
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				store.sa.sa_family = AF_INET;
+#if !defined(__Windows__)
 				store.sa.sa_len = sizeof(struct sockaddr_in);
+#endif
 			}
 			tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 			if (tinp && (tinp != inp) &&

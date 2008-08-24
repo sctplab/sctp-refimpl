@@ -5703,6 +5703,11 @@ sctp_sorecvmsg(struct socket *so,
 			bcopy(&sin->sin_addr,
 			      &sin6.sin6_addr.s6_addr[3],
 			      sizeof(sin6.sin6_addr.s6_addr[3]));
+#elif defined(__Windows__)
+			((uint32_t *)&sin6.sin6_addr)[2] = htonl(0xffff);
+			bcopy(&sin->sin_addr,
+			      &((uint32_t *)&sin6.sin6_addr)[3],
+			      sizeof(uint32_t));
 #else
 			sin6.sin6_addr.s6_addr32[2] = htonl(0xffff);
 			bcopy(&sin->sin_addr,
