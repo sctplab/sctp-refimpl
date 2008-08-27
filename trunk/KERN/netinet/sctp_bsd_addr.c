@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 180956 2008-07-29 09:30:50Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 181464 2008-08-09 11:28:57Z des $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -126,11 +126,11 @@ sctp_iterator_thread(void *v)
 #endif
 	 	       0, "waiting_for_work", 0);
 		if (SCTP_BASE_INFO(threads_must_exit)) {
-		  kthread_exit(
 #if defined(__FreeBSD__) && __FreeBSD_version < 730000
-			       0
+		  kthread_exit(0);
+#else
+		  kthread_exit();
 #endif			       
-			       );
 		}
 #elif defined(__Userspace__)
                 /* TODO msleep alternative */

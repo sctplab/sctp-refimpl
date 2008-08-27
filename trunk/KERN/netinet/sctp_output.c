@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 181054 2008-07-31 11:08:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 182114 2008-08-24 18:29:22Z bz $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -11640,9 +11640,12 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	struct ip *iph;
 	struct udphdr *udp = NULL;
 	struct mbuf *mout;
+
+#ifdef INET6
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
 #endif
+#endif 
 	uint32_t val;
 	struct mbuf *at;
 	int len;
