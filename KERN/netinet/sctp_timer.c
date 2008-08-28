@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 182367 2008-08-28 09:44:07Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 182403 2008-08-28 20:14:07Z rrs $");
 #endif
 
 #define _IP_VHL
@@ -682,6 +682,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		  recovery_cnt++;
 #ifdef INVARIANTS
 		  panic("last acked >= chk on sent-Q");
+		  /* to keep compiler happy */
+		  goto start_again;
 #else
 		  SCTP_PRINTF("Recover attempts a restart cnt:%d\n", recovery_cnt);
 		  sctp_recover_sent_list(stcb);
