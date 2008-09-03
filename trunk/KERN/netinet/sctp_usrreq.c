@@ -4825,14 +4825,14 @@ sctp_listen(struct socket *so, struct proc *p)
 #ifdef INET6
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				store.sa.sa_family = AF_INET6;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 				store.sa.sa_len = sizeof(struct sockaddr_in6);
 #endif
 			}
 #endif
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				store.sa.sa_family = AF_INET;
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 				store.sa.sa_len = sizeof(struct sockaddr_in);
 #endif
 			}
