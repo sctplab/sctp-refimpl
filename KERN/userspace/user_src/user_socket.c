@@ -265,8 +265,8 @@ sofree(struct socket *so)
         		(*pr->pr_domain->dom_dispose)(so->so_rcv.sb_mb);
         	if (pr->pr_usrreqs->pru_detach != NULL)
         		(*pr->pr_usrreqs->pru_detach)(so);
-                        sctp_close(so); was...    sctp_detach(so);
          */
+        sctp_close(so); /* was...    sctp_detach(so); */
 
 	/*
 	 * From this point on, we assume that no other references to this
