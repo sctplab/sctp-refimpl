@@ -12199,7 +12199,7 @@ sctp_sosend(struct socket *so,
 		}
 	}
 	addr_to_use = addr;
-#ifdef INET6
+#if defined(INET6)  && !defined(__Userspace__) /* TODO port in6_sin6_2_sin */
 	if ((addr) && (addr->sa_family == AF_INET6)) {
 		struct sockaddr_in6 *sin6;
 
