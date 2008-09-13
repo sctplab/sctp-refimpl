@@ -6968,8 +6968,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
   /* Setup for unordered if needed by looking
    * at the user sent info flags.
    */
-  if(sp->sinfo_flags & SCTP_UNORDERED) {
+  if (sp->sinfo_flags & SCTP_UNORDERED) {
 	rcv_flags |= SCTP_DATA_UNORDERED;
+  }
+  if (SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) && ((sp->sinfo_flags & SCTP_EOF) == SCTP_EOF)) {
+	rcv_flags |= SCTP_DATA_SACK_IMMEDIATELY;
   }
   /* clear out the chunk before setting up */
   memset(chk, 0, sizeof(*chk));
@@ -8215,6 +8218,13 @@ again_one_more_time:
 					SCTP_PRINTF("Warning chunk of %d bytes > mtu:%d and yet PMTU disc missed\n",
 						    chk->send_size, mtu);
 					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
+				}
+				if (SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) &&
+				    ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) == SCTP_STATE_SHUTDOWN_PENDING)) {
+					struct sctp_data_chunk *dchkh;
+					
+					dchkh = mtod(chk->data, struct sctp_data_chunk *);
+					dchkh->ch.chunk_flags |= SCTP_DATA_SACK_IMMEDIATELY;
 				}
 				if (((chk->send_size <= mtu) && (chk->send_size <= r_mtu)) ||
 				    ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) && (chk->send_size <= asoc->peers_rwnd))) {
