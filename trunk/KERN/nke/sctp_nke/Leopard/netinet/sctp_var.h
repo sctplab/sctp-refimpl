@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 181054 2008-07-31 11:08:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -165,6 +165,9 @@ extern struct pr_usrreqs sctp_usrreqs;
 	} \
 }
 
+#ifdef INVARIANTS
+
+
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	uint32_t val; \
 	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
@@ -190,6 +193,35 @@ extern struct pr_usrreqs sctp_usrreqs;
 		atomic_subtract_int(&(sb)->sb_ctl,SCTP_BUF_LEN((m))); \
 }
 
+
+#else
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	uint32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	    (sb)->sb_cc = 0;\
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    (sb)->sb_mbcnt = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	      (stcb)->asoc.sb_cc = 0; \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     (stcb)->asoc.my_rwnd_control_len = 0; \
+	  } \
+	} \
+	if (SCTP_BUF_TYPE(m) != MT_DATA && SCTP_BUF_TYPE(m) != MT_HEADER && \
+	    SCTP_BUF_TYPE(m) != MT_OOBDATA) \
+		atomic_subtract_int(&(sb)->sb_ctl,SCTP_BUF_LEN((m))); \
+}
+
+#endif
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,SCTP_BUF_LEN((m))); \
@@ -253,6 +285,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #else
 
+#ifdef INVARIANTS
+
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	int32_t val; \
 	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
@@ -274,6 +308,34 @@ extern struct pr_usrreqs sctp_usrreqs;
 	  } \
 	} \
 }
+
+#else
+
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	int32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	    (sb)->sb_cc = 0;\
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    (sb)->sb_mbcnt = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	     (stcb)->asoc.sb_cc = 0; \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     (stcb)->asoc.my_rwnd_control_len = 0; \
+	  } \
+	} \
+}
+
+
+#endif
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \

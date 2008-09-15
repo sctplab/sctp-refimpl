@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -388,12 +388,21 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				if(stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 					goto abandon;
 				} else {
+#ifdef INVARIANTS
 					if ((stcb->asoc.control_pdapi == NULL)  || (stcb->asoc.control_pdapi->tail_mbuf == NULL)) {
 						panic("This should not happen control_pdapi NULL?");
 					}
 					/* if we did not panic, it was a EOM */
 					panic("Bad chunking ??");
-					return;
+#else
+					if ((stcb->asoc.control_pdapi == NULL)  || (stcb->asoc.control_pdapi->tail_mbuf == NULL)) {
+					  SCTP_PRINTF("This should not happen control_pdapi NULL?\n");
+					}
+					SCTP_PRINTF("Bad chunking ??\n");
+					SCTP_PRINTF("Dumping re-assembly queue this will probably hose the association\n");
+					
+#endif					
+					goto abandon;
 				}
 			}
 			cntDel++;

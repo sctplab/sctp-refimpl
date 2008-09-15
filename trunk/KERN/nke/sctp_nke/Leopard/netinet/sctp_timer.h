@@ -31,7 +31,7 @@
 /* $KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 182405 2008-08-28 20:31:24Z rrs $");
 #endif
 
 #ifndef __sctp_timer_h__
@@ -100,6 +100,8 @@ sctp_autoclose_timer(struct sctp_inpcb *, struct sctp_tcb *,
 void sctp_audit_retranmission_queue(struct sctp_association *);
 
 void sctp_iterator_timer(struct sctp_iterator *it);
+
+void sctp_recover_sent_list(struct sctp_tcb *stcb);
 
 #if defined(__APPLE__)
 void sctp_slowtimo();

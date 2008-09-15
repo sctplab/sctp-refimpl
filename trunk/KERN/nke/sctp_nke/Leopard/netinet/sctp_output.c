@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 181054 2008-07-31 11:08:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3680,6 +3680,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
 #if !defined(__Windows__)
 			udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -4134,7 +4136,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 		if (port) {
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ - missing Linux fields */
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), packet_length - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
@@ -6964,8 +6968,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
   /* Setup for unordered if needed by looking
    * at the user sent info flags.
    */
-  if(sp->sinfo_flags & SCTP_UNORDERED) {
+  if (sp->sinfo_flags & SCTP_UNORDERED) {
 	rcv_flags |= SCTP_DATA_UNORDERED;
+  }
+  if (SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) && ((sp->sinfo_flags & SCTP_EOF) == SCTP_EOF)) {
+	rcv_flags |= SCTP_DATA_SACK_IMMEDIATELY;
   }
   /* clear out the chunk before setting up */
   memset(chk, 0, sizeof(*chk));
@@ -8211,6 +8218,13 @@ again_one_more_time:
 					SCTP_PRINTF("Warning chunk of %d bytes > mtu:%d and yet PMTU disc missed\n",
 						    chk->send_size, mtu);
 					chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
+				}
+				if (SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) &&
+				    ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) == SCTP_STATE_SHUTDOWN_PENDING)) {
+					struct sctp_data_chunk *dchkh;
+					
+					dchkh = mtod(chk->data, struct sctp_data_chunk *);
+					dchkh->ch.chunk_flags |= SCTP_DATA_SACK_IMMEDIATELY;
 				}
 				if (((chk->send_size <= mtu) && (chk->send_size <= r_mtu)) ||
 				    ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) && (chk->send_size <= asoc->peers_rwnd))) {
@@ -10471,6 +10485,8 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
 #if !defined(__Windows__)
 		udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+		udp->uh_sum = 0;
 #endif
 #endif
 		offset_out += sizeof(struct udphdr);
@@ -10546,14 +10562,16 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ missing Linux fields */
 		if (port) {
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), 
 						     sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
-		}
 #endif
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11538,6 +11556,8 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__)
 			udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -11594,13 +11614,15 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
-#if !(defined(__Userspace__) || defined(__Windows__)) /* UDP __Userspace__ - missing Linux fields */
 		if (port) {
+#if defined(__Windows__)
+			udp->uh_sum = 0;
+#elif !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
-		}
 #endif
+		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
 		/* Free the route if we got one back */
@@ -11628,9 +11650,12 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	struct ip *iph;
 	struct udphdr *udp = NULL;
 	struct mbuf *mout;
+
+#ifdef INET6
 #ifdef SCTP_DEBUG
 	struct sockaddr_in6 lsa6, fsa6;
 #endif
+#endif 
 	uint32_t val;
 	struct mbuf *at;
 	int len;
@@ -11737,6 +11762,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__)
  			udp->uh_sum = in_pseudo(out->ip_src.s_addr, out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
+#else
+ 			udp->uh_sum = 0;
 #endif
 #endif
 		}
@@ -11835,6 +11862,8 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), len - sizeof(struct ip6_hdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
+#else
+			udp->uh_sum = 0;
 #endif
 		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
@@ -12180,7 +12209,7 @@ sctp_sosend(struct socket *so,
 		}
 	}
 	addr_to_use = addr;
-#ifdef INET6
+#if defined(INET6)  && !defined(__Userspace__) /* TODO port in6_sin6_2_sin */
 	if ((addr) && (addr->sa_family == AF_INET6)) {
 		struct sockaddr_in6 *sin6;
 
