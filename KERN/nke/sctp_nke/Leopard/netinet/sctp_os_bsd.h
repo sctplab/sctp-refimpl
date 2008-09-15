@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 181803 2008-08-17 23:27:27Z bz $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -41,6 +41,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 180387 2008-07-09 16:45:30Z r
 #include "opt_inet6.h"
 #include "opt_inet.h"
 #include "opt_sctp.h"
+
 #include <sys/param.h>
 #include <sys/ktr.h>
 #include <sys/systm.h>
@@ -66,7 +67,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 180387 2008-07-09 16:45:30Z r
 #include <sys/random.h>
 #include <sys/limits.h>
 #include <sys/queue.h>
-#if defined(__FreeBSD__) && __FreeBSD_version > 800000 && defined(VIMAGE)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
 #include <sys/vimage.h>
 #endif
 #include <machine/cpu.h>
@@ -158,9 +159,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 /*
  * Macros to expand out globals defined by various modules
  * to either a real global or a virtualized instance of one,
- * depending on whether VIMAGE is defined in opt_vimage.h
- * XXX opt_vimage.h not yet present,  more framework to come.
- * XXX so will always evaluate to the global for now (VIMAGE not defined)
+ * depending on whether VIMAGE is defined.
  */
 /* first define modules that supply us information */
 #define MOD_NET net
@@ -169,11 +168,15 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define MOD_IPSEC ipsec
 
 /* then define the macro(s) that hook into the vimage macros */
-#if defined(__FreeBSD__) && __FreeBSD_version > 800000 && defined(VIMAGE)
-# define VSYMNAME(__MODULE) vnet_ ## __MODULE
-# define MODULE_GLOBAL(__MODULE, __SYMBOL) VSYM(VSYMNAME(__MODULE), __SYMBOL)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044 && defined(VIMAGE)
+#if 0
+#define VSYMNAME(__MODULE) vnet_ ## __MODULE
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) VSYM(VSYMNAME(__MODULE), __SYMBOL)
 #else
-# define MODULE_GLOBAL(__MODULE, __SYMBOL) (__SYMBOL)
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) V_ ## __SYMBOL
+#endif
+#else
+#define MODULE_GLOBAL(__MODULE, __SYMBOL) (__SYMBOL)
 #endif
 /*
  *
@@ -457,7 +460,7 @@ typedef struct callout sctp_os_timer_t;
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
-#if __FreeBSD_version >= 800037
+#if __FreeBSD_version >= 800045
 #define SCTP_RTALLOC(ro, vrf_id) in_rtalloc_ign((struct route *)ro, 0UL, vrf_id)
 #else
 #define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)

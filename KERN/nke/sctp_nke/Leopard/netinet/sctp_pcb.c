@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 181054 2008-07-31 11:08:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 182268 2008-08-27 13:13:35Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3090,8 +3090,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
                         last  = MODULE_GLOBAL(MOD_INET, ipport_lowlastauto);
                 } else {
 #endif
-                        first = ipport_firstauto;
-                        last  = ipport_lastauto;
+ 			first = MODULE_GLOBAL(MOD_INET, ipport_firstauto);
+ 			last = MODULE_GLOBAL(MOD_INET, ipport_lastauto);
 #if defined(__FreeBSD__) || defined(__APPLE__)
                 }
 #endif
@@ -3596,6 +3596,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 2);
 #endif
+			inp->sctp_socket = NULL;
 			return;
 		}
 	}

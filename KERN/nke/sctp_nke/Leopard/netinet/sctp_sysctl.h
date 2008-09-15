@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -158,7 +158,7 @@ struct sctp_sysctl {
 #define SCTPCTL_STRICT_SACKS_DESC	"Enable SCTP Strict SACK checking"
 #define SCTPCTL_STRICT_SACKS_MIN	0
 #define SCTPCTL_STRICT_SACKS_MAX	1
-#define SCTPCTL_STRICT_SACKS_DEFAULT	0
+#define SCTPCTL_STRICT_SACKS_DEFAULT	1
 
 /* loopback_nocsum: Enable NO Csum on packets sent on loopback */
 #define SCTPCTL_LOOPBACK_NOCSUM_DESC	"Enable NO Csum on packets sent on loopback"

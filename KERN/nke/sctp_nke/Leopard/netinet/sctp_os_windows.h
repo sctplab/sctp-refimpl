@@ -82,14 +82,14 @@ struct proc {
 #define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #if defined(SCTP_DEBUG)
-extern uint32_t sctp_debug_on;
+extern uint32_t *sctp_debug_on;
 #define SCTPDBG sctpdebug
 __inline void
 sctpdebug(uint32_t level, char *format, ...)
 {
 	va_list va;
 	va_start(va, format);
-	if (sctp_debug_on & level) {
+	if (*sctp_debug_on & level) {
 		vDbgPrintEx(DPFLTR_IHVNETWORK_ID, DPFLTR_ERROR_LEVEL, format, va);
 	}
 	va_end(va);
@@ -97,7 +97,7 @@ sctpdebug(uint32_t level, char *format, ...)
 #define SCTPDBG_ADDR(level, addr) \
 { \
 	do { \
-		if (sctp_debug_on & level) { \
+		if (*sctp_debug_on & level) { \
 			sctp_print_address(addr); \
 		} \
 	} while (0); \
@@ -105,7 +105,7 @@ sctpdebug(uint32_t level, char *format, ...)
 #define SCTPDBG_PKT(level, iph, sh) \
 { \
 	do { \
-		if (sctp_debug_on & level) { \
+		if (*sctp_debug_on & level) { \
 			sctp_print_address_pkt(iph, sh); \
 		} \
 	} while (0); \

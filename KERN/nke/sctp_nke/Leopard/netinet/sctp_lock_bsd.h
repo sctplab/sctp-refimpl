@@ -70,7 +70,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 179786 2008-06-14 13:24:49Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 
@@ -429,14 +429,20 @@ extern int sctp_logoff_stuff;
                 do { \
   	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
-
+#ifdef INVARIANTS
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
                        if(SCTP_BASE_INFO(ipi_count_chunk) == 0) \
                              panic("chunk count to 0?");    \
   	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
-
+#else
+#define SCTP_DECR_CHK_COUNT() \
+                do { \
+                       if(SCTP_BASE_INFO(ipi_count_chunk) != 0) \
+  	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
+	        } while (0)
+#endif 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
 		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \

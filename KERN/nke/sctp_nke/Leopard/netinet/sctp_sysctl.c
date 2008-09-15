@@ -964,14 +964,61 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
             "S,xassoc", "List of active SCTP associations");
 
 #elif defined(__Windows__)
+int sctp_over_udp_start(uint16_t);
+void sctp_over_udp_stop(void);
+
+static
+int
+sysctl_sctp_udp_tunneling_check(
+    struct sysctl *sysctl,
+    void *data,
+    uint32_t size)
+{
+	uint32_t new_sctp_udp_tunneling_port = 0;
+
+	if (size != sizeof(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port))) {
+		return -1;
+	}
+
+	new_sctp_udp_tunneling_port = *(uint32_t *)data;
+
+	if (new_sctp_udp_tunneling_port > 0xffff) {
+		return -1;
+	}
+	if (new_sctp_udp_tunneling_port == SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)) {
+		return 0;
+	}
+
+	if (SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)) {
+		sctp_over_udp_stop();
+	}
+	if (new_sctp_udp_tunneling_port) {
+		if (sctp_over_udp_start((uint16_t)new_sctp_udp_tunneling_port) == 0) {
+			SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = new_sctp_udp_tunneling_port;
+		} else {
+			SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = 0;
+		}
+	} else {
+		SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = 0;
+	}
+	return 0;
+}
+
 void sysctl_setup(void)
 {
 #ifdef SCTP_DEBUG
-	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", "Configure debug output", &sctp_debug_on, sizeof(sctp_debug_on));
+	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", SCTPCTL_DEBUG_DESC,
+	    &SCTP_BASE_SYSCTL(sctp_debug_on), sizeof(SCTP_BASE_SYSCTL(sctp_debug_on)),
+	    NULL);
 #endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
-	sysctl_create(CTLTYPE_STRUCT, CTLFLAG_RD, "sctp_log", "SCTP logging (struct sctp_log)", &sctp_log, sizeof(sctp_log));
+	sysctl_create(CTLTYPE_STRUCT, CTLFLAG_RD, "sctp_log", "SCTP logging (struct sctp_log)",
+	    &SCTP_BASE_SYSCTL(sctp_log), sizeof(SCTP_BASE_SYSCTL(sctp_log)),
+	    NULL);
 #endif
+	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "udp_tunneling_port", SCTPCTL_UDP_TUNNELING_PORT_DESC,
+	    &SCTP_BASE_SYSCTL(sctp_udp_tunneling_port), sizeof(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)),
+	    sysctl_sctp_udp_tunneling_check);
 }
 
 #endif

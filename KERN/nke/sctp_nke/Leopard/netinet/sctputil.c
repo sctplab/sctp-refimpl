@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 181054 2008-07-31 11:08:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -929,7 +929,9 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 			asoc->my_vtag = override_tag;
 		} else {
 			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
+#ifdef INVARIANTS
 			panic("Huh is_in_timewait fails");
+#endif 
 			return (ENOMEM);
 		}
 
@@ -5040,6 +5042,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
+	stage_right:
 		if (holds_lock == 0)
 			SCTP_IPI_ADDR_RUNLOCK();
 		return (NULL);
@@ -5061,7 +5064,13 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 	}
 	LIST_FOREACH(sctp_ifap, hash_head, next_bucket) {
 		if (sctp_ifap == NULL) {
+#ifdef INVARIANTS
 			panic("Huh LIST_FOREACH corrupt");
+		        goto stage_right;
+#else
+			SCTP_PRINTF("LIST corrupt of sctp_ifap's?\n");
+			goto stage_right;
+#endif
 		}
 		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
 			continue;
@@ -5703,6 +5712,11 @@ sctp_sorecvmsg(struct socket *so,
 			bcopy(&sin->sin_addr,
 			      &sin6.sin6_addr.s6_addr[3],
 			      sizeof(sin6.sin6_addr.s6_addr[3]));
+#elif defined(__Windows__)
+			((uint32_t *)&sin6.sin6_addr)[2] = htonl(0xffff);
+			bcopy(&sin->sin_addr,
+			      &((uint32_t *)&sin6.sin6_addr)[3],
+			      sizeof(uint32_t));
 #else
 			sin6.sin6_addr.s6_addr32[2] = htonl(0xffff);
 			bcopy(&sin->sin_addr,
@@ -6137,10 +6151,10 @@ sctp_sorecvmsg(struct socket *so,
 		    (no_rcv_needed == 0))
 			sctp_user_rcvd(stcb, &freed_so_far, hold_rlock, rwnd_req);
 	}
-
-	if (msg_flags)
-		*msg_flags = out_flags;
  out:
+	if (msg_flags) {
+		*msg_flags = out_flags;
+	}
 	if (((out_flags & MSG_EOR) == 0) && 
 	    ((in_flags & MSG_PEEK) == 0) &&
 	    (sinfo) &&
@@ -6171,7 +6185,12 @@ sctp_sorecvmsg(struct socket *so,
 		 * the atomic add to the refcnt.
 		 */
 		if (stcb == NULL) {
+#ifdef INVARIANTS
 			panic("stcb for refcnt has gone NULL?");
+			goto stage_left;
+#else
+			goto stage_left;
+#endif
 		}
 		atomic_add_int(&stcb->asoc.refcnt, -1);
 		freecnt_applied = 0;
@@ -6193,6 +6212,7 @@ sctp_sorecvmsg(struct socket *so,
 				       so->so_rcv.sb_cc);
 		}
 	}
+ stage_left:
 	if (wakeup_read_socket) {
 		sctp_sorwakeup(inp, so);
 	}
