@@ -219,8 +219,8 @@ int main(int argc, char *argv[])
 		xstcb = (struct xsctp_tcb *)(buf + offset);
 		while (xstcb->last == 0) {
 			xstcb = (struct xsctp_tcb *)(buf + offset);
-			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), HBInterval=%u, MTU=%u, Msgs(R/S)=(%u/%u), refcnt=%u\n\t\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t\tTag(L/R)=(%x/%x).\n",
-			       xstcb->remote_port, xstcb->state, xstcb->in_streams, xstcb->out_streams, xstcb->heartbeat_interval, xstcb->mtu, xstcb->total_recvs, xstcb->total_sends, xstcb->refcnt, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag);
+			printf("\tAssociation towards port=%d, state=%d, Streams(I/O)=(%u/%u), HBInterval=%u, MTU=%u, Msgs(R/S)=(%u/%u), refcnt=%u\n\t\tTSN(init/high/cum/cumack)=(%x/%x/%x/%x),\n\t\tTag(L/R)=(%x/%x), peer_rwnd = %u.\n",
+			       xstcb->remote_port, xstcb->state, xstcb->in_streams, xstcb->out_streams, xstcb->heartbeat_interval, xstcb->mtu, xstcb->total_recvs, xstcb->total_sends, xstcb->refcnt, xstcb->initial_tsn, xstcb->highest_tsn, xstcb->cumulative_tsn, xstcb->cumulative_tsn_ack, xstcb->local_tag, xstcb->remote_tag, xstcb->peers_rwnd);
 			offset += sizeof(struct xsctp_tcb);
 
 			printf("\t\tLocal addresses:");
