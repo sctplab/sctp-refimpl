@@ -9129,9 +9129,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		if ((SCTP_BASE_SYSCTL(sctp_max_retran_chunk)) &&
 		    (chk->snd_count >= SCTP_BASE_SYSCTL(sctp_max_retran_chunk))) {
 			/* Gak, we have exceeded max unlucky retran, abort! */
-			SCTP_PRINTF("Gak, chk->snd_count:%d >= max:%d - send abort\n",
+			SCTP_PRINTF("Gak, chk->snd_count:%d >= max:%d, TSN=%x - send abort\n",
 				    chk->snd_count,
-				    SCTP_BASE_SYSCTL(sctp_max_retran_chunk));
+				    SCTP_BASE_SYSCTL(sctp_max_retran_chunk), chk->rec.data.TSN_seq);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			sctp_abort_an_association(stcb->sctp_ep, stcb, 0, NULL, so_locked);
 			SCTP_TCB_LOCK(stcb);
