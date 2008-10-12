@@ -62,6 +62,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 181464 2008-08-09 11:28:57Z
  * them in comments in the mac-os file.
  */
 #ifndef __Panda__
+#ifndef __Windows__
 MALLOC_DEFINE(SCTP_M_MAP, "sctp_map", "sctp asoc map descriptor");
 MALLOC_DEFINE(SCTP_M_STRMI, "sctp_stri", "sctp stream in array");
 MALLOC_DEFINE(SCTP_M_STRMO, "sctp_stro", "sctp stream out array");
@@ -81,6 +82,27 @@ MALLOC_DEFINE(SCTP_M_TIMW, "sctp_timw", "sctp time block");
 MALLOC_DEFINE(SCTP_M_MVRF, "sctp_mvrf", "sctp mvrf pcb list");
 MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
 MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
+#else
+MALLOC_DEFINE(SCTP_M_MAP, 'nm00', "sctp_map", "sctp asoc map descriptor");
+MALLOC_DEFINE(SCTP_M_STRMI, 'nm01', "sctp_stri", "sctp stream in array");
+MALLOC_DEFINE(SCTP_M_STRMO, 'nm02', "sctp_stro", "sctp stream out array");
+MALLOC_DEFINE(SCTP_M_ASC_ADDR, 'nm03', "sctp_aadr", "sctp asconf address");
+MALLOC_DEFINE(SCTP_M_ASC_IT, 'nm04', "sctp_a_it", "sctp asconf iterator");
+MALLOC_DEFINE(SCTP_M_AUTH_CL, 'nm05', "sctp_atcl", "sctp auth chunklist");
+MALLOC_DEFINE(SCTP_M_AUTH_KY, 'nm06', "sctp_atky", "sctp auth key");
+MALLOC_DEFINE(SCTP_M_AUTH_HL, 'nm07', "sctp_athm", "sctp auth hmac list");
+MALLOC_DEFINE(SCTP_M_AUTH_IF, 'nm08', "sctp_athi", "sctp auth info");
+MALLOC_DEFINE(SCTP_M_STRESET, 'nm09', "sctp_stre", "sctp stream reset");
+MALLOC_DEFINE(SCTP_M_CMSG, 'nm10', "sctp_cmsg", "sctp CMSG buffer");
+MALLOC_DEFINE(SCTP_M_COPYAL, 'nm11', "sctp_cpal", "sctp copy all");
+MALLOC_DEFINE(SCTP_M_VRF, 'nm12', "sctp_vrf", "sctp vrf struct");
+MALLOC_DEFINE(SCTP_M_IFA, 'nm13', "sctp_ifa", "sctp ifa struct");
+MALLOC_DEFINE(SCTP_M_IFN, 'nm14', "sctp_ifn", "sctp ifn struct");
+MALLOC_DEFINE(SCTP_M_TIMW, 'nm15', "sctp_timw", "sctp time block");
+MALLOC_DEFINE(SCTP_M_MVRF, 'nm16', "sctp_mvrf", "sctp mvrf pcb list");
+MALLOC_DEFINE(SCTP_M_ITER, 'nm17', "sctp_iter", "sctp iterator control");
+MALLOC_DEFINE(SCTP_M_SOCKOPT, 'nm18', "sctp_socko", "sctp socket option");
+#endif
 #endif
 
 #if defined(__Userspace__)
