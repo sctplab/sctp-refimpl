@@ -10,6 +10,13 @@
 #include <sys/types.h>
 
 #if 1
+#if defined(__Userspace_os_Darwin)
+#include <libkern/OSAtomic.h>
+#define atomic_add_int(addr, val)	OSAtomicAdd32Barrier(val, (int32_t *)addr)
+#define atomic_fetchadd_int(addr, val)	OSAtomicAdd32Barrier(val, (int32_t *)addr)
+#define atomic_subtract_int(addr, val)	OSAtomicAdd32Barrier(-val, (int32_t *)addr)
+#define atomic_cmpset_int(dst, exp, src) OSAtomicCompareAndSwapIntBarrier(exp, src, (int *)dst)
+#else
 /* Using gcc built-in functions for atomic memory operations
    Reference: http://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
    Requires gcc version 4.1.0
@@ -37,6 +44,7 @@
  */
 
 #define atomic_cmpset_int(dst, exp, src) __sync_bool_compare_and_swap(dst, exp, src)
+#endif
 
 static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
 
