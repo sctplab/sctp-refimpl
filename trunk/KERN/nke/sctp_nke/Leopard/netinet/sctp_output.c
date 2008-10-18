@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 182367 2008-08-28 09:44:07Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 184028 2008-10-18 15:54:25Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9129,9 +9129,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		if ((SCTP_BASE_SYSCTL(sctp_max_retran_chunk)) &&
 		    (chk->snd_count >= SCTP_BASE_SYSCTL(sctp_max_retran_chunk))) {
 			/* Gak, we have exceeded max unlucky retran, abort! */
-			SCTP_PRINTF("Gak, chk->snd_count:%d >= max:%d, TSN=%x - send abort\n",
+			SCTP_PRINTF("Gak, chk->snd_count:%d >= max:%d - send abort\n",
 				    chk->snd_count,
-				    SCTP_BASE_SYSCTL(sctp_max_retran_chunk), chk->rec.data.TSN_seq);
+				    SCTP_BASE_SYSCTL(sctp_max_retran_chunk));
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			sctp_abort_an_association(stcb->sctp_ep, stcb, 0, NULL, so_locked);
 			SCTP_TCB_LOCK(stcb);
