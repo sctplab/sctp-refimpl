@@ -1,0 +1,30 @@
+#!/bin/sh
+echo "Checking and creating soft links if required ..."
+for i in netinet user_include user_lib
+do
+        if test ! -d $i
+        then
+# commented line uses old mercurial forest
+#        ln -s ../KERN.hg/userspace/build/$i
+# commented line assumes Randall's cvs KERN and our hg userspace
+#   (containing apps/) are in the same directory
+#        ln -s ../../KERN/userspace/build/$i
+# uncommented line assumes apps directory in Randall's cvs KERN userspace
+        ln -s ../build/$i
+        echo "Linking $i"
+        fi
+done
+
+if test ! -e ./libuserspace.a
+then
+# commented line uses old mercurial forest
+#ln -s ../KERN.hg/userspace/build/libuserspace.a
+# commented line assumes Randall's cvs KERN and our hg userspace
+#   (containing apps/) are in the same directory
+#ln -s ../../KERN/userspace/build/libuserspace.a
+# 
+# uncommented line assumes apps directory in Randall's cvs KERN userspace
+ln -s ../build/libuserspace.a
+echo "Linking libuserspace.a"
+fi
+
