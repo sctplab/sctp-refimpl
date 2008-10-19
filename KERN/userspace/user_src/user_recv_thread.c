@@ -94,7 +94,6 @@ recv_function_udp(void *arg)
 	char cmsgbuf[CMSG_SPACE(sizeof (struct in_addr))];
 	struct cmsghdr *cmsg;
 
-	
 	while (1) {
 		for (i = 0; i < to_fill; i++) {
 			/* Not getting the packet header. Tests with chain of one run
@@ -152,9 +151,9 @@ recv_function_udp(void *arg)
 				memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
 			}
 		}
-		
+
 		ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
-		
+
 		ip = mtod(ip_m, struct ip *);
 		bzero((void *)ip, sizeof(struct ip));
 		ip->ip_v = IPVERSION;
@@ -164,10 +163,10 @@ recv_function_udp(void *arg)
 		SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + n;
 		SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
 		SCTP_BUF_NEXT(ip_m) = recvmbuf[0];
-		
+
 		SCTPDBG(SCTP_DEBUG_INPUT1, "%s: Received %d bytes.", __func__, n);
 		SCTPDBG(SCTP_DEBUG_INPUT1, " - calling sctp_input with off=%d\n", (int)sizeof(struct ip));
-		
+
 		/* process incoming data */
 		/* sctp_input frees this mbuf. */
 		sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
