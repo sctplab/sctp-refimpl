@@ -3673,16 +3673,14 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		  }
 		}
 		if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(ip + 1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
 			udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 #else
 			udp->uh_sum = 0;
-#endif
 #endif
 		}
 
@@ -4090,13 +4088,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		ip6h->ip6_src = lsa6->sin6_addr;
 
 		if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(ip6h + 1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip6_hdr));	
 			udp->uh_sum = 0;
-#endif
 		}
 
 		/*
@@ -10463,16 +10459,14 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 		return;
 	}
 	if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 		udp = (struct udphdr *)comp_cp;
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
 		udp->uh_ulen = htons(sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
 		udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 #else
 		udp->uh_sum = 0;
-#endif
 #endif
 		offset_out += sizeof(struct udphdr);
 		comp_cp = (struct sctp_shutdown_complete_msg *)((caddr_t)comp_cp + sizeof(struct udphdr));
@@ -11471,12 +11465,10 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 	udp = (struct udphdr *)abm;
 	if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
 		/* set udp->uh_ulen later */	
 		udp->uh_sum = 0;
-#endif
 		iphlen_out += sizeof(struct udphdr);
 		abm = (struct sctp_abort_msg *)((caddr_t)abm + sizeof(struct udphdr));
 	}
@@ -11537,13 +11529,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		ro._l_addr.sa.sa_family = AF_INET;
 #endif
 		if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - missing Linux fields */
 			udp->uh_ulen = htons(len - sizeof(struct ip));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
 			udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 #else
 			udp->uh_sum = 0;
-#endif
 #endif
 		}
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip_output:\n");
@@ -11740,16 +11730,14 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out->ip_len = htons(len);
 #endif
 		if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(out+1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip));
-#if !defined(__Windows__)
+#if !defined(__Windows__) && !defined(__Userspace__)
  			udp->uh_sum = in_pseudo(out->ip_src.s_addr, out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 #else
  			udp->uh_sum = 0;
-#endif
 #endif
 		}
 
@@ -11809,13 +11797,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		out6->ip6_dst = in6->ip6_src;
 		out6->ip6_plen = len - sizeof(struct ip6_hdr);
 		if (port) {
-#if !defined(__Userspace__) /* UDP __Userspace__ - fields not present in Linux */
 			udp = (struct udphdr *)(out6+1);
 			udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 			udp->uh_sum = 0;
-#endif
 		}
 #ifdef SCTP_DEBUG
 		bzero(&lsa6, sizeof(lsa6));
