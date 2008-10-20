@@ -144,12 +144,20 @@ recv_function_udp(void *arg)
 		assert(to_fill <= MAXLEN_MBUF_CHAIN);
 
 		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-			if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
-				dst.sin_family = AF_INET;
-				dst.sin_len = sizeof(struct sockaddr_in);
-				dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
-				memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
-			}
+#if !defined(__Userspace_os_Linux)
+                    if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
+                        dst.sin_family = AF_INET;
+                        dst.sin_len = sizeof(struct sockaddr_in);
+                        dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+                        memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
+                    }
+#else /* __Userspace_os_Linux */
+                    if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_PKTINFO)) {
+                        dst.sin_family = AF_INET;
+                        dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+                        memcpy((void *) &dst.sin_addr, (const void *) &(((struct in_pktinfo *) CMSG_DATA (cmsg))->ipi_addr), sizeof(struct in_addr));
+                    }                        
+#endif
 		}
 
 		ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
@@ -227,10 +235,17 @@ recv_thread_init()
 			perror("UDP socket failure");
 			exit(1);
 		}
+#if defined(IP_RECVDSTADDR)
 		if (setsockopt(userspace_udpsctp, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int)) < 0) {
 			perror("setsockopt: IP_RECVDSTADDR");
 			exit(1);
 		}
+#elif defined(IP_PKTINFO)
+		if (setsockopt(userspace_udpsctp, IPPROTO_IP, IP_PKTINFO, (const void *)&on, (int)sizeof(int)) < 0) {
+			perror("setsockopt: IP_PKTINFO");
+			exit(1);
+		}
+#endif
 		memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_SIN_LEN
 		addr_ipv4.sin_len         = sizeof(struct sockaddr_in);
