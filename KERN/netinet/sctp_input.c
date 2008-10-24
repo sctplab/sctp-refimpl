@@ -5592,7 +5592,6 @@ sctp_input(i_pak, va_alist)
 	}
 	return;
 }
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userland__)
 void
 sctp_input(i_pak, off)
 	struct mbuf *i_pak;
@@ -5600,4 +5599,3 @@ sctp_input(i_pak, off)
 {
 	sctp_input_with_port(i_pak, off, 0);
 }
-#endif

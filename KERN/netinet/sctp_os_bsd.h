@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 181803 2008-08-17 23:27:27Z bz $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 184205 2008-10-23 15:53:51Z des $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -260,19 +260,33 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 /*
  * general memory allocation
  */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
+#define SCTP_MALLOC(var, type, size, name) \
+    do { \
+	var = (type)malloc(size, name, M_NOWAIT); \
+    } while (0)
+#else
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, name, M_NOWAIT); \
     } while (0)
+#endif
 
-#define SCTP_FREE(var, type)	FREE(var, type)
+#define SCTP_FREE(var, type)	free(var, type)
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
+#define SCTP_MALLOC_SONAME(var, type, size) \
+    do { \
+	var = (type)malloc(size, M_SONAME, M_WAITOK | M_ZERO); \
+    } while (0)
+#else
 #define SCTP_MALLOC_SONAME(var, type, size) \
     do { \
 	MALLOC(var, type, size, M_SONAME, M_WAITOK | M_ZERO); \
     } while (0)
+#endif
 
-#define SCTP_FREE_SONAME(var)	FREE(var, M_SONAME)
+#define SCTP_FREE_SONAME(var)	free(var, M_SONAME)
 
 #define SCTP_PROCESS_STRUCT struct proc *
 

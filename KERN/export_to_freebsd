@@ -4,7 +4,14 @@ then
 echo "$0 version [600000, 601000, 602000, 700000, 800000]"
 exit
 fi
-
+if test $1 -eq "800000"
+then
+    ver=800044
+    echo "using ver:$ver"
+else
+    echo "using ver:$1"
+    ver=$1
+fi
 if test $# -eq 2
 then
 prepare_script=$2
@@ -14,5 +21,5 @@ fi
 
 for j in `cat export_freebsd_list`
 do
-	./$prepare_script $1 $j
+	./$prepare_script $ver $j
 done
