@@ -216,3 +216,20 @@ document sctp_showpacketlog
 walk the packet log
 end
 
+define sctp_showsentq
+set $_stcb=$arg0
+set $chk=$_stcb->asoc.sent_queue.tqh_first
+while ( $chk != 0 )
+  printf "chk:%X strm:%d seq:%d TSN:%x sent:%d size:%d\n", \
+   $chk, \
+   $chk->rec.data.stream_number, \
+   $chk->rec.data.stream_seq, \
+   $chk->rec.data.TSN_seq, \
+   $chk->sent, \
+   $chk->send_size
+  set $chk=$chk->sctp_next.tqe_next
+ end
+end
+document sctp_showsentq
+Show sent values in sent_queue
+end
