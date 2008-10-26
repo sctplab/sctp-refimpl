@@ -9,7 +9,7 @@
 #include <errno.h>
 #include <netdb.h>
 #include <strings.h>
-
+#include <string.h>
 
 int
 sctp_configure_address(union sctp_sockstore *s, char *host, char *port)
@@ -27,15 +27,11 @@ sctp_configure_address(union sctp_sockstore *s, char *host, char *port)
 	}
 	if (inet_pton(AF_INET6, host, (void *)&s->sin6.sin6_addr) == 1) {
 		s->sin6.sin6_port = lport;
-#ifdef HAVE_SA_LEN
 		s->sin6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
 		s->sa.sa_family = AF_INET6;
 	} else if (inet_pton(AF_INET, host, (void *)&s->sin.sin_addr) == 1) {
 		s->sin.sin_port = lport;
-#ifdef HAVE_SA_LEN
 		s->sin.sin_len = sizeof(struct sockaddr_in);
-#endif
 		s->sa.sa_family = AF_INET;
 	} else {
 		struct hostent *add;
@@ -52,9 +48,7 @@ sctp_configure_address(union sctp_sockstore *s, char *host, char *port)
 				bcopy(add->h_addr_list[0],
 				    (char *)&s->sin6.sin6_addr,
 				    sizeof(struct in6_addr));
-#ifdef HAVE_SA_LEN
 				s->sin6.sin6_len = sizeof(struct sockaddr_in6);
-#endif
 			}
 		} else {
 			/* Pull a v4 address */
@@ -63,9 +57,7 @@ sctp_configure_address(union sctp_sockstore *s, char *host, char *port)
 			bcopy(add->h_addr_list[0],
 			    (char *)&s->sin.sin_addr.s_addr,
 			    sizeof(struct in_addr));
-#ifdef HAVE_SA_LEN
 			s->sin.sin_len = sizeof(struct sockaddr_in);
-#endif
 			return (0);
 		}
 		printf("SCTP:Can't translate address %s\n", host);
@@ -142,7 +134,7 @@ main(int argc, char **argv)
   memset(&sinfo, 0, sizeof(sinfo));
   if (connect_first) {
     printf("Connecting first with a 1 second sleep after\n");
-    if (connect(sd, &s.sa, sizeof(s)) == -1 ) {
+    if (connect(sd, &s.sa, s.sa.sa_len) == -1 ) {
       printf("err:%d connect fails\n", errno);
       return (-1);
     }
@@ -153,7 +145,7 @@ main(int argc, char **argv)
   buf[send_siz-1] = 0;
   buf[send_siz-2] = '\n';
   ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
-  printf("send returns:%d sleeping for %d seconds\n", ret, delay_after_send);
+  printf("send returns:%d sleeping for %d seconds err:%d\n", ret, delay_after_send, errno);
   sleep(delay_after_send);
   close(sd);
 }
