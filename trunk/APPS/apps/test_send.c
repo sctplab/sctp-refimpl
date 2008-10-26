@@ -6,6 +6,9 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
+#include <errno.h>
+#include <netdb.h>
+#include <strings.h>
 
 
 int
@@ -150,7 +153,7 @@ main(int argc, char **argv)
   buf[send_siz-1] = 0;
   buf[send_siz-2] = '\n';
   ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
-  printf("send returns:%d sleeping for %d seconds\n", ret, delay_after_sending);
-  sleep(delay_after_sending);
+  printf("send returns:%d sleeping for %d seconds\n", ret, delay_after_send);
+  sleep(delay_after_send);
   close(sd);
 }
