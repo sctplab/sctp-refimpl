@@ -12098,6 +12098,10 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->put_last_out = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
+	if (sp->length == 0) {
+		*error = 0;
+		goto skip_copy;
+	}
 #if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
@@ -12105,6 +12109,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
+ skip_copy:
 	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
 		sp = NULL;
