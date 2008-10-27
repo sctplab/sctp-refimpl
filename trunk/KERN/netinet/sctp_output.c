@@ -12959,8 +12959,9 @@ sctp_lower_sosend(struct socket *so,
 	goto skip_preblock;
   }
   if (((max_len <= local_add_more) && 
-	   (SCTP_SB_LIMIT_SND(so) > local_add_more)) ||
-	  ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)))/*if*/ {
+	(SCTP_SB_LIMIT_SND(so) >= local_add_more)) ||
+       (max_len == 0) ||
+       ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)))/*if*/ {
 	/* No room right now ! */
 	SOCKBUF_LOCK(&so->so_snd);
 	inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
