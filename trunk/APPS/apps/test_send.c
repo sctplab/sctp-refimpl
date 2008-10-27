@@ -79,8 +79,10 @@ main(int argc, char **argv)
   int delay_after_send=60;
   int optlen;
   int connect_first=0;
+  int number = 1;
+
   union sctp_sockstore s;
-  while((i= getopt(argc,argv,"h:p:s:S:d:c?")) != EOF)
+  while((i= getopt(argc,argv,"h:p:n:s:S:d:c?")) != EOF)
     {
       switch(i) {
       case 'c':
@@ -100,6 +102,9 @@ main(int argc, char **argv)
 	break;
       case 'p':
 	port = optarg;
+	break;
+      case 'n':
+	number = strtol(optarg, NULL, 0);
 	break;
       case '?':
       default:
@@ -144,8 +149,12 @@ main(int argc, char **argv)
   memset(buf, 'A', sizeof(buf));
   buf[send_siz-1] = 0;
   buf[send_siz-2] = '\n';
-  ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
-  printf("send returns:%d sleeping for %d seconds err:%d\n", ret, delay_after_send, errno);
-  sleep(delay_after_send);
+  for (i = 0; i < number; i++) {
+    ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
+    printf("send returns:%d, err:%d\n", ret, errno);
+  }
+  /* sleep not in the loop to inspect blocking */
+  printf("now sleepinh for %d seconds.\n");
+  sleep(delay_after_send);  
   close(sd);
 }
