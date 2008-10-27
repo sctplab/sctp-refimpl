@@ -6,6 +6,7 @@
 #include <sys/socket.h>
 #include <netinet/in.h>
 #include <netinet/sctp.h>
+#include <arpa/inet.h>
 #include <errno.h>
 #include <netdb.h>
 #include <strings.h>
@@ -66,95 +67,107 @@ sctp_configure_address(union sctp_sockstore *s, char *host, char *port)
 	return (0);
 }
 
-
+int
 main(int argc, char **argv)
 {
-  char buf[65535];
-  struct sctp_sndrcvinfo sinfo;
-  int i,sd,ret;
-  size_t sendbufsiz=0;
-  size_t send_siz = 0;
-  char *host=NULL;
-  char *port=NULL;
-  int delay_after_send=60;
-  int optlen;
-  int connect_first=0;
-  int number = 1;
+	char buf[65535];
+	struct sctp_sndrcvinfo sinfo;
+	int i,sd,ret;
+	size_t sendbufsiz=0;
+	size_t send_siz = 0;
+	char *host=NULL;
+	char *port=NULL;
+	int delay_after_send=60;
+	int optlen;
+	int connect_first=0;
+	int bulk_seen = 0;
+	int number = 1;
 
-  union sctp_sockstore s;
-  while((i= getopt(argc,argv,"h:p:n:s:S:d:c?")) != EOF)
-    {
-      switch(i) {
-      case 'c':
-	connect_first = 1;
-	break;
-      case 'S':
-	sendbufsiz = strtol(optarg, NULL, 0);
-	break;
-      case 'd':
-	delay_after_send = strtol(optarg, NULL, 0);
-	break;
-      case 's':
-	send_siz = strtol(optarg, NULL, 0);
-	break;
-      case 'h':
-	host = optarg;
-	break;
-      case 'p':
-	port = optarg;
-	break;
-      case 'n':
-	number = strtol(optarg, NULL, 0);
-	break;
-      case '?':
-      default:
-	goto out_of;
-	break;
-      };
-    }
-  if ((host == NULL) ||
-      (port == NULL) ||
-      (sendbufsiz == 0) ||
-      (send_siz == 0)) {
-  out_of:
-    printf("Use %s -h host -p port -S snd-socket-buf-size -s send-siz [-d delay -c]\n",
-	   argv[0]);
-    return(-1);
-  }
-  if (sctp_configure_address(&s, host, port)) {
-    printf("host:%s port:%s invalid combination\n",
-	   host, port);
-    return (-1);
-  }
-  sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
-  if (sd == -1) {
-    printf("Can't open sctp socket err:%d\n", errno);
-    return (-1);
-  }
-  optlen = sizeof(sendbufsiz);
-  if(setsockopt(sd, SOL_SOCKET, SO_SNDBUF, &sendbufsiz, optlen) != 0){
-    printf("err:%d could not set sndbuf to %d\n",errno, sendbufsiz);
-    return (-1);
-  }
-  memset(&sinfo, 0, sizeof(sinfo));
-  if (connect_first) {
-    printf("Connecting first with a 1 second sleep after\n");
-    if (connect(sd, &s.sa, s.sa.sa_len) == -1 ) {
-      printf("err:%d connect fails\n", errno);
-      return (-1);
-    }
-    sleep(1);
-  }
-  /* prepare send buffer of AAAA\n0 */
-  memset(buf, 'A', sizeof(buf));
-  buf[send_siz-1] = 0;
-  buf[send_siz-2] = '\n';
-  for (i = 0; i < number; i++) {
-    ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
-    printf("send returns:%d, err:%d\n", ret, errno);
-  }
-  /* sleep not in the loop to inspect blocking */
-  printf("now sleeping for %d seconds.\n", delay_after_send);
-  sleep(delay_after_send);  
-  close(sd);
+	union sctp_sockstore s;
+	while((i= getopt(argc,argv,"h:p:n:s:S:d:bc?")) != EOF)
+	{
+		switch(i) {
+		case 'b':
+			bulk_seen = 1;
+			break;
+		case 'c':
+			connect_first = 1;
+			break;
+		case 'S':
+			sendbufsiz = strtol(optarg, NULL, 0);
+			break;
+		case 'd':
+			delay_after_send = strtol(optarg, NULL, 0);
+			break;
+		case 's':
+			send_siz = strtol(optarg, NULL, 0);
+			break;
+		case 'h':
+			host = optarg;
+			break;
+		case 'p':
+			port = optarg;
+			break;
+		case 'n':
+			number = strtol(optarg, NULL, 0);
+			break;
+		case '?':
+		default:
+			goto out_of;
+			break;
+		};
+	}
+	if ((host == NULL) ||
+	    (port == NULL) ||
+	    (sendbufsiz == 0) ||
+	    (send_siz == 0)) {
+	out_of:
+		printf("Use %s -h host -p port -S snd-socket-buf-size -s send-siz [-d delay -c -n num -b]\n",
+		       argv[0]);
+		return(-1);
+	}
+	if (sctp_configure_address(&s, host, port)) {
+		printf("host:%s port:%s invalid combination\n",
+		       host, port);
+		return (-1);
+	}
+	sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (sd == -1) {
+		printf("Can't open sctp socket err:%d\n", errno);
+		return (-1);
+	}
+	optlen = sizeof(sendbufsiz);
+	if(setsockopt(sd, SOL_SOCKET, SO_SNDBUF, &sendbufsiz, optlen) != 0){
+		printf("err:%d could not set sndbuf to %d\n",errno, sendbufsiz);
+		return (-1);
+	}
+	memset(&sinfo, 0, sizeof(sinfo));
+	if (connect_first) {
+		printf("Connecting first with a 1 second sleep after\n");
+		if (connect(sd, &s.sa, s.sa.sa_len) == -1 ) {
+			printf("err:%d connect fails\n", errno);
+			return (-1);
+		}
+		sleep(1);
+	}
+	/* prepare send buffer of AAAA\n0 */
+	memset(buf, 'A', sizeof(buf));
+	if (bulk_seen) {
+		buf[0] = 'b';
+		buf[1] = 'u';
+		buf[2] = 'l';
+		buf[3] = 'k';
+	}
+	buf[send_siz-1] = 0;
+	buf[send_siz-2] = '\n';
+	for (i = 0; i < number; i++) {
+		errno = 0;
+		ret = sctp_sendx(sd, buf, send_siz, &s.sa, 1, &sinfo, 0);
+		printf("send returns:%d, err:%d\n", ret, errno);
+	}
+	/* sleep not in the loop to inspect blocking */
+	printf("now sleeping for %d seconds.\n", delay_after_send);
+	sleep(delay_after_send);  
+	close(sd);
+	return (0);
 }
