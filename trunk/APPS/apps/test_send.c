@@ -154,7 +154,7 @@ main(int argc, char **argv)
     printf("send returns:%d, err:%d\n", ret, errno);
   }
   /* sleep not in the loop to inspect blocking */
-  printf("now sleepinh for %d seconds.\n". delay_after_sleep);
+  printf("now sleeping for %d seconds.\n", delay_after_send);
   sleep(delay_after_send);  
   close(sd);
 }
