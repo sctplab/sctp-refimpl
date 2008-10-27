@@ -5298,13 +5298,7 @@ sctp_trim_mbuf(struct mbuf *m)
 }
 #endif
 
-#if defined(__Userspace__)
-void
-sctp_input(i_pak, off)
-        struct mbuf *i_pak;
-        int off;
-#else
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 void
 sctp_input_with_port(i_pak, off, port)
 	struct mbuf *i_pak;
@@ -5326,7 +5320,6 @@ sctp_input(i_pak, va_alist)
 #endif
 #endif
 #endif
-#endif        
 {
 #ifdef SCTP_MBUF_LOGGING
 	struct mbuf *mat;
@@ -5348,7 +5341,7 @@ sctp_input(i_pak, va_alist)
 	struct sctp_chunkhdr *ch;
 	int refcount_up = 0;
 	int length, mlen, offset;
-#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
+#if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined (__Userspace__))
 	uint16_t port = 0;
 #endif
 
@@ -5599,7 +5592,6 @@ sctp_input(i_pak, va_alist)
 	}
 	return;
 }
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 sctp_input(i_pak, off)
 	struct mbuf *i_pak;
@@ -5607,4 +5599,3 @@ sctp_input(i_pak, off)
 {
 	sctp_input_with_port(i_pak, off, 0);
 }
-#endif

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 184028 2008-10-18 15:54:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 184340 2008-10-27 14:49:12Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -53,6 +53,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 184028 2008-10-18 15:54:25Z r
 #include <netinet/sctp_indata.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_input.h>
+#if defined(__Userspace_os_Linux)
+#define __FAVOR_BSD    /* (on Ubuntu at least) enables UDP header field names like BSD in RFC 768 */
+#endif
 #include <netinet/udp.h>
 #if defined(__APPLE__)
 #include <netinet/in.h>
@@ -12095,6 +12098,10 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->put_last_out = 0;
 	resv_in_first = sizeof(struct sctp_data_chunk);
 	sp->data = sp->tail_mbuf = NULL;
+	if (sp->length == 0) {
+		*error = 0;
+		goto skip_copy;
+	}
 #if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
@@ -12102,6 +12109,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 #if defined(__APPLE__)
 	SCTP_SOCKET_LOCK(SCTP_INP_SO(stcb->sctp_ep), 0);
 #endif
+ skip_copy:
 	if (*error) {
 		sctp_free_a_strmoq(stcb, sp);
 		sp = NULL;
@@ -12943,7 +12951,7 @@ sctp_lower_sosend(struct socket *so,
   }
 
   if (user_marks_eor) {
-	local_add_more = SCTP_BASE_SYSCTL(sctp_add_more_threshold);
+	local_add_more = min(SCTP_SB_LIMIT_SND(so), SCTP_BASE_SYSCTL(sctp_add_more_threshold));
   } else {
 	/*-
 	 * For non-eeor the whole message must fit in
@@ -12956,14 +12964,21 @@ sctp_lower_sosend(struct socket *so,
 	goto skip_preblock;
   }
   if (((max_len <= local_add_more) && 
-	   (SCTP_SB_LIMIT_SND(so) > local_add_more)) ||
-	  ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)))/*if*/ {
+	(SCTP_SB_LIMIT_SND(so) >= local_add_more)) ||
+       (max_len == 0) ||
+       ((stcb->asoc.chunks_on_out_queue+stcb->asoc.stream_queue_cnt) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)))/*if*/ {
 	/* No room right now ! */
 	SOCKBUF_LOCK(&so->so_snd);
 	inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
-	while ((SCTP_SB_LIMIT_SND(so) < (inqueue_bytes + SCTP_BASE_SYSCTL(sctp_add_more_threshold))) ||
-		   ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue) /*while*/)) {
-
+	while ((SCTP_SB_LIMIT_SND(so) < (inqueue_bytes + local_add_more)) ||
+	       ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)) /*while*/) {
+	  SCTPDBG(SCTP_DEBUG_OUTPUT1,"pre_block limit:%d <(inq:%d + %d) || (%d+%d > %d)\n",
+		  SCTP_SB_LIMIT_SND(so),
+		  inqueue_bytes,
+		  local_add_more,
+		  stcb->asoc.stream_queue_cnt,
+		  stcb->asoc.chunks_on_out_queue,
+		  SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue));
 	  if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
 		sctp_log_block(SCTP_BLOCK_LOG_INTO_BLKA,
 					   so, asoc, sndlen);
@@ -13578,7 +13593,7 @@ sctp_lower_sosend(struct socket *so,
 	(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
 								&reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
   }
-  SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d",
+  SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d\n",
 		  queue_only, stcb->asoc.peers_rwnd, un_sent,
 		  stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
 		  stcb->asoc.total_output_queue_size, error);
