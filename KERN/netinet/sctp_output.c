@@ -13581,7 +13581,7 @@ sctp_lower_sosend(struct socket *so,
 	(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
 								&reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
   }
-  SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d",
+  SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d\n",
 		  queue_only, stcb->asoc.peers_rwnd, un_sent,
 		  stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
 		  stcb->asoc.total_output_queue_size, error);
