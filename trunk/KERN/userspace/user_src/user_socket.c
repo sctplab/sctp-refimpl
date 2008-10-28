@@ -2133,10 +2133,12 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
     int i;
     struct ip *iphdr;
     struct sctphdr *sh;
+    struct udphdr *udp;
     int res;
     struct sockaddr_in dst;
     struct msghdr msg_hdr;
-
+    char *ptr;
+    
     *result = 0;    
     i=0;
     iovcnt = 0;
@@ -2160,56 +2162,122 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
     
     assert(send_count == send_len);
 
-    if (userspace_rawsctp > -1) {
+    if (userspace_rawsctp > -1 || userspace_udpsctp > -1) {
         
         iphdr = (struct ip *)send_iovec[0].iov_base;
-        if(i > 1)
-            sh = (struct sctphdr *) send_iovec[1].iov_base;
-        else
-            sh = (struct sctphdr *) ( ((char *) iphdr) + sizeof(struct ip));
-
         bzero(&dst, sizeof(dst));
         dst.sin_family = AF_INET; 
         dst.sin_addr.s_addr = iphdr->ip_dst.s_addr;
-	if(sh->dest_port == 0) {
-            SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to port 0! Assigning port...\n", send_len);
-            dst.sin_port = htons(8898); /* OOTB only - arbitrary TODO assign available port */
-	} else {
-            SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to supplied non-zero port!\n", send_len);
-            dst.sin_port = sh->dest_port;
-	}
 #if !defined(__Userspace_os_Linux)
         dst.sin_len = sizeof(dst); 
 #endif
 
-        if (iphdr->ip_src.s_addr == INADDR_ANY) {
-            /* TODO get addr of outgoing interface */
-        }
+        if(iphdr->ip_p == IPPROTO_UDP) {
+            /* if the upper layer protocol is UDP then take away the IP and UDP header
+             *  and send the remaining stuff over the UDP socket.
+             *
+             *  Do this by getting the port from the UDP part of send_iovec then adjusting
+             *  the send_iovec so that the IP and UDP portions are not sent.
+             */
 
-        /* TODO IP handles fragmentation? */
+            i=0;
+            
+            /* is first element only IP header? */
+            if(send_iovec[0].iov_len == sizeof(struct ip)) {
+                /* look at next element to get port */
+                i++;
+                ptr = send_iovec[i].iov_base;
+                
+            } else {
+                /* port is on the first element */
+                ptr = send_iovec[0].iov_base + sizeof(struct ip);
+            }
+            udp = (struct udphdr *) ptr;
+            dst.sin_port = udp->uh_dport;
+
+            /* which is the first element we send (i.e. the first past the UDP header)? */
+            if(i == 1) {
+                /* does this element have the UDP header and the SCTP header? */
+                if(send_iovec[1].iov_len == sizeof(struct udphdr)) { /* no */
+                    /* send from the next one in the chain */
+                    i++;
+                } else { /* yes */
+                    /* send from the later part of this element, but update the values */
+                    send_iovec[1].iov_len -= sizeof(struct udphdr);
+                    send_iovec[1].iov_base += sizeof(struct udphdr);
+                }
+                
+            } else { /* i == 0 */
+                /* does this element have only the IP and UDP header? */
+                if(send_iovec[0].iov_len == sizeof(struct udphdr) + sizeof(struct ip)) { /* yes */
+                    /* send from the next one in the chain */
+                    i++;
+                } else { /* no */
+                    /* send from the later part of this element, but update the values */
+                    send_iovec[0].iov_len -= (sizeof(struct udphdr) + sizeof(struct ip));
+                    send_iovec[0].iov_base += (sizeof(struct udphdr) + sizeof(struct ip));
+                }
+                
+            }
+            
+            /* sendto call to UDP socket and do error handling */
+            msg_hdr.msg_name = (struct sockaddr *) &dst;
+            msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
+            msg_hdr.msg_iov = &send_iovec[i];
+            msg_hdr.msg_iovlen = iovcnt - i;
+            msg_hdr.msg_control = NULL;
+            msg_hdr.msg_controllen = 0;
+            msg_hdr.msg_flags = 0;
+            if((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT))
+               != send_len) {
+                *result = errno;
+            }
+
+            
+        } else {
+            /* doing SCTP over IP so use the raw socket... */
         
-        /* TODO need to worry about ro->ro_dst as in ip_output? */
+            if(i > 1)
+                sh = (struct sctphdr *) send_iovec[1].iov_base;
+            else
+                sh = (struct sctphdr *) ( ((char *) iphdr) + sizeof(struct ip));
+
+            if(sh->dest_port == 0) {
+                SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to port 0! Assigning port...\n", send_len);
+                dst.sin_port = htons(8898); /* OOTB only - arbitrary TODO assign available port */
+            } else {
+                SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to supplied non-zero port!\n", send_len);
+                dst.sin_port = sh->dest_port;
+            }
+
+            if (iphdr->ip_src.s_addr == INADDR_ANY) {
+                /* TODO get addr of outgoing interface */
+            }
+
+            /* TODO IP handles fragmentation? */
+            
+            /* TODO need to worry about ro->ro_dst as in ip_output? */
 
 #if defined(__Userspace_os_Linux)
-        /* need to put certain fields into network order for Linux */
-        iphdr->ip_len = htons(iphdr->ip_len);
-        iphdr->ip_tos = htons(iphdr->ip_tos);
-        iphdr->ip_off = 0; /* when is this non-zero!?? TODO - FIX THIS HACK... */
+            /* need to put certain fields into network order for Linux */
+            iphdr->ip_len = htons(iphdr->ip_len);
+            iphdr->ip_tos = htons(iphdr->ip_tos);
+            iphdr->ip_off = 0; /* when is this non-zero!?? TODO - FIX THIS HACK... */
 #endif
 
-        msg_hdr.msg_name = (struct sockaddr *) &dst;
-        msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
-        msg_hdr.msg_iov = send_iovec;
-        msg_hdr.msg_iovlen = iovcnt;
-        msg_hdr.msg_control = NULL;
-        msg_hdr.msg_controllen = 0;
-        msg_hdr.msg_flags = 0;
-        if((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT))
-           != send_len) {
-            *result = errno;
+            msg_hdr.msg_name = (struct sockaddr *) &dst;
+            msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
+            msg_hdr.msg_iov = send_iovec;
+            msg_hdr.msg_iovlen = iovcnt;
+            msg_hdr.msg_control = NULL;
+            msg_hdr.msg_controllen = 0;
+            msg_hdr.msg_flags = 0;
+            if((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT))
+               != send_len) {
+                *result = errno;
+            }            
         }
-
-    }   
+    }
 }
 
 
@@ -2226,7 +2294,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
     struct mbuf;
     struct ip *ip;
     struct sctphdr *sh;
-    struct udp *udp;
+    struct udphdr *udp;
     struct sockaddr_in dst;
     int o_flgs = 0, res;
     /*    const int hdrincl = 1; comment when using separate receive thread */
@@ -2281,18 +2349,29 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
         ip = (struct ip *) psend_buf;
 	ptr = (char *) ip;
 	ptr += sizeof(struct ip);
-        if(ip->ip_p == 17) {
+        bzero(&dst, sizeof(dst));
+        dst.sin_family = AF_INET; 
+        dst.sin_addr.s_addr = ip->ip_dst.s_addr;
+#if !defined(__Userspace_os_Linux)
+        dst.sin_len = sizeof(dst); 
+#endif
+
+        if(ip->ip_p == IPPROTO_UDP) {
             /* if the upper layer protocol is UDP then take away the IP and UDP header
              *  and send the remaining stuff over the UDP socket.
              */
-            udp = (struct udp *) ptr;
-            ptr += sizeof(struct udp);
+            udp = (struct udphdr *) ptr;
+            ptr += sizeof(struct udphdr);
 
-            /* TODO what destination port do I send to?  the UDP encap port? which header to i get
-             *   the port from?
-             */
+            dst.sin_port = udp->uh_dport;
             
-            /* TODO sendto call to userspace_udpsctp, and error handling */
+            /* sendto call to UDP socket and do error handling */
+            if((res = sendto (userspace_udpsctp, psend_buf, send_len,
+                              o_flgs,(struct sockaddr *) &dst,
+                              sizeof(struct sockaddr_in)))
+               != send_len) {
+                *result = errno;
+            }
 
             
         } else {
@@ -2300,9 +2379,6 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
             
             sh = (struct sctphdr *) ptr;
 
-            bzero(&dst, sizeof(dst));
-            dst.sin_family = AF_INET; 
-            dst.sin_addr.s_addr = ip->ip_dst.s_addr;
             if(sh->dest_port == 0) {
                 SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to port 0! Assigning port...\n", send_len);
                 dst.sin_port = htons(8898); /* OOTB only - arbitrary TODO assign available port */
@@ -2310,9 +2386,6 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
                 SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to supplied non-zero port!\n", send_len);
                 dst.sin_port = sh->dest_port;
             }
-#if !defined(__Userspace_os_Linux)
-            dst.sin_len = sizeof(dst); 
-#endif
 
             if (ip->ip_src.s_addr == INADDR_ANY) {
                 /* TODO get addr of outgoing interface */
