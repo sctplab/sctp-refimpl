@@ -187,10 +187,10 @@ setReceiveBufferSize(int sfd, int new_size)
 {
 	int ch = new_size;
 	if (setsockopt (sfd, SOL_SOCKET, SO_RCVBUF, (void*)&ch, sizeof(ch)) < 0) {
-		perror("raw_setReceiveBufferSize setsockopt: SO_RCVBUF failed !\n");
+		perror("setReceiveBufferSize setsockopt: SO_RCVBUF failed !\n");
 		exit(1);
 	}
-	printf("raw_setReceiveBufferSize set receive buffer size to : %d bytes\n",ch);
+	printf("setReceiveBufferSize set receive buffer size to : %d bytes\n",ch);
 	return 0;
 }
 
@@ -199,10 +199,10 @@ setSendBufferSize(int sfd, int new_size)
 {
 	int ch = new_size;
 	if (setsockopt (sfd, SOL_SOCKET, SO_SNDBUF, (void*)&ch, sizeof(ch)) < 0) {
-		perror("raw_setSendBufferSize setsockopt: SO_RCVBUF failed !\n");
+		perror("setSendBufferSize setsockopt: SO_RCVBUF failed !\n");
 		exit(1);
 	}
-	printf("raw_setSendBufferSize set send buffer size to : %d bytes\n",ch);
+	printf("setSendBufferSize set send buffer size to : %d bytes\n",ch);
 	return 0;
 }
 
@@ -258,8 +258,8 @@ recv_thread_init()
 			perror("bind");
 			exit(1);
 		}
-		setReceiveBufferSize(userspace_rawsctp, SB_RAW); /* 128K */
-		setSendBufferSize(userspace_rawsctp, SB_RAW); /* 128K Is this setting net.inet.raw.maxdgram value? Should it be set to 64K? */
+		setReceiveBufferSize(userspace_udpsctp, SB_RAW); /* 128K */
+		setSendBufferSize(userspace_udpsctp, SB_RAW); /* 128K Is this setting net.inet.raw.maxdgram value? Should it be set to 64K? */
 	}
 
 	/* start threads here for receiving incoming messages */
