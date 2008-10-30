@@ -2228,8 +2228,8 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
             msg_hdr.msg_control = NULL;
             msg_hdr.msg_controllen = 0;
             msg_hdr.msg_flags = 0;
-            if((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT))
-               != send_len) {
+            if((res = sendmsg(userspace_udpsctp, &msg_hdr, MSG_DONTWAIT))
+               != send_len - (sizeof(struct udphdr) + sizeof(struct ip))) {
                 *result = errno;
             }
 
@@ -2369,7 +2369,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
             if((res = sendto (userspace_udpsctp, psend_buf, send_len,
                               o_flgs,(struct sockaddr *) &dst,
                               sizeof(struct sockaddr_in)))
-               != send_len) {
+               != send_len - (sizeof(struct udphdr) + sizeof(struct ip))) {
                 *result = errno;
             }
 
