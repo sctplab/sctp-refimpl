@@ -6,3 +6,7 @@
  SCTP_INP_INFO_WLOCK/SCTP_INP_INFO_WUNLOCK.
 -Imrovement: Get rid of unused variable now in sctp_init_asoc().
 -Bugfix: Reuse the correct vtag in sctp_add_vtag_to_timewait().
+-Improvement: Get rid of unused constant SCTP_TIME_WAIT_SHORT
+ in sctp_constants.h.
+-Improvement: Use all hash buckets of the vtag hash table.
+ Get rid of then unused constant SCTP_STACK_VTAG_HASH_SIZE_A.
