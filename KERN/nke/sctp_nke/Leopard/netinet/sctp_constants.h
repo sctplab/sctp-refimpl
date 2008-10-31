@@ -1018,8 +1018,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 180955 2008-07-29 09:06:35
  * entries must be searched to see if the tag is in timed wait. If so we
  * reject it.
  */
-#define SCTP_STACK_VTAG_HASH_SIZE   31
-#define SCTP_STACK_VTAG_HASH_SIZE_A 32
+#define SCTP_STACK_VTAG_HASH_SIZE   32
 
 
 /*
@@ -1032,12 +1031,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 180955 2008-07-29 09:06:35
  * Number of seconds of time wait for a vtag.
  */
 #define SCTP_TIME_WAIT 60
-
-/* This time wait is the same as the default cookie life 
- * since we now enter a tag in every time we send a cookie.
- * We want this shorter to avoid vtag depletion.
- */
-#define SCTP_TIME_WAIT_SHORT 60
 
 /* The system retains a cache of free chunks such to 
  * cut down on calls the memory allocation system. There
