@@ -919,8 +919,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #endif
 	asoc->sb_send_resv = 0;
 	if (override_tag) {
-		struct timeval now;
-		(void)SCTP_GETTIME_TIMEVAL(&now);
 		if (sctp_is_in_timewait(override_tag)) {
 			/* It must be in the time-wait hash, we put
 			 * it there when we aloc one. If not the
