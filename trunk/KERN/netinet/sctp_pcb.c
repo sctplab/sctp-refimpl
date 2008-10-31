@@ -4626,6 +4626,7 @@ sctp_is_in_timewait(uint32_t tag)
 	int found=0;
 	int i;
 
+	SCTP_INP_INFO_WLOCK();
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
@@ -4639,6 +4640,7 @@ sctp_is_in_timewait(uint32_t tag)
 				break;
 		}
 	}
+	SCTP_INP_INFO_WUNLOCK();
 	return(found);
 }
 
