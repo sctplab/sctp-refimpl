@@ -1,1 +1,8 @@
 -8.0 All in sync as of 10/18/2008
+-Improvement: Add \n on debug output in sctp_lower_sosend(). 
+-Improvement: panic() on INVARIANTS kernels if memory allocation
+ fails for a tagblock in sctp_add_vtag_to_timewait().
+-Bugfix: Protect code in sctp_is_in_timewait() by
+ SCTP_INP_INFO_WLOCK/SCTP_INP_INFO_WUNLOCK.
+-Imrovement: Get rid of unused variable now in sctp_init_asoc().
+-Bugfix: Reuse the correct vtag in sctp_add_vtag_to_timewait().
