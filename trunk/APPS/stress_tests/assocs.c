@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2007 Michael Tuexen, tuexen@fh-muenster.de,
+ * Copyright (C) 2008 Michael Tuexen, tuexen@fh-muenster.de,
  *
  * All rights reserved.
  *
@@ -38,10 +38,12 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUMBER_OF_THREADS 512
-#define RUNTIME 600
+#define NUMBER_OF_THREADS 250 
+#define RUNTIME 60
 #define PORT 12345
 #define BUFFER_SIZE (1<<16)
+
+static int done;
 
 static void *discard_server(void *arg)
 {
@@ -85,7 +87,7 @@ static void *create_associations(void *arg)
 	remote_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	remote_addr.sin_port        = htons(PORT);
 
-	while (1) {
+	while (!done) {
 		if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 			perror("socket");
 		}		
@@ -104,9 +106,12 @@ int main() {
 	
 	pthread_create(&tid, NULL, &discard_server, (void *)NULL);
 	sleep(1);
+	done = 0;
 	for(i = 0; i < NUMBER_OF_THREADS; i++) {
 		pthread_create(&tid, NULL, &create_associations, (void *)NULL);
 	}
 	sleep(RUNTIME);
+	done = 1;
+	sleep(1);
 	return (0);
 }
