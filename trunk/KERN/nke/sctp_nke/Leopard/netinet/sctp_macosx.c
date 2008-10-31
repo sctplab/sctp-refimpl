@@ -816,7 +816,6 @@ void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 		return;
 	}
 	if (length == 0) {
-		printf("Routing socket closed.\n");
 		return;
 	}
 
