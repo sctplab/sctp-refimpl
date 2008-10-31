@@ -4612,7 +4612,7 @@ sctp_delete_from_timewait(uint32_t tag)
 					break;
 				}
 			}
-			if(found)
+			if (found)
 				break;
 		}
 	}
@@ -4636,7 +4636,7 @@ sctp_is_in_timewait(uint32_t tag)
 					break;
 				}
 			}
-			if(found)
+			if (found)
 				break;
 		}
 	}
@@ -4673,8 +4673,8 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].v_tag = 0;
 					if (set == 0) {
 						/* Reuse it for my new tag */
-						twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
-						twait_block->vtag_block[0].v_tag = tag;
+						twait_block->vtag_block[i].tv_sec_at_expire = now.tv_sec + time;
+						twait_block->vtag_block[i].v_tag = tag;
 						set = 1;
 					}
 				}
