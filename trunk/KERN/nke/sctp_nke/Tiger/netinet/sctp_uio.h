@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29 2007/09/18 15:16:39 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 184029 2008-10-18 15:55:15Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -43,12 +43,21 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_uio.h,v 1.29 2007/09/18 15:16:39 rrs Ex
 #endif
 #endif
 
+#if !(defined(__Windows__))
 #if ! defined(_KERNEL)
 #include <stdint.h>
 #endif
 #include <sys/types.h>
 #include <sys/socket.h>
 #include <netinet/in.h>
+#endif
+#if defined(__Windows__)
+#if defined(_KERNEL)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#endif
+#endif
 
 typedef uint32_t sctp_assoc_t;
 
@@ -514,6 +523,7 @@ struct sctp_authkey {
 
 /* SCTP_HMAC_IDENT */
 struct sctp_hmacalgo {
+	uint32_t shmac_number_of_idents;
 	uint16_t shmac_idents[0];
 };
 
@@ -905,8 +915,8 @@ struct sctpstat {
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
 #define SCTP_STAT_DECR(_x) SCTP_STAT_DECR_BY(_x,1)
-#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&sctpstat._x, _d)
-#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_int(&sctpstat._x, _d)
+#define SCTP_STAT_INCR_BY(_x,_d) atomic_add_int(&SCTP_BASE_STAT(_x), _d)
+#define SCTP_STAT_DECR_BY(_x,_d) atomic_subtract_int(&SCTP_BASE_STAT(_x), _d)
 
 /* The following macros are for handling MIB values, */
 #define SCTP_STAT_INCR_COUNTER32(_x) SCTP_STAT_INCR(_x)
@@ -960,6 +970,7 @@ struct xsctp_tcb {
 	uint32_t cumulative_tsn;
 	uint32_t cumulative_tsn_ack;
 	uint32_t mtu;
+	uint32_t peers_rwnd;
 	uint32_t refcnt;
 	uint16_t local_port;                    /* sctpAssocEntry 3   */
 	uint16_t remote_port;                   /* sctpAssocEntry 4   */
@@ -1008,7 +1019,7 @@ struct sctp_log {
 /*
  * Kernel defined for sctp_send
  */
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 int
 sctp_lower_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -1023,7 +1034,7 @@ sctp_lower_sosend(struct socket *so,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#if !defined(__Panda__)
+#if !(defined(__Panda__) || defined (__Userspace__)) 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
 #elif defined(__Windows__)
@@ -1052,7 +1063,8 @@ sctp_sorecvmsg(struct socket *so,
 /*
  * API system calls
  */
-#if !(defined(_KERNEL))
+#if !(defined(_KERNEL)) && !(defined(__Userspace__))
+#if !defined(__Windows__)
 
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
@@ -1087,5 +1099,36 @@ ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
 
 __END_DECLS
 
+#else
+SOCKET sctp_peeloff __P((SOCKET, sctp_assoc_t));
+int sctp_bindx __P((SOCKET, struct sockaddr *, int, int));
+int sctp_connectx __P((SOCKET, const struct sockaddr *, int, sctp_assoc_t *));
+int sctp_getaddrlen __P((sa_family_t));
+int sctp_getpaddrs __P((SOCKET, sctp_assoc_t, struct sockaddr **));
+void sctp_freepaddrs __P((struct sockaddr *));
+int sctp_getladdrs __P((SOCKET, sctp_assoc_t, struct sockaddr **));
+void sctp_freeladdrs __P((struct sockaddr *));
+int sctp_opt_info __P((SOCKET, sctp_assoc_t, int, void *, socklen_t *));
+
+ssize_t sctp_sendmsg (SOCKET, const void *, size_t,
+    const struct sockaddr *,
+    socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
+
+ssize_t sctp_send __P((SOCKET sd, const void *msg, size_t len,
+    const struct sctp_sndrcvinfo *sinfo, int flags));
+
+ssize_t	sctp_sendx __P((SOCKET sd, const void *msg, size_t len,
+    struct sockaddr *addrs, int addrcnt,
+    struct sctp_sndrcvinfo *sinfo, int flags));
+
+ssize_t	sctp_sendmsgx __P((SOCKET sd, const void *, size_t,
+    struct sockaddr *, int,
+    uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
+
+sctp_assoc_t sctp_getassocid __P((SOCKET sd, struct sockaddr *sa));
+
+ssize_t sctp_recvmsg __P((SOCKET, void *, size_t, struct sockaddr *,
+    socklen_t *, struct sctp_sndrcvinfo *, int *));
+#endif				/* !__Windows__*/
 #endif				/* !_KERNEL */
 #endif				/* !__sctp_uio_h__ */

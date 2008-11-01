@@ -32,11 +32,14 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 180955 2008-07-29 09:06:35Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
 #define __sctp_constants_h__
+
+/* IANA assigned port number for SCTP over UDP encapsulation */
+#define SCTP_OVER_UDP_TUNNELING_PORT 9899
 
 /* Number of packets to get before sack sent by default */
 #define SCTP_DEFAULT_SACK_FREQ 2
@@ -272,6 +275,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
 
+/* default MULTIPLE_ASCONF mode enable(1)/disable(0) value (sysctl) */
+#define SCTP_DEFAULT_MULTIPLE_ASCONFS	0
+
 /* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
 #if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
 #define SCTP_DEFAULT_MOBILITY_BASE      0
@@ -380,8 +386,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
-#define SCTP_DATAGRAM_INBOUND		10011
-#define SCTP_READY_TO_TRANSMIT		10012
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
@@ -1014,8 +1018,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
  * entries must be searched to see if the tag is in timed wait. If so we
  * reject it.
  */
-#define SCTP_STACK_VTAG_HASH_SIZE   31
-#define SCTP_STACK_VTAG_HASH_SIZE_A 32
+#define SCTP_STACK_VTAG_HASH_SIZE   32
 
 
 /*
@@ -1028,12 +1031,6 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
  * Number of seconds of time wait for a vtag.
  */
 #define SCTP_TIME_WAIT 60
-
-/* This time wait is the same as the default cookie life 
- * since we now enter a tag in every time we send a cookie.
- * We want this shorter to avoid vtag depletion.
- */
-#define SCTP_TIME_WAIT_SHORT 60
 
 /* The system retains a cache of free chunks such to 
  * cut down on calls the memory allocation system. There
@@ -1076,11 +1073,16 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
      (((uint8_t *)&(a)->s_addr)[2] == 0) && \
      (((uint8_t *)&(a)->s_addr)[3] == 1))
 
-
+#if defined (__Userspace__)
+#define SCTP_GETTIME_TIMEVAL(x)	gettimeofday(x, NULL)
+#define SCTP_GETPTIME_TIMEVAL(x)  /* this doesn't seem to ever be used.. */
+#endif
+     
 #if defined(_KERNEL)
 
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
+#endif
 /*#if defined(__FreeBSD__) || defined(__APPLE__)*/
 /*#define SCTP_GETTIME_TIMEVAL(x) { \*/
 /*	(x)->tv_sec = ticks / 1000; \*/
@@ -1091,6 +1093,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_constants.h,v 1.34 2007/10/30 14:09:23 
 /*#define SCTP_GETTIME_TIMEVAL(x)	(microtime(x))*/
 /*#endif				 __FreeBSD__ */
 
+#if defined(_KERNEL) || defined(__Userspace__)
 #define sctp_sowwakeup(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1100,7 +1103,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 #define sctp_sowwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1131,7 +1134,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1142,7 +1145,7 @@ do { \
 	} \
 } while (0)
 #else
-/* FIXME */
+
 #define sctp_sorwakeup_locked(inp, so) \
 do { \
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_DONT_WAKE) { \
@@ -1154,5 +1157,5 @@ do { \
 } while (0)
 #endif
 
-#endif				/* _KERNEL */
+#endif				/* _KERNEL || __Userspace__*/
 #endif

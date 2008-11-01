@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.13 2007/10/01 03:22:28 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
 #ifndef __sctp_output_h__
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_output.h,v 1.13 2007/10/01 03:22:28 rrs
 
 #include <netinet/sctp_header.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 struct mbuf *
@@ -71,7 +71,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 			      sctp_route_t *ro, struct sctp_nets *net,
 			      int non_asoc_addr_ok, uint32_t vrf_id);
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 int
 sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro);
 int
@@ -87,7 +87,7 @@ void sctp_send_initiate(struct sctp_inpcb *, struct sctp_tcb *, int
 void
 sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
     struct mbuf *, int, int, struct sctphdr *, struct sctp_init_chunk *,
-    uint32_t, int);
+    uint32_t, uint16_t, int);
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
@@ -112,7 +112,7 @@ void sctp_send_shutdown_ack(struct sctp_tcb *, struct sctp_nets *);
 void sctp_send_shutdown_complete(struct sctp_tcb *, struct sctp_nets *);
 
 void sctp_send_shutdown_complete2(struct mbuf *, int, struct sctphdr *,
-				 uint32_t);
+				 uint32_t, uint16_t);
 
 void sctp_send_asconf(struct sctp_tcb *, struct sctp_nets *, int addr_locked);
 
@@ -134,6 +134,9 @@ sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
     struct mbuf *, PKTHREAD, int);
 #else
+#if defined(__Userspace__)
+/* sctp_output is called bu sctp_sendm. Not using sctp_sendm for __Userspace__ */
+#endif
 int
 sctp_output(struct sctp_inpcb *,
 #if defined(__Panda__)
@@ -217,10 +220,13 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 
 void
 sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,
-    struct mbuf *, uint32_t);
+    struct mbuf *, uint32_t, uint16_t);
 
-void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t);
+void sctp_send_operr_to(struct mbuf *, int, struct mbuf *, uint32_t, uint32_t, uint16_t);
 
+#endif /* _KERNEL || __Userspace__ */
+
+#if defined(_KERNEL) || defined (__Userspace__)
 int
 sctp_sosend(struct socket *so,
     struct sockaddr *addr,
@@ -241,6 +247,9 @@ sctp_sosend(struct socket *so,
 #elif defined(__Windows__)
     PKTHREAD p
 #else
+#if defined(__Userspace__)
+    /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
+#endif
     struct proc *p
 #endif
 #endif
@@ -248,3 +257,4 @@ sctp_sosend(struct socket *so,
 
 #endif
 #endif
+

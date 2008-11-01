@@ -204,7 +204,7 @@ typedef	__uint16_t	in_port_t;
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_PGM		113		/* PGM */
-#define IPPROTO_SCTP            132             /* SCTP */
+#define IPPROTO_SCTP		132		/* SCTP */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion */
 #define	IPPROTO_DIVERT		254		/* divert pseudo-protocol */
@@ -596,4 +596,4 @@ u_long	in_netof(struct in_addr);
 const char	*inet_ntop(int, const void *, char *, size_t); /* in libkern */
 #endif /* KERNEL */
 
-#endif _NETINET_IN_H_
+#endif /* _NETINET_IN_H_ */

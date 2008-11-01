@@ -34,9 +34,10 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet6/sctp6_var.h,v 1.9 2007/12/10 16:03:39 obrien Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_var.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
+/* TODO __Userspace__ IPv6 stuff... */
 #if defined(_KERNEL)
 
 #if defined(__FreeBSD__) || (__APPLE__) || defined(__Windows__)

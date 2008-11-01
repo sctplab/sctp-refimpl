@@ -45,10 +45,27 @@ __FBSDID("$FreeBSD$");
 #define SCTP_INP_INFO_WLOCK()
 #define SCTP_IPI_COUNT_INIT()
 
+
+#define SCTP_STATLOG_INIT_LOCK() 
+#define SCTP_STATLOG_LOCK()
+#define SCTP_STATLOG_UNLOCK()
+#define SCTP_STATLOG_DESTROY()
+
+#define SCTP_IPI_ITERATOR_WQ_INIT()
+#define SCTP_IPI_ITERATOR_WQ_LOCK()
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()
+
+
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY(_inp)
 #define SCTP_IPI_ADDR_LOCK()
 #define SCTP_IPI_ADDR_UNLOCK()
+
+/* address list locks */
+#define SCTP_IPI_ADDR_RLOCK() 						
+#define SCTP_IPI_ADDR_RUNLOCK() 
+#define SCTP_IPI_ADDR_WLOCK() 						
+#define SCTP_IPI_ADDR_WUNLOCK() 
 
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
@@ -104,72 +121,72 @@ __FBSDID("$FreeBSD$");
 /***************BEGIN all other count stuff**********************/
 #define SCTP_INCR_EP_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_ep++; \
+		       SCTP_BASE_INFO(ipi_count_ep++); \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_ep--; \
+		       SCTP_BASE_INFO(ipi_count_ep--); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
-	               sctppcbinfo.ipi_count_asoc++; \
+	               SCTP_BASE_INFO(ipi_count_asoc++); \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-	               sctppcbinfo.ipi_count_asoc--; \
+	               SCTP_BASE_INFO(ipi_count_asoc--); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
-	               sctppcbinfo.ipi_count_laddr++; \
+	               SCTP_BASE_INFO(ipi_count_laddr++); \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-	               sctppcbinfo.ipi_count_laddr--; \
+	               SCTP_BASE_INFO(ipi_count_laddr--); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
- 	               sctppcbinfo.ipi_count_raddr++; \
+ 	               SCTP_BASE_INFO(ipi_count_raddr++); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
- 	               sctppcbinfo.ipi_count_raddr--; \
+ 	               SCTP_BASE_INFO(ipi_count_raddr--); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
-  	               sctppcbinfo.ipi_count_chunk++; \
+  	               SCTP_BASE_INFO(ipi_count_chunk++); \
 	        } while (0)
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-  	               sctppcbinfo.ipi_count_chunk--; \
+  	               SCTP_BASE_INFO(ipi_count_chunk--); \
 	        } while (0)
 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_readq++; \
+		       SCTP_BASE_INFO(ipi_count_readq++); \
 	        } while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_readq--; \
+		       SCTP_BASE_INFO(ipi_count_readq--); \
 	        } while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_strmoq++; \
+		       SCTP_BASE_INFO(ipi_count_strmoq++); \
 	        } while (0)
 
 #define SCTP_DECR_STRMOQ_COUNT() \
                 do { \
-		       sctppcbinfo.ipi_count_strmoq--; \
+		       SCTP_BASE_INFO(ipi_count_strmoq--); \
 	        } while (0)
 
 

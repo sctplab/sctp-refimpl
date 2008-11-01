@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.c,v 1.8 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 184027 2008-10-18 15:53:31Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -585,13 +585,13 @@ update_crc32(uint32_t crc32c,
     unsigned char *buffer,
     unsigned int length)
 {
-	uint32_t offset;
+	uint32_t to_even_word;
 
 	if (length == 0) {
 		return (crc32c);
 	}
-	offset = ((uintptr_t) buffer) & 0x3;
-	return (sctp_crc32c_sb8_64_bit(crc32c, buffer, length, offset));
+	to_even_word = (4 - (((uintptr_t) buffer) & 0x3));
+	return (sctp_crc32c_sb8_64_bit(crc32c, buffer, length, to_even_word));
 }
 
 uint32_t sctp_crc_c[256] = {

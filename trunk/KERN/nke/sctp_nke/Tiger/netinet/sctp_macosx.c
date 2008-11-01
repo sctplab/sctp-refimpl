@@ -56,7 +56,6 @@
  * @APPLE_LICENSE_OSREFERENCE_HEADER_END@
  */
 
-#include <sctp.h>
 
 #include <sys/param.h>
 #include <sys/domain.h>
@@ -66,15 +65,18 @@
 #include <sys/socketvar.h>
 #include <net/route.h>
 #include <netinet/ip.h>
+#include <net/if_dl.h>
 #ifdef INET6
 #include <netinet/ip6.h>
 #endif
 #include <netinet/in_pcb.h>
+#include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctp_var.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
+#include <net/kpi_interface.h>
 
 #define APPLE_FILE_NO 5
 
@@ -89,6 +91,7 @@ extern struct fileops socketops;
 #include <sys/file_internal.h>
 #if defined(APPLE_LEOPARD)
 #define CONFIG_MACF_SOCKET_SUBSET 1
+#include <sys/namei.h>
 #include <sys/vnode_internal.h>
 #if CONFIG_MACF_SOCKET_SUBSET
 #include <security/mac_framework.h>
@@ -134,7 +137,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	if (error) {
 		if (error == EOPNOTSUPP)
 			error = ENOTSOCK;
-		return (error);
+		goto out;
 	}
 	if (head == NULL) {
 		error = EBADF;
@@ -147,7 +150,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 
 	error = sctp_can_peel_off(head, uap->assoc_id);
 	if (error) {
-		return (error);
+		goto out;
 	}
 
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
@@ -359,21 +362,18 @@ sctp_unlock_assert(struct socket *so)
 /*
  * timer functions
  */
-int sctp_main_timer_ticks = 0;
 
 void
 sctp_start_main_timer(void) {
 	/* bound the timer (in msec) */
-	if ((int)sctp_main_timer <= 1000/hz)
-		sctp_main_timer = 1000/hz;
-	sctp_main_timer_ticks = MSEC_TO_TICKS(sctp_main_timer);
-/*  printf("start main timer: interval %d\n", sctp_main_timer_ticks); */
-	timeout(sctp_fasttim, NULL, sctp_main_timer_ticks);
+	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) <= 1000/hz)
+		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
+	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
+	timeout(sctp_fasttim, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
 }
 
 void
 sctp_stop_main_timer(void) {
-/* printf("stop main timer\n"); */
 	untimeout(sctp_fasttim, NULL);
 }
 
@@ -588,9 +588,9 @@ sctp_slowtimo()
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 
-	inp = LIST_FIRST(&sctppcbinfo.inplisthead);
+	inp = LIST_FIRST(&SCTP_BASE_INFO(inplisthead));
 	while (inp) {
 		inp_next = LIST_NEXT(inp, inp_list);
 #ifdef SCTP_DEBUG
@@ -605,25 +605,68 @@ sctp_slowtimo()
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
-				lck_mtx_free(inp->inpcb_mtx, sctppcbinfo.mtx_grp);
-				SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_ep, inp);
+				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
 			}
 		}
 		inp = inp_next;
 	}
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx);
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
-	if ((sctp_debug_on & SCTP_DEBUG_PCB2) && (n > 0)) {
+	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		printf("sctp_slowtimo: inps: %u\n", n);
 	}
 #endif
 }
 #endif
 
+static void print_address(struct sockaddr *sa)
+{
+	struct sockaddr_in *sin;
+	struct sockaddr_in6 *sin6;
+	ushort port = 0;
+	int len = 0;
+	void *src;
+	char str[128];
+	const char *ptr = NULL;
+
+	switch(sa->sa_family) {
+	case AF_INET:
+		sin = (struct sockaddr_in *)sa;
+		src = (void *)&sin->sin_addr.s_addr;
+		port = ntohs(sin->sin_port);
+#ifdef HAVE_SA_LEN
+		len = sa->sa_len;
+#else
+		len = sizeof(*sin);
+#endif
+		break;
+	case AF_INET6:
+		sin6 = (struct sockaddr_in6 *)sa;
+		src = (void *)&sin6->sin6_addr;
+		port = ntohs(sin6->sin6_port);
+#ifdef HAVE_SA_LEN
+		len = sa->sa_len;
+#else
+		len = sizeof(*sin6);
+#endif
+		break;
+	default:
+		/* TSNH: unknown family */
+		printf("[unknown address family %d]", sa->sa_family);
+		return;
+	}
+	ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
+	if (ptr != NULL) 
+		printf("%s:%u", ptr, port);
+	else
+		printf("[cannot display address]:%u", port);
+}
+
 #if defined(SCTP_APPLE_AUTO_ASCONF)
-socket_t sctp_address_monitor_so = 0;
+socket_t sctp_address_monitor_so = NULL;
 
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
 #define NEXT_SA(sa) sa = (struct sockaddr *) \
@@ -632,210 +675,474 @@ socket_t sctp_address_monitor_so = 0;
 static void
 sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 {
-    int i;
-    for (i = 0; i < RTAX_MAX; i++) {
-	if (addrs & (1 << i)) {
-	    rti_info[i] = sa;
-	    NEXT_SA(sa);
-	} else {
-	    rti_info[i] = NULL;
+	int i;
+	for (i = 0; i < RTAX_MAX; i++) {
+		if (addrs & (1 << i)) {
+			rti_info[i] = sa;
+			NEXT_SA(sa);
+		} else {
+			rti_info[i] = NULL;
+		}
 	}
-    }
-}
-
-static void print_address(struct sockaddr *sa)
-{
-    struct sockaddr_in *sin;
-    struct sockaddr_in6 *sin6;
-    ushort port = 0;
-    int len = 0;
-    void *src;
-    char str[128];
-    const char *ptr = NULL;
-
-    switch(sa->sa_family) {
-    case AF_INET:
-	sin = (struct sockaddr_in *)sa;
-	src = (void *)&sin->sin_addr.s_addr;
-	port = ntohs(sin->sin_port);
-#ifdef HAVE_SA_LEN
-	len = sa->sa_len;
-#else
-	len = sizeof(*sin);
-#endif
-	break;
-    case AF_INET6:
-	sin6 = (struct sockaddr_in6 *)sa;
-	src = (void *)&sin6->sin6_addr;
-	port = ntohs(sin6->sin6_port);
-#ifdef HAVE_SA_LEN
-	len = sa->sa_len;
-#else
-	len = sizeof(*sin6);
-#endif
-	break;
-    default:
-	/* TSNH: unknown family */
-	printf("[unknown address family]");
-	return;
-    }
-    ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
-    if (ptr != NULL) 
-	printf("%s:%u", ptr, port);
-    else
-	printf("[cannot display address]:%u", port);
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
-    struct sockaddr *sa;
-    struct sockaddr *rti_info[RTAX_MAX];
-    struct ifnet *ifn, *found_ifn = NULL;
-    struct ifaddr *ifa, *found_ifa = NULL;
-
-    /* handle only the types we want */
-    if ((ifa_msg->ifam_type != RTM_NEWADDR) &&
-	(ifa_msg->ifam_type != RTM_DELADDR))
-	return;
-					  
-    /* parse the list of addreses reported */
-    sa = (struct sockaddr *)(ifa_msg + 1);
-    sctp_get_rtaddrs(ifa_msg->ifam_addrs, sa, rti_info);
-
-    /* we only want the interface address */
-    sa = rti_info[RTAX_IFA];
-
-/* tempy prints */
-    if (ifa_msg->ifam_type == RTM_NEWADDR)
-	printf("if_index %u: adding ", ifa_msg->ifam_index);
-    else
-	printf("if_index %u: deleting ", ifa_msg->ifam_index);
-    print_address(sa);
-    printf("\n");
-/* end tempy prints */
-
-    /*
-     * find the actual kernel ifa/ifn for this address.
-     * we need this primarily for the v6 case to get the ifa_flags.
-     */
-    TAILQ_FOREACH(ifn, &ifnet, if_list) {
-	/* find the interface by index */
-	if (ifa_msg->ifam_index == ifn->if_index) {
-	    found_ifn = ifn;
-	    break;
-	}
-    }
-    if (found_ifn == NULL) {
-	/* TSNH */
-	printf("if_index %u not found?!", ifa_msg->ifam_index);
-	return;
-    }
-
-    /* verify the address on the interface */
-    TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
-	if (ifa->ifa_addr == NULL)
-	    continue;
-
-#if defined(INET6)
-	if (ifa->ifa_addr->sa_family == AF_INET6) {
-	    if (SCTP6_ARE_ADDR_EQUAL(&((struct sockaddr_in6 *)sa)->sin6_addr, 
-				     &((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-		found_ifa = ifa;
-		break;
-	    }
-	} else
+#if defined (__APPLE__)
+	errno_t error;
+	ifnet_t *ifnetlist;
+	uint32_t i, count;
 #endif
-	if (ifa->ifa_addr->sa_family == AF_INET) {
-	    if (((struct sockaddr_in *)sa)->sin_addr.s_addr ==
-		((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
-		found_ifa = ifa;
-		break;
-	    }
-	}
-    }
-    if (found_ifa == NULL) {
-	/* TSNH */
-	printf("ifa not found?!");
-	return;
-    }
+	struct sockaddr *sa;
+	struct sockaddr *rti_info[RTAX_MAX];
+	struct ifnet *ifn, *found_ifn = NULL;
+	struct ifaddr *ifa, *found_ifa = NULL;
 
-    /* relay the appropriate address change to the base code */
-    if (ifa_msg->ifam_type == RTM_NEWADDR) {
-	sctp_addr_change(found_ifa, RTM_ADD);
-    } else {
-	sctp_addr_change(found_ifa, RTM_DELETE);
-    }
+	/* handle only the types we want */
+	if ((ifa_msg->ifam_type != RTM_NEWADDR) && (ifa_msg->ifam_type != RTM_DELADDR)) {
+		return;
+	}
+	
+	/* parse the list of addreses reported */
+	sa = (struct sockaddr *)(ifa_msg + 1);
+	sctp_get_rtaddrs(ifa_msg->ifam_addrs, sa, rti_info);
+
+	/* we only want the interface address */
+	sa = rti_info[RTAX_IFA];
+
+	/*
+	if (ifa_msg->ifam_type == RTM_NEWADDR) {
+		printf("if_index %u: adding ", ifa_msg->ifam_index);
+	} else {
+		printf("if_index %u: deleting ", ifa_msg->ifam_index);
+	}
+	print_address(sa);
+	printf("\n");
+	*/
+	/*
+	 * find the actual kernel ifa/ifn for this address.
+	 * we need this primarily for the v6 case to get the ifa_flags.
+	 */
+#if defined (__APPLE__)
+	ifnetlist = NULL;
+	count = 0;
+	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+	if (error != 0) {
+		printf("ifnet_list_get failed %d\n", error);
+		goto out;
+	}
+	for (i = 0; i < count; i++) {
+		ifn = ifnetlist[i];
+#else
+	TAILQ_FOREACH(ifn, &ifnet, if_list) {
+#endif
+		/* find the interface by index */
+		if (ifa_msg->ifam_index == ifn->if_index) {
+			found_ifn = ifn;
+			break;
+		}
+	}
+
+	if (found_ifn == NULL) {
+		/* TSNH */
+		printf("if_index %u not found?!", ifa_msg->ifam_index);
+		goto out;
+	}
+
+	/* verify the address on the interface */
+	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
+		if (found_ifa) {
+			break;
+		}
+		if (ifa->ifa_addr == NULL) {
+			continue;
+		}
+		switch (ifa->ifa_addr->sa_family) {
+		case AF_INET:
+			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
+				found_ifa = ifa;
+ 			}
+			break;
+#if defined(INET6)
+		case AF_INET6:
+			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
+				found_ifa = ifa;
+			}
+			break;
+#endif
+		default:
+			break;
+		}
+	}
+	if (found_ifa == NULL) {
+		/* TSNH */
+		printf("ifa not found?!");
+		goto out;
+	}
+
+	/* relay the appropriate address change to the base code */
+	if (ifa_msg->ifam_type == RTM_NEWADDR) {
+		sctp_addr_change(found_ifa, RTM_ADD);
+	} else {
+		sctp_addr_change(found_ifa, RTM_DELETE);
+	}
+#if defined(__APPLE__)
+out:
+	if (ifnetlist != 0)
+		ifnet_list_free(ifnetlist);
+#endif
 }
+
 
 void sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
 {
-    struct msghdr msg;
-    struct iovec iov;
-    int flags;
-    size_t length;
-    errno_t error;
-    struct rt_msghdr *rt_msg;
-    char rt_buffer[1024];
+	struct msghdr msg;
+	struct iovec iov;
+	size_t length;
+	errno_t error;
+	struct rt_msghdr *rt_msg;
+	char rt_buffer[1024];
 
-    /* setup the receive iovec and msghdr */
-    iov.iov_base = rt_buffer;
-    iov.iov_len = sizeof(rt_buffer);
-    bzero(&msg, sizeof(msg));
-    msg.msg_iov = &iov;
-    msg.msg_iovlen = 1;
-    flags = 0;
-    length = 0;
-    /* read the routing socket */
-    error = sock_receive(rt_sock, &msg, flags, &length);
-    if (error != 0) {
-	printf("Routing socket read error: length %d, errno %d\n",
-	       length, error);
-	return;
-    }
-    if (length == 0) {
-	printf("Routing socket closed.\n");
-	return;
-    }
+	/* setup the receive iovec and msghdr */
+	iov.iov_base = rt_buffer;
+	iov.iov_len = sizeof(rt_buffer);
+	bzero(&msg, sizeof(msg));
+	msg.msg_iov = &iov;
+	msg.msg_iovlen = 1;
+	length = 0;
+	/* read the routing socket */
+	error = sock_receive(rt_sock, &msg, 0, &length);
+	if (error) {
+		printf("Routing socket read error: length %d, errno %d\n", (int)length, error);
+		return;
+	}
+	if (length == 0) {
+		return;
+	}
 
-    /* process the routing event */
-    rt_msg = (struct rt_msghdr *)rt_buffer;
-    printf("Got routing event 0x%x, %u bytes\n", rt_msg->rtm_type, length);
-    switch (rt_msg->rtm_type) {
-    case RTM_DELADDR:
-    case RTM_NEWADDR:
-	sctp_handle_ifamsg((struct ifa_msghdr *)rt_buffer);
-	break;
-    default:
-	/* ignore this routing event */
-	break;
-    }
+	/* process the routing event */
+	rt_msg = (struct rt_msghdr *)rt_buffer;
+	switch (rt_msg->rtm_type) {
+	case RTM_DELADDR:
+	case RTM_NEWADDR:
+		sctp_handle_ifamsg((struct ifa_msghdr *)rt_buffer);
+		break;
+	default:
+		/* ignore this routing event */
+		break;
+	}
 }
 
 void sctp_address_monitor_start(void)
 {
-    errno_t error;
+	errno_t error;
 
-    /* open an in kernel routing socket client */
-    error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb,
-			NULL, &sctp_address_monitor_so);
-    if (error < 0) {
-	printf("Failed to create routing socket\n");
-	/* FIX ME: try again later?? */
-    }
+	if (sctp_address_monitor_so) {
+		sock_close(sctp_address_monitor_so);
+		sctp_address_monitor_so = NULL;
+	}
+
+	error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb, NULL, &sctp_address_monitor_so);
+	if (error) {
+		printf("Failed to create routing socket\n");
+	}
 }
 
-void sctp_address_monitor_destroy(void)
+void sctp_address_monitor_stop(void)
 {
-    if (sctp_address_monitor_so != NULL) {
-	sock_close(sctp_address_monitor_so);
-	sctp_address_monitor_so = 0;
-    }
+	if (sctp_address_monitor_so) {
+		sock_close(sctp_address_monitor_so);
+		sctp_address_monitor_so = NULL;
+	}
+	return;
 }
 #else
 void sctp_address_monitor_start(void)
 {
+	return;
 }
 
-void sctp_address_monitor_destroy(void)
+void sctp_address_monitor_stop(void)
 {
+	return;
 }
 #endif
+
+static void
+sctp_print_mbuf_chain(mbuf_t m)
+{
+	for(; m; m = SCTP_BUF_NEXT(m)) {
+		printf("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
+		if (SCTP_BUF_IS_EXTENDED(m))
+			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
+	}  
+}
+
+void
+sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
+{
+	errno_t error;
+	size_t length;
+	mbuf_t packet;
+	struct msghdr msg;
+	struct sockaddr_in src, dst;
+	char cmsgbuf[CMSG_SPACE(sizeof (struct in_addr))];
+	struct cmsghdr *cmsg;
+	struct ip *ip;
+	struct mbuf *ip_m;
+	
+	bzero((void *)&msg, sizeof(struct msghdr));
+	bzero((void *)&src, sizeof(struct sockaddr_in));
+	bzero((void *)&dst, sizeof(struct sockaddr_in));
+	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in_addr)));
+	
+	msg.msg_name = (void *)&src;
+	msg.msg_namelen = sizeof(struct sockaddr_in);
+	msg.msg_iov = NULL;
+	msg.msg_iovlen = 0;
+	msg.msg_control = (void *)cmsgbuf;
+	msg.msg_controllen = CMSG_LEN(sizeof (struct in_addr));
+	msg.msg_flags = 0;
+
+	length = (1<<16);
+	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	if (error) {
+		printf("sock_receivembuf returned error %d.\n", error);
+		return;
+	}
+	if (length == 0) {
+		return;
+	}
+	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(packet);
+		return;
+	}
+
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
+			dst.sin_family = AF_INET;
+			dst.sin_len = sizeof(struct sockaddr_in);
+			dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+			memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
+		}
+	}
+	
+	ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
+	if (ip_m == NULL) {
+		mbuf_freem(packet);
+		return;
+	}
+	ip_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
+	ip = mtod(ip_m, struct ip *);
+	bzero((void *)ip, sizeof(struct ip));
+	ip->ip_v = IPVERSION;
+	ip->ip_len = length;
+	ip->ip_src = src.sin_addr;
+	ip->ip_dst = dst.sin_addr;
+	SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + length;
+	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
+	SCTP_BUF_NEXT(ip_m) = packet;
+
+	/*
+	printf("Received a UDP packet of length %d from ", (int)length);
+	print_address((struct sockaddr *)&src);
+	printf(" to ");
+	print_address((struct sockaddr *)&dst);
+	printf(".\n");
+	printf("packet = \n");
+	sctp_print_mbuf_chain(packet);
+	printf("ip_m = \n");
+	sctp_print_mbuf_chain(ip_m);
+	*/
+	
+	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
+	return;
+}
+
+void 
+sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
+{
+	errno_t error;
+	size_t length;
+	mbuf_t packet;
+	struct msghdr msg;
+	struct sockaddr_in6 src, dst;
+	char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
+	struct cmsghdr *cmsg;
+	struct ip6_hdr *ip6;
+	struct mbuf *ip6_m;
+	int offset;
+
+	bzero((void *)&msg, sizeof(struct msghdr));
+	bzero((void *)&src, sizeof(struct sockaddr_in6));
+	bzero((void *)&dst, sizeof(struct sockaddr_in6));
+	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in6_pktinfo)));
+	
+	msg.msg_name = (void *)&src;
+	msg.msg_namelen = sizeof(struct sockaddr_in6);
+	msg.msg_iov = NULL;
+	msg.msg_iovlen = 0;
+	msg.msg_control = (void *)cmsgbuf;
+	msg.msg_controllen = CMSG_LEN(sizeof (struct in6_pktinfo));
+	msg.msg_flags = 0;
+	
+	length = (1<<16);
+	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	if (error) {
+		printf("sock_receivembuf returned error %d.\n", error);
+		return;
+	}
+	if (length == 0) {
+		return;
+	}
+	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(packet);
+		return;
+	}
+	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+		if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_PKTINFO)) {
+			dst.sin6_family = AF_INET6;
+			dst.sin6_len = sizeof(struct sockaddr_in6);
+			dst.sin6_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+			memcpy((void *)&dst.sin6_addr, (const void *)(&((struct in6_pktinfo *)CMSG_DATA(cmsg))->ipi6_addr), sizeof(struct in6_addr));
+		}
+	}
+	ip6_m = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr), 1, M_DONTWAIT, 1, MT_DATA);
+	if (ip6_m == NULL) {
+		mbuf_freem(packet);
+		return;
+	}
+	ip6_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
+	ip6 = mtod(ip6_m, struct ip6_hdr *);
+	bzero((void *)ip6, sizeof(struct ip6_hdr));
+	ip6->ip6_vfc = IPV6_VERSION;
+	ip6->ip6_plen = htons(length);
+	ip6->ip6_src = src.sin6_addr;
+	ip6->ip6_dst = dst.sin6_addr;
+	SCTP_HEADER_LEN(ip6_m) = sizeof(struct ip6_hdr) + length;
+	SCTP_BUF_LEN(ip6_m) = sizeof(struct ip6_hdr);
+	SCTP_BUF_NEXT(ip6_m) = packet;
+	
+	/*
+	printf("Received a UDP packet of length %d from ", (int)length);
+	print_address((struct sockaddr *)&src);
+	printf(" to ");
+	print_address((struct sockaddr *)&dst);
+	printf(".\n");
+	printf("packet = \n");
+	sctp_print_mbuf_chain(packet);
+	printf("ip_m = \n");
+	sctp_print_mbuf_chain(ip6_m);
+	*/
+	
+	offset = sizeof(struct ip6_hdr);
+	sctp6_input_with_port(&ip6_m, &offset, src.sin6_port);
+}
+
+socket_t sctp_over_udp_ipv4_so = NULL;
+socket_t sctp_over_udp_ipv6_so = NULL;
+
+errno_t
+sctp_over_udp_start(void)
+{
+	errno_t error;
+	struct sockaddr_in addr_ipv4;
+	struct sockaddr_in6 addr_ipv6;
+	const int on = 1;
+	
+	if (sctp_over_udp_ipv4_so) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+	}
+
+	if (sctp_over_udp_ipv6_so) {
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+	}
+
+	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
+	if (error) {
+		sctp_over_udp_ipv4_so = NULL;
+		printf("Failed to create SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	
+	error = sock_setsockopt(sctp_over_udp_ipv4_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		printf("Failed to setsockopt() on SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	
+	memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
+	addr_ipv4.sin_len         = sizeof(struct sockaddr_in);
+	addr_ipv4.sin_family      = AF_INET;
+	addr_ipv4.sin_port        = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+	addr_ipv4.sin_addr.s_addr = htonl(INADDR_ANY);
+	error = sock_bind(sctp_over_udp_ipv4_so, (const struct sockaddr *)&addr_ipv4);
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		printf("Failed to bind SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+	
+	error = sock_socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv6_cb, NULL, &sctp_over_udp_ipv6_so);
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to create SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_V6ONLY, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_PKTINFO, (const void *)&on, (int)sizeof(int));
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	memset((void *)&addr_ipv6, 0, sizeof(struct sockaddr_in6));
+	addr_ipv6.sin6_len    = sizeof(struct sockaddr_in6);
+	addr_ipv6.sin6_family = AF_INET6;
+	addr_ipv6.sin6_port   = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+	addr_ipv6.sin6_addr   = in6addr_any;
+	error = sock_bind(sctp_over_udp_ipv6_so, (const struct sockaddr *)&addr_ipv6);
+	if (error) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+		printf("Failed to bind SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		return error;
+	}
+
+	return (0);
+}
+
+void sctp_over_udp_stop(void)
+{
+	if (sctp_over_udp_ipv4_so) {
+		sock_close(sctp_over_udp_ipv4_so);
+		sctp_over_udp_ipv4_so = NULL;
+	}
+	if (sctp_over_udp_ipv6_so) {
+		sock_close(sctp_over_udp_ipv6_so);
+		sctp_over_udp_ipv6_so = NULL;
+	}
+	return;
+}

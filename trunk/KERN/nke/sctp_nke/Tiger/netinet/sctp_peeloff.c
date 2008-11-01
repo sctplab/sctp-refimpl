@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_peeloff.c,v 1.17 2008/01/31 08:22:24 rwatson Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_peeloff.c 179783 2008-06-14 07:58:05Z rrs $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_pcb.h>
@@ -155,6 +155,9 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
+#if defined(__Userspace__)
+    /* if __Userspace__ chooses to originally not support peeloff, put it here... */
+#endif
 #if defined(__Panda__)
 	SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_PEELOFF, EINVAL);
 	*error = EINVAL;
@@ -238,9 +241,9 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
         newso->so_state |= SS_ISCONNECTED;
 	/* We remove it right away */
 
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 #ifdef SCTP_LOCK_LOGGING
-	if(sctp_logging_level & SCTP_LOCK_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOCK_LOGGING_ENABLE) {
 		sctp_log_lock(inp, (struct sctp_tcb *)NULL, SCTP_LOG_LOCK_SOCK);
 	}
 #endif

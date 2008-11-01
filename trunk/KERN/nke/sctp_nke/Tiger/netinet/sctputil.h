@@ -33,13 +33,13 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctputil.h,v 1.30 2007/10/30 14:09:24 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
 
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 
 #ifdef SCTP_ASOCLOG_OF_TSNS 
@@ -174,7 +174,7 @@ void sctp_abort_notification(struct sctp_tcb *, int, int
 /* We abort responding to an IP packet for some reason */
 void
 sctp_abort_association(struct sctp_inpcb *, struct sctp_tcb *,
-    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t);
+    struct mbuf *, int, struct sctphdr *, struct mbuf *, uint32_t, uint16_t);
 
 
 /* We choose to abort via user input */
@@ -187,7 +187,7 @@ sctp_abort_an_association(struct sctp_inpcb *, struct sctp_tcb *, int,
 );
 
 void sctp_handle_ootb(struct mbuf *, int, int, struct sctphdr *,
-    struct sctp_inpcb *, struct mbuf *, uint32_t);
+    struct sctp_inpcb *, struct mbuf *, uint32_t, uint16_t);
 
 int sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
     int totaddr, int *error);
@@ -197,6 +197,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
     int *totaddr, int *num_v4, int *num_v6, int *error, int limit, int *bad_addr);
 
 int sctp_is_there_an_abort_here(struct mbuf *, int, uint32_t *);
+#ifdef INET6
 uint32_t sctp_is_same_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
@@ -236,7 +237,7 @@ sctp_recover_scope(struct sockaddr_in6 *, struct sockaddr_in6 *);
 } while (0)
 #endif
 #endif
-
+#endif
 
 int sctp_cmpaddr(struct sockaddr *, struct sockaddr *);
 
@@ -324,6 +325,11 @@ do { \
 	} \
 } while (0)
 
+#ifdef __FreeBSD__
+/* new functions to start/stop udp tunneling */
+void sctp_over_udp_stop(void);
+int sctp_over_udp_start(void);
+#endif
 
 int
 sctp_soreceive(struct socket *so, struct sockaddr **psa,
@@ -424,5 +430,5 @@ void sctp_audit_log(uint8_t, uint8_t);
 	} while (/* CONSTCOND */ 0)
 #endif				/* SCTP_BASE_FREEBSD */
 
-#endif				/* _KERNEL */
+#endif				/* _KERNEL */ 
 #endif

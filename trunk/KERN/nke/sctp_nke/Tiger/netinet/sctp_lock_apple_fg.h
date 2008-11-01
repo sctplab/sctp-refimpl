@@ -40,39 +40,39 @@
 #define SCTP_STATLOG_DESTROY()
 
 /* for now, all locks use this group and attributes */
-#define SCTP_MTX_GRP sctppcbinfo.mtx_grp
-#define SCTP_MTX_ATTR sctppcbinfo.mtx_attr
+#define SCTP_MTX_GRP SCTP_BASE_INFO(mtx_grp)
+#define SCTP_MTX_ATTR SCTP_BASE_INFO(mtx_attr)
 
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
-	sctppcbinfo.ipi_ep_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(ipi_ep_mtx) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
 #define SCTP_INP_INFO_RUNLOCK() \
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx)
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
 #define SCTP_INP_INFO_WLOCK() \
-	lck_rw_lock_exclusive(sctppcbinfo.ipi_ep_mtx)
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
 #define SCTP_INP_INFO_WUNLOCK() \
-	lck_rw_unlock_exclusive(sctppcbinfo.ipi_ep_mtx)
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
 #define SCTP_INP_INFO_LOCK_DESTROY() \
-        lck_rw_free(sctppcbinfo.ipi_ep_mtx, SCTP_MTX_GRP)
+        lck_rw_free(SCTP_BASE_INFO(ipi_ep_mtx), SCTP_MTX_GRP)
 #define SCTP_IPI_COUNT_INIT() \
-	sctppcbinfo.ipi_count_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(ipi_count_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_COUNT_DESTROY() \
-        lck_mtx_free(sctppcbinfo.ipi_count_mtx, SCTP_MTX_GRP)
+        lck_mtx_free(SCTP_BASE_INFO(ipi_count_mtx), SCTP_MTX_GRP)
 
 #define SCTP_IPI_ADDR_INIT() \
-	sctppcbinfo.ipi_addr_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(ipi_addr_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_ADDR_DESTROY() \
-	lck_mtx_free(sctppcbinfo.ipi_addr_mtx, SCTP_MTX_GRP)
+	lck_mtx_free(SCTP_BASE_INFO(ipi_addr_mtx), SCTP_MTX_GRP)
 #define SCTP_IPI_ADDR_RLOCK() \
-	lck_mtx_lock(sctppcbinfo.ipi_addr_mtx)
+	lck_mtx_lock(SCTP_BASE_INFO(ipi_addr_mtx))
 #define SCTP_IPI_ADDR_RUNLOCK() \
-	lck_mtx_unlock(sctppcbinfo.ipi_addr_mtx)
+	lck_mtx_unlock(SCTP_BASE_INFO(ipi_addr_mtx))
 #define SCTP_IPI_ADDR_WLOCK() \
-	lck_mtx_lock(sctppcbinfo.ipi_addr_mtx)
+	lck_mtx_lock(SCTP_BASE_INFO(ipi_addr_mtx))
 #define SCTP_IPI_ADDR_WUNLOCK() \
-	lck_mtx_unlock(sctppcbinfo.ipi_addr_mtx)
+	lck_mtx_unlock(SCTP_BASE_INFO(ipi_addr_mtx))
 
 
 #define SCTP_TCB_SEND_LOCK_INIT(_tcb) \
@@ -156,22 +156,22 @@ do { \
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
-	sctppcbinfo.it_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(it_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_ITERATOR_LOCK() \
-	lck_mtx_lock(sctppcbinfo.it_mtx)
+	lck_mtx_lock(SCTP_BASE_INFO(it_mtx))
 #define SCTP_ITERATOR_UNLOCK() \
-	lck_mtx_unlock(sctppcbinfo.it_mtx)
+	lck_mtx_unlock(SCTP_BASE_INFO(it_mtx))
 #define SCTP_ITERATOR_LOCK_DESTROY() \
-	lck_mtx_free(sctppcbinfo.it_mtx, SCTP_MTX_GRP)
+	lck_mtx_free(SCTP_BASE_INFO(it_mtx), SCTP_MTX_GRP)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-	sctppcbinfo.ipi_iterator_wq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(ipi_iterator_wq_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	lck_mtx_free(sctppcbinfo.ipi_iterator_wq_mtx, SCTP_MTX_GRP)
+	lck_mtx_free(SCTP_BASE_INFO(ipi_iterator_wq_mtx), SCTP_MTX_GRP)
 #define SCTP_IPI_ITERATOR_WQ_LOCK() \
-	lck_mtx_lock(sctppcbinfo.ipi_iterator_wq_mtx)
+	lck_mtx_lock(SCTP_BASE_INFO(ipi_iterator_wq_mtx))
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
-	lck_mtx_unlock(sctppcbinfo.ipi_iterator_wq_mtx)
+	lck_mtx_unlock(SCTP_BASE_INFO(ipi_iterator_wq_mtx))
 
 
 /* socket locks */
@@ -224,83 +224,83 @@ do { \
 
 #define SCTP_INCR_EP_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_ep, 1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
 	        } while (0)
 
 #define SCTP_DECR_EP_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_ep,-1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep),-1); \
 	        } while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, 1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
 	        } while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_asoc, -1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), -1); \
 	        } while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, 1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
 	        } while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
                 do { \
-	               atomic_add_int(&sctppcbinfo.ipi_count_laddr, -1); \
+	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), -1); \
 	        } while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
                 do { \
- 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,1); \
+ 	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),1); \
 	        } while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
                 do { \
- 	               atomic_add_int(&sctppcbinfo.ipi_count_raddr,-1); \
+ 	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),-1); \
 	        } while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
                 do { \
-  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk, 1); \
+  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
 
 #ifdef INVARIANTS
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-                       if(sctppcbinfo.ipi_count_chunk == 0) \
+                       if(SCTP_BASE_INFO(ipi_count_chunk) == 0) \
                              panic("chunk count to 0?"); \
-  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
+  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
 	        } while (0)
 #else
 
 #define SCTP_DECR_CHK_COUNT() \
                 do { \
-  	               atomic_add_int(&sctppcbinfo.ipi_count_chunk,-1); \
+  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
 	        } while (0)
 #endif
 
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_readq,1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \
 	        } while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_readq, -1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq), -1); \
 	        } while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq, 1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
 	        } while (0)
 
 #define SCTP_DECR_STRMOQ_COUNT() \
                 do { \
-		       atomic_add_int(&sctppcbinfo.ipi_count_strmoq,-1); \
+		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq),-1); \
 	        } while (0)
 
 

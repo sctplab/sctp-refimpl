@@ -32,13 +32,13 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_asconf.h,v 1.10 2007/09/15 19:07:42 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
 #ifndef _NETINET_SCTP_ASCONF_H_
 #define _NETINET_SCTP_ASCONF_H_
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 /*
  * function prototypes
@@ -83,11 +83,13 @@ extern void
 sctp_move_chunks_from_deleted_prim(struct sctp_tcb *, struct sctp_nets *);
 extern void
 sctp_assoc_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 extern void
 sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 #endif
 
+extern int
+sctp_is_addr_pending(struct sctp_tcb *, struct sctp_ifa *);
 #endif				/* _KERNEL */
 
 #endif				/* !_NETINET_SCTP_ASCONF_H_ */

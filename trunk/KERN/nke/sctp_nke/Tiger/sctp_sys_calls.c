@@ -871,15 +871,15 @@ sctp_recvmsg(int s,
 	msg.msg_controllen = sizeof(controlVector);
 	errno = 0;
 	sz = recvmsg(s, &msg, *msg_flags);
-	if (sz <= 0)
+	*msg_flags = msg.msg_flags;
+	if (sz <= 0) {
 		return (sz);
-
+	}
 	s_info = NULL;
 	len = sz;
-	*msg_flags = msg.msg_flags;
-	if (sinfo)
+	if (sinfo) {
 		sinfo->sinfo_assoc_id = 0;
-
+	}
 	if ((msg.msg_controllen) && sinfo) {
 		/*
 		 * parse through and see if we find the sctp_sndrcvinfo (if
