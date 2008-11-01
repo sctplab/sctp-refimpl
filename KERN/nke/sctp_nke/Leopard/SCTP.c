@@ -27,6 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  */
+
 #include <sys/sysctl.h>
 #include <netinet/in.h>
 #include <sys/protosw.h>
@@ -48,7 +49,9 @@
 #include <netinet/udp_var.h>
 
 extern struct pr_usrreqs udp_usrreqs;
+#ifdef INET6
 extern struct pr_usrreqs udp6_usrreqs;
+#endif
 extern struct inpcbinfo udbinfo;
 
 SYSCTL_DECL(_net_inet);
@@ -403,7 +406,9 @@ SCTP_start (kmod_info_t * ki, void * d)
 
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;
+#ifdef INET6
 	udp6_usrreqs.pru_soreceive = soreceive_fix;
+#endif
 	lck_rw_done(udbinfo.mtx);
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
@@ -437,7 +442,9 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive;
+#ifdef INET6
 	udp6_usrreqs.pru_soreceive = soreceive;
+#endif
 	lck_rw_done(udbinfo.mtx);
 	
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
