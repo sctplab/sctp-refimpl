@@ -31,9 +31,9 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.22 2007/12/04 14:41:48 rrs Exp $");
-#endif
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 181054 2008-07-31 11:08:30Z rrs $");
 
+#endif
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
 
@@ -45,6 +45,9 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp.h,v 1.22 2007/12/04 14:41:48 rrs Exp $"
 #if defined(__Windows__)
 #include <packon.h>
 #endif
+
+#define SCTP_PACKED __attribute__((packed))
+
 /*
  * SCTP protocol - RFC2960.
  */
@@ -54,7 +57,7 @@ struct sctphdr {
 	uint32_t v_tag;		/* verification tag of packet */
 	uint32_t checksum;	/* Adler32 C-Sum */
 	/* chunks follow... */
-} __attribute__((packed)) ;
+} SCTP_PACKED ;
 
 /*
  * SCTP Chunks
@@ -64,7 +67,7 @@ struct sctp_chunkhdr {
 	uint8_t chunk_flags;	/* chunk flags */
 	uint16_t chunk_length;	/* chunk length */
 	/* optional params follow */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 /*
  * SCTP chunk parameters
@@ -72,7 +75,7 @@ struct sctp_chunkhdr {
 struct sctp_paramhdr {
 	uint16_t param_type;	/* parameter type */
 	uint16_t param_length;	/* parameter length */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 /*
  * user socket options: socket API defined
@@ -115,6 +118,7 @@ struct sctp_paramhdr {
 #define SCTP_CONTEXT                    0x0000001a /* rw */
 /* explict EOR signalling */
 #define SCTP_EXPLICIT_EOR               0x0000001b
+#define SCTP_REUSE_PORT                 0x0000001c /* rw */
 
 /*
  * read-only options
@@ -313,38 +317,38 @@ struct sctp_error_cause {
 	uint16_t code;
 	uint16_t length;
 	/* optional cause-specific info may follow */
-} __attribute__((packed));
+}  SCTP_PACKED;
 
 struct sctp_error_invalid_stream {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
 	uint16_t stream_id;	/* stream id of the DATA in error */
 	uint16_t reserved;
-} __attribute__((packed));
+} SCTP_PACKED;
 
 struct sctp_error_missing_param {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_MISSING_PARAM */
 	uint32_t num_missing_params;	/* number of missing parameters */
 	/* uint16_t param_type's follow */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 struct sctp_error_stale_cookie {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_STALE_COOKIE */
 	uint32_t stale_time;	/* time in usec of staleness */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 struct sctp_error_out_of_resource {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_OUT_OF_RESOURCES */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 struct sctp_error_unresolv_addr {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRESOLVABLE_ADDR */
 
-} __attribute__((packed));
+} SCTP_PACKED;
 
 struct sctp_error_unrecognized_chunk {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_UNRECOG_CHUNK */
 	struct sctp_chunkhdr ch;/* header from chunk in error */
-} __attribute__((packed));
+} SCTP_PACKED;
 
 /*
  * Main SCTP chunk types we place these here so natd and f/w's in user land
@@ -400,18 +404,18 @@ struct sctp_error_unrecognized_chunk {
 					 * in sat */
 
 /* Data Chuck Specific Flags */
-#define SCTP_DATA_FRAG_MASK	0x03
-#define SCTP_DATA_MIDDLE_FRAG	0x00
-#define SCTP_DATA_LAST_FRAG	0x01
-#define SCTP_DATA_FIRST_FRAG	0x02
-#define SCTP_DATA_NOT_FRAG	0x03
-#define SCTP_DATA_UNORDERED	0x04
-
+#define SCTP_DATA_FRAG_MASK        0x03
+#define SCTP_DATA_MIDDLE_FRAG      0x00
+#define SCTP_DATA_LAST_FRAG        0x01
+#define SCTP_DATA_FIRST_FRAG       0x02
+#define SCTP_DATA_NOT_FRAG         0x03
+#define SCTP_DATA_UNORDERED        0x04
+#define SCTP_DATA_SACK_IMMEDIATELY 0x08
 /* ECN Nonce: SACK Chunk Specific Flags */
-#define SCTP_SACK_NONCE_SUM     0x01
+#define SCTP_SACK_NONCE_SUM        0x01
 
 /* CMT DAC algorithm SACK flag */
-#define SCTP_SACK_CMT_DAC       0x80
+#define SCTP_SACK_CMT_DAC          0x80
 
 /*
  * PCB flags (in sctp_flags bitmask).
@@ -423,7 +427,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_BOUNDALL		0x00000004
 #define SCTP_PCB_FLAGS_ACCEPTING	0x00000008
 #define SCTP_PCB_FLAGS_UNBOUND		0x00000010
-#define SCTP_PCB_FLAGS_LISTENING	0x00000020
 #define SCTP_PCB_FLAGS_CLOSE_IP         0x00040000
 #define SCTP_PCB_FLAGS_WAS_CONNECTED    0x00080000
 #define SCTP_PCB_FLAGS_WAS_ABORTED      0x00100000
@@ -435,12 +438,13 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_WAKEOUTPUT	0x01000000
 #define SCTP_PCB_FLAGS_WAKEINPUT	0x02000000
 #define SCTP_PCB_FLAGS_BOUND_V6		0x04000000
-#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x08000000
-#define SCTP_PCB_FLAGS_BLOCKING_IO	0x10000000
-#define SCTP_PCB_FLAGS_SOCKET_GONE	0x20000000
-#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x40000000
+#define SCTP_PCB_FLAGS_BLOCKING_IO	0x08000000
+#define SCTP_PCB_FLAGS_SOCKET_GONE	0x10000000
+#define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x20000000
 /* flags to copy to new PCB */
-#define SCTP_PCB_COPY_FLAGS		0x0e000004
+#define SCTP_PCB_COPY_FLAGS		(SCTP_PCB_FLAGS_BOUNDALL|\
+					 SCTP_PCB_FLAGS_WAKEINPUT|\
+					 SCTP_PCB_FLAGS_BOUND_V6)
 
 
 /*
@@ -453,7 +457,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_DO_ASCONF	0x00000020
 #define SCTP_PCB_FLAGS_AUTO_ASCONF	0x00000040
 #define SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE 0x00000080
-
 /* socket options */
 #define SCTP_PCB_FLAGS_NODELAY		0x00000100
 #define SCTP_PCB_FLAGS_AUTOCLOSE	0x00000200
@@ -469,7 +472,9 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_STREAM_RESETEVNT 0x00080000
 #define SCTP_PCB_FLAGS_NO_FRAGMENT	0x00100000
 #define SCTP_PCB_FLAGS_EXPLICIT_EOR     0x00400000
-
+#define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x00800000
+#define SCTP_PCB_FLAGS_MULTIPLE_ASCONFS	0x01000000
+#define SCTP_PCB_FLAGS_PORTREUSE        0x02000000
 /*-
  * mobility_features parameters (by micchie).Note
  * these features are applied against the
@@ -538,5 +543,7 @@ struct sctp_error_unrecognized_chunk {
 #if defined(__Windows__)
 #include <packoff.h>
 #endif
+
+#undef SCTP_PACKED
 
 #endif				/* !_NETINET_SCTP_H_ */

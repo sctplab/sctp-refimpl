@@ -33,7 +33,6 @@
 /*
  * includes
  */
-#include <sctp.h>
 #include <sys/param.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
@@ -121,6 +120,12 @@ extern struct fileops socketops;
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
 
 
+#define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT(elem) system_base_info.sctpstat.elem
+#define SCTP_BASE_SYSCTL(var) system_base_info.sctpsysctl.var
+#define SCTP_BASE_VAR(var) system_base_info.var
+
 /*
  * debug macro
  */
@@ -128,7 +133,7 @@ extern struct fileops socketops;
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -136,7 +141,7 @@ extern struct fileops socketops;
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (sctp_debug_on & level ) {					\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -144,7 +149,7 @@ extern struct fileops socketops;
 #define SCTPDBG_PKT(level, iph, sh)					\
 {									\
     do {								\
-	    if (sctp_debug_on & level) {				\
+	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
 		    sctp_print_address_pkt(iph, sh);			\
 	    }								\
     } while (0);							\
@@ -168,6 +173,7 @@ extern struct fileops socketops;
 #define	SCTP_INIT_VRF_TABLEID(vrf)
 
 #define SCTP_IFN_IS_IFT_LOOP(ifn) ((ifn)->ifn_type == IFT_LOOP)
+#define SCTP_ROUTE_IS_REAL_LOOP(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifa && (ro)->ro_rt->rt_ifa->ifa_ifp && (ro)->ro_rt->rt_ifa->ifa_ifp->if_type == IFT_LOOP)
 
 /* MAC always needs a lock */
 #define SCTP_PKTLOG_WRITERS_NEED_LOCK 0
@@ -179,8 +185,6 @@ extern struct fileops socketops;
 #define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) (ro)->ro_rt->rt_ifp->if_index
 #define SCTP_ROUTE_HAS_VALID_IFN(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifp)
 
-/* The packed define for 64 bit platforms */
-#define SCTP_PACKED __attribute__((packed))
 #define SCTP_UNUSED __attribute__((unused))
 
 /* 
@@ -355,7 +359,10 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
-
+#define SCTP_ENABLE_UDP_CSUM(m) do { \
+					m->m_pkthdr.csum_flags = CSUM_UDP; \
+					m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum); \
+				} while (0)
 static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
 	vrf_id = SCTP_DEFAULT_VRFID;
 	return (0);
@@ -538,15 +545,12 @@ extern int ticks;
 #define ifa_list	ifa_link
 
 /* MacOS specific timer functions */
-extern unsigned int sctp_main_timer;
-extern int sctp_main_timer_ticks;
-
 void sctp_start_main_timer(void);
 void sctp_stop_main_timer(void);
 
 /* address monitor thread */
 void sctp_address_monitor_start(void);
-void sctp_address_monitor_destroy(void);
+void sctp_address_monitor_stop(void);
 #define SCTP_PROCESS_STRUCT thread_t
 
 #endif

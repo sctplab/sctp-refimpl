@@ -106,12 +106,31 @@ struct fileproc {
 #define CLOSEINT_WAITONCLOSE 2
 #define CLOSEINT_NOFDRELSE  4
 #define CLOSEINT_NOFDNOREF  8
+  
+/* file types */
+typedef enum {
+	DTYPE_VNODE     = 1,    /* file */
+	DTYPE_SOCKET,           /* communications endpoint */
+	DTYPE_PSXSHM,           /* POSIX Shared memory */
+	DTYPE_PSXSEM,           /* POSIX Semaphores */
+	DTYPE_KQUEUE,           /* kqueue */
+	DTYPE_PIPE,             /* pipe */
+	DTYPE_FSEVENTS          /* fsevents */
+} file_type_t;
+
+/* defines for fg_lflags */
+#define FG_TERM        0x01    /* the fileglob is terminating .. */
+#define FG_INSMSGQ     0x02    /* insert to msgqueue pending .. */
+#define FG_WINSMSGQ    0x04    /* wait for the fielglob is in msgque */
+#define FG_RMMSGQ      0x08    /* the fileglob is being removed from msgqueue */
+#define FG_WRMMSGQ     0x10    /* wait for the fileglob to  be removed from msgqueue */
+
 
 struct fileglob {
 	LIST_ENTRY(fileglob) f_list;/* list of active files */
 	LIST_ENTRY(fileglob) f_msglist;/* list of active files */
 	int32_t	fg_flag;		/* see fcntl.h */
-	int32_t	fg_type;		/* descriptor type */
+	file_type_t fg_type;		/* descriptor type */
 	int32_t	fg_count;	/* reference count */
 	int32_t	fg_msgcount;	/* references from message queue */
 	struct	ucred *fg_cred;	/* credentials associated with descriptor */
@@ -122,7 +141,8 @@ struct fileglob {
 		int	(*fo_write)	__P((struct fileproc *fp, struct uio *uio,
 					    struct ucred *cred, int flags,
 					    struct proc *p));
-#define	FOF_OFFSET	1
+#define	FOF_OFFSET	0x00000001	/* offset supplied to vn_write */
+#define FOF_PCRED	0x00000002	/* cred from proc, not current thread */
 		int	(*fo_ioctl)	__P((struct fileproc *fp, u_long com,
 					    caddr_t data, struct proc *p));
 		int	(*fo_select)	__P((struct fileproc *fp, int which,
@@ -139,23 +159,6 @@ struct fileglob {
 	unsigned int fg_lockpc[4];
 	unsigned int fg_unlockpc[4];
 };
-
-/* file types */
-#define	DTYPE_VNODE	1	/* file */
-#define	DTYPE_SOCKET	2	/* communications endpoint */
-#define	DTYPE_PSXSHM	3	/* POSIX Shared memory */
-#define	DTYPE_PSXSEM	4	/* POSIX Semaphores */
-#define DTYPE_KQUEUE	5	/* kqueue */
-#define	DTYPE_PIPE	6	/* pipe */
-#define DTYPE_FSEVENTS	7	/* fsevents */
-
-/* defines for fg_lflags */
-#define FG_TERM 	0x01	/* the fileglob is terminating .. */
-#define FG_INSMSGQ 	0x02	/* insert to msgqueue pending .. */
-#define FG_WINSMSGQ	0x04 	/* wait for the fielglob is in msgque */
-#define FG_RMMSGQ	0x08 	/* the fileglob is being removed from msgqueue */
-#define FG_WRMMSGQ	0x10 	/* wait for the fileglob to  be removed from msgqueue */
-
 
 #ifdef __APPLE_API_PRIVATE
 LIST_HEAD(filelist, fileglob);
@@ -190,8 +193,15 @@ struct kqueue;
 int fp_getfkq(struct proc *p, int fd, struct fileproc **resultfp, struct kqueue  **resultkq);
 struct psemnode;
 int fp_getfpsem(struct proc *p, int fd, struct fileproc **resultfp, struct psemnode  **resultpsem);
+struct pshmnode;
+int fp_getfpshm(struct proc *p, int fd, struct fileproc **resultfp, struct pshmnode  **resultpshm);
+struct pipe;
+int fp_getfpipe(struct proc *p, int fd, struct fileproc **resultfp, struct pipe  **resultpipe);
+struct atalk;
+int fp_getfatalk(struct proc *p, int fd, struct fileproc **resultfp, struct atalk  **resultatalk);
 struct vnode;
 int fp_getfvp(struct proc *p, int fd, struct fileproc **resultfp, struct vnode  **resultvp);
+int fp_getfvpandvid(struct proc *p, int fd, struct fileproc **resultfp, struct vnode  **resultvp, uint32_t * vidp);
 struct socket;
 int fp_getfsock(struct proc *p, int fd, struct fileproc **resultfp, struct socket  **results);
 int fp_lookup(struct proc *p, int fd, struct fileproc **resultfp, int locked);
@@ -199,6 +209,12 @@ int close_internal(struct proc *p, int fd, struct fileproc *fp, int flags);
 int closef_locked(struct fileproc *fp, struct fileglob *fg, struct proc *p);
 void fg_insertuipc(struct fileglob * fg);
 void fg_removeuipc(struct fileglob * fg);
+void unp_gc_wait(void);
+void procfdtbl_reservefd(struct proc * p, int fd);
+void procfdtbl_markclosefd(struct proc * p, int fd);
+void procfdtbl_releasefd(struct proc * p, int fd, struct fileproc * fp);
+void procfdtbl_waitfd(struct proc * p, int fd);
+void procfdtbl_clearfd(struct proc * p, int fd);
 __END_DECLS
 
 #endif /* __APPLE_API_UNSTABLE */

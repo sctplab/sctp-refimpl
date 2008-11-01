@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.21 2007/10/16 14:05:51 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 182367 2008-08-28 09:44:07Z rrs $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_var.h,v 1.21 2007/10/16 14:05:51 rrs Ex
 
 #include <netinet/sctp_uio.h>
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 extern struct pr_usrreqs sctp_usrreqs;
@@ -49,8 +49,9 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
 #define sctp_feature_off(inp, feature) (inp->sctp_features &= ~feature)
-#define sctp_is_feature_on(inp, feature) (inp->sctp_features & feature)
+#define sctp_is_feature_on(inp, feature) ((inp->sctp_features & feature) == feature)
 #define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
+
 
 /* managing mobility_feature in inpcb (by micchie) */
 #define sctp_mobility_feature_on(inp, feature)  (inp->sctp_mobility_features |= feature)
@@ -77,24 +78,24 @@ extern struct pr_usrreqs sctp_usrreqs;
  */
 
 #define sctp_free_a_readq(_stcb, _readq) { \
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_readq, (_readq)); \
+	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), (_readq)); \
 	SCTP_DECR_READQ_COUNT(); \
 }
 
 #define sctp_alloc_a_readq(_stcb, _readq) { \
-	(_readq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_readq, struct sctp_queued_to_read); \
+	(_readq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_readq), struct sctp_queued_to_read); \
 	if ((_readq)) { \
  	     SCTP_INCR_READQ_COUNT(); \
 	} \
 }
 
 #define sctp_free_a_strmoq(_stcb, _strmoq) { \
-	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_strmoq, (_strmoq)); \
+	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), (_strmoq)); \
 	SCTP_DECR_STRMOQ_COUNT(); \
 }
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
-	(_strmoq) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_strmoq, struct sctp_stream_queue_pending); \
+	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
 	if ((_strmoq)) { \
 		SCTP_INCR_STRMOQ_COUNT(); \
  	} \
@@ -108,24 +109,24 @@ extern struct pr_usrreqs sctp_usrreqs;
                   sctp_free_remote_addr((_chk)->whoTo); \
                   (_chk)->whoTo = NULL; \
           } \
-          if (((_stcb)->asoc.free_chunk_cnt > sctp_asoc_free_resc_limit) || \
-               (sctppcbinfo.ipi_free_chunks > sctp_system_free_resc_limit)) { \
-	 	SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+          if (((_stcb)->asoc.free_chunk_cnt > SCTP_BASE_SYSCTL(sctp_asoc_free_resc_limit)) || \
+               (SCTP_BASE_INFO(ipi_free_chunks) > SCTP_BASE_SYSCTL(sctp_system_free_resc_limit))) { \
+	 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 	 	SCTP_DECR_CHK_COUNT(); \
 	  } else { \
 	 	TAILQ_INSERT_TAIL(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 	 	(_stcb)->asoc.free_chunk_cnt++; \
-	 	atomic_add_int(&sctppcbinfo.ipi_free_chunks, 1); \
+	 	atomic_add_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
           } \
         } else { \
-		SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_chunk, (_chk)); \
+		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), (_chk)); \
 		SCTP_DECR_CHK_COUNT(); \
 	} \
 }
 
 #define sctp_alloc_a_chunk(_stcb, _chk) { \
 	if (TAILQ_EMPTY(&(_stcb)->asoc.free_chunks))  { \
-		(_chk) = SCTP_ZONE_GET(sctppcbinfo.ipi_zone_chunk, struct sctp_tmit_chunk); \
+		(_chk) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_chunk), struct sctp_tmit_chunk); \
 		if ((_chk)) { \
 			SCTP_INCR_CHK_COUNT(); \
                         (_chk)->whoTo = NULL; \
@@ -133,7 +134,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 	} else { \
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
-		atomic_subtract_int(&sctppcbinfo.ipi_free_chunks, 1); \
+		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
                 SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \
@@ -158,11 +159,14 @@ extern struct pr_usrreqs sctp_usrreqs;
 			} \
                         (__net)->src_addr_selected = 0; \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
 		} \
 	} \
 }
+
+#ifdef INVARIANTS
+
 
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	uint32_t val; \
@@ -189,6 +193,35 @@ extern struct pr_usrreqs sctp_usrreqs;
 		atomic_subtract_int(&(sb)->sb_ctl,SCTP_BUF_LEN((m))); \
 }
 
+
+#else
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	uint32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	    (sb)->sb_cc = 0;\
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    (sb)->sb_mbcnt = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	      (stcb)->asoc.sb_cc = 0; \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     (stcb)->asoc.my_rwnd_control_len = 0; \
+	  } \
+	} \
+	if (SCTP_BUF_TYPE(m) != MT_DATA && SCTP_BUF_TYPE(m) != MT_HEADER && \
+	    SCTP_BUF_TYPE(m) != MT_OOBDATA) \
+		atomic_subtract_int(&(sb)->sb_ctl,SCTP_BUF_LEN((m))); \
+}
+
+#endif
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc,SCTP_BUF_LEN((m))); \
@@ -221,7 +254,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 			} \
                         (__net)->src_addr_selected = 0; \
 			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
-			SCTP_ZONE_FREE(sctppcbinfo.ipi_zone_net, (__net)); \
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
 		} \
 	} \
@@ -252,6 +285,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #else
 
+#ifdef INVARIANTS
+
 #define sctp_sbfree(ctl, stcb, sb, m) { \
 	int32_t val; \
 	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
@@ -273,6 +308,34 @@ extern struct pr_usrreqs sctp_usrreqs;
 	  } \
 	} \
 }
+
+#else
+
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	int32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	    (sb)->sb_cc = 0;\
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    (sb)->sb_mbcnt = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	     (stcb)->asoc.sb_cc = 0; \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     (stcb)->asoc.my_rwnd_control_len = 0; \
+	  } \
+	} \
+}
+
+
+#endif
 
 #define sctp_sballoc(stcb, sb, m) { \
 	atomic_add_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
@@ -382,7 +445,7 @@ struct sctp_tcb;
 struct sctphdr;
 
 
-#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__)
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void sctp_close(struct socket *so);
 #else
 int sctp_detach(struct socket *so);
@@ -392,10 +455,16 @@ int sctp_disconnect(struct socket *so);
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
+void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
 void sctp_input __P((struct mbuf *, int));
+void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
 #else
 #if defined(__Panda__)
 void sctp_input __P((pakhandle_type i_pak));
+#elif defined(__Userspace__)
+void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
+void sctp_input __P((struct mbuf *, int));
+void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
 #else
 void sctp_input __P((struct mbuf *,...));
 #endif
@@ -406,12 +475,11 @@ int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
-#if defined(__APPLE__) || defined(__Windows__)
 void sctp_finish(void);
+
+#if defined(__FreeBSD__)
+int sctp_flush(struct socket *, int);
 #endif
-
-void sctp_pcbinfo_cleanup(void);
-
 int sctp_shutdown __P((struct socket *));
 void sctp_notify __P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
 		struct sockaddr *, struct sctp_tcb *,
@@ -451,11 +519,13 @@ int sctp_listen(struct socket *, struct thread *);
 #endif
 #elif defined(__Windows__)
 int sctp_listen(struct socket *, int, PKTHREAD);
+#elif defined(__Userspace__)
+int sctp_listen(struct socket *, int, struct proc *);
 #else
 int sctp_listen(struct socket *, struct proc *);
 #endif
 
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 int sctp_accept(struct socket *, struct sockaddr **);
 #elif defined(__Panda__)
 int sctp_accept(struct socket *, struct sockaddr *, int *, void *, int *);

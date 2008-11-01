@@ -201,6 +201,7 @@ struct mbuf {
 #define	M_PROTO3	0x0020	/* protocol-specific */
 #define	M_PROTO4	0x0040	/* protocol-specific */
 #define	M_PROTO5	0x0080	/* protocol-specific */
+#define M_NOTIFICATION  M_PROTO1 /* notification event */
 
 /* mbuf pkthdr flags, also in m_flags */
 #define	M_BCAST		0x0100	/* send/received as link-level broadcast */
@@ -209,16 +210,11 @@ struct mbuf {
 #define	M_FIRSTFRAG	0x0800	/* packet is first fragment */
 #define	M_LASTFRAG	0x1000	/* packet is last fragment */
 #define	M_PROMISC	0x2000	/* packet is promiscuous (shouldn't go to stack) */
-#ifdef __APPLE__
-#define M_NOTIFICATION  M_PROTO1 /* notification event */
-#else
-#define M_NOTIFICATION  0x8000  /* notification event */
-#endif
 
 /* flags copied when copying m_pkthdr */
 #define M_COPYFLAGS     (M_PKTHDR|M_EOR|M_PROTO1|M_PROTO2|M_PROTO3 | \
                             M_PROTO4|M_PROTO5|M_BCAST|M_MCAST|M_FRAG | \
-                            M_FIRSTFRAG|M_LASTFRAG|M_PROMISC|M_NOTIFICATION)
+                            M_FIRSTFRAG|M_LASTFRAG|M_PROMISC)
 
 /* flags indicating hw checksum support and sw checksum requirements [freebsd4.1]*/
 #define CSUM_IP                 0x0001          /* will csum IP */
@@ -498,6 +494,7 @@ struct mbuf *m_pulldown(struct mbuf*, int, int, int*);
 struct mbuf *m_aux_add(struct mbuf *, int, int);
 struct mbuf *m_aux_find(struct mbuf *, int, int);
 void m_aux_delete(struct mbuf *, struct mbuf *);
+struct mbuf *m_aux_copy(struct mbuf *, struct mbuf *);
 
 struct mbuf *m_mclget(struct mbuf *, int);
 caddr_t m_mclalloc(int);

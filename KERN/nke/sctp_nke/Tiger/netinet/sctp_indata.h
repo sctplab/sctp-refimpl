@@ -32,13 +32,13 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_indata.h,v 1.9 2007/06/22 13:50:56 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
 #ifndef __sctp_indata_h__
 #define __sctp_indata_h__
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 
 struct sctp_queued_to_read *
 sctp_build_readq_entry(struct sctp_tcb *stcb,

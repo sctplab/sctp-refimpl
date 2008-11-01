@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.h,v 1.3 2007/05/08 17:01:10 rrs Exp $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.h 180387 2008-07-09 16:45:30Z rrs $");
 #endif
 
 #ifndef __crc32c_h__
@@ -40,7 +40,7 @@ __FBSDID("$FreeBSD: src/sys/netinet/sctp_crc32.h,v 1.3 2007/05/08 17:01:10 rrs E
 
 #ifndef SCTP_USE_ADLER32
 
-#if defined(_KERNEL)
+#if defined(_KERNEL) || defined(__Userspace__)
 uint32_t update_crc32(uint32_t, unsigned char *, unsigned int);
 
 uint32_t old_update_crc32(uint32_t, unsigned char *, unsigned int);
