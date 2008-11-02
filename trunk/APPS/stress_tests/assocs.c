@@ -39,13 +39,26 @@
 #include <string.h>
 
 #define NUMBER_OF_THREADS 250 
-#define RUNTIME 60
-#define PORT 12345
+#define RUNTIME 600
 #define BUFFER_SIZE (1<<16)
 
 static int done;
+static unsigned short port;
 
-static void *discard_server(void *arg)
+unsigned short
+sctp_get_local_port(int fd)
+{
+	struct sockaddr_in addr;
+	socklen_t addr_len;
+
+	addr_len = (socklen_t)sizeof(struct sockaddr_in);
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+	(void)getsockname(fd, (struct sockaddr *) &addr, &addr_len);
+	return ntohs(addr.sin_port);
+}
+
+static void *
+discard_server(void *arg)
 {
 	int fd;
 	struct sockaddr_in addr;
@@ -60,11 +73,13 @@ static void *discard_server(void *arg)
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	addr.sin_len         = sizeof(struct sockaddr_in);
 	addr.sin_family      = AF_INET;
-	addr.sin_port        = htons(PORT);
+	addr.sin_port        = htons(0);
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("bind");
 	}
+	
+	port = sctp_get_local_port(fd);
 	
 	if (listen(fd, 1) < 0) {
 		perror("listen");
@@ -77,7 +92,8 @@ static void *discard_server(void *arg)
 	return (NULL);
 }
 
-static void *create_associations(void *arg)
+static void *
+create_associations(void *arg)
 {
 	struct sockaddr_in remote_addr;
 	int fd;
@@ -85,7 +101,7 @@ static void *create_associations(void *arg)
 	remote_addr.sin_family      = AF_INET;
 	remote_addr.sin_len         = sizeof(struct sockaddr_in);
 	remote_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	remote_addr.sin_port        = htons(PORT);
+	remote_addr.sin_port        = htons(port);
 
 	while (!done) {
 		if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
@@ -98,9 +114,11 @@ static void *create_associations(void *arg)
 			perror("close");
 		}
 	}
+	return (NULL);
 }		
 		
-int main() {
+int 
+main() {
 	pthread_t tid;
 	unsigned int i;
 	
