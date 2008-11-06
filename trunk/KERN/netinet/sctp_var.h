@@ -477,7 +477,7 @@ void sctp_init __P((void));
 
 void sctp_finish(void);
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 int sctp_flush(struct socket *, int);
 #endif
 int sctp_shutdown __P((struct socket *));
