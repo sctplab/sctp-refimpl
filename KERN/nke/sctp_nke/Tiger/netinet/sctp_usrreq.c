@@ -1149,7 +1149,7 @@ sctp_disconnect(struct socket *so)
 	}
 }
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__Windows__)
 int
 sctp_flush(struct socket *so, int how)
 {
@@ -5360,6 +5360,9 @@ struct pr_usrreqs sctp_usrreqs = {
 #endif
 	pru_sense_null,
 	sctp_shutdown,
+#if defined(__Windows__)
+	sctp_flush,
+#endif
 	sctp_ingetaddr,
 	sctp_sosend,
 	sctp_soreceive,
