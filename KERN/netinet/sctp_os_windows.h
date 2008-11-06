@@ -83,9 +83,8 @@ struct proc {
 
 #if defined(SCTP_DEBUG)
 extern uint32_t *sctp_debug_on;
-#define SCTPDBG sctpdebug
 __inline void
-sctpdebug(uint32_t level, char *format, ...)
+SCTPDBG(uint32_t level, char *format, ...)
 {
 	va_list va;
 	va_start(va, format);
@@ -111,11 +110,7 @@ sctpdebug(uint32_t level, char *format, ...)
 	} while (0); \
 }
 #else
-#define SCTPDBG sctpdebug
-__inline void
-sctpdebug(uint32_t level, char *format, ...)
-{
-}
+#define SCTPDBG(x, ...)
 #define SCTPDBG_ADDR(level, addr)
 #define SCTPDBG_PKT(level, iph, sh)
 #endif
