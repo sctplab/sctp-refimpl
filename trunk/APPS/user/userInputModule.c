@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.107 2007-09-06 17:39:17 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.108 2008-11-06 12:36:57 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -205,6 +205,8 @@ static int cmd_streamreset(char *argv[], int argc);
 static int cmd_deliverydump(char *argv[], int argc);
 static int cmd_sendsent(char *argv[], int argc);
 static int cmd_getroute(char *argv[], int argc);
+static int cmd_sendN(char *argv[], int argc);
+
 
 static int cmd_savepacketlog(char *argv[], int argc);
 
@@ -282,6 +284,9 @@ static struct command commands[] = {
      cmd_bindx},
     {"bulk", "bulk size stream count - send a bulk of messages",
      cmd_bulk},
+	 { "bulkc", "bulkc size stream count - ",
+	   cmd_sendN},
+	
     {"bulkstat", "bulkstat - display count of bulk packets and sent (seen resets)",
      cmd_bulkstat},
     {"bulkstop", "bulkstop - stop the bulk transfer",
@@ -2869,6 +2874,45 @@ cmd_bindx(char *argv[], int argc)
 		printf("bindx() completed\n");
 	}
 	return 0;
+}
+
+
+/* bulk size stream count - send a bulk of messages
+ */
+static int
+cmd_sendN(char *argv[], int argc)
+{
+    int fd = adap->fd;
+    int ret,i;
+    if (argc < 3) {
+	    printf("bulk: expected 3 arguments\n");
+	    return -1;
+    }
+    bulkBufSize = argv[0] != NULL ? strtol(argv[0], NULL, 0) : 0;
+    bulkStream  = argv[1] != NULL ? strtol(argv[1], NULL, 0) : 0;
+    bulkCount   = argv[2] != NULL ? strtol(argv[2], NULL, 0) : 0;
+    if(bulkBufSize > SCTP_MAX_READBUFFER){
+	    printf("bulk: size %d is to large, overriding to largest I can"
+		   "handle %d\n", bulkBufSize, SCTP_MAX_READBUFFER);
+	    bulkBufSize = SCTP_MAX_READBUFFER;
+    }else if (bulkBufSize <= 0) {
+	  printf("bulk: size must be positive\n");
+	  return -1;
+    }
+    /* prepare ping buffer */
+    /* ask for the time */
+	strncpy(pingBuffer,"bulk",4);
+    checkBulkTranfer((void *)&adap->fd,NULL);
+    for (i=0; i<bulkCount; i++) {
+      ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(NULL),sendOptions,payload,0);
+	  if (ret < 0) {
+		printf("sending aborts ret:%d errno:%d at %d\n",
+			   ret, errno, i);
+		break;
+	  }
+	}	  
+	bulkCount = 0;
+    return 0;
 }
 
 
