@@ -1005,7 +1005,7 @@ sysctl_sctp_udp_tunneling_check(
 	return 0;
 }
 
-void sysctl_setup(void)
+void sysctl_setup_sctp(void)
 {
 #ifdef SCTP_DEBUG
 	sysctl_create(CTLTYPE_INT, CTLFLAG_RW, "debug", SCTPCTL_DEBUG_DESC,
