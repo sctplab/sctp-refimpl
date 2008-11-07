@@ -12,6 +12,25 @@ int userspace_rawsctp = -1; /* needs to be declared = -1 */
 int userspace_udpsctp = -1; 
 int userspace_rawroute = -1;
 
+/* local macros and datatypes used to get IP addresses system independently */
+#if defined IP_RECVDSTADDR
+# define DSTADDR_SOCKOPT IP_RECVDSTADDR
+# define DSTADDR_DATASIZE (CMSG_SPACE(sizeof(struct in_addr)))
+# define dstaddr(x) (CMSG_DATA(x))
+#elif defined IP_PKTINFO
+# define DSTADDR_SOCKOPT IP_PKTINFO
+# define DSTADDR_DATASIZE (CMSG_SPACE(sizeof(struct in_pktinfo)))
+# define dstaddr(x) (&(((struct in_pktinfo *)(CMSG_DATA(x)))->ipi_addr))
+#else
+# error "can't determine socket option to use to get UDP IP"
+#endif
+
+union control_data {
+    struct cmsghdr cmsg;
+    u_char data[DSTADDR_DATASIZE];
+};
+
+
 static void *
 recv_function_raw(void *arg)
 {
@@ -91,8 +110,8 @@ recv_function_udp(void *arg)
 	struct mbuf *ip_m;
 	struct msghdr msg;
 	struct sockaddr_in src, dst;
-	char cmsgbuf[CMSG_SPACE(sizeof (struct in_addr))];
-	struct cmsghdr *cmsg;
+	union control_data cmsg;
+	struct cmsghdr *cmsgptr;
 
 	while (1) {
 		for (i = 0; i < to_fill; i++) {
@@ -108,14 +127,14 @@ recv_function_udp(void *arg)
 		bzero((void *)&msg, sizeof(struct msghdr));
 		bzero((void *)&src, sizeof(struct sockaddr_in));
 		bzero((void *)&dst, sizeof(struct sockaddr_in));
-		bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in_addr)));
+		bzero((void *)&cmsg, sizeof(union control_data));
 		
 		msg.msg_name = (void *)&src;
 		msg.msg_namelen = sizeof(struct sockaddr_in);
 		msg.msg_iov = iov;
 		msg.msg_iovlen = MAXLEN_MBUF_CHAIN;
-		msg.msg_control = (void *)cmsgbuf;
-		msg.msg_controllen = CMSG_LEN(sizeof (struct in_addr));
+		msg.msg_control = (void *) &cmsg;
+		msg.msg_controllen = sizeof(union control_data);
 		msg.msg_flags = 0;
 
 		ncounter = n = recvmsg(userspace_udpsctp, &msg, 0);
@@ -143,21 +162,15 @@ recv_function_udp(void *arg)
 		}
 		assert(to_fill <= MAXLEN_MBUF_CHAIN);
 
-		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
-#if !defined(__Userspace_os_Linux)
-                    if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
+		for (cmsgptr = CMSG_FIRSTHDR(&msg); cmsgptr != NULL; cmsgptr = CMSG_NXTHDR(&msg, cmsgptr)) {
+                    if ((cmsgptr->cmsg_level == IPPROTO_IP) && (cmsgptr->cmsg_type == DSTADDR_SOCKOPT)) {
                         dst.sin_family = AF_INET;
+#ifdef HAVE_SIN_LEN
                         dst.sin_len = sizeof(struct sockaddr_in);
-                        dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
-                        memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
-                    }
-#else /* __Userspace_os_Linux */
-                    if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_PKTINFO)) {
-                        dst.sin_family = AF_INET;
-                        dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
-                        memcpy((void *) &dst.sin_addr, (const void *) &(((struct in_pktinfo *) CMSG_DATA (cmsg))->ipi_addr), sizeof(struct in_addr));
-                    }                        
 #endif
+                        dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+                        memcpy((void *)&dst.sin_addr, (const void *) dstaddr(cmsgptr), sizeof(struct in_addr));
+                    }
 		}
 
 		ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
@@ -165,6 +178,7 @@ recv_function_udp(void *arg)
 		ip = mtod(ip_m, struct ip *);
 		bzero((void *)ip, sizeof(struct ip));
 		ip->ip_v = IPVERSION;
+		ip->ip_p = IPPROTO_UDP; /* tells me over UDP */
 		ip->ip_len = n;
 		ip->ip_src = src.sin_addr;
 		ip->ip_dst = dst.sin_addr;
@@ -236,17 +250,10 @@ recv_thread_init()
 			perror("UDP socket failure");
 			exit(1);
 		}
-#if defined(IP_RECVDSTADDR)
-		if (setsockopt(userspace_udpsctp, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int)) < 0) {
-			perror("setsockopt: IP_RECVDSTADDR");
+		if (setsockopt(userspace_udpsctp, IPPROTO_IP, DSTADDR_SOCKOPT, (const void *)&on, (int)sizeof(int)) < 0) {
+			perror("setsockopt: DSTADDR_SOCKOPT");
 			exit(1);
 		}
-#elif defined(IP_PKTINFO)
-		if (setsockopt(userspace_udpsctp, IPPROTO_IP, IP_PKTINFO, (const void *)&on, (int)sizeof(int)) < 0) {
-			perror("setsockopt: IP_PKTINFO");
-			exit(1);
-		}
-#endif
 		memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_SIN_LEN
 		addr_ipv4.sin_len         = sizeof(struct sockaddr_in);

@@ -17,6 +17,7 @@
 #include <pthread.h>
 #include <netinet/in_systm.h>
 #include <netinet/ip.h>
+#include <netinet/sctp_pcb.h>
 #else
 #include <netinet/sctp.h>
 #include <sys/uio.h>
@@ -171,6 +172,7 @@ int main(int argc, char **argv) {
     
 #if defined(USERMODE)
     sctp_init(); 
+    SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
     
     if( !(psock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) ){
         printf("user_socket() returned NULL\n");
