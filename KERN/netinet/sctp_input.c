@@ -4310,7 +4310,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * attention to a sack sent in to us since
 					 * we don't care anymore.
 					 */
- 					goto ignore_sack;
+ 					break;
 				} 
 				sack = (struct sctp_sack_chunk *)ch;
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
