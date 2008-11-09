@@ -10,3 +10,4 @@
  in sctp_constants.h.
 -Improvement: Use all hash buckets of the vtag hash table.
  Get rid of then unused constant SCTP_STACK_VTAG_HASH_SIZE_A.
+-Bugfix: Handle SHUTDOWN;SACK packet correctly.
