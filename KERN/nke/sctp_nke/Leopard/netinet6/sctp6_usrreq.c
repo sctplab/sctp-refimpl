@@ -1734,6 +1734,9 @@ struct pr_usrreqs sctp6_usrreqs = {
 #endif
 	pru_sense_null,
 	sctp_shutdown,
+#if defined(__Windows__)
+	sctp_flush,
+#endif
 	sctp6_in6getaddr,
 	sctp_sosend,
 	sctp_soreceive,
