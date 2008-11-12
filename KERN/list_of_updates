@@ -1,14 +1,2 @@
--Improvement: Add \n on debug output in sctp_lower_sosend(). 
--Improvement: panic() on INVARIANTS kernels if memory allocation
- fails for a tagblock in sctp_add_vtag_to_timewait().
--Bugfix: Protect code in sctp_is_in_timewait() by
- SCTP_INP_INFO_WLOCK/SCTP_INP_INFO_WUNLOCK.
--Improvement: Get rid of unused variable now in sctp_init_asoc().
--Bugfix: Reuse the correct vtag in sctp_add_vtag_to_timewait().
--Improvement: Get rid of unused constant SCTP_TIME_WAIT_SHORT
- in sctp_constants.h.
--Improvement: Use all hash buckets of the vtag hash table.
- Get rid of then unused constant SCTP_STACK_VTAG_HASH_SIZE_A.
--Bugfix: Handle SHUTDOWN;SACK packet correctly.
--Bugfix: Last TSN in a gap ack block was not being "ack'd"
-         in the internal scoreboard.
+Has of 11/12/2008 all items sync'd to Head in FreeBSD8.
+*************************
