@@ -1,2 +1,4 @@
 Has of 11/12/2008 all items sync'd to Head in FreeBSD8.
+
+Fix protection code for notification generation.
 *************************
