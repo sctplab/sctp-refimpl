@@ -1,37 +1,39 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without
+ * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
- *
- * a) Redistributions of source code must retain the above copyright notice,
+ * 
+ * a) Redistributions of source code must retain the above copyright notice, 
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in
+ * b) Redistributions in binary form must reproduce the above copyright 
+ *    notice, this list of conditions and the following disclaimer in 
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its
- *    contributors may be used to endorse or promote products derived
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its 
+ *    contributors may be used to endorse or promote products derived 
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /* $KAME: sctp_var.h,v 1.24 2005/03/06 16:04:19 itojun Exp $	 */
 
+#ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 182367 2008-08-28 09:44:07Z rrs $");
+#endif
 
 #ifndef _NETINET_SCTP_VAR_H_
 #define _NETINET_SCTP_VAR_H_
@@ -40,7 +42,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 182367 2008-08-28 09:44:07Z rrs 
 
 #if defined(_KERNEL) || defined(__Userspace__)
 
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 extern struct pr_usrreqs sctp_usrreqs;
+#endif
 
 
 #define sctp_feature_on(inp, feature)  (inp->sctp_features |= feature)
@@ -137,6 +141,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 }
 
 
+#if defined(__FreeBSD__) && __FreeBSD_version > 500000
 
 #define sctp_free_remote_addr(__net) { \
 	if ((__net)) {  \
@@ -230,6 +235,118 @@ extern struct pr_usrreqs sctp_usrreqs;
 		atomic_add_int(&(sb)->sb_ctl,SCTP_BUF_LEN((m))); \
 }
 
+#else				/* FreeBSD Version <= 500000 or non-FreeBSD */
+
+
+#define sctp_free_remote_addr(__net) { \
+	if ((__net)) { \
+		if (atomic_fetchadd_int(&(__net)->ref_count, -1) == 1) { \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->rxt_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->pmtu_timer.timer); \
+			(void)SCTP_OS_TIMER_STOP(&(__net)->fr_timer.timer); \
+                        if ((__net)->ro.ro_rt) { \
+				RTFREE((__net)->ro.ro_rt); \
+				(__net)->ro.ro_rt = NULL; \
+                        } \
+			if ((__net)->src_addr_selected) { \
+				sctp_free_ifa((__net)->ro._s_addr); \
+				(__net)->ro._s_addr = NULL; \
+			} \
+                        (__net)->src_addr_selected = 0; \
+			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
+			SCTP_DECR_RADDR_COUNT(); \
+		} \
+	} \
+}
+
+#if defined(__Panda__)
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	if ((sb)->sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
+		atomic_subtract_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
+	} else { \
+		(sb)->sb_cc = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) { \
+		if ((stcb)->asoc.sb_cc >= (uint32_t)SCTP_BUF_LEN((m))) { \
+			atomic_subtract_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
+		} else { \
+			(stcb)->asoc.sb_cc = 0; \
+		} \
+	} \
+}
+
+#define sctp_sballoc(stcb, sb, m) { \
+	atomic_add_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
+	if (stcb) { \
+		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
+	} \
+}
+
+#else
+
+#ifdef INVARIANTS
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	int32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	   panic("sb_cc goes negative"); \
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    panic("sb_mbcnt goes negative"); \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	     panic("stcb->sb_cc goes negative"); \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     panic("asoc->mbcnt goes negative"); \
+	  } \
+	} \
+}
+
+#else
+
+
+#define sctp_sbfree(ctl, stcb, sb, m) { \
+	int32_t val; \
+	val = atomic_fetchadd_int(&(sb)->sb_cc,-(SCTP_BUF_LEN((m)))); \
+	if (val < SCTP_BUF_LEN((m))) { \
+	    (sb)->sb_cc = 0;\
+	} \
+	val = atomic_fetchadd_int(&(sb)->sb_mbcnt,-(MSIZE)); \
+	if (val < MSIZE) { \
+	    (sb)->sb_mbcnt = 0; \
+	} \
+	if (((ctl)->do_not_ref_stcb == 0) && stcb) {\
+	  val = atomic_fetchadd_int(&(stcb)->asoc.sb_cc,-(SCTP_BUF_LEN((m)))); \
+	  if (val < SCTP_BUF_LEN((m))) {\
+	     (stcb)->asoc.sb_cc = 0; \
+	  } \
+	  val = atomic_fetchadd_int(&(stcb)->asoc.my_rwnd_control_len,-(MSIZE)); \
+	  if (val < MSIZE) { \
+	     (stcb)->asoc.my_rwnd_control_len = 0; \
+	  } \
+	} \
+}
+
+
+#endif
+
+#define sctp_sballoc(stcb, sb, m) { \
+	atomic_add_int(&(sb)->sb_cc, SCTP_BUF_LEN((m))); \
+	atomic_add_int(&(sb)->sb_mbcnt, MSIZE); \
+	if (stcb) { \
+		atomic_add_int(&(stcb)->asoc.sb_cc, SCTP_BUF_LEN((m))); \
+		atomic_add_int(&(stcb)->asoc.my_rwnd_control_len, MSIZE); \
+	} \
+}
+#endif
+#endif
 
 #define sctp_ucount_incr(val) { \
 	val++; \
@@ -328,44 +445,94 @@ struct sctp_tcb;
 struct sctphdr;
 
 
+#if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void sctp_close(struct socket *so);
+#else
+int sctp_detach(struct socket *so);
+#endif
 int sctp_disconnect(struct socket *so);
 
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
 void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
 void sctp_input __P((struct mbuf *, int));
 void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
+#else
+#if defined(__Panda__)
+void sctp_input __P((pakhandle_type i_pak));
+#elif defined(__Userspace__)
+void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
+void sctp_input __P((struct mbuf *, int));
+void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
+#else
+void sctp_input __P((struct mbuf *,...));
+#endif
+void *sctp_ctlinput __P((int, struct sockaddr *, void *));
+int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
+
+#endif
 void sctp_drain __P((void));
 void sctp_init __P((void));
 
 void sctp_finish(void);
 
+#if defined(__FreeBSD__) || defined(__Windows__)
 int sctp_flush(struct socket *, int);
+#endif
 int sctp_shutdown __P((struct socket *));
-void sctp_notify 
-__P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
-    struct sockaddr *, struct sctp_tcb *,
-    struct sctp_nets *));
+void sctp_notify __P((struct sctp_inpcb *, struct ip *ip, struct sctphdr *,
+		struct sockaddr *, struct sctp_tcb *,
+		struct sctp_nets *));
 
-	int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
-        int, int, struct proc *);
+int sctp_bindx(struct socket *, int, struct sockaddr_storage *,
+	int, int, struct proc *);
 
 /* can't use sctp_assoc_t here */
-	int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
+int sctp_peeloff(struct socket *, struct socket *, int, caddr_t, int *);
 
-	int sctp_ingetaddr(struct socket *,
-        struct sockaddr **
+int sctp_ingetaddr(struct socket *,
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+	struct sockaddr **
+#elif defined(__Panda__)
+	struct sockaddr *
+#else
+	struct mbuf *
+#endif
 );
 
-	int sctp_peeraddr(struct socket *,
-        struct sockaddr **
+int sctp_peeraddr(struct socket *,
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+	struct sockaddr **
+#elif defined(__Panda__)
+	struct sockaddr *
+#else
+	struct mbuf *
+#endif
 );
 
-	int sctp_listen(struct socket *, int, struct thread *);
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if __FreeBSD_version >= 700000
+int sctp_listen(struct socket *, int, struct thread *);
+#else
+int sctp_listen(struct socket *, struct thread *);
+#endif
+#elif defined(__Windows__)
+int sctp_listen(struct socket *, int, PKTHREAD);
+#elif defined(__Userspace__)
+int sctp_listen(struct socket *, int, struct proc *);
+#else
+int sctp_listen(struct socket *, struct proc *);
+#endif
 
-	int sctp_accept(struct socket *, struct sockaddr **);
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
+int sctp_accept(struct socket *, struct sockaddr **);
+#elif defined(__Panda__)
+int sctp_accept(struct socket *, struct sockaddr *, int *, void *, int *);
+#else
+int sctp_accept(struct socket *, struct mbuf *);
+#endif
 
-#endif				/* _KERNEL */
+#endif /* _KERNEL */
 
-#endif				/* !_NETINET_SCTP_VAR_H_ */
+#endif /* !_NETINET_SCTP_VAR_H_ */
