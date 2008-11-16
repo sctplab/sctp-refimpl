@@ -12972,8 +12972,8 @@ sctp_lower_sosend(struct socket *so,
 	inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
 	while ((SCTP_SB_LIMIT_SND(so) < (inqueue_bytes + local_add_more)) ||
 	       ((stcb->asoc.stream_queue_cnt+stcb->asoc.chunks_on_out_queue) >= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue)) /*while*/) {
-	  SCTPDBG(SCTP_DEBUG_OUTPUT1,"pre_block limit:%d <(inq:%d + %d) || (%d+%d > %d)\n",
-		  SCTP_SB_LIMIT_SND(so),
+	  SCTPDBG(SCTP_DEBUG_OUTPUT1,"pre_block limit:%u <(inq:%d + %d) || (%d+%d > %d)\n",
+		  (unsigned int)SCTP_SB_LIMIT_SND(so),
 		  inqueue_bytes,
 		  local_add_more,
 		  stcb->asoc.stream_queue_cnt,
