@@ -1,37 +1,35 @@
 /*-
  * Copyright (c) 2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 182367 2008-08-28 09:44:07Z rrs $");
-#endif
 
 #ifndef __sctp_sysctl_h__
 #define __sctp_sysctl_h__
@@ -76,6 +74,11 @@ struct sctp_sysctl {
 	uint32_t sctp_nr_outgoing_streams_default;
 	uint32_t sctp_cmt_on_off;
 	uint32_t sctp_cmt_use_dac;
+
+/* EY 5/5/08 - nr_sack flag variable */
+	uint32_t sctp_nr_sack_on_off;
+
+/* JRS 5/21/07 - CMT PF type flag variables  */
 	uint32_t sctp_cmt_pf;
 	uint32_t sctp_use_cwnd_based_maxburst;
 	uint32_t sctp_early_fr;
@@ -102,13 +105,9 @@ struct sctp_sysctl {
 #endif
 	uint32_t sctp_udp_tunneling_for_client_enable;
 	uint32_t sctp_udp_tunneling_port;
-	uint32_t sctp_enable_sack_immediately ;
+	uint32_t sctp_enable_sack_immediately;
 #if defined(SCTP_DEBUG)
 	uint32_t sctp_debug_on;
-#endif
-#if defined(__APPLE__)
-	uint32_t sctp_ignore_vmware_interfaces ;
-	uint32_t sctp_main_timer;
 #endif
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	uint32_t sctp_output_unlocked;
@@ -328,6 +327,12 @@ struct sctp_sysctl {
 #define SCTPCTL_CMT_ON_OFF_MAX		1
 #define SCTPCTL_CMT_ON_OFF_DEFAULT	0
 
+/* EY - nr_sack_on_off: NR_SACK on/off flag */
+#define SCTPCTL_NR_SACK_ON_OFF_DESC	"NR_SACK on/off flag"
+#define SCTPCTL_NR_SACK_ON_OFF_MIN	0
+#define SCTPCTL_NR_SACK_ON_OFF_MAX	1
+#define SCTPCTL_NR_SACK_ON_OFF_DEFAULT	0
+
 /* cmt_use_dac: CMT DAC on/off flag */
 #define SCTPCTL_CMT_USE_DAC_DESC	"CMT DAC on/off flag"
 #define SCTPCTL_CMT_USE_DAC_MIN		0
@@ -477,37 +482,24 @@ struct sctp_sysctl {
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
-#define SCTPCTL_DEBUG_DEFAULT	0	
+#define SCTPCTL_DEBUG_DEFAULT	0
 #endif
 
-#if defined(__APPLE__)
-#define SCTPCTL_MAIN_TIMER_DESC		"Main timer interval in ms"
-#define SCTPCTL_MAIN_TIMER_MIN		1
-#define SCTPCTL_MAIN_TIMER_MAX		0xFFFFFFFF
-#define SCTPCTL_MAIN_TIMER_DEFAULT	10	
-
-#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC		"Ignore VMWare Interfaces"
-#define SCTPCTL_IGNORE_VMWARE_INTERFACES_MIN		0
-#define SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX		1
-#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT	SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX	
-#endif
 
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 #define SCTPCTL_OUTPUT_UNLOCKED_DESC	"Unlock socket when sending packets down to IP."
 #define SCTPCTL_OUTPUT_UNLOCKED_MIN	0
 #define SCTPCTL_OUTPUT_UNLOCKED_MAX	1
-#define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN	
+#define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN
 #endif
 
 
 #if defined(_KERNEL) || defined(__Userspace__)
-#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 #if defined(SYSCTL_DECL)
 SYSCTL_DECL(_net_inet_sctp);
-#endif
 #endif
 
 void sctp_init_sysctls(void);
 
-#endif /* _KERNEL */
-#endif /* __sctp_sysctl_h__ */
+#endif				/* _KERNEL */
+#endif				/* __sctp_sysctl_h__ */
