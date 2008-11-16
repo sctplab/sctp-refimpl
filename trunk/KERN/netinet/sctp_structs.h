@@ -1,39 +1,37 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 /* $KAME: sctp_structs.h,v 1.13 2005/03/06 16:04:18 itojun Exp $	 */
 
-#ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 179157 2008-05-20 13:47:46Z rrs $");
-#endif
 
 #ifndef __sctp_structs_h__
 #define __sctp_structs_h__
@@ -63,9 +61,9 @@ struct sctp_timer {
 
 struct sctp_foo_stuff {
 	struct sctp_inpcb *inp;
-	uint32_t        lineno;
-	uint32_t        ticks;
-	int             updown;
+	uint32_t lineno;
+	uint32_t ticks;
+	int updown;
 };
 
 
@@ -110,21 +108,22 @@ typedef void (*end_func) (void *ptr, uint32_t val);
 struct sctp_iterator {
 	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
 	struct sctp_timer tmr;
-	struct sctp_inpcb *inp;		/* current endpoint */
-	struct sctp_tcb *stcb;		/* current* assoc */
+	struct sctp_inpcb *inp;	/* current endpoint */
+	struct sctp_tcb *stcb;	/* current* assoc */
 	asoc_func function_assoc;	/* per assoc function */
-	inp_func function_inp;		/* per endpoint function */
+	inp_func function_inp;	/* per endpoint function */
 	inp_func function_inp_end;	/* end INP function */
-	end_func function_atend;	/* iterator completion function */
-	void *pointer;			/* pointer for apply func to use */
-	uint32_t val;			/* value for apply func to use */
-	uint32_t pcb_flags;		/* endpoint flags being checked */
-	uint32_t pcb_features;		/* endpoint features being checked */
-	uint32_t asoc_state;		/* assoc state being checked */
+	end_func function_atend;/* iterator completion function */
+	void *pointer;		/* pointer for apply func to use */
+	uint32_t val;		/* value for apply func to use */
+	uint32_t pcb_flags;	/* endpoint flags being checked */
+	uint32_t pcb_features;	/* endpoint features being checked */
+	uint32_t asoc_state;	/* assoc state being checked */
 	uint32_t iterator_flags;
-	uint8_t  no_chunk_output;
-	uint8_t  done_current_ep;
+	uint8_t no_chunk_output;
+	uint8_t done_current_ep;
 };
+
 /* iterator_flags values */
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
 #define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
@@ -146,31 +145,32 @@ struct sctp_asconf_iterator {
 };
 
 struct sctp_net_route {
-    sctp_rtentry_t *ro_rt;
-    union sctp_sockstore _l_addr;	/* remote peer addr */
-    struct sctp_ifa *_s_addr;		/* our selected src addr */
+	sctp_rtentry_t *ro_rt;
+	union sctp_sockstore _l_addr;	/* remote peer addr */
+	struct sctp_ifa *_s_addr;	/* our selected src addr */
 };
 
 struct htcp {
-	uint16_t	alpha;		/* Fixed point arith, << 7 */
-	uint8_t		beta;           /* Fixed point arith, << 7 */
-	uint8_t		modeswitch;     /* Delay modeswitch until we had at least one congestion event */
-	uint32_t	last_cong;	/* Time since last congestion event end */
-	uint32_t	undo_last_cong;
-	uint16_t	bytes_acked;
-	uint32_t	bytecount;
-	uint32_t	minRTT;
-	uint32_t	maxRTT;
+	uint16_t alpha;		/* Fixed point arith, << 7 */
+	uint8_t beta;		/* Fixed point arith, << 7 */
+	uint8_t modeswitch;	/* Delay modeswitch until we had at least one
+				 * congestion event */
+	uint32_t last_cong;	/* Time since last congestion event end */
+	uint32_t undo_last_cong;
+	uint16_t bytes_acked;
+	uint32_t bytecount;
+	uint32_t minRTT;
+	uint32_t maxRTT;
 
-	uint32_t	undo_maxRTT;
-	uint32_t	undo_old_maxB;
+	uint32_t undo_maxRTT;
+	uint32_t undo_old_maxB;
 
 	/* Bandwidth estimation */
-	uint32_t	minB;
-	uint32_t	maxB;
-	uint32_t	old_maxB;
-	uint32_t	Bi;
-	uint32_t	lasttime;
+	uint32_t minB;
+	uint32_t maxB;
+	uint32_t old_maxB;
+	uint32_t Bi;
+	uint32_t lasttime;
 };
 
 
@@ -221,8 +221,8 @@ struct sctp_nets {
 	unsigned int net_ack2;
 
 	/*
-	 * JRS - 5/8/07 - Variable to track last time
-	 *  a destination was active for CMT PF
+	 * JRS - 5/8/07 - Variable to track last time a destination was
+	 * active for CMT PF
 	 */
 	uint32_t last_active;
 
@@ -245,11 +245,11 @@ struct sctp_nets {
 	uint32_t heartbeat_random2;
 	uint32_t tos_flowlabel;
 
-	struct timeval start_time;      /* time when this net was created */
+	struct timeval start_time;	/* time when this net was created */
 
-	uint32_t marked_retrans;        /* number or DATA chunks marked for
-	                                   timer based retransmissions */
-	uint32_t marked_fastretrans;   
+	uint32_t marked_retrans;/* number or DATA chunks marked for timer
+				 * based retransmissions */
+	uint32_t marked_fastretrans;
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
@@ -259,7 +259,7 @@ struct sctp_nets {
 	uint16_t error_count;
 	/* UDP port number in case of UDP tunneling */
 	uint16_t port;
-	
+
 	uint8_t fast_retran_loss_recovery;
 	uint8_t will_exit_fast_recovery;
 	/* Flags that probably can be combined into dest_state */
@@ -292,8 +292,8 @@ struct sctp_nets {
 	uint8_t new_pseudo_cumack;	/* CMT CUC algorithm. Flag used to
 					 * indicate if a new pseudo-cumack or
 					 * rtx-pseudo-cumack has been received */
-	uint8_t window_probe;		/* Doing a window probe? */
-	uint8_t RTO_measured;		/* Have we done the first measure */
+	uint8_t window_probe;	/* Doing a window probe? */
+	uint8_t RTO_measured;	/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
 	/* JRS - struct used in HTCP algorithm */
 	struct htcp htcp_ca;
@@ -318,8 +318,7 @@ struct sctp_data_chunkrec {
 	struct timeval timetodrop;	/* time we drop it from queue */
 	uint8_t doing_fast_retransmit;
 	uint8_t rcv_flags;	/* flags pulled from data chunk on inbound for
-				 * outbound holds sending flags for PR-SCTP.
-				 */
+				 * outbound holds sending flags for PR-SCTP. */
 	uint8_t state_flags;
 	uint8_t chunk_was_revoked;
 };
@@ -350,7 +349,7 @@ struct sctp_tmit_chunk {
 	struct mbuf *data;	/* pointer to mbuf chain of data */
 	struct mbuf *last_mbuf;	/* pointer to last mbuf in chain */
 	struct sctp_nets *whoTo;
-	TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
+	          TAILQ_ENTRY(sctp_tmit_chunk) sctp_next;	/* next link */
 	int32_t sent;		/* the send status */
 	uint16_t snd_count;	/* number of times I sent */
 	uint16_t flags;		/* flags, such as FRAGMENT_OK */
@@ -387,20 +386,21 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	sctp_assoc_t sinfo_assoc_id;	/* our assoc id */
 	/* Non sinfo stuff */
 	uint32_t length;	/* length of data */
-    uint32_t held_length;	/* length held in sb */
-    struct sctp_nets *whoFrom;	/* where it came from */
+	uint32_t held_length;	/* length held in sb */
+	struct sctp_nets *whoFrom;	/* where it came from */
 	struct mbuf *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
 	struct mbuf *tail_mbuf;	/* used for multi-part data */
-	struct mbuf *aux_data;  /* used to hold/cache  control if o/s does not take it from us */
+	struct mbuf *aux_data;	/* used to hold/cache  control if o/s does not
+				 * take it from us */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
-	TAILQ_ENTRY(sctp_queued_to_read) next;
+	         TAILQ_ENTRY(sctp_queued_to_read) next;
 	uint16_t port_from;
 	uint16_t spec_flags;	/* Flags to hold the notification field */
-	uint8_t  do_not_ref_stcb;
-	uint8_t  end_added;
-	uint8_t  pdapi_aborted;
-	uint8_t  some_taken;
+	uint8_t do_not_ref_stcb;
+	uint8_t end_added;
+	uint8_t pdapi_aborted;
+	uint8_t some_taken;
 };
 
 /* This data structure will be on the outbound
@@ -410,7 +410,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * fit every chunk we pull to the send/sent
  * queue to make up the next full packet
  * if we can. An entry cannot be removed
- * from the stream_out queue until 
+ * from the stream_out queue until
  * the msg_is_complete flag is set. This
  * means at times data/tail_mbuf MIGHT
  * be NULL.. If that occurs it happens
@@ -419,14 +419,14 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * awoken to copy more data down... OR
  * the user is in the explict MSG_EOR mode
  * and wrote some data, but has not completed
- * sending. 
+ * sending.
  */
 struct sctp_stream_queue_pending {
 	struct mbuf *data;
 	struct mbuf *tail_mbuf;
 	struct timeval ts;
 	struct sctp_nets *net;
-	TAILQ_ENTRY (sctp_stream_queue_pending ) next;
+	          TAILQ_ENTRY(sctp_stream_queue_pending) next;
 	uint32_t length;
 	uint32_t timetolive;
 	uint32_t ppid;
@@ -435,12 +435,12 @@ struct sctp_stream_queue_pending {
 	uint16_t stream;
 	uint16_t strseq;
 	uint16_t act_flags;
-	uint8_t  msg_is_complete;
-	uint8_t  some_taken;
-	uint8_t  addr_over;
-	uint8_t  pr_sctp_on;
-	uint8_t  sender_all_done;
-	uint8_t  put_last_out;
+	uint8_t msg_is_complete;
+	uint8_t some_taken;
+	uint8_t addr_over;
+	uint8_t pr_sctp_on;
+	uint8_t sender_all_done;
+	uint8_t put_last_out;
 };
 
 /*
@@ -452,17 +452,17 @@ struct sctp_stream_in {
 	struct sctp_readhead inqueue;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
-	uint8_t  delivery_started;
+	uint8_t delivery_started;
 };
 
 /* This struct is used to track the traffic on outbound streams */
 TAILQ_HEAD(sctpwheel_listhead, sctp_stream_out);
 struct sctp_stream_out {
 	struct sctp_streamhead outqueue;
-	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
+	                TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
-	uint8_t  last_msg_incomplete;
+	uint8_t last_msg_incomplete;
 };
 
 /* used to keep track of the addresses yet to try to add/delete */
@@ -486,7 +486,7 @@ struct sctp_scoping {
 #define SCTP_TSN_LOG_SIZE 40
 
 struct sctp_tsn_log {
-	void     *stcb;
+	void *stcb;
 	uint32_t tsn;
 	uint16_t strm;
 	uint16_t seq;
@@ -530,23 +530,23 @@ struct sctp_nonpad_sndrcvinfo {
  */
 
 struct sctp_cc_functions {
-	void (*sctp_set_initial_cc_param)(struct sctp_tcb *stcb, struct sctp_nets *net);
-	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
-		 	struct sctp_association *asoc, 
-		 	int accum_moved ,int reneged_all, int will_exit);
-	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
-			struct sctp_association *asoc);
-	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
-			struct sctp_nets *net);
-	void (*sctp_cwnd_update_after_ecn_echo)(struct sctp_tcb *stcb,
-			struct sctp_nets *net);
-	void (*sctp_cwnd_update_after_packet_dropped)(struct sctp_tcb *stcb,
-			struct sctp_nets *net, struct sctp_pktdrop_chunk *cp,
-			uint32_t *bottle_bw, uint32_t *on_queue);
-	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
-			struct sctp_nets *net, int burst_limit);
-	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp, 
-			struct sctp_tcb *stcb, struct sctp_nets *net);
+	void (*sctp_set_initial_cc_param) (struct sctp_tcb *stcb, struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_sack) (struct sctp_tcb *stcb,
+	         struct sctp_association *asoc,
+	         int accum_moved, int reneged_all, int will_exit);
+	void (*sctp_cwnd_update_after_fr) (struct sctp_tcb *stcb,
+	         struct sctp_association *asoc);
+	void (*sctp_cwnd_update_after_timeout) (struct sctp_tcb *stcb,
+	         struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_ecn_echo) (struct sctp_tcb *stcb,
+	         struct sctp_nets *net);
+	void (*sctp_cwnd_update_after_packet_dropped) (struct sctp_tcb *stcb,
+	         struct sctp_nets *net, struct sctp_pktdrop_chunk *cp,
+	         uint32_t * bottle_bw, uint32_t * on_queue);
+	void (*sctp_cwnd_update_after_output) (struct sctp_tcb *stcb,
+	         struct sctp_nets *net, int burst_limit);
+	void (*sctp_cwnd_update_after_fr_timer) (struct sctp_inpcb *inp,
+	         struct sctp_tcb *stcb, struct sctp_nets *net);
 };
 
 /* used to save ASCONF chunks for retransmission */
@@ -589,9 +589,9 @@ struct sctp_association {
 	struct sctp_nonpad_sndrcvinfo def_send;
 
 	/* timers and such */
-	struct sctp_timer hb_timer;		/* hb timer */
-	struct sctp_timer dack_timer;		/* Delayed ack timer */
-	struct sctp_timer asconf_timer;		/* asconf */
+	struct sctp_timer hb_timer;	/* hb timer */
+	struct sctp_timer dack_timer;	/* Delayed ack timer */
+	struct sctp_timer asconf_timer;	/* asconf */
 	struct sctp_timer strreset_timer;	/* stream reset */
 	struct sctp_timer shut_guard_timer;	/* shutdown guard */
 	struct sctp_timer autoclose_timer;	/* automatic close timer */
@@ -606,7 +606,7 @@ struct sctp_association {
 	/* Deleted primary destination (used to stop timer) */
 	struct sctp_nets *deleted_primary;
 
-	struct sctpnetlisthead nets;		/* remote address list */
+	struct sctpnetlisthead nets;	/* remote address list */
 
 	/* Free chunk list */
 	struct sctpchunk_listhead free_chunks;
@@ -638,12 +638,11 @@ struct sctp_association {
 	 */
 	struct sctpwheel_listhead out_wheel;
 
-	/* This pointer will be set to NULL 
-	 * most of the time. But when we have
-	 * a fragmented message, where we could
-	 * not get out all of the message at
-	 * the last send then this will point
-	 * to the stream to go get data from.
+	/*
+	 * This pointer will be set to NULL most of the time. But when we
+	 * have a fragmented message, where we could not get out all of the
+	 * message at the last send then this will point to the stream to go
+	 * get data from.
 	 */
 	struct sctp_stream_out *locked_on_sending;
 
@@ -691,7 +690,10 @@ struct sctp_association {
 
 	/* JRS - the congestion control functions are in this struct */
 	struct sctp_cc_functions cc_functions;
-	/* JRS - value to store the currently loaded congestion control module */
+	/*
+	 * JRS - value to store the currently loaded congestion control
+	 * module
+	 */
 	uint32_t congestion_control_module;
 
 	uint32_t vrf_id;
@@ -760,6 +762,12 @@ struct sctp_association {
 	 * mapping array.
 	 */
 	uint32_t highest_tsn_inside_map;
+	
+	/* EY - new NR variables used for nr_sack based on mapping_array*/
+	uint8_t *nr_mapping_array;
+	uint32_t nr_mapping_array_base_tsn;
+	uint32_t highest_tsn_inside_nr_map;
+	uint16_t nr_mapping_array_size;
 
 	uint32_t last_echo_tsn;
 	uint32_t last_cwr_tsn;
@@ -782,22 +790,21 @@ struct sctp_association {
 	uint32_t last_sending_seq[SCTP_MAX_RESET_PARAMS];
 	uint32_t last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
 #ifdef SCTP_ASOCLOG_OF_TSNS
-	/* 
-	 * special log  - This adds considerable size
-	 * to the asoc, but provides a log that you
-	 * can use to detect problems via kgdb.
+	/*
+	 * special log  - This adds considerable size to the asoc, but
+	 * provides a log that you can use to detect problems via kgdb.
 	 */
-        struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
-        struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log in_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log out_tsnlog[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_log[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_logsnt[SCTP_TSN_LOG_SIZE];
 	uint16_t tsn_in_at;
- 	uint16_t tsn_out_at;
+	uint16_t tsn_out_at;
 	uint16_t tsn_in_wrapped;
 	uint16_t tsn_out_wrapped;
 	uint16_t cumack_log_at;
 	uint16_t cumack_log_atsnt;
-#endif /* SCTP_ASOCLOG_OF_TSNS */
+#endif				/* SCTP_ASOCLOG_OF_TSNS */
 #ifdef SCTP_FS_SPEC_LOG
 	struct sctp_fs_spec_log fslog[SCTP_FS_SPEC_LOG_SIZE];
 	uint16_t fs_index;
@@ -814,9 +821,10 @@ struct sctp_association {
 
 	uint32_t total_output_queue_size;
 
-	uint32_t sb_cc;		       /* shadow of sb_cc */
-    uint32_t sb_send_resv;     /* amount reserved on a send */
-    uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
+	uint32_t sb_cc;		/* shadow of sb_cc */
+	uint32_t sb_send_resv;	/* amount reserved on a send */
+	uint32_t my_rwnd_control_len;	/* shadow of sb_mbcnt used for rwnd
+					 * control */
 	/* 32 bit nonce stuff */
 	uint32_t nonce_resync_tsn;
 	uint32_t nonce_wait_tsn;
@@ -949,8 +957,8 @@ struct sctp_association {
 	uint8_t stream_locked;
 	uint8_t authenticated;	/* packet authenticated ok */
 	/*
-	 * This flag indicates that a SACK need to be sent.
-	 * Initially this is 1 to send the first sACK immediately.
+	 * This flag indicates that a SACK need to be sent. Initially this
+	 * is 1 to send the first sACK immediately.
 	 */
 	uint8_t send_sack;
 
@@ -967,14 +975,14 @@ struct sctp_association {
 	uint8_t last_flags_delivered;
 	uint8_t hb_ect_randombit;
 	uint8_t hb_random_idx;
-	uint8_t hb_is_disabled;		/* is the hb disabled? */
+	uint8_t hb_is_disabled;	/* is the hb disabled? */
 	uint8_t default_tos;
 	uint8_t asconf_del_pending;	/* asconf delete last addr pending */
 
 	/* ECN Nonce stuff */
 	uint8_t receiver_nonce_sum;	/* nonce I sum and put in my sack */
 	uint8_t ecn_nonce_allowed;	/* Tells us if ECN nonce is on */
-	uint8_t nonce_sum_check;	/* On off switch used during re-sync */
+	uint8_t nonce_sum_check;/* On off switch used during re-sync */
 	uint8_t nonce_wait_for_ecne;	/* flag when we expect a ECN */
 	uint8_t peer_supports_ecn_nonce;
 
@@ -990,6 +998,10 @@ struct sctp_association {
 
 	/* flag to indicate if peer can do asconf */
 	uint8_t peer_supports_asconf;
+	
+	/* EY - flag to indicate if peer can do nr_sack*/
+	uint8_t peer_supports_nr_sack;
+	
 	/* pr-sctp support flag */
 	uint8_t peer_supports_prsctp;
 	/* peer authentication support flag */
@@ -1026,6 +1038,8 @@ struct sctp_association {
 	uint8_t delayed_connection;
 	uint8_t ifp_had_enobuf;
 	uint8_t saw_sack_with_frags;
+	/* EY */
+	uint8_t saw_sack_with_nr_frags;
 	uint8_t in_restart_hash;
 	uint8_t assoc_up_sent;
 	uint8_t adaptation_needed;
@@ -1035,6 +1049,10 @@ struct sctp_association {
 	uint8_t sctp_cmt_on_off;
 	uint8_t iam_blocking;
 	uint8_t cookie_how[8];
+	
+	/* EY 05/05/08 - NR_SACK variable*/
+	uint8_t sctp_nr_sack_on_off;
+	
 	/* JRS 5/21/07 - CMT PF variable */
 	uint8_t sctp_cmt_pf;
 	/*
@@ -1044,16 +1062,16 @@ struct sctp_association {
 	 * trailing locactions out.  If I get a TSN above the array
 	 * mappingArraySz, I discard the datagram and let retransmit happen.
 	 */
-	 uint32_t marked_retrans;
-	 uint32_t timoinit;
-	 uint32_t timodata;
-	 uint32_t timosack;
-	 uint32_t timoshutdown;
-	 uint32_t timoheartbeat;
-	 uint32_t timocookie;
-	 uint32_t timoshutdownack;
-	 struct timeval start_time;
-	 struct timeval discontinuity_time;
+	uint32_t marked_retrans;
+	uint32_t timoinit;
+	uint32_t timodata;
+	uint32_t timosack;
+	uint32_t timoshutdown;
+	uint32_t timoheartbeat;
+	uint32_t timocookie;
+	uint32_t timoshutdownack;
+	struct timeval start_time;
+	struct timeval discontinuity_time;
 };
 
 #endif
