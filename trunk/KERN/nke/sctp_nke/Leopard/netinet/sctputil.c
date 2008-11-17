@@ -854,7 +854,7 @@ sctp_select_initial_TSN(struct sctp_pcb *inp)
 }
 
 uint32_t
-sctp_select_a_tag(struct sctp_inpcb *inp, int save_in_twait)
+sctp_select_a_tag(struct sctp_inpcb *inp, uint16_t lport, uint16_t rport, int save_in_twait)
 {
 	u_long x, not_done;
 	struct timeval now;
@@ -867,7 +867,7 @@ sctp_select_a_tag(struct sctp_inpcb *inp, int save_in_twait)
 			/* we never use 0 */
 			continue;
 		}
-		if (sctp_is_vtag_good(inp, x, &now, save_in_twait)) {
+		if (sctp_is_vtag_good(inp, x, lport, rport, &now, save_in_twait)) {
 			not_done = 0;
 		}
 	}
@@ -919,7 +919,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #endif
 	asoc->sb_send_resv = 0;
 	if (override_tag) {
-		if (sctp_is_in_timewait(override_tag)) {
+#ifdef MICHAELS_EXPERIMENT
+	        if (sctp_is_in_timewait(override_tag, stcb->sctp_ep->sctp_lport, stcb->rport)) {
 			/* It must be in the time-wait hash, we put
 			 * it there when we aloc one. If not the
 			 * peer is playing games.
@@ -932,13 +933,15 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #endif 
 			return (ENOMEM);
 		}
-
+#else
+		asoc->my_vtag = override_tag;
+#endif		
 	} else {
-		asoc->my_vtag = sctp_select_a_tag(m, 1);
+	  asoc->my_vtag = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
 	}
 	/* Get the nonce tags */
-	asoc->my_vtag_nonce = sctp_select_a_tag(m, 0);
-	asoc->peer_vtag_nonce = sctp_select_a_tag(m, 0);
+	asoc->my_vtag_nonce = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport, 0);
+	asoc->peer_vtag_nonce = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport, 0);
 	asoc->vrf_id = vrf_id;
 
 	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
@@ -959,7 +962,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #endif
 	asoc->refcnt = 0;
 	asoc->assoc_up_sent = 0;
-	asoc->assoc_id = asoc->my_vtag;
 	asoc->asconf_seq_out = asoc->str_reset_seq_out = asoc->init_seq_number = asoc->sending_seq =
 	    sctp_select_initial_TSN(&m->sctp_ep);
 	asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
