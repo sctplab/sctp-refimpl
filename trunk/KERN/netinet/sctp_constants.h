@@ -825,33 +825,34 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 /*
  * SCTP upper layer notifications
  */
-#define SCTP_NOTIFY_ASSOC_UP		1
-#define SCTP_NOTIFY_ASSOC_DOWN		2
-#define SCTP_NOTIFY_INTERFACE_DOWN	3
-#define SCTP_NOTIFY_INTERFACE_UP	4
-#define SCTP_NOTIFY_DG_FAIL		5
-#define SCTP_NOTIFY_STRDATA_ERR 	6
-#define SCTP_NOTIFY_ASSOC_ABORTED	7
-#define SCTP_NOTIFY_PEER_OPENED_STREAM	8
-#define SCTP_NOTIFY_STREAM_OPENED_OK	9
-#define SCTP_NOTIFY_ASSOC_RESTART	10
-#define SCTP_NOTIFY_HB_RESP             11
-#define SCTP_NOTIFY_ASCONF_SUCCESS	12
-#define SCTP_NOTIFY_ASCONF_FAILED	13
-#define SCTP_NOTIFY_PEER_SHUTDOWN	14
-#define SCTP_NOTIFY_ASCONF_ADD_IP	15
-#define SCTP_NOTIFY_ASCONF_DELETE_IP	16
-#define SCTP_NOTIFY_ASCONF_SET_PRIMARY	17
+#define SCTP_NOTIFY_ASSOC_UP                     1
+#define SCTP_NOTIFY_ASSOC_DOWN                   2
+#define SCTP_NOTIFY_INTERFACE_DOWN               3
+#define SCTP_NOTIFY_INTERFACE_UP                 4
+#define SCTP_NOTIFY_DG_FAIL                      5
+#define SCTP_NOTIFY_STRDATA_ERR                  6
+#define SCTP_NOTIFY_ASSOC_ABORTED                7
+#define SCTP_NOTIFY_PEER_OPENED_STREAM           8
+#define SCTP_NOTIFY_STREAM_OPENED_OK             9
+#define SCTP_NOTIFY_ASSOC_RESTART               10
+#define SCTP_NOTIFY_HB_RESP                     11
+#define SCTP_NOTIFY_ASCONF_SUCCESS              12
+#define SCTP_NOTIFY_ASCONF_FAILED               13
+#define SCTP_NOTIFY_PEER_SHUTDOWN               14
+#define SCTP_NOTIFY_ASCONF_ADD_IP               15
+#define SCTP_NOTIFY_ASCONF_DELETE_IP            16
+#define SCTP_NOTIFY_ASCONF_SET_PRIMARY          17
 #define SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION 18
-#define SCTP_NOTIFY_INTERFACE_CONFIRMED 20
-#define SCTP_NOTIFY_STR_RESET_RECV      21
-#define SCTP_NOTIFY_STR_RESET_SEND      22
-#define SCTP_NOTIFY_STR_RESET_FAILED_OUT 23
-#define SCTP_NOTIFY_STR_RESET_FAILED_IN 24
-#define SCTP_NOTIFY_AUTH_NEW_KEY	25
-#define SCTP_NOTIFY_AUTH_KEY_CONFLICT	26
-#define SCTP_NOTIFY_SPECIAL_SP_FAIL     27
-#define SCTP_NOTIFY_MAX			27
+#define SCTP_NOTIFY_INTERFACE_CONFIRMED         20
+#define SCTP_NOTIFY_STR_RESET_RECV              21
+#define SCTP_NOTIFY_STR_RESET_SEND              22
+#define SCTP_NOTIFY_STR_RESET_FAILED_OUT        23
+#define SCTP_NOTIFY_STR_RESET_FAILED_IN         24
+#define SCTP_NOTIFY_AUTH_NEW_KEY                25
+#define SCTP_NOTIFY_AUTH_KEY_CONFLICT           26
+#define SCTP_NOTIFY_SPECIAL_SP_FAIL             27
+#define SCTP_NOTIFY_SENDER_DRY                  28
+#define SCTP_NOTIFY_MAX                         28
 
 /* This is the value for messages that are NOT completely
  * copied down where we will start to split the message.

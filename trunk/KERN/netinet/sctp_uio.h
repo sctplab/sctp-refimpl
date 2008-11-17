@@ -72,6 +72,7 @@ struct sctp_event_subscribe {
 	uint8_t sctp_partial_delivery_event;
 	uint8_t sctp_adaptation_layer_event;
 	uint8_t sctp_authentication_event;
+	uint8_t sctp_sender_dry_event;
 	uint8_t sctp_stream_reset_events;
 };
 
@@ -364,6 +365,14 @@ struct sctp_authkey_event {
 #define SCTP_AUTH_NEWKEY	0x0001
 
 
+struct sctp_sender_dry_event {
+	uint16_t sender_dry_type;
+	uint16_t sender_dry_flags;
+	uint32_t sender_dry_length;
+	sctp_assoc_t sender_dry_assoc_id;
+};
+
+
 /*
  * stream reset event
  */
@@ -402,6 +411,7 @@ union sctp_notification {
 	struct sctp_adaption_event sn_adaption_event;
 	struct sctp_pdapi_event sn_pdapi_event;
 	struct sctp_authkey_event sn_auth_event;
+	struct sctp_sender_dry_event sn_sender_dry_event;
 	struct sctp_stream_reset_event sn_strreset_event;
 };
 
@@ -417,7 +427,7 @@ union sctp_notification {
 #define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
 #define SCTP_AUTHENTICATION_EVENT	0x0008
 #define SCTP_STREAM_RESET_EVENT		0x0009
-
+#define SCTP_SENDER_DRY_EVENT           0x000a
 
 /*
  * socket option structs
