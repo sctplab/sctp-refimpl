@@ -4517,8 +4517,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	SCTP_TCB_LOCK(stcb);
 
 	/* now that my_vtag is set, add it to the hash */
-	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
-	    SCTP_BASE_INFO(hashasocmark))];
+	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 #ifdef MICHAELS_EXPERIMENT
