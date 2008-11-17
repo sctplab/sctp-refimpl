@@ -3754,9 +3754,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->pak_to_read_sendq = NULL;
 	}
 #endif
-	if ((inp->sctp_asocidhash) != NULL) 
+	if ((inp->sctp_asocidhash) != NULL) {
 		SCTP_HASH_FREE(inp->sctp_asocidhash, inp->hashasocidmark);
-
+		inp->sctp_asocidhash = NULL;
+	}
         /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		/* Its only abandoned if it had data left */
