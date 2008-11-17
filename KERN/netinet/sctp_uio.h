@@ -555,6 +555,7 @@ struct sctp_assoc_value {
 };
 
 struct sctp_assoc_ids {
+        uint32_t gaids_number_of_ids;
 	sctp_assoc_t gaids_assoc_id[0];
 };
 
