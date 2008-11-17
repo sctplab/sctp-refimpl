@@ -135,7 +135,9 @@ struct sctp_block_entry {
 
 struct sctp_timewait {
 	uint32_t tv_sec_at_expire;	/* the seconds from boot to expire */
-	uint32_t v_tag;		/* the vtag that can not be reused */
+        uint32_t v_tag;		        /* the vtag that can not be reused */
+        uint16_t lport;                 /* the local port used in vtag */
+        uint16_t rport;                 /* the remote port used in vtag */
 };
 
 struct sctp_tagblock {
@@ -731,7 +733,7 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *,
 
 struct sctp_tcb *
 sctp_findassociation_ep_asconf(struct mbuf *, int, int,
-    struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **);
+			       struct sctphdr *, struct sctp_inpcb **, struct sctp_nets **, uint32_t vrf_id);
 
 int sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id);
 
@@ -757,12 +759,12 @@ sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
 
 
-void sctp_delete_from_timewait(uint32_t);
+void sctp_delete_from_timewait(uint32_t, uint16_t, uint16_t );
 
-int sctp_is_in_timewait(uint32_t tag);
+int sctp_is_in_timewait(uint32_t tag, uint16_t lport, uint16_t rport);
 
 void
-sctp_add_vtag_to_timewait(uint32_t, uint32_t);
+sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t rport);
 
 void sctp_add_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *, uint32_t);
 
@@ -793,7 +795,7 @@ int
 sctp_set_primary_addr(struct sctp_tcb *, struct sockaddr *,
     struct sctp_nets *);
 
-int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, struct timeval *, int);
+int sctp_is_vtag_good(struct sctp_inpcb *, uint32_t, uint16_t lport, uint16_t rport, struct timeval *, int);
 
 /* void sctp_drain(void); */
 

@@ -76,7 +76,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock);
 
 uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
-uint32_t sctp_select_a_tag(struct sctp_inpcb *, int);
+uint32_t sctp_select_a_tag(struct sctp_inpcb *, uint16_t lport, uint16_t rport, int);
 
 int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, int, uint32_t, uint32_t);
 

@@ -1471,6 +1471,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 
 	if (head == NULL)
 		return (NULL);
+	
 	LIST_FOREACH(inp, head, sctp_hash) {
 		SCTP_INP_RLOCK(inp);
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
@@ -1762,8 +1763,11 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	 * If the TCP model exists it could be that the main listening
 	 * endpoint is gone but there exists a connected socket for this guy
 	 * yet. If so we can return the first one that we find. This may NOT
-	 * be the correct one but the sctp_findassociation_ep_addr has
-	 * further code to look at all TCP models.
+	 * be the correct one so the caller should be wary on the return INP.
+	 * Currently the onlyc caller that sets this flag is in bindx where
+	 * we are verifying that a user CAN bind the address. He either
+	 * has bound it already, or someone else has, or its open to bind,
+	 * so this is good enough. 
 	 */
 	if (inp == NULL && find_tcp_pool) {
 		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(lport,SCTP_BASE_INFO(hashtcpmark))];
@@ -1915,11 +1919,62 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 	return (NULL);
 }
 
+static int
+sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
+{
+  struct sctp_nets *net;
+  /* Simple question, the ports match, does the tcb own the to address? */
+  if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
+    /* of course */
+    return (1);
+  }
+  /* have to look at all bound addresses */
+  TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+    if (net->ro._l_addr.sa.sa_family != to->sa_family) {
+      /* not the same family, can't be a match */
+      continue;
+    }
+    switch (to->sa_family) {
+    case AF_INET:
+      {
+	struct sockaddr_in *sin, *rsin;
+	sin = (struct sockaddr_in *)&net->ro._l_addr;
+	rsin = (struct sockaddr_in *)to;
+	if (sin->sin_addr.s_addr ==
+	    rsin->sin_addr.s_addr) {
+	  /* found it */
+	  return (1);
+	}
+	break;
+      }
+#ifdef INET6
+    case AF_INET6:
+      {
+	struct sockaddr_in6 *sin6, *rsin6;
+
+	sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+	rsin6 = (struct sockaddr_in6 *)to;
+	if (SCTP6_ARE_ADDR_EQUAL(sin6,
+				 rsin6)) {
+	  /* Update the endpoint pointer */
+	  return (1);
+	}
+	break;
+      }
+#endif
+    default:
+      /* TSNH */
+      break;
+    }
+  }
+  /* Nope, do not have the address ;-( */
+  return (0);
+}
 
 static struct sctp_tcb *
 sctp_findassoc_by_vtag(struct sockaddr *from, struct sockaddr *to, uint32_t vtag,
-    struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint16_t rport,
-    uint16_t lport, int skip_src_check)
+		       struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint16_t rport,
+		       uint16_t lport, int skip_src_check, uint32_t vrf_id, uint32_t remote_tag)
 {
 	/*
 	 * Use my vtag to hash. If we find it we then verify the source addr
@@ -1963,9 +2018,27 @@ sctp_findassoc_by_vtag(struct sockaddr *from, struct sockaddr *to, uint32_t vtag
 				continue;
 			}
 			/* RRS:Need toaddr check here */
-			
+			if (sctp_does_stcb_own_this_addr(stcb, to) == 0) {
+			        /* Endpoint does not own this address */
+				SCTP_TCB_UNLOCK(stcb);
+				continue;
+			}
+			if (remote_tag) {
+			  /* If we have both vtags thats all we match on */
+			  if (stcb->asoc.peer_vtag == remote_tag) {
+			    /* If both tags match we consider it conclusive
+			     * and check NO source/destination addresses
+			     */
+			    goto conclusive;
+			  }
+			}
 			if (skip_src_check) {
-				*netp = NULL;	/* unknown */
+			conclusive:
+			        if (from) {
+				  net = sctp_findnet(stcb, from);
+				} else {
+				  *netp = NULL;	/* unknown */
+				}
 				if(inp_p)
 					*inp_p = stcb->sctp_ep;
 				SCTP_INP_INFO_RUNLOCK();
@@ -2123,7 +2196,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 	      retval = sctp_findassoc_by_vtag(from, to,  ntohl(sh->v_tag),
-		    inp_p, netp, sh->src_port, sh->dest_port, 0);
+					      inp_p, netp, sh->src_port, sh->dest_port, 0, vrf_id, 0);
 		if (retval) {
 			return (retval);
 		}
@@ -2181,7 +2254,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
  */
 struct sctp_tcb *
 sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
-    struct sctphdr *sh, struct sctp_inpcb **inp_p, struct sctp_nets **netp)
+			       struct sctphdr *sh, struct sctp_inpcb **inp_p, struct sctp_nets **netp, uint32_t vrf_id)
 {
 	struct sctp_tcb *stcb;
 	struct sockaddr_in *sin;
@@ -2189,6 +2262,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_in6 *sin6;
 #endif
 	struct sockaddr_storage local_store, remote_store;
+	struct sockaddr *to;
 	struct ip *iph;
 #ifdef INET6
 	struct ip6_hdr *ip6;
@@ -2200,7 +2274,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 
 	memset(&local_store, 0, sizeof(local_store));
 	memset(&remote_store, 0, sizeof(remote_store));
-
+	to = (struct sockaddr *)&local_store;
 	/* First get the destination address setup too. */
 	iph = mtod(m, struct ip *);
 	switch (iph->ip_v) {
@@ -2304,12 +2378,12 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int iphlen, int offset,
 
 	if (zero_address) {
 	        stcb = sctp_findassoc_by_vtag(NULL, to, ntohl(sh->v_tag), inp_p,
-		    netp, sh->src_port, sh->dest_port, 1);
+					      netp, sh->src_port, sh->dest_port, 1, vrf_id, 0);
                 /*printf("findassociation_ep_asconf: zero lookup address finds stcb 0x%x\n", (uint32_t)stcb);*/
 	} else {
 		stcb = sctp_findassociation_ep_addr(inp_p,
 		    (struct sockaddr *)&remote_store, netp,
-		    (struct sockaddr *)&local_store, NULL);
+		    to, NULL);
 	}
 	return (stcb);
 }
@@ -4412,6 +4486,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	asoc->assoc_id = sctp_aloc_a_assoc_id(inp, stcb);
 	SCTP_TCB_LOCK_INIT(stcb);
 	SCTP_TCB_SEND_LOCK_INIT(stcb);
+	stcb->rport = rport;
 	/* setup back pointer's */
 	stcb->sctp_ep = inp;
 	stcb->sctp_socket = inp->sctp_socket;
@@ -4425,7 +4500,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		return (NULL);
 	}
 	/* and the port */
-	stcb->rport = rport;
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_WLOCK(inp);
 	if (inp->sctp_flags & (SCTP_PCB_FLAGS_SOCKET_GONE | SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
@@ -4447,8 +4521,9 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	    SCTP_BASE_INFO(hashasocmark))];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
-	sctp_delete_from_timewait(stcb->asoc.my_vtag);
-
+#ifdef MICHAELS_EXPERIMENT
+	sctp_delete_from_timewait(stcb->asoc.my_vtag, inp->sctp_lport, stcb->rport);
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, SCTP_DO_SETSCOPE, SCTP_ALLOC_ASOC))) {
@@ -4586,7 +4661,7 @@ sctp_del_remote_addr(struct sctp_tcb *stcb, struct sockaddr *remaddr)
 }
 
 void
-sctp_delete_from_timewait(uint32_t tag)
+sctp_delete_from_timewait(uint32_t tag, uint16_t lport, uint16_t rport)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -4597,9 +4672,13 @@ sctp_delete_from_timewait(uint32_t tag)
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-				if (twait_block->vtag_block[i].v_tag == tag) {
+			  if ((twait_block->vtag_block[i].v_tag == tag) &&
+			      (twait_block->vtag_block[i].lport == lport) &&
+			      (twait_block->vtag_block[i].rport == rport)) {
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
+					twait_block->vtag_block[i].lport = 0;
+					twait_block->vtag_block[i].rport = 0;
 					found = 1;
 					break;
 				}
@@ -4611,7 +4690,7 @@ sctp_delete_from_timewait(uint32_t tag)
 }
 
 int
-sctp_is_in_timewait(uint32_t tag)
+sctp_is_in_timewait(uint32_t tag, uint16_t lport, uint16_t rport)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -4623,7 +4702,9 @@ sctp_is_in_timewait(uint32_t tag)
 	if (!SCTP_LIST_EMPTY(chain)) {
 		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-				if (twait_block->vtag_block[i].v_tag == tag) {
+			        if ((twait_block->vtag_block[i].v_tag == tag)  &&
+				    (twait_block->vtag_block[i].lport == lport)  &&
+				    (twait_block->vtag_block[i].rport == rport)) {
 					found = 1;
 					break;
 				}
@@ -4638,7 +4719,7 @@ sctp_is_in_timewait(uint32_t tag)
 
 
 void
-sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
+sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t rport)
 {
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
@@ -4657,16 +4738,22 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 					twait_block->vtag_block[i].tv_sec_at_expire =
 						now.tv_sec + time;
 					twait_block->vtag_block[i].v_tag = tag;
+					twait_block->vtag_block[i].lport = lport;
+					twait_block->vtag_block[i].rport = rport;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
 					    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
+					twait_block->vtag_block[i].lport = 0;
+					twait_block->vtag_block[i].rport = 0;
 					if (set == 0) {
 						/* Reuse it for my new tag */
 						twait_block->vtag_block[i].tv_sec_at_expire = now.tv_sec + time;
 						twait_block->vtag_block[i].v_tag = tag;
+						twait_block->vtag_block[i].lport = lport;
+						twait_block->vtag_block[i].rport = rport;
 						set = 1;
 					}
 				}
@@ -4694,6 +4781,8 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time)
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
 		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 		twait_block->vtag_block[0].v_tag = tag;
+		twait_block->vtag_block[0].lport = lport;
+		twait_block->vtag_block[0].rport = rport;
 	}
 }
 
@@ -4998,7 +5087,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_TIME_WAIT);
+	sctp_add_vtag_to_timewait(asoc->my_vtag, inp->sctp_lport, stcb->rport, SCTP_TIME_WAIT);
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
@@ -6738,7 +6827,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 }
 
 int
-sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now, int save_in_twait)
+sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t rport, struct timeval *now, int save_in_twait)
 {
 	/*
 	 * This function serves two purposes. It will see if a TAG can be
@@ -6762,18 +6851,10 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, struct timeval *now, int
 	        goto check_time_wait;
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
-
-		if (stcb->asoc.my_vtag == tag) {
-			/*
-			 * We should remove this if and return 0 always if
-			 * we want vtags unique across all endpoints. For
-			 * now within a endpoint is ok.
-			 */
-			if (inp == stcb->sctp_ep) {
-				/* bad tag, in use */
-				SCTP_INP_INFO_WUNLOCK();
-				return (0);
-			}
+	        if ((stcb->asoc.my_vtag == tag) && (stcb->rport == rport) && (inp == stcb->sctp_ep))  {
+		        /* bad tag, in use */
+	  	        SCTP_INP_INFO_WUNLOCK();
+		        return (0);
 		}
 	}
 check_time_wait:
@@ -6793,8 +6874,9 @@ check_time_wait:
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
-				} else if (twait_block->vtag_block[i].v_tag ==
-				    tag) {
+				} else if ((twait_block->vtag_block[i].v_tag == tag) &&
+					   (twait_block->vtag_block[i].lport == lport) &&
+					   (twait_block->vtag_block[i].rport == rport)) {
 					/* Bad tag, sorry :< */
 					SCTP_INP_INFO_WUNLOCK();
 					return (0);
@@ -6802,6 +6884,7 @@ check_time_wait:
 			}
 		}
 	}
+#ifdef MICHAELS_EXPERIMENT
 	/*-
 	 * Not found, ok to use the tag, add it to the time wait hash
 	 * as well this will prevent two sucessive cookies from getting
@@ -6811,7 +6894,8 @@ check_time_wait:
 	 * the t-wait hash.
 	 */
 	if (save_in_twait)
-		sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life));
+	       sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life, lport, rport));
+#endif
 	SCTP_INP_INFO_WUNLOCK();
 	return (1);
 }
