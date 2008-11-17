@@ -2074,10 +2074,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_ids *ids;
 		unsigned int at, limit;
-
+		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
-		limit = *optsize / sizeof(sctp_assoc_t);
+		limit = (*optsize-sizeof(uint32_t))/ sizeof(sctp_assoc_t);
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if (at < limit) {
@@ -2089,7 +2089,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			}
 		}
 		SCTP_INP_RUNLOCK(inp);
-		*optsize = at * sizeof(sctp_assoc_t);
+		ids->gaids_number_of_ids = at;
+		*optsize = ((at * sizeof(sctp_assoc_t)) + sizeof(uint32_t));
 	}
 	break;
 	case SCTP_CONTEXT:
