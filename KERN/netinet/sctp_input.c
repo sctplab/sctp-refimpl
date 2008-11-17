@@ -3951,7 +3951,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if (asconf_len < sizeof(struct sctp_asconf_paramhdr)) 
 					break;
 				stcb = sctp_findassociation_ep_asconf(m, iphlen,
-								      *offset, sh, &inp, netp);
+								      *offset, sh, &inp, netp, vrf_id);
 				if (stcb != NULL)
 					break;
 				asconf_offset += SCTP_SIZE32(asconf_len);
