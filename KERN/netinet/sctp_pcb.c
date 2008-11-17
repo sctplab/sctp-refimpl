@@ -6835,7 +6835,6 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	 * tag. A secondary function it will do is purge out old tags that
 	 * can be removed.
 	 */
-	struct sctpasochead *head;
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
 	struct sctp_tcb *stcb;
@@ -6843,21 +6842,6 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 
 	SCTP_INP_INFO_WLOCK();
 	chain = &SCTP_BASE_INFO(vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE))];
-	/* First is the vtag in use ? */
-
-	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(tag,
-							    SCTP_BASE_INFO(hashasocmark))];
-	if (head == NULL) {
-	        goto check_time_wait;
-	}
-	LIST_FOREACH(stcb, head, sctp_asocs) {
-	        if ((stcb->asoc.my_vtag == tag) && (stcb->rport == rport) && (inp == stcb->sctp_ep))  {
-		        /* bad tag, in use */
-	  	        SCTP_INP_INFO_WUNLOCK();
-		        return (0);
-		}
-	}
-check_time_wait:
 	/* Now what about timed wait ? */
 	if (!SCTP_LIST_EMPTY(chain)) {
 		/*
