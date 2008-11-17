@@ -2074,7 +2074,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_ids *ids;
 		unsigned int at, limit;
-
+		struct sctpasochead *head;
+		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
 		limit = *optsize / sizeof(sctp_assoc_t);
@@ -2087,6 +2088,22 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
 				break;
 			}
+		}
+		for (at=0; at<=inp->hashasocidmark; at++)  {
+		  int cnt=0;
+		  struct sctp_tcb *lstcb;
+		  head = &inp->sctp_asocidhash[at];
+		  printf("Bucket:%d:");
+		  LIST_FOREACH(lstcb, head, sctp_tcbasocidhash) {
+		    cnt++;
+		    printf("%d", sctp_get_associd(lstcb));
+		    if ((cnt % 8)  == 0) {
+		      printf("\n");
+		    } else {
+		      printf(",");
+		    }
+		  }
+		  printf("\n");
 		}
 		SCTP_INP_RUNLOCK(inp);
 		*optsize = at * sizeof(sctp_assoc_t);
