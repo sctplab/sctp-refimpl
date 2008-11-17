@@ -2912,18 +2912,6 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 #endif
 
 	/*
-	 * First if we are are going down dump everything we can to the
-	 * socket rcv queue.
-	 */
-
-#if defined(__APPLE__)
-	if (so_locked) {
-		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	} else {
-		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	}
-#endif
-	/*
 	 * For TCP model AND UDP connected sockets we will send an error up
 	 * when an ABORT comes in.
 	 */
@@ -3126,13 +3114,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 		return;
 	}
 
-#if defined(__APPLE__)
-	if (so_locked) {
-		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	} else {
-		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	}
-#endif
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
@@ -3216,13 +3197,6 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 		/* event not enabled */
 		return;
 	}
-#if defined(__APPLE__)
-	if (so_locked) {
-		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	} else {
-		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
-	}
-#endif
 
 	length = sizeof(struct sctp_send_failed) + sp->length;
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_send_failed), 0, M_DONTWAIT, 1, MT_DATA);
@@ -3343,9 +3317,6 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 		return;
 	}
 	
-#if defined (__APPLE__)
-	sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
-#endif
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_pdapi_event), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
