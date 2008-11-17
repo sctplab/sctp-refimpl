@@ -764,6 +764,12 @@ struct sctp_association {
 	 * mapping array.
 	 */
 	uint32_t highest_tsn_inside_map;
+	
+	/* EY - new NR variables used for nr_sack based on mapping_array*/
+	uint8_t *nr_mapping_array;
+	uint32_t nr_mapping_array_base_tsn;
+	uint32_t highest_tsn_inside_nr_map;
+	uint16_t nr_mapping_array_size;
 
 	uint32_t last_echo_tsn;
 	uint32_t last_cwr_tsn;
@@ -994,6 +1000,8 @@ struct sctp_association {
 
 	/* flag to indicate if peer can do asconf */
 	uint8_t peer_supports_asconf;
+	/* EY - flag to indicate if peer can do nr_sack*/
+	uint8_t peer_supports_nr_sack;	
 	/* pr-sctp support flag */
 	uint8_t peer_supports_prsctp;
 	/* peer authentication support flag */
@@ -1030,6 +1038,8 @@ struct sctp_association {
 	uint8_t delayed_connection;
 	uint8_t ifp_had_enobuf;
 	uint8_t saw_sack_with_frags;
+	/* EY */
+	uint8_t saw_sack_with_nr_frags;
 	uint8_t in_asocid_hash;
 	uint8_t assoc_up_sent;
 	uint8_t adaptation_needed;
@@ -1039,6 +1049,8 @@ struct sctp_association {
 	uint8_t sctp_cmt_on_off;
 	uint8_t iam_blocking;
 	uint8_t cookie_how[8];
+	/* EY 05/05/08 - NR_SACK variable*/
+	uint8_t sctp_nr_sack_on_off;
 	/* JRS 5/21/07 - CMT PF variable */
 	uint8_t sctp_cmt_pf;
 	/*
