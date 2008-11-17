@@ -1680,14 +1680,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 */
 		LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 
-		/* Is this the first restart? */
-		if (stcb->asoc.in_restart_hash == 0) {
-			/* Ok add it to assoc_id vtag hash */
-			head = &SCTP_BASE_INFO(sctp_restarthash)[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-									       SCTP_BASE_INFO(hashrestartmark))];
-			LIST_INSERT_HEAD(head, stcb, sctp_tcbrestarhash);
-			stcb->asoc.in_restart_hash = 1;
-		}
 		/* process the INIT info (peer's info) */
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -1882,7 +1874,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* process the INIT-ACK info (my info) */
 	old_tag = asoc->my_vtag;
-	asoc->assoc_id = asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
+	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
