@@ -475,6 +475,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_NEEDS_MAPPED_V4	0x00800000
 #define SCTP_PCB_FLAGS_MULTIPLE_ASCONFS	0x01000000
 #define SCTP_PCB_FLAGS_PORTREUSE        0x02000000
+#define SCTP_PCB_FLAGS_DRYEVNT          0x04000000
 /*-
  * mobility_features parameters (by micchie).Note
  * these features are applied against the
