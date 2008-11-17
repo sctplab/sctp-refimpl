@@ -3448,6 +3448,54 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 }
 
 static void
+sctp_notify_sender_dry_event(struct sctp_tcb *stcb,
+                             int so_locked
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+                             SCTP_UNUSED
+#endif
+                             )
+{
+	struct mbuf *m_notify;
+	struct sctp_sender_dry_event *event;
+	struct sctp_queued_to_read *control;
+
+	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_DRYEVNT)) {
+		/* event not enabled */
+		return;
+	}
+	
+	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_sender_dry_event), 0, M_DONTWAIT, 1, MT_DATA);
+	if (m_notify == NULL) {
+		/* no space left */
+		return;
+	}
+	SCTP_BUF_LEN(m_notify) = 0;
+	event = mtod(m_notify, struct sctp_sender_dry_event *);
+	event->sender_dry_type = SCTP_SENDER_DRY_EVENT;
+	event->sender_dry_flags = 0;
+	event->sender_dry_length = sizeof(struct sctp_sender_dry_event);
+	event->sender_dry_assoc_id = sctp_get_associd(stcb);
+
+	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_sender_dry_event);
+	SCTP_BUF_NEXT(m_notify) = NULL;
+
+	/* append to socket */
+	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
+	                                 0, 0, 0, 0, 0, 0, m_notify);
+	if (control == NULL) {
+		/* no memory */
+		sctp_m_freem(m_notify);
+		return;
+	}
+	control->length = SCTP_BUF_LEN(m_notify);
+	control->spec_flags = M_NOTIFICATION;
+	/* not that we need this */
+	control->tail_mbuf = m_notify;
+	sctp_add_to_readq(stcb->sctp_ep, stcb, control,
+	                  &stcb->sctp_socket->so_rcv, 1, so_locked);
+}
+
+static void
 sctp_notify_stream_reset(struct sctp_tcb *stcb,
     int number_entries, uint16_t * list, int flag)
 {
@@ -3663,8 +3711,9 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		    error, (uint16_t)(uintptr_t)data);
 		break;
 #endif				/* not yet? remove? */
-
-
+	case SCTP_NOTIFY_SENDER_DRY:
+		sctp_notify_sender_dry_event(stcb, so_locked);
+		break;
 	default:
 		SCTPDBG(SCTP_DEBUG_UTIL1, "%s: unknown notification %xh (%u)\n",
 			__FUNCTION__, notification, notification);
