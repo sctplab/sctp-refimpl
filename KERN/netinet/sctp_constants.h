@@ -386,6 +386,14 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
+/* EY 
+ * If a tsn is nr-gapped, its first tagged as NR_MARKED and then NR_ACKED
+ * When yet another nr-sack is received, if a particular TSN's sent tag 
+ * is observed to be NR_ACKED after gap-ack info is processed, this implies
+ * that particular TSN is reneged
+*/
+#define SCTP_DATAGRAM_NR_ACKED 		10020
+#define SCTP_DATAGRAM_NR_MARKED		20005
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
@@ -557,7 +565,13 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 #define SCTP_INITIAL_MAPPING_ARRAY  16
 /* how much we grow the mapping array each call */
 #define SCTP_MAPPING_ARRAY_INCR     32
-
+/* EY 05/13/08 - nr_sack version of the previous 3 constants */
+/* Maximum the nr mapping array will  grow to (TSN mapping array) */
+#define SCTP_NR_MAPPING_ARRAY	512
+/* size of the inital malloc on the nr mapping array */
+#define SCTP_INITIAL_NR_MAPPING_ARRAY  16
+/* how much we grow the nr mapping array each call */
+#define SCTP_NR_MAPPING_ARRAY_INCR     32
 /*
  * Here we define the timer types used by the implementation as arguments in
  * the set/get timer type calls.
