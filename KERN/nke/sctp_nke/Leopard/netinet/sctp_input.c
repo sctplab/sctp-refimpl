@@ -1680,14 +1680,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 */
 		LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 
-		/* Is this the first restart? */
-		if (stcb->asoc.in_restart_hash == 0) {
-			/* Ok add it to assoc_id vtag hash */
-			head = &SCTP_BASE_INFO(sctp_restarthash)[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-									       SCTP_BASE_INFO(hashrestartmark))];
-			LIST_INSERT_HEAD(head, stcb, sctp_tcbrestarhash);
-			stcb->asoc.in_restart_hash = 1;
-		}
 		/* process the INIT info (peer's info) */
 		SCTP_TCB_SEND_UNLOCK(stcb);
 		SCTP_INP_WUNLOCK(stcb->sctp_ep);
@@ -1882,7 +1874,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	}
 	/* process the INIT-ACK info (my info) */
 	old_tag = asoc->my_vtag;
-	asoc->assoc_id = asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
+	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
 	asoc->init_seq_number = ntohl(initack_cp->init.initial_tsn);
@@ -2092,6 +2084,18 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	return (stcb);
 }
 
+/*
+ * CODE LIKE THIS NEEDS TO RUN IF the peer supports the NAT extension, i.e
+ * we NEED to make sure we are not already using the vtag. If so we
+ * need to send back an ABORT-TRY-AGAIN-WITH-NEW-TAG No middle box bit!
+	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(tag,
+							    SCTP_BASE_INFO(hashasocmark))];
+	LIST_FOREACH(stcb, head, sctp_asocs) {
+	        if ((stcb->asoc.my_vtag == tag) && (stcb->rport == rport) && (inp == stcb->sctp_ep))  {
+		       -- SEND ABORT - TRY AGAIN --
+		}
+	}
+*/
 
 /*
  * handles a COOKIE-ECHO message stcb: modified to either a new or left as
@@ -3959,7 +3963,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if (asconf_len < sizeof(struct sctp_asconf_paramhdr)) 
 					break;
 				stcb = sctp_findassociation_ep_asconf(m, iphlen,
-								      *offset, sh, &inp, netp);
+								      *offset, sh, &inp, netp, vrf_id);
 				if (stcb != NULL)
 					break;
 				asconf_offset += SCTP_SIZE32(asconf_len);
