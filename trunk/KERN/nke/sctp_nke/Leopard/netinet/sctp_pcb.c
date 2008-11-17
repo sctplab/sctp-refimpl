@@ -1396,7 +1396,7 @@ sctp_findasoc_ep_asocid_locked(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_PRINTF("TSNH ep_associd1\n");
 		return (NULL);
 	}
-	LIST_FOREACH(stcb, head, sctp_asocs) {
+	LIST_FOREACH(stcb, head, sctp_tcbasocidhash) {
 		if (stcb->asoc.assoc_id == id) {
 			if (inp != stcb->sctp_ep) {
 				/*
@@ -3754,9 +3754,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->pak_to_read_sendq = NULL;
 	}
 #endif
-	if ((inp->sctp_asocidhash) != NULL) 
+	if ((inp->sctp_asocidhash) != NULL) {
 		SCTP_HASH_FREE(inp->sctp_asocidhash, inp->hashasocidmark);
-
+		inp->sctp_asocidhash = NULL;
+	}
         /*sa_ignore FREED_MEMORY*/
 	while ((sq = TAILQ_FIRST(&inp->read_queue)) != NULL) {
 		/* Its only abandoned if it had data left */
@@ -4494,6 +4495,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		/* failed */
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
+		LIST_REMOVE(stcb, sctp_tcbasocidhash);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_asoc), stcb);
 		SCTP_DECR_ASOC_COUNT();
 		*error = err;
@@ -4506,6 +4508,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		/* inpcb freed while alloc going on */
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
+		LIST_REMOVE(stcb, sctp_tcbasocidhash);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_asoc), stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_INP_INFO_WUNLOCK();
@@ -4517,8 +4520,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	SCTP_TCB_LOCK(stcb);
 
 	/* now that my_vtag is set, add it to the hash */
-	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag,
-	    SCTP_BASE_INFO(hashasocmark))];
+	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
 #ifdef MICHAELS_EXPERIMENT
@@ -4539,6 +4541,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
+		LIST_REMOVE(stcb, sctp_tcbasocidhash);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_asoc), stcb);
 		SCTP_INP_WUNLOCK(inp);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);

@@ -57,7 +57,7 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #include <netinet/sctp_auth.h>
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
-#define SCTP_PCBHASH_ASOC(tag, mask) (tag % mask)
+#define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
 
 struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
