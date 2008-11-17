@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.108 2008-11-06 12:36:57 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.109 2008-11-17 20:42:44 lei Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -234,6 +234,7 @@ static int cmd_setv4mapped(char *argv[], int argc);
 static int cmd_addauth(char *argv[], int argc);
 static int cmd_addkey(char *argv[], int argc);
 static int cmd_addnullkey(char *argv[], int argc);
+static int cmd_deactivatekey(char *argv[], int argc);
 static int cmd_deletekey(char *argv[], int argc);
 static int cmd_setactivekey(char *argv[], int argc);
 static int cmd_getactivekey(char *argv[], int argc);
@@ -565,6 +566,8 @@ static struct command commands[] = {
      cmd_addkey},
     {"addnullkey", "addkey - set a shared null key",
      cmd_addnullkey},
+    {"deactivatekey", "deactivatekey - deactivate a shared key",
+     cmd_deactivatekey},
     {"deletekey", "deletekey - delete a shared key",
      cmd_deletekey},
     {"setactivekey", "setactivekey - set a shared key as active",
@@ -1595,7 +1598,11 @@ initUserInterface(distributor *o,struct sctpAdaptorMod *s)
   /* Override the default completion done by the library, because
    * we want to complete commands, not filenames.
    */
+#if defined(__APPLE__)
+  rl_completion_entry_function = (Function *)command_generator;
+#else
   rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
+#endif
   /*  Call handleStdin2 when a complete line of input has been entered. */
   rl_callback_handler_install(">>>", handleStdin2);
 
@@ -5830,6 +5837,36 @@ static int cmd_addnullkey(char *argv[], int argc) {
 	return (-1);
     } else {
 	printf("Added null key id %u\n", key->sca_keynumber);
+    }
+#else
+    printf("Not supported on this OS\n");
+#endif
+    return (0);
+}
+
+static int cmd_deactivatekey(char *argv[], int argc) {
+#if defined(__BSD_SCTP_STACK__)
+    struct sctp_authkeyid key;
+
+    if ((argc < 1) || (argc > 2)) {
+	printf("Expected: deactivatekey <key_id> [<optional assoc id>]\n");
+	return (-1);
+    }
+    bzero(&key, sizeof(key));
+    key.scact_keynumber = (uint16_t)strtoul(argv[0], NULL, 0);
+    /* use the optional assoc id, if given */
+    if (argc == 2)
+	key.scact_assoc_id = (uint32_t)strtoul(argv[1], NULL, 0);
+    else
+	key.scact_assoc_id = get_assoc_id();
+
+    if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_DEACTIVATE_KEY, &key,
+		   sizeof(key)) != 0) {
+	printf("Can't deactivate key id %u, errno %d\n", key.scact_keynumber,
+	       errno);
+	return (-1);
+    } else {
+	printf("Deactivated key id %u\n", key.scact_keynumber);
     }
 #else
     printf("Not supported on this OS\n");

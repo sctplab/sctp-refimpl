@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.31 2007-07-17 12:54:50 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.32 2008-11-17 20:42:44 lei Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -194,11 +194,12 @@ handle_notification(int fd,char *notify_buf) {
 		case SCTP_AUTH_NEWKEY:
 			printf("AUTH_NEWKEY");
 			break;
-#if 0
-		case SCTP_KEY_CONFLICT:
-			printf("KEY_CONFLICT");
+		case SCTP_AUTH_NO_AUTH:
+			printf("AUTH_NO_AUTH");
 			break;
-#endif
+		case SCTP_AUTH_FREE_KEY:
+			printf("AUTH_FREE_KEY");
+			break;
 		default:
 			printf("Indication 0x%x", auth->auth_indication);
 		}
@@ -245,7 +246,6 @@ handle_notification(int fd,char *notify_buf) {
 				printf(" have been reset %s\n",strscope);
 			}
 		}
-		
 	}
 	break;
 #endif
