@@ -57,7 +57,7 @@ TAILQ_HEAD(sctp_streamhead, sctp_stream_queue_pending);
 #include <netinet/sctp_auth.h>
 
 #define SCTP_PCBHASH_ALLADDR(port, mask) (port & mask)
-#define SCTP_PCBHASH_ASOC(tag, mask) (tag & mask)
+#define SCTP_PCBHASH_ASOC(tag, mask) (tag % mask)
 
 struct sctp_vrf {
 	LIST_ENTRY (sctp_vrf) next_vrf;
@@ -151,8 +151,6 @@ struct sctp_epinfo {
 	struct sctppcbhead *sctp_ephash;
 	u_long hashmark;
 
-	struct sctpasochead *sctp_restarthash;
-	u_long hashrestartmark;
 	/*-
 	 * The TCP model represents a substantial overhead in that we get an
 	 * additional hash table to keep explicit connections in. The
@@ -544,6 +542,10 @@ struct sctp_inpcb {
 	uint32_t total_recvs;
 	uint32_t last_abort_code;
 	uint32_t total_nospaces;
+	struct sctpasochead *sctp_asocidhash;
+	u_long hashasocidmark;
+        uint32_t sctp_associd_counter;
+  
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	struct sctp_pcbtsn_rlog readlog[SCTP_READ_LOG_SIZE];
 	uint32_t readlog_index;
@@ -557,8 +559,9 @@ struct sctp_tcb {
 						 * table */
         LIST_ENTRY(sctp_tcb) sctp_tcblist;	/* list of all of the
 						 * TCB's */
-        LIST_ENTRY(sctp_tcb) sctp_tcbrestarhash;	/* next link in restart
-							 * hash table */
+        LIST_ENTRY(sctp_tcb) sctp_tcbasocidhash;	/* next link in asocid
+							 * hash table
+							 */
         LIST_ENTRY(sctp_tcb) sctp_asocs;	/* vtag hash list */
 	struct sctp_block_entry *block_entry;	/* pointer locked by  socket
 						 * send buffer */
@@ -718,6 +721,9 @@ struct sctp_tcb *
 sctp_findassociation_ep_addr(struct sctp_inpcb **,
     struct sockaddr *, struct sctp_nets **, struct sockaddr *,
     struct sctp_tcb *);
+
+struct sctp_tcb *
+sctp_findasoc_ep_asocid_locked(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int want_lock);
 
 struct sctp_tcb *
 sctp_findassociation_ep_asocid(struct sctp_inpcb *,
