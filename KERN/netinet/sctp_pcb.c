@@ -1396,7 +1396,7 @@ sctp_findasoc_ep_asocid_locked(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
 		SCTP_PRINTF("TSNH ep_associd1\n");
 		return (NULL);
 	}
-	LIST_FOREACH(stcb, head, sctp_asocs) {
+	LIST_FOREACH(stcb, head, sctp_tcbasocidhash) {
 		if (stcb->asoc.assoc_id == id) {
 			if (inp != stcb->sctp_ep) {
 				/*
