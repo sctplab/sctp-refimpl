@@ -6837,7 +6837,6 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	 */
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
-	struct sctp_tcb *stcb;
 	int i;
 
 	SCTP_INP_INFO_WLOCK();
