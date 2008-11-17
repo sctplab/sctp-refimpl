@@ -2084,6 +2084,18 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	return (stcb);
 }
 
+/*
+ * CODE LIKE THIS NEEDS TO RUN IF the peer supports the NAT extension, i.e
+ * we NEED to make sure we are not already using the vtag. If so we
+ * need to send back an ABORT-TRY-AGAIN-WITH-NEW-TAG No middle box bit!
+	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(tag,
+							    SCTP_BASE_INFO(hashasocmark))];
+	LIST_FOREACH(stcb, head, sctp_asocs) {
+	        if ((stcb->asoc.my_vtag == tag) && (stcb->rport == rport) && (inp == stcb->sctp_ep))  {
+		       -- SEND ABORT - TRY AGAIN --
+		}
+	}
+*/
 
 /*
  * handles a COOKIE-ECHO message stcb: modified to either a new or left as
