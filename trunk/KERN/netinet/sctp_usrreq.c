@@ -2093,7 +2093,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		  int cnt=0;
 		  struct sctp_tcb *lstcb;
 		  head = &inp->sctp_asocidhash[at];
-		  printf("Bucket:%d:");
+		  printf("Bucket[%d]:", at);
 		  LIST_FOREACH(lstcb, head, sctp_tcbasocidhash) {
 		    cnt++;
 		    printf("%d", sctp_get_associd(lstcb));
@@ -2103,7 +2103,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		      printf(",");
 		    }
 		  }
-		  printf("\n");
+		  printf("!!!\n");
 		}
 		SCTP_INP_RUNLOCK(inp);
 		*optsize = at * sizeof(sctp_assoc_t);
