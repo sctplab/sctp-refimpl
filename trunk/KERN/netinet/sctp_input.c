@@ -321,6 +321,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
+	/* EY - nr_sack: initialize highest tsn in nr_mapping_array */
+	asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 		sctp_log_map(0, 5, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 	}
@@ -328,6 +330,8 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	asoc->str_reset_seq_in = asoc->asconf_seq_in + 1;
 	
 	asoc->mapping_array_base_tsn = ntohl(init->initial_tsn);
+	/* EY 05/13/08 - nr_sack: initialize nr_mapping array's base tsn like above*/
+	asoc->nr_mapping_array_base_tsn = ntohl(init->initial_tsn);
 	asoc->tsn_last_delivered = asoc->cumulative_tsn = asoc->asconf_seq_in;
 	asoc->last_echo_tsn = asoc->asconf_seq_in;
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
@@ -1650,6 +1654,12 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		if (asoc->mapping_array) {
 			memset(asoc->mapping_array, 0,
 			       asoc->mapping_array_size);
+		}
+		/* EY 05/13/08 - nr_sack version of the above if statement*/
+		if (asoc->nr_mapping_array && SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) 
+			&& asoc->peer_supports_nr_sack) {
+			memset(asoc->nr_mapping_array, 0,
+			    asoc->nr_mapping_array_size);
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		SCTP_INP_INFO_WLOCK();
@@ -3066,6 +3076,10 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		/* resend the sack */
 		sctp_send_sack(stcb);
 		break;
+	/* EY for nr_sacks*/	
+	case SCTP_NR_SELECTIVE_ACK:
+		sctp_send_nr_sack(stcb);	/* EY resend the nr-sack */
+		break;
 	case SCTP_HEARTBEAT_REQUEST:
 		/* resend a demand HB */
 		if ((stcb->asoc.overall_error_count + 3) < stcb->asoc.max_send_times) {
@@ -3319,6 +3333,14 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					stcb->asoc.tsn_last_delivered = stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
 					stcb->asoc.mapping_array_base_tsn = ntohl(resp->senders_next_tsn);
 					memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
+					
+					/* EY 05/13/08 - nr_sack: to keep nr_mapping array be consistent with mapping_array*/
+					if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack){
+						stcb->asoc.highest_tsn_inside_nr_map = stcb->asoc.highest_tsn_inside_map;
+						stcb->asoc.nr_mapping_array_base_tsn = stcb->asoc.mapping_array_base_tsn;
+						memset(stcb->asoc.nr_mapping_array, 0, stcb->asoc.nr_mapping_array_size);
+					}					
+					
 					stcb->asoc.sending_seq = ntohl(resp->receivers_next_tsn);
 					stcb->asoc.last_acked_seq = stcb->asoc.cumulative_tsn;
 
@@ -3425,6 +3447,12 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		stcb->asoc.tsn_last_delivered = stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
 		stcb->asoc.mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
+		/* EY 05/13/08 -nr_sack: to keep nr_mapping array consistent with mapping array */
+		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack){
+			stcb->asoc.highest_tsn_inside_nr_map = stcb->asoc.highest_tsn_inside_map;
+			stcb->asoc.nr_mapping_array_base_tsn = stcb->asoc.highest_tsn_inside_map + 1;
+			memset(stcb->asoc.nr_mapping_array, 0, stcb->asoc.nr_mapping_array_size);
+		}		
 		atomic_add_int(&stcb->asoc.sending_seq, 1);
 		/* save off historical data for retrans */
 		stcb->asoc.last_sending_seq[1] = stcb->asoc.last_sending_seq[0];
@@ -4064,7 +4092,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	 * process all control chunks...
 	 */
 	if (((ch->chunk_type == SCTP_SELECTIVE_ACK) ||
-	     (ch->chunk_type == SCTP_HEARTBEAT_REQUEST)) &&
+		/* EY */
+		(ch->chunk_type == SCTP_NR_SELECTIVE_ACK) ||
+	    (ch->chunk_type == SCTP_HEARTBEAT_REQUEST)) &&
 	    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		/* implied cookie-ack.. we must have lost the ack */
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
@@ -4350,6 +4380,88 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 			}
 			break;
+		/* EY - nr_sack:  If the received chunk is an nr_sack chunk */
+		case SCTP_NR_SELECTIVE_ACK:
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_NR_SACK\n");
+			SCTP_STAT_INCR(sctps_recvsacks);
+			{
+				struct sctp_nr_sack_chunk *nr_sack;
+				int abort_now = 0;
+				uint32_t a_rwnd, cum_ack;
+				uint16_t num_seg, num_nr_seg;
+				int nonce_sum_flag, all_bit;
+
+				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_nr_sack_chunk))) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on nr_sack chunk, too small\n");
+			ignore_nr_sack:
+					*offset = length;
+					if (locked_tcb) {
+						SCTP_TCB_UNLOCK(locked_tcb);
+					}
+					return (NULL);
+				}
+				/* EY nr_sacks have not been negotiated but the peer end sent an nr_sack, silently discard the chunk */
+				if(!(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)){
+					goto unknown_chunk;
+				}
+				
+				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
+					/*-
+					 * If we have sent a shutdown-ack, we will pay no
+					 * attention to a sack sent in to us since
+					 * we don't care anymore.
+					 */
+					goto ignore_nr_sack;
+				}
+				nr_sack = (struct sctp_nr_sack_chunk *)ch;
+				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
+				all_bit = ch->chunk_flags & SCTP_NR_SACK_ALL_BIT;
+				
+				cum_ack = ntohl(nr_sack->nr_sack.cum_tsn_ack);
+				num_seg = ntohs(nr_sack->nr_sack.num_gap_ack_blks);
+				/* EY -if All bit  is set, then there are as many gaps as nr_gaps */
+				if(all_bit){
+					num_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
+				}
+				num_nr_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
+				a_rwnd = (uint32_t) ntohl(nr_sack->nr_sack.a_rwnd);
+				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_NR_SACK process cum_ack:%x num_seg:%d a_rwnd:%d\n",
+				    cum_ack,
+				    num_seg,
+				    a_rwnd
+				    );
+				stcb->asoc.seen_a_sack_this_pkt = 1;
+				if ((stcb->asoc.pr_sctp_cnt == 0) &&
+				    (num_seg == 0) &&
+				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
+				    (cum_ack == stcb->asoc.last_acked_seq)) &&
+				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))
+				    ) {
+					/*
+					 * We have a SIMPLE sack having no
+					 * prior segments and data on sent
+					 * queue to be acked.. Use the
+					 * faster path sack processing. We
+					 * also allow window update sacks
+					 * with no missing segments to go
+					 * this way too.
+					 */
+					sctp_express_handle_nr_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag,
+					    &abort_now);
+				} else {
+					if (netp && *netp)
+						sctp_handle_nr_sack(m, *offset,
+						    nr_sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+				}
+				if (abort_now) {
+					/* ABORT signal from sack processing */
+					*offset = length;
+					return (NULL);
+				}
+			}
+			break;	
+						
 		case SCTP_HEARTBEAT_REQUEST:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_HEARTBEAT\n");
 			if ((stcb) && netp && *netp) {
