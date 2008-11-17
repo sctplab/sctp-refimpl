@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -1169,6 +1169,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	TAILQ_INIT(&asoc->asconf_queue);
 	/* authentication fields */
 	asoc->authinfo.random = NULL;
+	asoc->authinfo.active_keyid = 0;
 	asoc->authinfo.assoc_key = NULL;
 	asoc->authinfo.assoc_keyid = 0;
 	asoc->authinfo.recv_key = NULL;
@@ -3602,6 +3603,10 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		if(stcb->asoc.adaptation_needed && (stcb->asoc.adaptation_sent == 0)) {
 			sctp_notify_adaptation_layer(stcb, error);
 		}
+		if (stcb->asoc.peer_supports_auth == 0) {
+			sctp_ulp_notify(SCTP_NOTIFY_NO_PEER_AUTH, stcb, 0,
+					NULL, so_locked);
+		}
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
 		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error, NULL, so_locked);
@@ -3665,6 +3670,10 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_ASSOC_RESTART:
 		sctp_notify_assoc_change(SCTP_RESTART, stcb, error, data, so_locked);
+		if (stcb->asoc.peer_supports_auth == 0) {
+			sctp_ulp_notify(SCTP_NOTIFY_NO_PEER_AUTH, stcb, 0,
+					NULL, so_locked);
+		}
 		break;
 	case SCTP_NOTIFY_HB_RESP:
 		break;
@@ -3703,14 +3712,19 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_AUTH_NEW_KEY:
 		sctp_notify_authentication(stcb, SCTP_AUTH_NEWKEY, error,
-		    (uint16_t)(uintptr_t)data);
+					   (uint16_t)(uintptr_t)data,
+					   so_locked);
 		break;
-#if 0
-	case SCTP_NOTIFY_AUTH_KEY_CONFLICT:
-		sctp_notify_authentication(stcb, SCTP_AUTH_KEY_CONFLICT,
-		    error, (uint16_t)(uintptr_t)data);
+	case SCTP_NOTIFY_AUTH_FREE_KEY:
+		sctp_notify_authentication(stcb, SCTP_AUTH_FREE_KEY, error,
+					   (uint16_t)(uintptr_t)data,
+					   so_locked);
 		break;
-#endif				/* not yet? remove? */
+	case SCTP_NOTIFY_NO_PEER_AUTH:
+		sctp_notify_authentication(stcb, SCTP_AUTH_NO_AUTH, error,
+					   (uint16_t)(uintptr_t)data,
+					   so_locked);
+		break;
 	case SCTP_NOTIFY_SENDER_DRY:
 		sctp_notify_sender_dry_event(stcb, so_locked);
 		break;

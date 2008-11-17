@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -357,6 +357,8 @@ struct sctp_tmit_chunk {
 	uint16_t send_size;
 	uint16_t book_size;
 	uint16_t mbcnt;
+	uint16_t auth_keyid;
+	uint8_t holds_key_ref;	/* flag if auth keyid refcount is held */
 	uint8_t pad_inplace;
 	uint8_t do_rtt;
 	uint8_t book_size_scale;
@@ -426,7 +428,7 @@ struct sctp_stream_queue_pending {
 	struct mbuf *tail_mbuf;
 	struct timeval ts;
 	struct sctp_nets *net;
-	TAILQ_ENTRY (sctp_stream_queue_pending ) next;
+	TAILQ_ENTRY (sctp_stream_queue_pending) next;
 	uint32_t length;
 	uint32_t timetolive;
 	uint32_t ppid;
@@ -435,6 +437,8 @@ struct sctp_stream_queue_pending {
 	uint16_t stream;
 	uint16_t strseq;
 	uint16_t act_flags;
+	uint16_t auth_keyid;
+	uint8_t  holds_key_ref;
 	uint8_t  msg_is_complete;
 	uint8_t  some_taken;
 	uint8_t  addr_over;
