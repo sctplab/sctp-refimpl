@@ -2073,12 +2073,12 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_ASSOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
-		unsigned int at, limit, i;
+		unsigned int at, limit;
 		struct sctpasochead *head;
 		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
-		limit = *optsize / sizeof(sctp_assoc_t);
+		limit = (*optsize-sizeof(uint32_t))/ sizeof(sctp_assoc_t);
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if (at < limit) {
@@ -2089,24 +2089,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				break;
 			}
 		}
-		for (i=0; i<=inp->hashasocidmark; i++)  {
-		  int cnt=0;
-		  struct sctp_tcb *lstcb;
-		  head = &inp->sctp_asocidhash[i];
-		  printf("Bucket[%d]:", i);
-		  LIST_FOREACH(lstcb, head, sctp_tcbasocidhash) {
-		    cnt++;
-		    printf("%d", sctp_get_associd(lstcb));
-		    if ((cnt % 8)  == 0) {
-		      printf("\n");
-		    } else {
-		      printf(",");
-		    }
-		  }
-		  printf("!!!\n");
-		}
 		SCTP_INP_RUNLOCK(inp);
-		*optsize = at * sizeof(sctp_assoc_t);
+		ids->gaids_number_of_ids = at;
+		*optsize = ((at * sizeof(sctp_assoc_t)) + sizeof(uint32_t));
 	}
 	break;
 	case SCTP_CONTEXT:
