@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -119,6 +119,7 @@ struct sctp_paramhdr {
 /* explict EOR signalling */
 #define SCTP_EXPLICIT_EOR               0x0000001b
 #define SCTP_REUSE_PORT                 0x0000001c /* rw */
+#define SCTP_AUTH_DEACTIVATE_KEY	0x0000001d
 
 /*
  * read-only options

@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -90,6 +90,10 @@ extern struct pr_usrreqs sctp_usrreqs;
 }
 
 #define sctp_free_a_strmoq(_stcb, _strmoq) { \
+	if ((_strmoq)->holds_key_ref) { \
+		sctp_auth_key_release(stcb, sp->auth_keyid); \
+		(_strmoq)->holds_key_ref = 0; \
+	} \
 	SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), (_strmoq)); \
 	SCTP_DECR_STRMOQ_COUNT(); \
 }
@@ -98,11 +102,15 @@ extern struct pr_usrreqs sctp_usrreqs;
 	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
 	if ((_strmoq)) { \
 		SCTP_INCR_STRMOQ_COUNT(); \
+		(_strmoq)->holds_key_ref = 0; \
  	} \
 }
 
-
 #define sctp_free_a_chunk(_stcb, _chk) { \
+	if ((_chk)->holds_key_ref) {\
+		sctp_auth_key_release((_stcb), (_chk)->auth_keyid); \
+		(_chk)->holds_key_ref = 0; \
+	} \
         if(_stcb) { \
           SCTP_TCB_LOCK_ASSERT((_stcb)); \
           if ((_chk)->whoTo) { \
@@ -130,11 +138,13 @@ extern struct pr_usrreqs sctp_usrreqs;
 		if ((_chk)) { \
 			SCTP_INCR_CHK_COUNT(); \
                         (_chk)->whoTo = NULL; \
+			(_chk)->holds_key_ref = 0; \
 		} \
 	} else { \
 		(_chk) = TAILQ_FIRST(&(_stcb)->asoc.free_chunks); \
 		TAILQ_REMOVE(&(_stcb)->asoc.free_chunks, (_chk), sctp_next); \
 		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1); \
+		(_chk)->holds_key_ref = 0; \
                 SCTP_STAT_INCR(sctps_cached_chk); \
 		(_stcb)->asoc.free_chunk_cnt--; \
 	} \

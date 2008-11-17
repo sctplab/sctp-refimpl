@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -2873,7 +2873,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if (stcb) {
 			/* get the active key on the assoc */
-			scact->scact_keynumber = stcb->asoc.authinfo.assoc_keyid;
+			scact->scact_keynumber = stcb->asoc.authinfo.active_keyid;
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* get the endpoint active key */
@@ -3473,7 +3473,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 			shared_key->key = key;
 			shared_key->keyid = sca->sca_keynumber;
-			sctp_insert_sharedkey(shared_keys, shared_key);
+			error = sctp_insert_sharedkey(shared_keys, shared_key);
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* set it on the endpoint */
@@ -3507,7 +3507,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 			shared_key->key = key;
 			shared_key->keyid = sca->sca_keynumber;
-			sctp_insert_sharedkey(shared_keys, shared_key);
+			error = sctp_insert_sharedkey(shared_keys, shared_key);
 			SCTP_INP_WUNLOCK(inp);
 		}
 		break;
@@ -3570,22 +3570,29 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_authkeyid *scact;
 
-		SCTP_CHECK_AND_CAST(scact, optval, struct sctp_authkeyid, optsize);
+		SCTP_CHECK_AND_CAST(scact, optval, struct sctp_authkeyid,
+				    optsize);
 		SCTP_FIND_STCB(inp, stcb, scact->scact_assoc_id);
 
 		/* set the active key on the right place */
 		if (stcb) {
 			/* set the active key on the assoc */
-			if (sctp_auth_setactivekey(stcb, scact->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_auth_setactivekey(stcb,
+						   scact->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* set the active key on the endpoint */
 			SCTP_INP_WLOCK(inp);
-			if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_auth_setactivekey_ep(inp,
+						      scact->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_INP_WUNLOCK(inp);
@@ -3596,20 +3603,58 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_authkeyid *scdel;
 
-		SCTP_CHECK_AND_CAST(scdel, optval, struct sctp_authkeyid, optsize);
+		SCTP_CHECK_AND_CAST(scdel, optval, struct sctp_authkeyid,
+				    optsize);
 		SCTP_FIND_STCB(inp, stcb, scdel->scact_assoc_id);
 
 		/* delete the key from the right place */
 		if (stcb) {
-			if (sctp_delete_sharedkey(stcb, scdel->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_delete_sharedkey(stcb,
+						  scdel->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			if (sctp_delete_sharedkey_ep(inp, scdel->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_delete_sharedkey_ep(inp,
+						     scdel->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
+				error = EINVAL;
+			}
+			SCTP_INP_WUNLOCK(inp);
+		}
+		break;
+	}
+	case SCTP_AUTH_DEACTIVATE_KEY:
+	{
+		struct sctp_authkeyid *keyid;
+
+		SCTP_CHECK_AND_CAST(keyid, optval, struct sctp_authkeyid,
+				    optsize);
+		SCTP_FIND_STCB(inp, stcb, keyid->scact_assoc_id);
+
+		/* deactivate the key from the right place */
+		if (stcb) {
+			if (sctp_deact_sharedkey(stcb,
+						 keyid->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
+				error = EINVAL;
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			SCTP_INP_WLOCK(inp);
+			if (sctp_deact_sharedkey_ep(inp,
+						    keyid->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_INP_WUNLOCK(inp);

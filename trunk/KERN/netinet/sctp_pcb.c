@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -5131,6 +5131,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 			sctp_free_remote_addr(sp->net);
 			sctp_free_spbufspace(stcb, asoc, sp);
+			if (sp->holds_key_ref)
+				sctp_auth_key_release(stcb, sp->auth_keyid);
 			/* Free the zone stuff  */
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), sp);
 			SCTP_DECR_STRMOQ_COUNT();
@@ -5169,6 +5171,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
 		}
+		if (chk->holds_key_ref)
+			sctp_auth_key_release(stcb, chk->auth_keyid);
 		ccnt++;
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
@@ -5186,6 +5190,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			if (chk->holds_key_ref)
+				sctp_auth_key_release(stcb, chk->auth_keyid);
 			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
@@ -5209,6 +5215,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			if (chk->holds_key_ref)
+				sctp_auth_key_release(stcb, chk->auth_keyid);
 			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
@@ -5232,6 +5240,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			if (chk->holds_key_ref)
+				sctp_auth_key_release(stcb, chk->auth_keyid);
 			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
@@ -5256,6 +5266,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			if (chk->holds_key_ref)
+				sctp_auth_key_release(stcb, chk->auth_keyid);
 			ccnt++;
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
@@ -5278,6 +5290,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
+			if (chk->holds_key_ref)
+				sctp_auth_key_release(stcb, chk->auth_keyid);
 			sctp_free_remote_addr(chk->whoTo);
 			ccnt++;
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
