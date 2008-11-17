@@ -2074,7 +2074,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_ids *ids;
 		unsigned int at, limit;
-		struct sctpasochead *head;
 		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
