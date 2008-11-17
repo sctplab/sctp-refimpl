@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -2578,8 +2578,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				sctp_free_chunklist(inp->sctp_ep.local_auth_chunks);
 			inp->sctp_ep.local_auth_chunks =
 			    sctp_copy_chunklist((*inp_p)->sctp_ep.local_auth_chunks);
-			(void)sctp_copy_skeylist(&(*inp_p)->sctp_ep.shared_keys,
-			    &inp->sctp_ep.shared_keys);
 
 			/*
 			 * Now we must move it from one hash table to
