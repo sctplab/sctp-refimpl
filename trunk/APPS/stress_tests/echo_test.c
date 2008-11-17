@@ -39,7 +39,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUMBER_OF_THREADS 1
+#define NUMBER_OF_THREADS 250
 #define RUNTIME 60
 #define BUFFER_SIZE (1<<16)
 
@@ -68,9 +68,16 @@ echo_server(void *arg)
 	struct sctp_event_subscribe event;
 	int flags;
 	ssize_t n;
+	char *ids;
+	socklen_t len;
+	struct sctp_assoc_ids *assoc_ids;
+	unsigned int i;
 	
 	buffer = (char *)malloc(BUFFER_SIZE);
-
+	len = 100000;
+	ids = (char *)malloc(len);
+	assoc_ids = (struct sctp_assoc_ids *)ids;
+	
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 		perror("socket");
 	}
@@ -99,6 +106,7 @@ echo_server(void *arg)
 		flags = 0;
 		memset((void *)&sinfo, 0, sizeof(struct sctp_sndrcvinfo));
 		n = sctp_recvmsg(fd, (void *)buffer, BUFFER_SIZE, NULL, 0, &sinfo, &flags);
+		//printf("Assoc id: %d.\n", (int)sinfo.sinfo_assoc_id);
 		if (n < 0) {
 			perror("sctp_recvmsg");
 		}
@@ -108,7 +116,11 @@ echo_server(void *arg)
 		if (n > 0) {
 			n = sctp_send(fd, (const void *)buffer, n, (const struct sctp_sndrcvinfo *)&sinfo, 0);
 			if (n < 0) {
-				perror("sctp_send");
+				printf("SSN = %d, Assoc id: %d.\n", sinfo.sinfo_ssn, (int)sinfo.sinfo_assoc_id);
+				getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, ids, &len);
+				for (i = 0; i < len / sizeof(sctp_assoc_t); i++) {
+					printf("id = %d\n", assoc_ids->gaids_assoc_id[i]);
+				}
 			}
 		}
 	}
