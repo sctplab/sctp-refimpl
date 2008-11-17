@@ -2073,7 +2073,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_ASSOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
-		unsigned int at, limit;
+		unsigned int at, limit, i;
 		struct sctpasochead *head;
 		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
@@ -2089,11 +2089,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				break;
 			}
 		}
-		for (at=0; at<=inp->hashasocidmark; at++)  {
+		for (i=0; i<=inp->hashasocidmark; i++)  {
 		  int cnt=0;
 		  struct sctp_tcb *lstcb;
-		  head = &inp->sctp_asocidhash[at];
-		  printf("Bucket[%d]:", at);
+		  head = &inp->sctp_asocidhash[i];
+		  printf("Bucket[%d]:", i);
 		  LIST_FOREACH(lstcb, head, sctp_tcbasocidhash) {
 		    cnt++;
 		    printf("%d", sctp_get_associd(lstcb));
