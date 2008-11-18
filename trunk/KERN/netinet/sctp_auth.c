@@ -1415,7 +1415,6 @@ int
 sctp_delete_sharedkey_ep(struct sctp_inpcb *inp, uint16_t keyid)
 {
 	sctp_sharedkey_t *skey;
-	struct sctp_tcb *stcb;
 
 	if (inp == NULL)
 		return (-1);
@@ -1448,7 +1447,6 @@ int
 sctp_auth_setactivekey(struct sctp_tcb *stcb, uint16_t keyid)
 {
 	sctp_sharedkey_t *skey = NULL;
-	sctp_key_t *key = NULL;
 
 	/* find the key on the assoc */
 	skey = sctp_find_sharedkey(&stcb->asoc.shared_keys, keyid);
@@ -1530,7 +1528,6 @@ int
 sctp_deact_sharedkey_ep(struct sctp_inpcb *inp, uint16_t keyid)
 {
 	sctp_sharedkey_t *skey;
-	struct sctp_tcb *stcb;
 
 	if (inp == NULL)
 		return (-1);
