@@ -9293,7 +9293,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
 	uint16_t auth_keyid = 0;
-	int data_auth_reqd = 0, data_auth_added = 0;
+	int data_auth_reqd = 0 /*, data_auth_added = 0*/;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 		the destination. */
 	int pf_hbflag = 0;
