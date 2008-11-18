@@ -2014,6 +2014,29 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		*optsize = sizeof(*av); 
 	}
 	break;
+	/* EY - set socket option for nr_sacks  */		
+	case SCTP_NR_SACK_ON_OFF:
+		{
+			struct sctp_assoc_value *av;
+
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off)) {
+				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+				if (stcb) {
+					av->assoc_value = stcb->asoc.sctp_nr_sack_on_off;
+					SCTP_TCB_UNLOCK(stcb);
+
+				} else {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTCONN);
+					error = ENOTCONN;
+				}
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOPROTOOPT);
+				error = ENOPROTOOPT;
+			}
+			*optsize = sizeof(*av);
+		}
+		break;
 	/* JRS - Get socket option for pluggable congestion control */
 	case SCTP_PLUGGABLE_CC:
 	{
@@ -3146,6 +3169,27 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 	}
 	break;
+	/* EY nr_sack_on_off socket option */
+	case SCTP_NR_SACK_ON_OFF:
+		{
+			struct sctp_assoc_value *av;
+
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off)) {
+				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+				if (stcb) {
+					stcb->asoc.sctp_nr_sack_on_off = (uint8_t) av->assoc_value;
+					SCTP_TCB_UNLOCK(stcb);
+				} else {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTCONN);
+					error = ENOTCONN;
+				}
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOPROTOOPT);
+				error = ENOPROTOOPT;
+			}
+		}
+		break;
 	/* JRS - Set socket option for pluggable congestion control */
 	case SCTP_PLUGGABLE_CC:
 	{
