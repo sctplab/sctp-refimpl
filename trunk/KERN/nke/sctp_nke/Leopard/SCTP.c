@@ -92,6 +92,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_assoc_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_path_rtx_max;
 extern struct sysctl_oid sysctl__net_inet_sctp_outgoing_streams;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
+extern struct sysctl_oid sysctl__net_inet_sctp_nr_sack_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_pf;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
@@ -363,6 +364,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 	sysctl_register_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_register_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_on_off);
+	sysctl_register_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_pf);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
@@ -476,6 +478,7 @@ SCTP_stop (kmod_info_t * ki, void * d)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_path_rtx_max);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_outgoing_streams);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_on_off);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_pf);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
