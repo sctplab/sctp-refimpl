@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.109 2008-11-17 20:42:44 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.110 2008-11-18 17:19:06 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -1599,7 +1599,8 @@ initUserInterface(distributor *o,struct sctpAdaptorMod *s)
    * we want to complete commands, not filenames.
    */
 #if defined(__APPLE__)
-  rl_completion_entry_function = (Function *)command_generator;
+  rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
+  /*  rl_completion_entry_function = (Function *)command_generator;*/
 #else
   rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
 #endif
