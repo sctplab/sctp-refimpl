@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.32 2008-11-17 20:42:44 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.33 2008-11-18 17:19:06 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -207,6 +207,9 @@ handle_notification(int fd,char *notify_buf) {
 		       auth->auth_altkeynumber);
 		break;
 	}
+	case SCTP_SENDER_DRY_EVENT:
+	  printf("Got sender DRY event\n");
+	  break;
 	case SCTP_STREAM_RESET_EVENT:
 	{
 		int len;
@@ -775,6 +778,7 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 #endif
 #if defined(__BSD_SCTP_STACK__)
 	event.sctp_authentication_event = 1;
+	event.sctp_sender_dry_event = 1;
 	event.sctp_stream_reset_events = 1;
 #endif
 
