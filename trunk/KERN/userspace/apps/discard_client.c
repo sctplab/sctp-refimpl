@@ -48,7 +48,7 @@ int main() {
 		perror("userspace_connect");
 
 	for (i = 0; i <  NUMBER_OF_MESSAGES; i++) {
-		if (userspace_sctp_sendmsg(sock, (const void *)buffer, SIZE_OF_MESSAGE, &addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0) < 0) {
+		if (userspace_sctp_sendmsg(sock, (const void *)buffer, SIZE_OF_MESSAGE, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0) < 0) {
 			perror("userspace_sctp_sendmsg");
 		}
 	}	
