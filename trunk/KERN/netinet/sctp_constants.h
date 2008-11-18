@@ -317,7 +317,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 /* Minimum number of bytes read by user before we
  * condsider doing a rwnd update
  */
-// #define SCTP_MIN_READ_BEFORE_CONSIDERING  3000
 
 /*
  * default HMAC for cookies, etc... use one of the AUTH HMAC id's
@@ -629,7 +628,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
  * Number of ticks before the soxwakeup() event that is delayed is sent AFTER
  * the accept() call
  */
-// #define SCTP_EVENTWAKEUP_WAIT_TICKS	3000
 
 /*
  * Of course we really don't collect stale cookies, being folks of decerning
@@ -638,7 +636,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
  * up...this is a implemenation dependent treatment. In ours we do not ask
  * for a extension of time, but just retry this many times...
  */
-// #define SCTP_MAX_STALE_COOKIES_I_COLLECT 10
 
 /* max number of TSN's dup'd that I will hold */
 #define SCTP_MAX_DUP_TSNS	20
@@ -647,11 +644,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
  * Here we define the types used when setting the retry amounts.
  */
 /* constants for type of set */
-// #define SCTP_MAXATTEMPT_INIT	2
-// #define SCTP_MAXATTEMPT_SEND	3
 
 /* Maximum TSN's we will summarize in a drop report */
-// #define SCTP_MAX_DROP_REPORT 16
 
 /* How many drop re-attempts we make on  INIT/COOKIE-ECHO */
 #define SCTP_RETRY_DROPPED_THRESH 4
@@ -660,7 +654,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
  * And the max we will keep a history of in the tcb which MUST be lower than
  * 256.
  */
-// #define SCTP_MAX_DROP_SAVE_REPORT 16
 
 /*
  * Here we define the default timers and the default number of attemts we
@@ -737,13 +730,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 #define SCTP_DEF_MAX_PATH_RTX	5
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600	/* 10 min between raise attempts */
-//#define SCTP_DEF_PMTU_MIN	600
 
-//#define SCTP_MSEC_IN_A_SEC	1000
-//#define SCTP_USEC_IN_A_SEC	1000000
-//#define SCTP_NSEC_IN_A_SEC	1000000000
-
-// #define SCTP_MAX_OUTSTANDING_DG	10000
 
 /* How many streams I request initally by default */
 #define SCTP_OSTREAM_INITIAL 10
@@ -752,9 +739,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
  * How many smallest_mtu's need to increase before a window update sack is
  * sent (should be a power of 2).
  */
-//#define SCTP_SEG_TO_RWND_UPD 32
 /* Send window update (incr * this > hiwat). Should be a power of 2 */
-//#define SCTP_SCALE_OF_RWND_TO_UPD       4
 #define SCTP_MINIMAL_RWND		(4096)	/* minimal rwnd */
 
 #define SCTP_ADDRMAX		24
@@ -810,15 +795,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 #define SCTP_DEFAULT_MTU 1500 /* emegency default MTU */
 /* amount peer is obligated to have in rwnd or I will abort */
 #define SCTP_MIN_RWND	1500
-
-//#define SCTP_WINDOW_MIN	1500	/* smallest rwnd can be */
-//#define SCTP_WINDOW_MAX 1048576	/* biggest I can grow rwnd to My playing
-				 /* around suggests a value greater than 64k
-				 * does not do much, I guess via the kernel
-				 * limitations on the stream/socket. */
-
-/* I can handle a 1meg re-assembly */
-//#define SCTP_DEFAULT_MAXMSGREASM 1048576
 
 #define SCTP_DEFAULT_MAXSEGMENT 65535
 
@@ -1002,7 +978,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 #endif				/* !IPPROTO_SCTP */
 
 #define SCTP_MAX_DATA_BUNDLING		256
-//#define SCTP_MAX_CONTROL_BUNDLING	20
 
 /* modular comparison */
 /* True if a > b (mod = M) */
