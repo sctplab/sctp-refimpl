@@ -2136,7 +2136,7 @@ failed_express_del:
 					/*printf("EY-IN sctp_process_a_data_chunk(6): Something is wrong the map base tsn"
 					"\nEY-and nr_map base tsn should be equal.");*/
 				/* EY - not %100 sure about the lock thing, i think we don't need the below, */	
-				//SCTP_TCB_LOCK_ASSERT(stcb);
+				/*SCTP_TCB_LOCK_ASSERT(stcb);*/
 				{
 				/*printf("\nEY-Calculating an nr_gap!!\nEY-mapping_array_size = %d nr_mapping_array_size = %d"
 				"\nEY-mapping_array_base = %d nr_mapping_array_base = %d\nEY-highest_tsn_inside_map = %d"
@@ -5541,7 +5541,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 						/*printf("In sctp_kick_prsctp_reorder_queue(7): Something wrong, the TSN to be tagged"
 							"\nas NR is not even in the mapping_array, or map and nr_map are inconsistent");*/
 						/* EY - not %100 sure about the lock thing, don't think its required */	
-						//SCTP_TCB_LOCK_ASSERT(stcb);			
+						/*SCTP_TCB_LOCK_ASSERT(stcb);			*/
 						{
 						/*printf("\nCalculating an nr_gap!!\nmapping_array_size = %d nr_mapping_array_size = %d"
 						"\nmapping_array_base = %d nr_mapping_array_base = %d\nhighest_tsn_inside_map = %d"
@@ -5605,7 +5605,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 						/*printf("In sctp_kick_prsctp_reorder_queue(8): Something wrong, the TSN to be tagged"
 							"\nas NR is not even in the mapping_array, or map and nr_map are inconsistent");*/
 						/* EY - not %100 sure about the lock thing, don't think its required */	
-						//SCTP_TCB_LOCK_ASSERT(stcb);			
+						/*SCTP_TCB_LOCK_ASSERT(stcb);			*/
 						{
 						/*printf("\nCalculating an nr_gap!!\nmapping_array_size = %d nr_mapping_array_size = %d"
 						"\nmapping_array_base = %d nr_mapping_array_base = %d\nhighest_tsn_inside_map = %d"
@@ -5679,7 +5679,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			      MAX_TSN)) {
 		asoc->highest_tsn_inside_map = new_cum_tsn;
 		/* EY nr_mapping_array version of the above*/
-		//if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack)
+		/*if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack)*/
 		asoc->highest_tsn_inside_nr_map = new_cum_tsn;
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
@@ -6712,7 +6712,7 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 						/* EY - if all bit is set then this TSN is nr_marked */
 						if(all_bit){
 							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
-							//TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+							/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);*/
 							if (tp1->data) {
 								/* sa_ignore NO_NULL_CHK */
 								sctp_free_bufspace(stcb, asoc, tp1, 1);
@@ -6720,8 +6720,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 								}
 				
 							tp1->data = NULL;
-							//asoc->sent_queue_cnt--;
-							//sctp_free_a_chunk(stcb, tp1);
+							/*asoc->sent_queue_cnt--;*/
+							/*sctp_free_a_chunk(stcb, tp1);*/
 							wake_him++;
 						}
 					}
@@ -6813,7 +6813,7 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 					if (tp1->rec.data.TSN_seq == j) {
 						if (tp1->sent != SCTP_DATAGRAM_UNSENT) {
 							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
-							//TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
+							/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next); */
 							if (tp1->data) {
 								/* sa_ignore NO_NULL_CHK */
 								sctp_free_bufspace(stcb, asoc, tp1, 1);
@@ -6821,8 +6821,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 								}
 				
 							tp1->data = NULL;
-							//asoc->sent_queue_cnt--;
-							//sctp_free_a_chunk(stcb, tp1);
+							/*asoc->sent_queue_cnt--;*/
+							/*sctp_free_a_chunk(stcb, tp1);*/
 							wake_him++;
 						}
 					break;

@@ -310,6 +310,10 @@ struct sctp_paramhdr {
 #define SCTP_CAUSE_ILLEGAL_ASCONF_ACK	0xa3
 #define SCTP_CAUSE_REQUEST_REFUSED	0xa4
 
+/* Error causes from nat-draft */
+#define SCTP_CAUSE_NAT_COLLIDING_STATE  0xb0
+#define SCTP_CAUSE_NAT_MISSING_STATE    0xb1
+
 /* Error causes from RFC4895 */
 #define SCTP_CAUSE_UNSUPPORTED_HMACID	0x0105
 
