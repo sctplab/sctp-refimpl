@@ -660,7 +660,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 	if (stcb == NULL)
 		return;
 
-	len = ntohs(cp->chk_lenght);
+	len = ntohs(cp->chk_length);
 
 	
 	/* stop any receive timers */
