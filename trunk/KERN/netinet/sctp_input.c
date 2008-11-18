@@ -4373,6 +4373,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 						sctp_handle_sack(m, *offset, 
 								 sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
 				}
+				if (TAILQ_EMPTY(&stcb->asoc.send_queue) &&
+				    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
+				    (stcb->asoc.stream_queue_cnt == 0)) {
+					sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_NOT_LOCKED);
+				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
 					*offset = length;
@@ -4453,6 +4458,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					if (netp && *netp)
 						sctp_handle_nr_sack(m, *offset,
 						    nr_sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+				}
+				if (TAILQ_EMPTY(&stcb->asoc.send_queue) &&
+				    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
+				    (stcb->asoc.stream_queue_cnt == 0)) {
+					sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_NOT_LOCKED);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
