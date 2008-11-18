@@ -1,0 +1,58 @@
+#include <stdlib.h>
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <netinet/in_systm.h>
+#include <netinet/ip.h>
+#include <netinet/sctp_os.h>
+#include <netinet/sctp_pcb.h>
+
+#define DISCARD_PORT 9
+#define ADDR "192.168.1.197"
+#define SIZE_OF_MESSAGE    1000
+#define NUMBER_OF_MESSAGES 1000
+
+void sctp_init(void);
+int userspace_connect(struct socket *, struct sockaddr *, int);
+ssize_t userspace_sctp_sendmsg(struct socket *, const void *, size_t, struct sockaddr *, socklen_t, u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t);
+void userspace_close(struct socket *);
+
+int main() {
+	struct socket *sock;
+	unsigned int i;
+	struct sockaddr_in addr;
+	char buffer[SIZE_OF_MESSAGE];
+
+	sctp_init();
+//    SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=1;
+//    SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;
+	memset((void *)buffer, 'A', SIZE_OF_MESSAGE);
+	
+	if ((sock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == NULL) {
+		perror("userspace_socket");
+	}
+	
+	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
+#ifdef HAVE_SIN_LEN
+	addr.sin_len         = sizeof(struct sockaddr_in);
+#endif
+	addr.sin_family     = AF_INET;
+	addr.sin_port       = htons(DISCARD_PORT);
+	inet_pton(AF_INET, ADDR, &addr.sin_addr);	
+	
+	if (userspace_connect(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0)
+		perror("userspace_connect");
+
+	for (i = 0; i <  NUMBER_OF_MESSAGES; i++) {
+		if (userspace_sctp_sendmsg(sock, (const void *)buffer, SIZE_OF_MESSAGE, &addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0) < 0) {
+			perror("userspace_sctp_sendmsg");
+		}
+	}	
+	userspace_close(sock);
+	sleep(10);
+	return(0);
+}

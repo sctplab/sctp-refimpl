@@ -23,10 +23,12 @@ softlinks:
 	sh locate_libraries
 apps:
 	$(C_COMPILE) -o discard_server discard_server.c $(LDFLAGS) $(LIBS)
+	$(C_COMPILE) -o discard_client discard_client.c $(LDFLAGS) $(LIBS)
+	$(C_COMPILE) -o discard_app discard_app.c $(LDFLAGS) $(LIBS)
 
 
 clean: 
-	rm -f discard_server
+	rm -f discard_server discard_client discard_app
 
 destroy: clean
 	rm -f user_include user_lib netinet libuserspace.a
