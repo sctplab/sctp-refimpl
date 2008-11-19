@@ -6434,7 +6434,7 @@ static void
 sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct sctp_nr_sack_chunk *ch, uint32_t last_tsn, uint32_t * biggest_tsn_acked,
     uint32_t * biggest_newly_acked_tsn, uint32_t * this_sack_lowest_newack,
-    int num_seg, int num_nr_seg, int *ecn_seg_sums)
+    uint32_t num_seg, uint32_t num_nr_seg, int *ecn_seg_sums)
 {
 	/************************************************/
 	/* process fragments and update sendqueue        */
@@ -6443,16 +6443,16 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_nr_gap_ack_block *nr_frag, nr_block;
 	struct sctp_tmit_chunk *tp1;
-	int i, j, all_bit;
+	uint32_t i, j, all_bit;
 	int wake_him=0;
-	unsigned int theTSN;
+	uint32_t theTSN;
 	int num_frs = 0;
 
 	uint16_t frag_strt, frag_end, primary_flag_set;
 	uint16_t nr_frag_strt, nr_frag_end;
 	
-	u_long last_frag_high;
-	u_long last_nr_frag_high;
+	uint32_t last_frag_high;
+	uint32_t last_nr_frag_high;
 
 	all_bit = ch->ch.chunk_flags & SCTP_NR_SACK_ALL_BIT;
 	
