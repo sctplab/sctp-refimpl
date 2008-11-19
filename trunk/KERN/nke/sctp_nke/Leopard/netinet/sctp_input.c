@@ -648,18 +648,104 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	}
 }
 
+static int
+sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *cp, struct sctp_missing_nat_state *natc)
+{
+  /* return 0 means we want you to proceed with the abort
+   * non-zero means no abort processing
+   */
+  struct sctpasochead *head;
+  
+  if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT) {
+    /* generate a new vtag and send init */
+    LIST_REMOVE(stcb, sctp_asocs);
+    stcb->asoc.my_vtag = sctp_select_a_tag(stcb->sctp_ep, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
+    head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
+    /* put it in the bucket in the vtag hash of assoc's for the system */
+    LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+    sctp_send_initiate(stcb->sctp_ep, stcb, SCTP_SO_NOT_LOCKED);
+    return (1);
+  }
+  if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED) {
+    /* treat like a case where the cookie expired i.e.:
+     * - dump current cookie.
+     * - generate a new vtag.
+     * - resend init.
+     */
+    /* generate a new vtag and send init */
+    LIST_REMOVE(stcb, sctp_asocs);
+    stcb->asoc.state &= ~SCTP_STATE_COOKIE_ECHOED;
+    stcb->asoc.state |= SCTP_STATE_COOKIE_WAIT;
+    sctp_stop_all_cookie_timers(stcb);
+    sctp_toss_old_cookies(stcb, &stcb->asoc);
+    stcb->asoc.my_vtag = sctp_select_a_tag(stcb->sctp_ep, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
+    head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
+    /* put it in the bucket in the vtag hash of assoc's for the system */
+    LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+    sctp_send_initiate(stcb->sctp_ep, stcb, SCTP_SO_NOT_LOCKED);
+    return (1);
+  }
+  return (0);
+}
+
+static int
+sctp_handle_nat_missing_state(struct mbuf *m, int iphlen,
+			      struct sctp_tcb *stcb,
+			      struct sctp_abort_chunk *cp,
+			      struct sctp_missing_nat_state *natc)
+{
+  /* return 0 means we want you to proceed with the abort
+   * non-zero means no abort processing
+   */
+  /* TODO: Need to send an asconf to the peer with the vtag lookups and the address the chunk came from.
+   *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
+   *       Need to add C007 parameter in INIT when appropriate and watch for response in INIT-ACK.
+   *       If flag is set and restart occurs, ignore restarts, do we need to validate the address lookup
+   *          returns the right TCB on address AND vtag?
+   */
+  return (1);
+}
+
+
 static void
-sctp_handle_abort(struct sctp_abort_chunk *cp,
+sctp_handle_abort(struct mbuf *m, int iphlen, struct sctp_abort_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
-
+	int len;
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: handling ABORT\n");
 	if (stcb == NULL)
 		return;
 
+	len = ntohs(cp->ch.chunk_length);
+	if (len > sizeof (struct sctp_chunkhdr)) {
+	  /* Need to check the cause codes for our
+	   * two magic nat aborts which don't kill the assoc
+	   * necessarily.
+	   */
+	  struct sctp_abort_chunk *cpnext;
+	  struct sctp_missing_nat_state *natc;
+	  uint16_t cause;
+	  cpnext = cp;
+	  cpnext++;
+	  natc = (struct sctp_missing_nat_state *)cpnext;
+	  cause = ntohs(natc->cause);
+	  if (cause == SCTP_CAUSE_NAT_COLLIDING_STATE) {
+	    SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
+		    cp->ch.chunk_flags);
+	    if (sctp_handle_nat_colliding_state(stcb, cp, natc)) {
+	      return;
+	    }
+	  } else if (cause == SCTP_CAUSE_NAT_MISSING_STATE) {
+	    SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
+		    cp->ch.chunk_flags);
+	    if (sctp_handle_nat_missing_state(m, iphlen, stcb, cp, natc)) {
+	      return;
+	    }
+	  }
+	}
 	/* stop any receive timers */
 	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 	/* notify user of the abort and clean up... */
@@ -1024,9 +1110,9 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 					return (-1);
 				}
 				/* blast back to INIT state */
+				sctp_toss_old_cookies(stcb, &stcb->asoc);
 				asoc->state &= ~SCTP_STATE_COOKIE_ECHOED;
 				asoc->state |= SCTP_STATE_COOKIE_WAIT;
-
 				sctp_stop_all_cookie_timers(stcb);
 				sctp_send_initiate(stcb->sctp_ep, stcb, SCTP_SO_NOT_LOCKED);
 			}
@@ -4518,7 +4604,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT, stcb %p\n",
 				stcb);
 			if ((stcb) && netp && *netp)
-				sctp_handle_abort((struct sctp_abort_chunk *)ch,
+				sctp_handle_abort(m, iphlen, (struct sctp_abort_chunk *)ch,
 						  stcb, *netp);
 			*offset = length;
 			return (NULL);

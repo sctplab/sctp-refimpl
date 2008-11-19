@@ -9293,7 +9293,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
 	uint16_t auth_keyid = 0;
-	int data_auth_reqd = 0, data_auth_added = 0;
+	int data_auth_reqd = 0 /*, data_auth_added = 0*/;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 		the destination. */
 	int pf_hbflag = 0;
@@ -12301,7 +12301,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	stcb->freed_by_sorcv_sincelast = 0;
 
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)nr_sack + sizeof(struct sctp_nr_sack_chunk));
-	//nr_gap_descriptor = (struct sctp_nr_gap_ack_block *)((caddr_t)nr_sack + sizeof(struct sctp_nr_sack_chunk));
+	nr_gap_descriptor = (struct sctp_nr_gap_ack_block *)((caddr_t)nr_sack + sizeof(struct sctp_nr_sack_chunk));
 	
 	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
 	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {

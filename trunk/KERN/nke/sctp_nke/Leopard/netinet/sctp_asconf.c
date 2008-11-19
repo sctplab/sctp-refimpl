@@ -785,6 +785,9 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			m_result = sctp_process_asconf_set_primary(m, aph,
 			    stcb, error);
 			break;
+		case SCTP_NAT_VTAGS:
+		        SCTPDBG(SCTP_DEBUG_ASCONF1, "handle_asconf: sees a NAT VTAG state parameter\n");
+		        break;
 		case SCTP_SUCCESS_REPORT:
 			/* not valid in an ASCONF chunk */
 			break;
