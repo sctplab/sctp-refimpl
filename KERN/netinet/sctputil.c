@@ -4579,19 +4579,6 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 	SCTP_INP_READ_UNLOCK(new_inp);
 }
 
-#if defined(__APPLE__)
-static void
-sctp_print_mbuf_chain(struct mbuf *m)
-{
-	for(; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
-		if (SCTP_BUF_IS_EXTENDED(m))
-			SCTP_PRINTF("%p: extend size = %d\n", m,
-				    SCTP_BUF_EXTEND_SIZE(m));
-		}  
-}
-#endif
-
 void
 sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
