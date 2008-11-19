@@ -200,3 +200,4 @@ DEFINE_APITEST(sctp_recvmsg, msg_notification_in)
 		return NULL;
 	}
 }
+
