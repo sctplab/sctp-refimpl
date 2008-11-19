@@ -208,6 +208,15 @@ struct sctp_state_cookie {	/* this is our definition... */
 	 */
 } SCTP_PACKED ;
 
+
+/* Used for NAT state error cause */
+struct sctp_missing_nat_state {
+	uint16_t cause;
+	uint16_t length;
+        uint8_t data[0];
+} SCTP_PACKED ;
+
+
 struct sctp_inv_mandatory_param {
 	uint16_t cause;
 	uint16_t length;
