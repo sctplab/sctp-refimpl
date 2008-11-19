@@ -674,8 +674,8 @@ sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *
      */
     /* generate a new vtag and send init */
     LIST_REMOVE(stcb, sctp_asocs);
-    asoc->state &= ~SCTP_STATE_COOKIE_ECHOED;
-    asoc->state |= SCTP_STATE_COOKIE_WAIT;
+    stcb->asoc.state &= ~SCTP_STATE_COOKIE_ECHOED;
+    stcb->asoc.state |= SCTP_STATE_COOKIE_WAIT;
     sctp_stop_all_cookie_timers(stcb);
     sctp_toss_old_cookies(stcb, &stcb->asoc);
     stcb->asoc.my_vtag = sctp_select_a_tag(stcb->sctp_ep, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
@@ -731,7 +731,7 @@ sctp_handle_abort(struct mbuf *m, int iphlen, struct sctp_abort_chunk *cp,
 	  cpnext = cp;
 	  cpnext++;
 	  natc = (struct sctp_missing_nat_state *)cpnext;
-	  cause = ntohs(nstc->cause);
+	  cause = ntohs(natc->cause);
 	  if (cause == SCTP_CAUSE_NAT_COLLIDING_STATE) {
 	    SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
 		    cp->ch.chunk_flags);
