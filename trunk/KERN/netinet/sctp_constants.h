@@ -476,6 +476,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 184883 2008-11-12 14:16:39
 #define SCTP_SET_PRIM_ADDR		0xc004
 #define SCTP_SUCCESS_REPORT		0xc005
 #define SCTP_ULP_ADAPTATION		0xc006
+/* behave-nat-draft */
+#define SCTP_NAT_VTAGS                  0xc007
 
 /* Notification error codes */
 #define SCTP_NOTIFY_DATAGRAM_UNSENT	0x0001
