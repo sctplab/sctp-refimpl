@@ -31,6 +31,9 @@ main(int argc, char **argv)
 	socklen_t sa_len;
 	int fd, failed_cnt=0, newfd;
 	int flags;
+#if defined(__APPLE__)
+	off_t len=0;
+#endif
 
 	while((i= getopt(argc,argv,"B:p::")) != EOF){
 		switch(i){
@@ -115,7 +118,11 @@ main(int argc, char **argv)
 		close(newfd);
 		goto again;
 	}
+#if defined(__APPLE__)
+	ret = sendfile(in_fd, newfd, 0, &len, NULL, 0);
+#else
 	ret = sendfile(in_fd, newfd, 0, 0, NULL, NULL, 0);
+#endif
 	printf("ret from sendfile is %d\n", ret);
 	close(newfd);
 	close(in_fd);

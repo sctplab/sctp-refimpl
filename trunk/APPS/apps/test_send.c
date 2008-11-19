@@ -138,7 +138,7 @@ main(int argc, char **argv)
 	}
 	optlen = sizeof(sendbufsiz);
 	if(setsockopt(sd, SOL_SOCKET, SO_SNDBUF, &sendbufsiz, optlen) != 0){
-		printf("err:%d could not set sndbuf to %d\n",errno, sendbufsiz);
+		printf("err:%d could not set sndbuf to %zu\n",errno, sendbufsiz);
 		return (-1);
 	}
 	memset(&sinfo, 0, sizeof(sinfo));
