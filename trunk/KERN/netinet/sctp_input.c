@@ -648,7 +648,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	}
 }
 
-int
+static int
 sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *cp, struct sctp_missing_nat_state *natc)
 {
   /* return 0 means we want you to proceed with the abort
@@ -688,7 +688,7 @@ sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *
   return (0);
 }
 
-int
+static int
 sctp_handle_nat_missing_state(struct mbuf *m, int iphlen,
 			      struct sctp_tcb *stcb,
 			      struct sctp_abort_chunk *cp,
