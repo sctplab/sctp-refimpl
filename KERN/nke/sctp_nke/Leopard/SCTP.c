@@ -168,7 +168,7 @@ soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct
 }
 
 kern_return_t 
-SCTP_start (kmod_info_t * ki, void * d)
+SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
 {
 	int err;
 
@@ -418,7 +418,7 @@ SCTP_start (kmod_info_t * ki, void * d)
 
 
 kern_return_t 
-SCTP_stop (kmod_info_t * ki, void * d)
+SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
 {
 	struct inpcb *inp;
 	int err;
