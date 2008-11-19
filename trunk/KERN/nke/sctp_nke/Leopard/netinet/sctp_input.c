@@ -5466,8 +5466,7 @@ trigger_send:
 	return;
 }
 
-#ifdef __APPLE__
-#ifdef SCTP_DEBUG
+#if 0
 static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
@@ -5476,32 +5475,6 @@ sctp_print_mbuf_chain(struct mbuf *m)
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 	}  
-}
-#endif
-
-static struct mbuf *
-sctp_trim_mbuf(struct mbuf *m)
-{
-	struct mbuf *n, *m0;
-
-	while (m && SCTP_BUF_LEN(m) == 0) {
-		n = SCTP_BUF_NEXT(m);
-		SCTP_BUF_NEXT(m) = NULL;
-		sctp_m_free(m);
-		m = n;
-	}
-	m0 = m;
-
-	for(; m; m = SCTP_BUF_NEXT(m)) {
-		n = SCTP_BUF_NEXT(m);
-		while (n && SCTP_BUF_LEN(n) == 0) {
-			SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT(n);
-			SCTP_BUF_NEXT(n) = NULL;
-			sctp_m_free(n);
-			n = SCTP_BUF_NEXT(m);
-		}
-	}
-	return m0;
 }
 #endif
 
