@@ -659,8 +659,7 @@ sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *
   if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT) {
     /* generate a new vtag and send init */
     LIST_REMOVE(stcb, sctp_asocs);
-    sctp_add_vtag_to_timewait(asoc->my_vtag, inp->sctp_lport, stcb->rport, SCTP_TIME_WAIT);
-    asoc->my_vtag = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
+    stcb->asoc.my_vtag = sctp_select_a_tag(stcb->sctp_ep, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
     head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
     /* put it in the bucket in the vtag hash of assoc's for the system */
     LIST_INSERT_HEAD(head, stcb, sctp_asocs);
@@ -679,8 +678,7 @@ sctp_handle_nat_colliding_state(struct sctp_tcb *stcb, struct sctp_abort_chunk *
     asoc->state |= SCTP_STATE_COOKIE_WAIT;
     sctp_stop_all_cookie_timers(stcb);
     sctp_toss_old_cookies(stcb, &stcb->asoc);
-    sctp_add_vtag_to_timewait(asoc->my_vtag, inp->sctp_lport, stcb->rport, SCTP_TIME_WAIT);
-    asoc->my_vtag = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
+    stcb->asoc.my_vtag = sctp_select_a_tag(stcb->sctp_ep, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
     head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
     /* put it in the bucket in the vtag hash of assoc's for the system */
     LIST_INSERT_HEAD(head, stcb, sctp_asocs);
