@@ -714,37 +714,38 @@ sctp_handle_abort(struct mbuf *m, int iphlen, struct sctp_abort_chunk *cp,
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	struct socket *so;
 #endif
-	int len;
+	uint16_t len;
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_abort: handling ABORT\n");
 	if (stcb == NULL)
 		return;
 
 	len = ntohs(cp->ch.chunk_length);
 	if (len > sizeof (struct sctp_chunkhdr)) {
-	  /* Need to check the cause codes for our
-	   * two magic nat aborts which don't kill the assoc
-	   * necessarily.
-	   */
-	  struct sctp_abort_chunk *cpnext;
-	  struct sctp_missing_nat_state *natc;
-	  uint16_t cause;
-	  cpnext = cp;
-	  cpnext++;
-	  natc = (struct sctp_missing_nat_state *)cpnext;
-	  cause = ntohs(natc->cause);
-	  if (cause == SCTP_CAUSE_NAT_COLLIDING_STATE) {
-	    SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
-		    cp->ch.chunk_flags);
-	    if (sctp_handle_nat_colliding_state(stcb, cp, natc)) {
-	      return;
-	    }
-	  } else if (cause == SCTP_CAUSE_NAT_MISSING_STATE) {
-	    SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
-		    cp->ch.chunk_flags);
-	    if (sctp_handle_nat_missing_state(m, iphlen, stcb, cp, natc)) {
-	      return;
-	    }
-	  }
+		/* Need to check the cause codes for our
+		 * two magic nat aborts which don't kill the assoc
+		 * necessarily.
+		 */
+		struct sctp_abort_chunk *cpnext;
+		struct sctp_missing_nat_state *natc;
+		uint16_t cause;
+		
+		cpnext = cp;
+		cpnext++;
+		natc = (struct sctp_missing_nat_state *)cpnext;
+		cause = ntohs(natc->cause);
+		if (cause == SCTP_CAUSE_NAT_COLLIDING_STATE) {
+			SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
+			                           cp->ch.chunk_flags);
+			if (sctp_handle_nat_colliding_state(stcb, cp, natc)) {
+				return;
+			}
+		} else if (cause == SCTP_CAUSE_NAT_MISSING_STATE) {
+			SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
+			                           cp->ch.chunk_flags);
+			if (sctp_handle_nat_missing_state(m, iphlen, stcb, cp, natc)) {
+				return;
+			}
+		}
 	}
 	/* stop any receive timers */
 	sctp_timer_stop(SCTP_TIMER_TYPE_RECV, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
@@ -2113,9 +2114,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) &&
 	    (inp->sctp_socket->so_qlimit == 0)) {
-#if defined(__APPLE__)
-		struct socket *so_pcb;
-#endif
 		/*
 		 * This is an endpoint that called connect() how it got a
 		 * cookie that is NEW is a bit of a mystery. It must be that
