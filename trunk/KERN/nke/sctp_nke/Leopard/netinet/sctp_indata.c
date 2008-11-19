@@ -3123,7 +3123,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	for (i = 0; i < num_seg; i++) {
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
-		/* some sanity checks on the fargment offsets */
+		/* some sanity checks on the fragment offsets */
 		if (frag_strt > frag_end) {
 			/* this one is malformed, skip */
 			frag++;
@@ -3158,7 +3158,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 				 * reset the queue this will cause extra
 				 * hunting but hey, they chose the
 				 * performance hit when they failed to order
-				 * there gaps..
+				 * their gaps
 				 */
 				tp1 = TAILQ_FIRST(&asoc->sent_queue);
 			}
