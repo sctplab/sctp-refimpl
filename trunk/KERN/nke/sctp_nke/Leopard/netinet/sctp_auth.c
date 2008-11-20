@@ -543,13 +543,10 @@ sctp_alloc_sharedkey(void)
 void
 sctp_free_sharedkey(sctp_sharedkey_t *skey)
 {
-	int oldval;
-
 	if (skey == NULL)
 		return;
 
-	oldval = atomic_fetchadd_int(&skey->refcount, -1);
-	if (oldval == 1) {
+	if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(&skey->refcount)) {
 		if (skey->key != NULL)
 			sctp_free_key(skey->key);
 		SCTP_FREE(skey, SCTP_M_AUTH_KY);
