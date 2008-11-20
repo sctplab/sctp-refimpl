@@ -518,6 +518,26 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
 #define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 
+#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 1)
+#if defined(INVARIANTS)
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
+		panic("Counter goes negative"); \
+	} \
+}
+#else
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
+		*addr = 0; \
+	} \
+}
+#endif
 /* additional protosw entries for Mac OS X 10.4 */
 #if defined(__APPLE__)
 int sctp_lock(struct socket *so, int refcount, int lr);
