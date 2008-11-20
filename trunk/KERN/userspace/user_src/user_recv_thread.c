@@ -265,6 +265,9 @@ recv_thread_init()
 			perror("bind");
 			exit(1);
 		}
+		if (userspace_rawsctp == -1) {
+			SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable) = 1;
+		}
 		setReceiveBufferSize(userspace_udpsctp, SB_RAW); /* 128K */
 		setSendBufferSize(userspace_udpsctp, SB_RAW); /* 128K Is this setting net.inet.raw.maxdgram value? Should it be set to 64K? */
 	}
