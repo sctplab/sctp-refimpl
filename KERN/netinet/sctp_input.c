@@ -1085,14 +1085,14 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 			break;
 		case SCTP_CAUSE_NAT_COLLIDING_STATE:
 		        SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
-				cp->ch.chunk_flags);
+				ch->chunk_flags);
 			if (sctp_handle_nat_colliding_state(stcb)) {
 			  return(0);
 			}
 			break;
 		case SCTP_CAUSE_NAT_MISSING_STATE:
 			SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
-			                           cp->ch.chunk_flags);
+			                           ch->chunk_flags);
 			if (sctp_handle_nat_missing_state(stcb, net)) {
 			  return(0);
 			}
