@@ -2116,6 +2116,19 @@ void userspace_close(struct socket *so) {
         sorele(so);
 }
 
+int
+userspace_setsockopt(struct socket *so, int level, int option_name,
+                     const void *option_value, socklen_t option_len)
+{
+	return (sctp_setopt(so, option_name, option_value, option_len, NULL));
+}
+
+int
+userspace_getsockopt(struct socket *so, int level, int option_name,
+                     void *option_value, socklen_t option_len)
+{
+	return (sctp_getopt(so, option_name, option_value, option_len, NULL));
+}
 
 #if 1 /* using iovec to sendmsg */
 /* "result" is mapped to an errno if something bad occurs */
@@ -2123,164 +2136,112 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
                                             struct route *ro, void *stcb,
                                             uint32_t vrf_id)
 {
+	const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
+	struct iovec send_iovec[MAXLEN_MBUF_CHAIN];
+	struct mbuf *m;
+	int iovcnt;
+	int send_len;
+	int len;
+	int send_count;
+	int i;
+	struct ip *ip;
+	struct udphdr *udp;
+	int res;
+	struct sockaddr_in dst;
+	struct msghdr msg_hdr;
+	int use_udp_tunneling;
+	
+	*result = 0;
+	i=0;
+	iovcnt = 0;
+	send_count = 0;
 
-    const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
-    struct iovec send_iovec[MAXLEN_MBUF_CHAIN];
-    struct mbuf *mb = o_pak;
-    int iovcnt;
-    int send_len;
-    int send_count;
-    int i;
-    struct ip *iphdr;
-    struct sctphdr *sh;
-    struct udphdr *udp;
-    int res;
-    struct sockaddr_in dst;
-    struct msghdr msg_hdr;
-    char *ptr;
-    
-    *result = 0;    
-    i=0;
-    iovcnt = 0;
-    send_count = 0;
-    if(o_pak)
-        {
-            send_len = SCTP_HEADER_LEN(o_pak); /* length of entire packet */
-            do{
-                send_iovec[i].iov_base = (caddr_t)mb->m_data;
-                send_iovec[i].iov_len = SCTP_BUF_LEN(mb);
-                send_count += send_iovec[i].iov_len;
-                iovcnt++;
-                i++;
-                mb = mb->m_next;
-            }while(mb);
-        }
-    else{
-        printf("Warning: trying to send null mbuf in %s\n", __func__);
-        exit(1);
-    }
-    
-    assert(send_count == send_len);
+	m = SCTP_HEADER_TO_CHAIN(o_pak);
 
-    if (userspace_rawsctp > -1 || userspace_udpsctp > -1) {
-        
-        iphdr = (struct ip *)send_iovec[0].iov_base;
-        bzero(&dst, sizeof(dst));
-        dst.sin_family = AF_INET; 
-        dst.sin_addr.s_addr = iphdr->ip_dst.s_addr;
-#if !defined(__Userspace_os_Linux)
-        dst.sin_len = sizeof(dst); 
-#endif
+	len = sizeof(struct ip);
+	if (SCTP_BUF_LEN(m) < len) {
+		if ((m = m_pullup(m, len)) == 0) {
+			printf("Can not get the IP header in the first mbuf.\n");
+			return;
+		}
+	}
+	ip = mtod(m, struct ip *);
+	use_udp_tunneling = (ip->ip_p == IPPROTO_UDP);
 
-        if(iphdr->ip_p == IPPROTO_UDP) {
-            /* if the upper layer protocol is UDP then take away the IP and UDP header
-             *  and send the remaining stuff over the UDP socket.
-             *
-             *  Do this by getting the port from the UDP part of send_iovec then adjusting
-             *  the send_iovec so that the IP and UDP portions are not sent.
-             */
+	if (use_udp_tunneling) {
+		len = sizeof(struct ip) + sizeof(struct udphdr);
+		if (SCTP_BUF_LEN(m) < len) {
+			if ((m = m_pullup(m, len)) == 0) {
+				printf("Can not get the UDP/IP header in the first mbuf.\n");
+				return;
+			}
+			ip = mtod(m, struct ip *);
+		}
+		udp = (struct udphdr *)(ip + 1);
+	}
 
-            i=0;
-            
-            /* is first element only IP header? */
-            if(send_iovec[0].iov_len == sizeof(struct ip)) {
-                /* look at next element to get port */
-                i++;
-                ptr = send_iovec[i].iov_base;
-                
-            } else {
-                /* port is on the first element */
-                ptr = send_iovec[0].iov_base + sizeof(struct ip);
-            }
-            udp = (struct udphdr *) ptr;
-            dst.sin_port = udp->uh_dport;
-
-            /* which is the first element we send (i.e. the first past the UDP header)? */
-            if(i == 1) {
-                /* does this element have the UDP header and the SCTP header? */
-                if(send_iovec[1].iov_len == sizeof(struct udphdr)) { /* no */
-                    /* send from the next one in the chain */
-                    i++;
-                } else { /* yes */
-                    /* send from the later part of this element, but update the values */
-                    send_iovec[1].iov_len -= sizeof(struct udphdr);
-                    send_iovec[1].iov_base += sizeof(struct udphdr);
-                }
-                
-            } else { /* i == 0 */
-                /* does this element have only the IP and UDP header? */
-                if(send_iovec[0].iov_len == sizeof(struct udphdr) + sizeof(struct ip)) { /* yes */
-                    /* send from the next one in the chain */
-                    i++;
-                } else { /* no */
-                    /* send from the later part of this element, but update the values */
-                    send_iovec[0].iov_len -= (sizeof(struct udphdr) + sizeof(struct ip));
-                    send_iovec[0].iov_base += (sizeof(struct udphdr) + sizeof(struct ip));
-                }
-                
-            }
-            
-            /* sendto call to UDP socket and do error handling */
-            msg_hdr.msg_name = (struct sockaddr *) &dst;
-            msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
-            msg_hdr.msg_iov = &send_iovec[i];
-            msg_hdr.msg_iovlen = iovcnt - i;
-            msg_hdr.msg_control = NULL;
-            msg_hdr.msg_controllen = 0;
-            msg_hdr.msg_flags = 0;
-            if((res = sendmsg(userspace_udpsctp, &msg_hdr, MSG_DONTWAIT))
-               != send_len - (sizeof(struct udphdr) + sizeof(struct ip))) {
-                *result = errno;
-            }
-
-            
-        } else {
-            /* doing SCTP over IP so use the raw socket... */
-        
-            if(i > 1)
-                sh = (struct sctphdr *) send_iovec[1].iov_base;
-            else
-                sh = (struct sctphdr *) ( ((char *) iphdr) + sizeof(struct ip));
-
-            if(sh->dest_port == 0) {
-                SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to port 0! Assigning port...\n", send_len);
-                dst.sin_port = htons(8898); /* OOTB only - arbitrary TODO assign available port */
-            } else {
-                SCTPDBG(SCTP_DEBUG_OUTPUT1, "Sending %d bytes to supplied non-zero port!\n", send_len);
-                dst.sin_port = sh->dest_port;
-            }
-
-            if (iphdr->ip_src.s_addr == INADDR_ANY) {
-                /* TODO get addr of outgoing interface */
-            }
-
-            /* TODO IP handles fragmentation? */
-            
-            /* TODO need to worry about ro->ro_dst as in ip_output? */
-
+	if (!use_udp_tunneling) {
+		if (ip->ip_src.s_addr == INADDR_ANY) {
+			/* TODO get addr of outgoing interface */
+			printf("Why did the SCTP implementation did not choose a source address?\n");
+		}
+		/* TODO need to worry about ro->ro_dst as in ip_output? */
 #if defined(__Userspace_os_Linux)
-            /* need to put certain fields into network order for Linux */
-            iphdr->ip_len = htons(iphdr->ip_len);
-            iphdr->ip_tos = htons(iphdr->ip_tos);
-            iphdr->ip_off = 0; /* when is this non-zero!?? TODO - FIX THIS HACK... */
+		/* need to put certain fields into network order for Linux */
+		ip->ip_len = htons(iphdr->ip_len);
+		ip->ip_tos = htons(iphdr->ip_tos);
+		ip->ip_off = 0;
 #endif
+	}
 
-            msg_hdr.msg_name = (struct sockaddr *) &dst;
-            msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
-            msg_hdr.msg_iov = send_iovec;
-            msg_hdr.msg_iovlen = iovcnt;
-            msg_hdr.msg_control = NULL;
-            msg_hdr.msg_controllen = 0;
-            msg_hdr.msg_flags = 0;
-            if((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT))
-               != send_len) {
-                *result = errno;
-            }            
-        }
-    }
+	memset((void *)&dst, 0, sizeof(struct sockaddr_in));
+	dst.sin_family = AF_INET;
+	dst.sin_addr.s_addr = ip->ip_dst.s_addr;
+#if !defined(__Userspace_os_Linux)
+	dst.sin_len = sizeof(struct sockaddr_in); 
+#endif
+	if (use_udp_tunneling) {
+		dst.sin_port = udp->uh_dport;
+	} else {
+		dst.sin_port = 0;
+	}
+
+	/*tweak the mbuf chain */
+	if (use_udp_tunneling) {
+		m_adj(m, sizeof(struct ip) + sizeof(struct udphdr));
+	}
+
+	send_len = SCTP_HEADER_LEN(m); /* length of entire packet */
+	send_count = 0;
+	do {
+		send_iovec[i].iov_base = (caddr_t)m->m_data;
+		send_iovec[i].iov_len = SCTP_BUF_LEN(m);
+		send_count += send_iovec[i].iov_len;
+		iovcnt++;
+		i++;
+		m = m->m_next;
+	} while(m);
+	assert(send_count == send_len);
+
+	msg_hdr.msg_name = (struct sockaddr *) &dst;
+	msg_hdr.msg_namelen = sizeof(struct sockaddr_in);
+	msg_hdr.msg_iov = send_iovec;
+	msg_hdr.msg_iovlen = iovcnt;
+	msg_hdr.msg_control = NULL;
+	msg_hdr.msg_controllen = 0;
+	msg_hdr.msg_flags = 0;
+
+	if ((!use_udp_tunneling) && (userspace_rawsctp > -1)) {
+		if ((res = sendmsg(userspace_rawsctp, &msg_hdr, MSG_DONTWAIT)) != send_len) {
+			*result = errno;
+		}
+	}
+	if ((use_udp_tunneling) && (userspace_udpsctp > -1)) {
+		if ((res = sendmsg(userspace_udpsctp, &msg_hdr, MSG_DONTWAIT)) != send_len) {
+			*result = errno;
+		}
+	}
 }
-
-
 
 #else  /* old version of sctp_userspace_ip_output that makes a copy using pack_send_buffer */
 /*extern int pack_send_buffer(caddr_t buffer, struct mbuf* mb, int len); */
@@ -2366,7 +2327,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
             dst.sin_port = udp->uh_dport;
             
             /* sendto call to UDP socket and do error handling */
-            if((res = sendto (userspace_udpsctp, psend_buf, send_len,
+            if((res = sendto (userspace_udpsctp, ptr, send_len - (sizeof(struct udphdr) + sizeof(struct ip)),
                               o_flgs,(struct sockaddr *) &dst,
                               sizeof(struct sockaddr_in)))
                != send_len - (sizeof(struct udphdr) + sizeof(struct ip))) {
