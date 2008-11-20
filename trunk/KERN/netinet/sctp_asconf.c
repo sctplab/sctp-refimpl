@@ -3316,7 +3316,6 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
   struct sctp_asconf_addr *aa;
   struct sctp_ifa *sctp_ifap;
   struct sctp_asconf_tag_param *vtag;
-  struct sctp_ifa *ifa;
   struct sockaddr_in *to;
 #ifdef INET6
   struct sockaddr_in6 *to6;
