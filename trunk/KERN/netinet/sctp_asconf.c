@@ -3344,7 +3344,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
   /* top level elements are "networked" during send */
   aa->ifa = NULL;
   aa->sent = 0;		/* clear sent flag */
-  vtag = &aa->ap.aph;
+  vtag = (struct sctp_asconf_tag_param *)&aa->ap.aph;
   vtag->aph.ph.param_type = SCTP_NAT_VTAGS;  
   vtag->aph.ph.param_length = sizeof(struct sctp_asconf_tag_param);
   vtag->local_vtag = htonl(stcb->asoc.my_vtag);
@@ -3364,7 +3364,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
   /* ADD(0.0.0.0) */
   if (net->ro._l_addr.sa.sa_family == AF_INET) {
     aa->ap.aph.ph.param_type = SCTP_ADD_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct struct sctp_asconf_addrv4_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv4_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV4_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv4addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3373,7 +3373,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 #ifdef INET6
   else if (net->ro._l_addr.sa.sa_family == AF_INET6) {
     aa->ap.aph.ph.param_type = SCTP_ADD_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct struct sctp_asconf_addrv6_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv6_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv6addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3393,7 +3393,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
   /* ADD(0.0.0.0) */
   if (net->ro._l_addr.sa.sa_family == AF_INET) {
     aa->ap.aph.ph.param_type = SCTP_ADD_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct struct sctp_asconf_addrv4_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv4_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV4_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv4addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3402,7 +3402,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 #ifdef INET6
   else if (net->ro._l_addr.sa.sa_family == AF_INET6) {
     aa->ap.aph.ph.param_type = SCTP_DEL_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct struct sctp_asconf_addrv6_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv6_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv6addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3411,32 +3411,44 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 #endif /*INET6*/
   /* Now we must hunt the addresses and add all global addresses */
   if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
-    SCTP_IPI_ADDR_RLOCK();
-    LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
-      if (sctp_ifap->address.sa.sa_family == AF_INET) {
-	struct sockaddr_in *to;
-	to = &sctp_ifap->address.sin;
+    struct sctp_vrf *vrf = NULL;
+    struct sctp_ifn *sctp_ifnp;
+    uint32_t vrf_id;
 
-	if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
-	  continue;
+    vrf_id = stcb->sctp_ep->def_vrf_id;
+    vrf = sctp_find_vrf(vrf_id);
+    if(vrf == NULL) {
+      goto skip_rest;
+    }
+
+    SCTP_IPI_ADDR_RLOCK();
+    LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
+      LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+	if (sctp_ifap->address.sa.sa_family == AF_INET) {
+	  struct sockaddr_in *to;
+	  to = &sctp_ifap->address.sin;
+
+	  if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
+	    continue;
+	  }
+	  if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
+	    continue;
+	  }
 	}
-	if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
-	  continue;
-	}
-      }
 #ifdef INET6
-      else if {
-	struct sockaddr_in6 *to6;
-	to6 = &sctp_ifap->address.sin6;
-	if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
-	  continue;
+	else if {
+	  struct sockaddr_in6 *to6;
+	  to6 = &sctp_ifap->address.sin6;
+	  if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
+	    continue;
+	  }
+	  if (IN6_IS_ADDR_LINKLOCAL(&to6->sin6_addr)) {
+	    continue;
+	  }
 	}
-	if (IN6_IS_ADDR_LINKLOCAL(&to6->sin6_addr)) {
-	  continue;
-	}
-      }
 #endif      
-      sctp_asconf_queue_mgmt(stcb, sctp_ifap, SCTP_ADD_IP_ADDRESS);
+	sctp_asconf_queue_mgmt(stcb, sctp_ifap, SCTP_ADD_IP_ADDRESS);
+      }
     }
     SCTP_IPI_ADDR_RUNLOCK();
   } else {
@@ -3483,6 +3495,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
       sctp_asconf_queue_mgmt(stcb, sctp_ifap, SCTP_ADD_IP_ADDRESS);
     }
   }
+ skip_rest:
   /* Now we must send the asconf into the queue */
   sctp_send_asconf(stcb, net, 0);
 }
