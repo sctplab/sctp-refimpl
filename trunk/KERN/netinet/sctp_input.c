@@ -1087,7 +1087,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 		case SCTP_CAUSE_NAT_COLLIDING_STATE:
 		        SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
 				cp->ch.chunk_flags);
-			if (sctp_handle_nat_colliding_state(stcb, cp, natc)) {
+			if (sctp_handle_nat_colliding_state(stcb)) {
 			  return(0);
 			}
 			break;
