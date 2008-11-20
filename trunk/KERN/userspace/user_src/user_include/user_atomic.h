@@ -17,26 +17,6 @@
 #define atomic_subtract_int(addr, val)	OSAtomicAdd32Barrier(-val, (int32_t *)addr)
 #define atomic_cmpset_int(dst, exp, src) OSAtomicCompareAndSwapIntBarrier(exp, src, (int *)dst)
 
-#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 0)
-#if defined(INVARIANTS)
-#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
-{ \
-	int32_t newval; \
-	newval = atomic_fetchadd_int(addr, -val); \
-	if (newval < 0) { \
-		panic("Counter goes negative"); \
-	} \
-}
-#else
-#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
-{ \
-	int32_t newval; \
-	newval = atomic_fetchadd_int(addr, -val); \
-	if (newval < 0) { \
-		*addr = 0; \
-	} \
-}
-#endif
 #else
 /* Using gcc built-in functions for atomic memory operations
    Reference: http://gcc.gnu.org/onlinedocs/gcc-4.1.0/gcc/Atomic-Builtins.html
@@ -65,6 +45,27 @@
  */
 
 #define atomic_cmpset_int(dst, exp, src) __sync_bool_compare_and_swap(dst, exp, src)
+#endif
+
+#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 0)
+#if defined(INVARIANTS)
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t newval; \
+	newval = atomic_fetchadd_int(addr, -val); \
+	if (newval < 0) { \
+		panic("Counter goes negative"); \
+	} \
+}
+#else
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t newval; \
+	newval = atomic_fetchadd_int(addr, -val); \
+	if (newval < 0) { \
+		*addr = 0; \
+	} \
+}
 #endif
 
 static inline void atomic_init() {} /* empty when we are not using atomic_mtx */

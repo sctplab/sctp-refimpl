@@ -2116,18 +2116,25 @@ void userspace_close(struct socket *so) {
         sorele(so);
 }
 
+/* needed from sctp_usrreq.c */
+int
+sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize, void *p);
 int
 userspace_setsockopt(struct socket *so, int level, int option_name,
                      const void *option_value, socklen_t option_len)
 {
-	return (sctp_setopt(so, option_name, option_value, option_len, NULL));
+    return (sctp_setopt(so, option_name, (void *) option_value, option_len, NULL));
 }
 
+/* needed from sctp_usrreq.c */
+int
+sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
+	    void *p);
 int
 userspace_getsockopt(struct socket *so, int level, int option_name,
                      void *option_value, socklen_t option_len)
 {
-	return (sctp_getopt(so, option_name, option_value, option_len, NULL));
+	return (sctp_getopt(so, option_name, option_value, &option_len, NULL));
 }
 
 #if 1 /* using iovec to sendmsg */
@@ -2188,8 +2195,8 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
 		/* TODO need to worry about ro->ro_dst as in ip_output? */
 #if defined(__Userspace_os_Linux)
 		/* need to put certain fields into network order for Linux */
-		ip->ip_len = htons(iphdr->ip_len);
-		ip->ip_tos = htons(iphdr->ip_tos);
+		ip->ip_len = htons(ip->ip_len);
+		ip->ip_tos = htons(ip->ip_tos);
 		ip->ip_off = 0;
 #endif
 	}
