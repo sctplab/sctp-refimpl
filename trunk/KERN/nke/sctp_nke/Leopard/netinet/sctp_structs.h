@@ -475,7 +475,9 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct sctp_ifa *ifa;	/* save the ifa for add/del ip */
-	uint8_t sent;		/* has this been sent yet? */
+        uint8_t sent;		/* has this been sent yet? */
+        uint8_t special_del;	/* not to be used in lookup */
+  
 };
 
 struct sctp_scoping {
