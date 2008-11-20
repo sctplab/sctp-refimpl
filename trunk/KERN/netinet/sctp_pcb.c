@@ -6558,6 +6558,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
       if (lsa) {
 	(void)sctp_set_primary_addr(stcb, sa, NULL);
       }
+    } else if (ptype == SCTP_HAS_NAT_SUPPORT) {
+      stcb->asoc.peer_supports_nat = 1;
     } else if (ptype == SCTP_PRSCTP_SUPPORTED) {
       /* Peer supports pr-sctp */
       stcb->asoc.peer_supports_prsctp = 1;
