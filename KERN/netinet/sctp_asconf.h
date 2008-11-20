@@ -89,8 +89,7 @@ sctp_net_immediate_retrans(struct sctp_tcb *, struct sctp_nets *);
 #endif
 
 extern void
-sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
-				  struct sctp_tcb *stcb,
+sctp_asconf_send_nat_state_update(struct sctp_tcb *stcb,
 				  struct sctp_nets *net);
 
 extern int

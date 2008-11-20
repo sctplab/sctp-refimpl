@@ -3309,8 +3309,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 }
 
 void
-sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
-				  struct sctp_tcb *stcb,
+sctp_asconf_send_nat_state_update(struct sctp_tcb *stcb,
 				  struct sctp_nets *net)
 {
   struct sctp_asconf_addr *aa;
