@@ -3438,7 +3438,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 	  }
 	}
 #ifdef INET6
-	else if {
+	else if sctp_ifap->address.sa.sa_family == AF_INET6) {
 	  to6 = &sctp_ifap->address.sin6;
 	  if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
 	    continue;
@@ -3481,7 +3481,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 	}
       }
 #ifdef INET6
-      else if {
+      else if sctp_ifap->address.sa.sa_family == AF_INET6) {
 	to6 = &sctp_ifap->address.sin6;
 	if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
 	  continue;
