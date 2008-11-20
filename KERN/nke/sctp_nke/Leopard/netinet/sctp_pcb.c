@@ -277,9 +277,7 @@ sctp_find_vrf(uint32_t vrf_id)
 void
 sctp_free_vrf(struct sctp_vrf *vrf)
 {
-	int ret;
-	ret = atomic_fetchadd_int(&vrf->refcount, -1);
-	if(ret == 1) {
+	if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(&vrf->refcount)) {
                 if (vrf->vrf_addr_hash) {
                     SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
                     vrf->vrf_addr_hash = NULL;
@@ -294,9 +292,7 @@ sctp_free_vrf(struct sctp_vrf *vrf)
 void
 sctp_free_ifn(struct sctp_ifn *sctp_ifnp)
 {
-	int ret;
-	ret = atomic_fetchadd_int(&sctp_ifnp->refcount, -1);
-	if(ret == 1) {
+	if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(&sctp_ifnp->refcount)) {
 		/* We zero'd the count */
 		if (sctp_ifnp->vrf) {
 			sctp_free_vrf(sctp_ifnp->vrf);
@@ -321,9 +317,7 @@ sctp_update_ifn_mtu(uint32_t ifn_index, uint32_t mtu)
 void
 sctp_free_ifa(struct sctp_ifa *sctp_ifap)
 {
-	int ret;
-	ret = atomic_fetchadd_int(&sctp_ifap->refcount, -1);
-	if(ret == 1) {
+	if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(&sctp_ifap->refcount)) {
 		/* We zero'd the count */
 		if(sctp_ifap->ifn_p) {
 			sctp_free_ifn(sctp_ifap->ifn_p);
