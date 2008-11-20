@@ -3317,6 +3317,10 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
   struct sctp_ifa *sctp_ifap;
   struct sctp_asconf_tag_param *vtag;
   struct sctp_ifa *ifa;
+  struct sockaddr_in *to;
+#ifdef INET6
+  struct sockaddr_in6 *to6;
+#endif
   if (net == NULL) {
     SCTPDBG(SCTP_DEBUG_ASCONF1, "sctp_asconf_send_nat_state_update: Missing net\n");
     return;
@@ -3373,7 +3377,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 #ifdef INET6
   else if (net->ro._l_addr.sa.sa_family == AF_INET6) {
     aa->ap.aph.ph.param_type = SCTP_ADD_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv6_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addr_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv6addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3402,7 +3406,7 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 #ifdef INET6
   else if (net->ro._l_addr.sa.sa_family == AF_INET6) {
     aa->ap.aph.ph.param_type = SCTP_DEL_IP_ADDRESS;
-    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addrv6_param);
+    aa->ap.aph.ph.param_length = sizeof(struct sctp_asconf_addr_param);
     aa->ap.addrp.ph.param_type = SCTP_IPV6_ADDRESS;
     aa->ap.addrp.ph.param_length = sizeof (struct sctp_ipv6addr_param);
     /* No need to add an address, we are using 0.0.0.0 */
@@ -3425,7 +3429,6 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
     LIST_FOREACH(sctp_ifnp, &vrf->ifnlist, next_ifn) {
       LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
 	if (sctp_ifap->address.sa.sa_family == AF_INET) {
-	  struct sockaddr_in *to;
 	  to = &sctp_ifap->address.sin;
 
 	  if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
@@ -3437,7 +3440,6 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
 	}
 #ifdef INET6
 	else if {
-	  struct sockaddr_in6 *to6;
 	  to6 = &sctp_ifap->address.sin6;
 	  if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
 	    continue;
@@ -3470,7 +3472,6 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
       }
       sctp_ifap = laddr->ifa;
       if (sctp_ifap->address.sa.sa_family == AF_INET) {
-	struct sockaddr_in *to;
 	to = &sctp_ifap->address.sin;
 
 	if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
@@ -3482,7 +3483,6 @@ sctp_asconf_send_nat_state_update(struct mbuf *m, int iphlen,
       }
 #ifdef INET6
       else if {
-	struct sockaddr_in6 *to6;
 	to6 = &sctp_ifap->address.sin6;
 	if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
 	  continue;
