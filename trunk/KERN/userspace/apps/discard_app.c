@@ -16,12 +16,14 @@ int userspace_connect(struct socket *, struct sockaddr *, int);
 int userspace_bind(struct socket *, struct sockaddr *, int);
 int userspace_listen(struct socket *, int );
 void userspace_close(struct socket *);
+int userspace_setsockopt(struct socket *, int, int, const void *, socklen_t);
+
 ssize_t userspace_sctp_sendmsg(struct socket *, const void *, size_t, struct sockaddr *, socklen_t, u_int32_t, u_int32_t, u_int16_t, u_int32_t, u_int32_t);
 ssize_t userspace_sctp_recvmsg(struct socket *, void *, size_t , struct sockaddr *, socklen_t *, struct sctp_sndrcvinfo *, int *);
 
 #define BUFFER_SIZE (1024)
 #define DISCARD_PORT 9
-#define NUMBER_OF_MESSAGES 1
+#define NUMBER_OF_MESSAGES 10
 
 static void *
 discard_server(void *arg)
@@ -32,21 +34,17 @@ discard_server(void *arg)
 	socklen_t from_len;
 	struct sctp_sndrcvinfo sinfo;
 	char buffer[BUFFER_SIZE];
-#if 0
 	struct sctp_event_subscribe event;
-#endif
 	
 	if ((sock = userspace_socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) == NULL) {
 		perror("userspace_socket");
 	}
 
-#if 0
 	memset((void *)&event, 1, sizeof(struct sctp_event_subscribe));
-	if (setsockopt(sock, IPPROTO_SCTP, SCTP_EVENTS,
-		&event, sizeof(struct sctp_event_subscribe)) < 0) {
+	if (userspace_setsockopt(sock, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(struct sctp_event_subscribe)) < 0) {
 		perror("setsockopt");
 	}
-#endif
+
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
@@ -79,7 +77,7 @@ discard_server(void *arg)
 			       sinfo.sinfo_stream, ntohl(sinfo.sinfo_ppid));
 		}
 	}
-	
+
 	/* FIXME: Why does this not return a value ? */  
 	userspace_close(sock);
 	return NULL;
@@ -95,12 +93,10 @@ int main(int argc, char *argv[])
 	char buffer[BUFFER_SIZE];
 
 	sctp_init();
-	
+
 	pthread_create(&tid, NULL, &discard_server, (void *)NULL);
 	sleep(1);
-
-//    SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=1;
-    SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;
+	
 	memset((void *)buffer, 'A', BUFFER_SIZE);
 	
 	if ((sock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == NULL) {
@@ -117,7 +113,7 @@ int main(int argc, char *argv[])
 	if (userspace_bind(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("userspace_bind");
 	}
-	
+
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 #ifdef HAVE_SIN_LEN
 	addr.sin_len         = sizeof(struct sockaddr_in);
@@ -125,17 +121,16 @@ int main(int argc, char *argv[])
 	addr.sin_family      = AF_INET;
 	addr.sin_port        = htons(DISCARD_PORT);
 	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	if (userspace_connect(sock, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0)
 		perror("userspace_connect");
 
 	for (i = 0; i <  NUMBER_OF_MESSAGES; i++) {
-		if (userspace_sctp_sendmsg(sock, (const void *)buffer, BUFFER_SIZE, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0) < 0) {
+		if (userspace_sctp_sendmsg(sock, (const void *)buffer, BUFFER_SIZE, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), htonl(3), 0, 2, 0, 0) < 0) {
 			perror("userspace_sctp_sendmsg");
 		}
-	}	
-	sleep(1);
+	}
 	userspace_close(sock);
-	sleep(10);
+	sleep(1);
 	return(0);
 }
