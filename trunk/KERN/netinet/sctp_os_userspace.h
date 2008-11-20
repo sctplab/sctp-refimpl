@@ -733,7 +733,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 /* stolen from /usr/include/sys/socket.h */
 #define CMSG_ALIGN(n)   _ALIGN(n)
 #elif defined(__Userspace_os_Darwin)
-#define CMSG_ALIGN(n)   ALIGN(n)
+#define CMSG_ALIGN(n)   __DARWIN_ALIGN32(n)
+#define I_AM_HERE \
+                do { \
+			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
+		} while (0)
 #endif
 
 #endif
