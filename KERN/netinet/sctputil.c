@@ -969,7 +969,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->asconf_seq_out_acked = asoc->asconf_seq_out - 1;
 	/* we are optimisitic here */
 	asoc->peer_supports_pktdrop = 1;
-
+	asoc->peer_supports_nat = 0;
 	asoc->sent_queue_retran_cnt = 0;
 
 	/* for CMT */
