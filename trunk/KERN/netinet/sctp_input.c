@@ -689,8 +689,7 @@ sctp_handle_nat_colliding_state(struct sctp_tcb *stcb)
 }
 
 static int
-sctp_handle_nat_missing_state(struct mbuf *m, int iphlen,
-			      struct sctp_tcb *stcb, 
+sctp_handle_nat_missing_state(struct sctp_tcb *stcb, 
 			      struct sctp_nets *net)
 
 {
@@ -707,13 +706,13 @@ sctp_handle_nat_missing_state(struct mbuf *m, int iphlen,
     SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_nat_missing_state: Peer does not support AUTH, cannot send an asconf\n");
     return (0);
   }
-  sctp_asconf_send_nat_state_update(m, iphlen, stcb, net);
+  sctp_asconf_send_nat_state_update(stcb, net);
   return (1);
 }
 
 
 static void
-sctp_handle_abort(struct mbuf *m, int iphlen, struct sctp_abort_chunk *cp,
+sctp_handle_abort(struct sctp_abort_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -747,7 +746,7 @@ sctp_handle_abort(struct mbuf *m, int iphlen, struct sctp_abort_chunk *cp,
 		} else if (cause == SCTP_CAUSE_NAT_MISSING_STATE) {
 			SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
 			                           cp->ch.chunk_flags);
-			if (sctp_handle_nat_missing_state(m, iphlen, stcb, net)) {
+			if (sctp_handle_nat_missing_state(stcb, net)) {
 				return;
 			}
 		}
@@ -1094,7 +1093,7 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 		case SCTP_CAUSE_NAT_MISSING_STATE:
 			SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
 			                           cp->ch.chunk_flags);
-			if (sctp_handle_nat_missing_state(m, iphlen, stcb, net)) {
+			if (sctp_handle_nat_missing_state(stcb, net)) {
 			  return(0);
 			}
 			break;
@@ -4621,7 +4620,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT, stcb %p\n",
 				stcb);
 			if ((stcb) && netp && *netp)
-				sctp_handle_abort(m, iphlen, (struct sctp_abort_chunk *)ch,
+				sctp_handle_abort((struct sctp_abort_chunk *)ch,
 						  stcb, *netp);
 			*offset = length;
 			return (NULL);
