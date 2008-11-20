@@ -124,6 +124,14 @@ struct sctp_asconf_addr_param {	/* an ASCONF address parameter */
 	struct sctp_ipv6addr_param addrp;	/* max storage size */
 } SCTP_PACKED ;
 
+
+struct sctp_asconf_tag_param {	/* an ASCONF NAT-Vtag parameter */
+	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
+        uint32_t local_vtag;
+        uint32_t remote_vtag;
+} SCTP_PACKED ;
+
+
 struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 	struct sctp_asconf_paramhdr aph;	/* asconf "parameter" */
 	struct sctp_ipv4addr_param addrp;	/* max storage size */
