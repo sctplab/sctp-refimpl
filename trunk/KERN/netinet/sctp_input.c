@@ -1336,7 +1336,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
     struct sctp_inpcb *inp, struct sctp_nets **netp,
     struct sockaddr *init_src, int *notification,
     int auth_skipped, uint32_t auth_offset, uint32_t auth_len,
-    uint32_t vrf_id, uint16_t port)
+    uint32_t vrf_id, uint16_t port);
 
 
 /*
