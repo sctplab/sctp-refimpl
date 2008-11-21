@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 184030 2008-10-18 15:56:12Z r
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_cc_functions.h>
+#include <netinet/udp.h>
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
@@ -250,6 +251,10 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
 		net->mtu = nxtsz;
+		if (net->port) {
+			net->mtu -= sizeof(struct udphdr);
+		}
+
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {

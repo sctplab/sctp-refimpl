@@ -4168,7 +4168,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #ifdef SCTP_PRINT_FOR_B_AND_M 
 		SCTP_PRINTF("We have found an interface mtu of %d\n", net->mtu);
 #endif
-		if(net->mtu == 0) {
+		if (net->mtu == 0) {
 			/* Huh ?? */
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
