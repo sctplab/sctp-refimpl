@@ -85,6 +85,7 @@ static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
 	if (oldval < val) { \
 		*addr = 0; \
 	} \
+}
 #endif
 static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
 #endif
@@ -237,5 +238,4 @@ atomic_cmpset_int(volatile u_int *dst, u_int exp, u_int src)
 		atomic_unlock();          \
 } while(0)
 
-#endif
 #endif
