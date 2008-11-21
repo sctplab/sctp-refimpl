@@ -1318,7 +1318,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 }
 
 static int
-sctp_validate_no_colliding_state()
+sctp_validate_no_colliding_state(struct sctp_inpcb *inp)
 {
   /* TODO: 
    *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
@@ -1737,7 +1737,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		   * are allowing a duplicate association. I hope
 		   * this works...
 		   */
-		  if (sctp_validate_no_colliding_state(/* need args here */) ) {
+		  if (sctp_validate_no_colliding_state(inp) ) {
 		    /* There is colliding state */
 		    return NULL;
 		  }
