@@ -696,12 +696,6 @@ sctp_handle_nat_missing_state(struct sctp_tcb *stcb,
   /* return 0 means we want you to proceed with the abort
    * non-zero means no abort processing
    */
-  /* TODO: Need to send an asconf to the peer with the vtag lookups and the address the chunk came from.
-   *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
-   *       Need to add C007 parameter in INIT when appropriate and watch for response in INIT-ACK.
-   *       If flag is set and restart occurs, ignore restarts, do we need to validate the address lookup
-   *          returns the right TCB on address AND vtag?
-   */
   if (stcb->asoc.peer_supports_auth == 0) {
     SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_nat_missing_state: Peer does not support AUTH, cannot send an asconf\n");
     return (0);
@@ -1021,6 +1015,9 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 	case SCTP_SUPPORTED_CHUNK_EXT:
 		break;
 		/* draft-ietf-tsvwg-addip-sctp */
+	case SCTP_HAS_NAT_SUPPORT:
+	        stcb->asoc.peer_supports_nat = 0;
+	        break;
 	case SCTP_ECN_NONCE_SUPPORTED:
 		stcb->asoc.peer_supports_ecn_nonce = 0;
 		stcb->asoc.ecn_nonce_allowed = 0;
@@ -1320,6 +1317,27 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 	return (0);
 }
 
+static int
+sctp_validate_no_colliding_state(/* need args here */)
+{
+  /* TODO: 
+   *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
+   *       Need to add C007 parameter in INIT when appropriate and watch for response in INIT-ACK.
+   *       - do we need to validate the address lookup returns the right TCB on address AND vtag?
+   */
+  
+  /* Return 0 to say all is ok, non-zero we must abort with the 00B0 error cause */
+  return (0);
+}
+
+static struct sctp_tcb *
+sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
+    struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
+    struct sctp_inpcb *inp, struct sctp_nets **netp,
+    struct sockaddr *init_src, int *notification,
+    int auth_skipped, uint32_t auth_offset, uint32_t auth_len,
+    uint32_t vrf_id, uint16_t port);
+
 
 /*
  * handle a state cookie for an existing association m: input packet mbuf
@@ -1330,19 +1348,21 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 static struct sctp_tcb *
 sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
-    struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets *net,
+    struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sctp_nets **netp,
     struct sockaddr *init_src, int *notification, sctp_assoc_t * sac_assoc_id,
-    uint32_t vrf_id)
+    uint32_t vrf_id,int auth_skipped, uint32_t auth_offset, uint32_t auth_len, uint16_t port)
 {
 	struct sctp_association *asoc;
 	struct sctp_init_chunk *init_cp, init_buf;
 	struct sctp_init_ack_chunk *initack_cp, initack_buf;
+	struct sctp_nets *net;
 	int chk_length;
 	int init_offset, initack_offset, i;
 	int retval;
 	int spec_flag=0;
 	uint32_t how_indx;
-
+	
+	net = *netp;
 	/* I know that the TCB is non-NULL from the caller */
 	asoc = &stcb->asoc;
 	for (how_indx = 0; how_indx  < sizeof(asoc->cookie_how); how_indx++) {
@@ -1711,7 +1731,21 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	    cookie->tie_tag_peer_vtag == asoc->peer_vtag_nonce &&
 	    cookie->tie_tag_peer_vtag != 0) {
 		struct sctpasochead *head;
-
+		if (asoc->peer_supports_nat) {
+		  /* This is a gross gross hack.
+		   * just call the cookie_new code since we
+		   * are allowing a duplicate association. I hope
+		   * this works...
+		   */
+		  if (sctp_validate_no_colliding_state(/* need args here */) ) {
+		    /* There is colliding state */
+		    return NULL;
+		  }
+		  return (sctp_process_cookie_new(m, iphlen, offset,  sh, cookie, cookie_len,
+						  inp, netp, init_src,notification,
+						  auth_skipped, auth_offset, auth_len,
+						  vrf_id, port));
+		}
 		/*
 		 * case A in Section 5.2.4 Table 2: XXMM (peer restarted)
 		 */
@@ -1844,7 +1878,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
  * cookie-echo chunk length: length of the cookie chunk to: where the init
  * was from returns a new TCB
  */
-static struct sctp_tcb *
+struct sctp_tcb *
 sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
     struct sctp_inpcb *inp, struct sctp_nets **netp,
@@ -2543,14 +2577,14 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
 		*stcb = sctp_process_cookie_new(m, iphlen, offset, sh, cookie,
-		    cookie_len, *inp_p, netp, to, &notification,
-		    auth_skipped, auth_offset, auth_len, vrf_id, port);
+						cookie_len, *inp_p, netp, to, &notification,
+						auth_skipped, auth_offset, auth_len, vrf_id, port);
 	} else {
 		/* this is abnormal... cookie-echo on existing TCB */
 		had_a_existing_tcb = 1;
 		*stcb = sctp_process_cookie_existing(m, iphlen, offset, sh,
-		    cookie, cookie_len, *inp_p, *stcb, *netp, to,
-		    &notification, &sac_restart_id, vrf_id);
+						     cookie, cookie_len, *inp_p, *stcb, netp, to,
+						     &notification, &sac_restart_id, vrf_id, auth_skipped, auth_offset, auth_len, port);
 	}
 
 	if (*stcb == NULL) {

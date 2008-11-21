@@ -4168,7 +4168,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #ifdef SCTP_PRINT_FOR_B_AND_M 
 		SCTP_PRINTF("We have found an interface mtu of %d\n", net->mtu);
 #endif
-		if(net->mtu == 0) {
+		if (net->mtu == 0) {
 			/* Huh ?? */
 			net->mtu = SCTP_DEFAULT_MTU;
 		} else {
@@ -6558,6 +6558,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
       if (lsa) {
 	(void)sctp_set_primary_addr(stcb, sa, NULL);
       }
+    } else if (ptype == SCTP_HAS_NAT_SUPPORT) {
+      stcb->asoc.peer_supports_nat = 1;
     } else if (ptype == SCTP_PRSCTP_SUPPORTED) {
       /* Peer supports pr-sctp */
       stcb->asoc.peer_supports_prsctp = 1;

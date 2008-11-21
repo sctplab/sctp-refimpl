@@ -98,7 +98,8 @@ struct sctp_sysctl {
 	uint32_t sctp_default_cc_module;
 	uint32_t sctp_default_frag_interleave;
 	uint32_t sctp_mobility_base;
-	uint32_t sctp_mobility_fasthandoff;
+        uint32_t sctp_mobility_fasthandoff;
+        uint32_t sctp_inits_include_nat_friendly;  
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_log sctp_log;
 #endif
@@ -479,6 +480,13 @@ struct sctp_sysctl {
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN	0
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_MAX	1
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT	SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN
+
+/* Enable sending of the SACK-IMMEDIATELY bit */
+#define SCTPCTL_NAT_FRIENDLY_INITS	"Enable sending of the nat-friendly SCTP option on INITs."
+#define SCTPCTL_NAT_FRIENDLY_INITS_MIN	0
+#define SCTPCTL_NAT_FRIENDLY_INITS_MAX	1
+#define SCTPCTL_NAT_FRIENDLY_INITS_DEFAULT	SCTPCTL_NAT_FRIENDLY_INITS_MIN
+
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
