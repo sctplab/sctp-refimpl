@@ -401,14 +401,15 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	struct mbuf *op_err;
 	int retval, abort_flag;
 	uint32_t initack_limit;
+	int nat_friendly=0;
 
 	/* First verify that we have no illegal param's */
 	abort_flag = 0;
 	op_err = NULL;
 
 	op_err = sctp_arethere_unrecognized_parameters(m,
-	    (offset + sizeof(struct sctp_init_chunk)),
-	    &abort_flag, (struct sctp_chunkhdr *)cp);
+						       (offset + sizeof(struct sctp_init_chunk)),
+						       &abort_flag, (struct sctp_chunkhdr *)cp, &nat_friendly);
 	if (abort_flag) {
 		/* Send an abort and notify peer */
 		sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_CAUSE_PROTOCOL_VIOLATION, op_err, SCTP_SO_NOT_LOCKED);
@@ -416,6 +417,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 		return (-1);
 	}
 	asoc = &stcb->asoc;
+	asoc->peer_supports_nat = (uint8_t)nat_friendly;
 	/* process the peer's parameters in the INIT-ACK */
 	retval = sctp_process_init((struct sctp_init_chunk *)cp, stcb, net);
 	if (retval < 0) {
