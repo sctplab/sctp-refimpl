@@ -6235,8 +6235,8 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	  /* Add NAT friendly parameter */
 	  struct sctp_paramhdr *ph;
 	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
-	  ph.param_type = htons(SCTP_HAS_NAT_SUPPORT);
-	  ph.param_length = htons(sizeof(struct sctp_paramhdr));
+	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
+	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
 	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
 	}
 	/* add authentication parameters */
@@ -7345,8 +7345,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	  /* Add NAT friendly parameter */
 	  struct sctp_paramhdr *ph;
 	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
-	  ph.param_type = htons(SCTP_HAS_NAT_SUPPORT);
-	  ph.param_length = htons(sizeof(struct sctp_paramhdr));
+	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
+	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
 	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
 	}
 	/* And now tell the peer we do all the extensions */
