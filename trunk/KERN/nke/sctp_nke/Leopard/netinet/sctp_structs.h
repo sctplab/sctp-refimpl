@@ -1011,6 +1011,7 @@ struct sctp_association {
 	/* stream resets are supported by the peer */
 	uint8_t peer_supports_strreset;
 
+        uint8_t peer_supports_nat;
 	/*
 	 * packet drop's are supported by the peer, we don't really care
 	 * about this but we bookkeep it anyway.

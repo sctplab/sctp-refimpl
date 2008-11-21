@@ -54,7 +54,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 184333 2008-10-27 13:53:31Z rr
 #include <netinet/sctp_input.h>
 #include <netinet/sctp.h>
 #include <netinet/sctp_uio.h>
-
+#include <netinet/udp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 6
@@ -1785,6 +1785,9 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		}
 		if(net->ro._s_addr) {
 			mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._s_addr.sa, net->ro.ro_rt);
+			if (net->port) {
+				mtu -= sizeof(struct udphdr);
+			}
 			if (mtu > next_mtu) {
 				net->mtu = next_mtu;
 			}
