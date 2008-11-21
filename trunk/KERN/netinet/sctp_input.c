@@ -1318,7 +1318,7 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 }
 
 static int
-sctp_validate_no_colliding_state(/* need args here */)
+sctp_validate_no_colliding_state()
 {
   /* TODO: 
    *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
