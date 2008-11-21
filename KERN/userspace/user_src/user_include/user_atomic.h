@@ -9,13 +9,34 @@
 #include <stdio.h>
 #include <sys/types.h>
 
-#if 1
 #if defined(__Userspace_os_Darwin)
 #include <libkern/OSAtomic.h>
 #define atomic_add_int(addr, val)	OSAtomicAdd32Barrier(val, (int32_t *)addr)
 #define atomic_fetchadd_int(addr, val)	OSAtomicAdd32Barrier(val, (int32_t *)addr)
 #define atomic_subtract_int(addr, val)	OSAtomicAdd32Barrier(-val, (int32_t *)addr)
 #define atomic_cmpset_int(dst, exp, src) OSAtomicCompareAndSwapIntBarrier(exp, src, (int *)dst)
+
+#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 0)
+#if defined(INVARIANTS)
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t newval; \
+	newval = atomic_fetchadd_int(addr, -val); \
+	if (newval < 0) { \
+		panic("Counter goes negative"); \
+	} \
+}
+#else
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t newval; \
+	newval = atomic_fetchadd_int(addr, -val); \
+	if (newval < 0) { \
+		*addr = 0; \
+	} \
+}
+static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
+#endif
 
 #else
 /* Using gcc built-in functions for atomic memory operations
@@ -45,31 +66,28 @@
  */
 
 #define atomic_cmpset_int(dst, exp, src) __sync_bool_compare_and_swap(dst, exp, src)
-#endif
 
-#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 0)
+#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 1)
 #if defined(INVARIANTS)
 #define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
 { \
-	int32_t newval; \
-	newval = atomic_fetchadd_int(addr, -val); \
-	if (newval < 0) { \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
 		panic("Counter goes negative"); \
 	} \
 }
 #else
 #define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
 { \
-	int32_t newval; \
-	newval = atomic_fetchadd_int(addr, -val); \
-	if (newval < 0) { \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
 		*addr = 0; \
 	} \
-}
 #endif
-
 static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
-
+#endif
 
 #if 0 /* using libatomic_ops */
 #include "user_include/atomic_ops.h"
@@ -103,7 +121,7 @@ static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
 static inline void atomic_init() {} /* empty when we are not using atomic_mtx */
 #endif /* closing #if for libatomic */
 
-#else /* using atomic_mtx */
+#if 0 /* using atomic_mtx */
 
 #include <pthread.h>
 
@@ -219,4 +237,5 @@ atomic_cmpset_int(volatile u_int *dst, u_int exp, u_int src)
 		atomic_unlock();          \
 } while(0)
 
+#endif
 #endif
