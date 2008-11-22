@@ -7267,7 +7267,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			SCTP_TCB_UNLOCK(stcb);
 		new_tag:
 			vtag = sctp_select_a_tag(inp, inp->sctp_lport, sh->src_port, 1);
-			if ((asoc.peer_supports_nat)  && (vtag == asoc.my_vtag)) {
+			if ((asoc->peer_supports_nat)  && (vtag == asoc->my_vtag)) {
 			  /* Got a duplicate vtag on some guy behind a nat
 			   * make sure we don't use it.
 			   */
