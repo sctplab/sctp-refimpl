@@ -7265,7 +7265,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (asoc) {
 			atomic_add_int(&asoc->refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
+		new_tag:
 			vtag = sctp_select_a_tag(inp, inp->sctp_lport, sh->src_port, 1);
+			if ((asoc.peer_supports_nat)  && (vtag == asoc.my_vtag)) {
+			  /* Got a duplicate vtag on some guy behind a nat
+			   * make sure we don't use it.
+			   */
+			  goto new_tag;
+			}
 			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
 			itsn = sctp_select_initial_TSN(&inp->sctp_ep);
