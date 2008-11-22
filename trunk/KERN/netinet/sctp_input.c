@@ -1345,6 +1345,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	struct sctp_init_chunk *init_cp, init_buf;
 	struct sctp_init_ack_chunk *initack_cp, initack_buf;
 	struct sctp_nets *net;
+	struct mbuf *op_err;
 	int chk_length;
 	int init_offset, initack_offset, i;
 	int retval;
@@ -1363,7 +1364,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	}
 	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 		/* SHUTDOWN came in after sending INIT-ACK */
-		struct mbuf *op_err;
 		struct sctp_paramhdr *ph;
 
 		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
