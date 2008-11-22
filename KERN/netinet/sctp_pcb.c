@@ -6871,7 +6871,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	  if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 	    continue;
 	  }
-	  if (stcb->asoc.my_vtag == vtag) {
+	  if (stcb->asoc.my_vtag == tag) {
 	    /* candidate */
 	    if (stcb->rport != rport) {
 	      continue;
