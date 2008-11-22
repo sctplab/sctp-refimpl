@@ -1319,19 +1319,6 @@ sctp_handle_init_ack(struct mbuf *m, int iphlen, int offset,
 	return (0);
 }
 
-static int
-sctp_validate_no_colliding_state(struct sctp_inpcb *inp)
-{
-  /* TODO: 
-   *       Need to make sure when cookie arrives we validate no colliding state, if so send a 00B0 abort.
-   *       Need to add C007 parameter in INIT when appropriate and watch for response in INIT-ACK.
-   *       - do we need to validate the address lookup returns the right TCB on address AND vtag?
-   */
-  
-  /* Return 0 to say all is ok, non-zero we must abort with the 00B0 error cause */
-  return (0);
-}
-
 static struct sctp_tcb *
 sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
     struct sctphdr *sh, struct sctp_state_cookie *cookie, int cookie_len,
@@ -1573,6 +1560,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			asoc->cookie_how[how_indx] = 5;
 		return (stcb);
 	}
+	
 	if (ntohl(initack_cp->init.initiate_tag) != asoc->my_vtag &&
 	    ntohl(init_cp->init.initiate_tag) == asoc->peer_vtag &&
 	    cookie->tie_tag_my_vtag == 0 &&
@@ -1584,9 +1572,48 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			asoc->cookie_how[how_indx] = 6;
 		return (NULL);
 	}
-	if (ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag &&
-	    (ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag ||
-	     init_cp->init.initiate_tag == 0)) {
+	/* If nat support, and the below and stcb is established,
+	 * send back a ABORT(colliding state) if we are established.
+	 */
+	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN)  &&
+	    (asoc->peer_supports_nat) &&
+	    ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
+	    ((ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) ||
+	     (asoc->peer_vtag == 0)))) {
+	  /* Special case - Peer's support nat. We may have
+	   * two init's that we gave out the same tag on since
+	   * one was not established.. i.e. we get INIT from host-1
+	   * behind the nat and we respond tag-a, we get a INIT from
+	   * host-2 behind the nat and we get tag-a again. Then we
+	   * bring up host-1 (or 2's) assoc, Then comes the cookie
+	   * from hsot-2 (or 1). Now we have colliding state. We must
+	   * send an abort here with colliding state indication.
+	   */
+	   op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+					  0, M_DONTWAIT, 1, MT_DATA);
+	   if (op_err == NULL) {
+	     /* FOOBAR */
+	     return (NULL);
+	   }
+	   /* pre-reserve some space */
+ #ifdef INET6
+	   SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+ #else
+	   SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+ #endif
+	   SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+	   SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
+	   /* Set the len */
+	   SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
+	   ph = mtod(op_err, struct sctp_paramhdr *);
+	   ph->param_type = htons(SCTP_CAUSE_NAT_COLLIDING_STATE);
+	   ph->param_length = htons(sizeof(struct sctp_paramhdr));
+	   sctp_send_abort(m, iphlen,  sh, 0, op_err, vrf_id, port);
+	   return (NULL);
+	}
+	if ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
+	    ((ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) ||
+	     (asoc->peer_vtag == 0))) {
 		/*
 		 * case B in Section 5.2.4 Table 2: MXAA or MOAA my info
 		 * should be ok, re-accept peer info
@@ -1739,10 +1766,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		   * are allowing a duplicate association. I hope
 		   * this works...
 		   */
-		  if (sctp_validate_no_colliding_state(inp) ) {
-		    /* There is colliding state */
-		    return NULL;
-		  }
 		  return (sctp_process_cookie_new(m, iphlen, offset,  sh, cookie, cookie_len,
 						  inp, netp, init_src,notification,
 						  auth_skipped, auth_offset, auth_len,
