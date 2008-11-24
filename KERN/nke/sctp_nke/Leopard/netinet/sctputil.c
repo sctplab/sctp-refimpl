@@ -3186,7 +3186,17 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
-
+	if (chk->data) {
+	  /*
+	   * trim off the sctp chunk header(it should
+	   * be there)
+	   */
+	  if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
+		m_adj(chk->data, sizeof(struct sctp_data_chunk));
+		sctp_mbuf_crush(chk->data);
+		chk->send_size -= sizeof(struct sctp_data_chunk);
+	  }
+	}
 	/* Steal off the mbuf */
 	chk->data = NULL;
 	/*
@@ -3805,18 +3815,6 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 		while (chk) {
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
 			asoc->sent_queue_cnt--;
-			if (chk->data) {
-				/*
-				 * trim off the sctp chunk header(it should
-				 * be there)
-				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
-					m_adj(chk->data, sizeof(struct sctp_data_chunk));
-					sctp_mbuf_crush(chk->data);
-					chk->send_size -= sizeof(struct sctp_data_chunk);
-				}
-
-			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 			    SCTP_NOTIFY_DATAGRAM_SENT, chk, so_locked);
@@ -3835,18 +3833,6 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 		while (chk) {
 			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
 			asoc->send_queue_cnt--;
-			if (chk->data) {
-				/*
-				 * trim off the sctp chunk header(it should
-				 * be there)
-				 */
-				if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
-					m_adj(chk->data, sizeof(struct sctp_data_chunk));
-					sctp_mbuf_crush(chk->data);
-					chk->send_size -= sizeof(struct sctp_data_chunk);
-				}
-
-			}
 			sctp_free_bufspace(stcb, asoc, chk, 1);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk, so_locked);
 			if (chk->data) {
