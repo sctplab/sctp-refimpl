@@ -3186,7 +3186,21 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
-
+	
+	/* Pull out the chunk header */
+	if (chk->data) {	
+	  m_adj(chk->data, sizeof(struct sctp_data_chunk));
+#ifdef __FreeBSD__
+	  /* Crush out 0 len mbufs at the top if any */
+	  while(SCTP_BUF_LEN(chk->data) == 0) {
+	    tt = chk->data;
+	    chk->data = SCTP_BUF_NEXT(tt);
+	    SCTP_BUF_NEXT(tt) = NULL;
+	    sctp_m_freem(tt);
+	  }
+#endif
+	}	
+	
 	/* Steal off the mbuf */
 	chk->data = NULL;
 	/*
