@@ -5314,9 +5314,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
-	if (net) {
-		printf("lowlevel_output: net->mtu = %d.\n", net->mtu);
-	}
 	if (stcb) {
 	    vrf_id = stcb->asoc.vrf_id;
 	} else {
