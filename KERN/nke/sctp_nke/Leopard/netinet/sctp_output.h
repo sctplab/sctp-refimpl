@@ -91,7 +91,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *, struct sctp_tcb *,
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *, int, int *,
-    struct sctp_chunkhdr *);
+				      struct sctp_chunkhdr *, int *);
 void sctp_queue_op_err(struct sctp_tcb *, struct mbuf *);
 
 int

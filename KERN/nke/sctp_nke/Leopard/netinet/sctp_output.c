@@ -5314,6 +5314,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+	if (net) {
+		printf("lowlevel_output: net->mtu = %d.\n", net->mtu);
+	}
 	if (stcb) {
 	    vrf_id = stcb->asoc.vrf_id;
 	} else {
@@ -5998,9 +6001,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			    (net->ro._s_addr)) {
 				uint32_t mtu;
 				mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, ro->ro_rt);
-				if (net->port) {
-					mtu -= sizeof(struct udphdr);
-				}
 				if (mtu &&
 				    (stcb->asoc.smallest_mtu > mtu)) {
 #ifdef SCTP_PRINT_FOR_B_AND_M 
@@ -6009,6 +6009,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 					sctp_mtu_size_reset(inp, &stcb->asoc, mtu);
 					net->mtu = mtu;
+					if (net->port) {
+						net->mtu -= sizeof(struct udphdr);
+					}
 				}
 			}
 #if !defined(__Panda__) && !defined(__Userspace__)
@@ -6228,6 +6231,14 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
 		SCTP_BUF_LEN(m) += sizeof(*ecn_nonce);
 	}
+	if (SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly)) {
+	  /* Add NAT friendly parameter */
+	  struct sctp_paramhdr *ph;
+	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
+	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
+	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
+	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
+	}
 	/* add authentication parameters */
 	if (!SCTP_BASE_SYSCTL(sctp_auth_disable)) {
 		struct sctp_auth_random *randp;
@@ -6338,7 +6349,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 
 struct mbuf *
 sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
-    int param_offset, int *abort_processing, struct sctp_chunkhdr *cp)
+	int param_offset, int *abort_processing, struct sctp_chunkhdr *cp, int *nat_friendly)
 {
 	/*
 	 * Given a mbuf containing an INIT or INIT-ACK with the param_offset
@@ -6451,10 +6462,14 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 			}
 			at += padded_size;
 			break;
+		case SCTP_HAS_NAT_SUPPORT:
+		  *nat_friendly = 1;
+		  /* fall through */
 		case SCTP_ECN_NONCE_SUPPORTED:
 		case SCTP_PRSCTP_SUPPORTED:
+
 			if (padded_size != sizeof(struct sctp_paramhdr)) {
-				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ecnnonce/prsctp %d\n", plen);
+				SCTPDBG(SCTP_DEBUG_OUTPUT1, "Invalid size - error ecnnonce/prsctp/nat support %d\n", plen);
 				goto invalid_size;
 			}
 			at += padded_size;
@@ -6870,6 +6885,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	int abort_flag, padval;
 	int num_ext;
 	int p_len;
+	int nat_friendly=0;
 	struct socket *so;
 
 	if (stcb)
@@ -6892,7 +6908,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	abort_flag = 0;
 	op_err = sctp_arethere_unrecognized_parameters(init_pkt,
 						       (offset + sizeof(struct sctp_init_chunk)),
-						       &abort_flag, (struct sctp_chunkhdr *)init_chk);
+						       &abort_flag, (struct sctp_chunkhdr *)init_chk, &nat_friendly);
 	if (abort_flag) {
 	do_a_abort:
 		sctp_send_abort(init_pkt, iphlen, sh,
@@ -7249,7 +7265,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		if (asoc) {
 			atomic_add_int(&asoc->refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
+		new_tag:
 			vtag = sctp_select_a_tag(inp, inp->sctp_lport, sh->src_port, 1);
+			if ((asoc->peer_supports_nat)  && (vtag == asoc->my_vtag)) {
+			  /* Got a duplicate vtag on some guy behind a nat
+			   * make sure we don't use it.
+			   */
+			  goto new_tag;
+			}
 			initackm_out->msg.init.initiate_tag = htonl(vtag);
 			/* get a TSN to use too */
 			itsn = sctp_select_initial_TSN(&inp->sctp_ep);
@@ -7325,11 +7348,16 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	prsctp->ph.param_type = htons(SCTP_PRSCTP_SUPPORTED);
 	prsctp->ph.param_length = htons(sizeof(*prsctp));
 	SCTP_BUF_LEN(m) += sizeof(*prsctp);
-
+	if (nat_friendly) {
+	  /* Add NAT friendly parameter */
+	  struct sctp_paramhdr *ph;
+	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
+	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
+	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
+	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
+	}
 	/* And now tell the peer we do all the extensions */
-	pr_supported = (struct sctp_supported_chunk_types_param *)
-		((caddr_t)prsctp + sizeof(*prsctp));
-
+	pr_supported = (struct sctp_supported_chunk_types_param *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 	pr_supported->ph.param_type = htons(SCTP_SUPPORTED_CHUNK_EXT);
 	num_ext = 0;
 	pr_supported->chunk_types[num_ext++] = SCTP_ASCONF;
