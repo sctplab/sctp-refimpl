@@ -3149,7 +3149,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 #endif
     )
 {
-	struct mbuf *m_notify, *tt;
+	struct mbuf *m_notify;
 	struct sctp_send_failed *ssf;
 	struct sctp_queued_to_read *control;
 	int length;
@@ -3183,17 +3183,6 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_context = chk->rec.data.context;
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
-
-	/* Take off the chunk header */
-	m_adj(chk->data, sizeof(struct sctp_data_chunk));
-
-	/* trim out any 0 len mbufs */
-	while(SCTP_BUF_LEN(chk->data) == 0) {
-	  tt = chk->data;
-	  chk->data = SCTP_BUF_NEXT(tt);
-	  SCTP_BUF_NEXT(tt) = NULL;
-	  sctp_m_freem(tt);
-	}
 
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
