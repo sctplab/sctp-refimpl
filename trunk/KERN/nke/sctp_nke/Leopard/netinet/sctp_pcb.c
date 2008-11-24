@@ -6850,9 +6850,42 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	 */
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block;
+	struct sctpasochead *head;
+	struct sctp_tcb *stcb;
 	int i;
 
-	SCTP_INP_INFO_WLOCK();
+	SCTP_INP_INFO_RLOCK();
+	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(tag,
+	    SCTP_BASE_INFO(hashasocmark))];
+	if (head == NULL) {
+		/* invalid vtag */
+	  goto skip_vtag_check;
+	}
+	LIST_FOREACH(stcb, head, sctp_asocs) {
+	  /* We choose not to lock anything here. TCB's can't be
+	   * removed since we have the read lock, so they can't
+	   * be freed on us, same thing for the INP. I may
+	   * be wrong with this assumption, but we will go
+	   * with it for now :-)
+	   */
+	  if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+	    continue;
+	  }
+	  if (stcb->asoc.my_vtag == tag) {
+	    /* candidate */
+	    if (stcb->rport != rport) {
+	      continue;
+	    }
+	    if (stcb->sctp_ep->sctp_lport != lport) {
+	      continue;
+	    }
+	    /* Its a used tag set */
+	    SCTP_INP_INFO_WUNLOCK();
+	    return (0);
+	  }
+	}
+ skip_vtag_check:
+
 	chain = &SCTP_BASE_INFO(vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE))];
 	/* Now what about timed wait ? */
 	if (!SCTP_LIST_EMPTY(chain)) {
@@ -6880,6 +6913,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 			}
 		}
 	}
+	SCTP_INP_INFO_RUNLOCK();
 #ifdef MICHAELS_EXPERIMENT
 	/*-
 	 * Not found, ok to use the tag, add it to the time wait hash
@@ -6889,10 +6923,12 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	 * add this tag to the assoc hash we need to purge it from
 	 * the t-wait hash.
 	 */
+	SCTP_INP_INFO_WLOCK();
 	if (save_in_twait)
 	       sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life, lport, rport));
-#endif
 	SCTP_INP_INFO_WUNLOCK();
+#endif
+
 	return (1);
 }
 
