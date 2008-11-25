@@ -156,17 +156,18 @@ struct sctp_snd_all_completes {
 };
 
 /* Flags that go into the sinfo->sinfo_flags field */
-#define SCTP_EOF 	  0x0100/* Start shutdown procedures */
-#define SCTP_ABORT	  0x0200/* Send an ABORT to peer */
-#define SCTP_UNORDERED 	  0x0400/* Message is un-ordered */
-#define SCTP_ADDR_OVER	  0x0800/* Override the primary-address */
-#define SCTP_SENDALL      0x1000/* Send this on all associations */
-#define SCTP_EOR          0x2000/* end of message signal */
-#define SCTP_PR_POLICY_VALID 0x4000 /* pr sctp policy valid */
+#define SCTP_EOF              0x0100 /* Start shutdown procedures */
+#define SCTP_ABORT            0x0200 /* Send an ABORT to peer */
+#define SCTP_UNORDERED        0x0400 /* Message is un-ordered */
+#define SCTP_ADDR_OVER        0x0800 /* Override the primary-address */
+#define SCTP_SENDALL          0x1000 /* Send this on all associations */
+#define SCTP_EOR              0x2000 /* end of message signal */
+#define SCTP_SACK_IMMEDIATELY 0x4000 /* Set I-Bit */
 
 #define INVALID_SINFO_FLAG(x) (((x) & 0xffffff00 \
                                     & ~(SCTP_EOF | SCTP_ABORT | SCTP_UNORDERED |\
-				        SCTP_ADDR_OVER | SCTP_SENDALL | SCTP_EOR)) != 0)
+				        SCTP_ADDR_OVER | SCTP_SENDALL | SCTP_EOR |\
+					SCTP_SACK_IMMEDIATELY)) != 0)
 /* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */
