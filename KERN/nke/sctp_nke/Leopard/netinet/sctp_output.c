@@ -8797,7 +8797,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
   if (sp->sinfo_flags & SCTP_UNORDERED) {
 	rcv_flags |= SCTP_DATA_UNORDERED;
   }
-  if (SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) && ((sp->sinfo_flags & SCTP_EOF) == SCTP_EOF)) {
+  if ((SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) && ((sp->sinfo_flags & SCTP_EOF) == SCTP_EOF)) ||
+      ((sp->sinfo_flags & SCTP_SACK_IMMEDIATELY) == SCTP_SACK_IMMEDIATELY)) {
 	rcv_flags |= SCTP_DATA_SACK_IMMEDIATELY;
   }
   /* clear out the chunk before setting up */
