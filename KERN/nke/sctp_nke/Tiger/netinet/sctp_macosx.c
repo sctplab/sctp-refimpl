@@ -622,49 +622,6 @@ sctp_slowtimo()
 }
 #endif
 
-static void print_address(struct sockaddr *sa)
-{
-	struct sockaddr_in *sin;
-	struct sockaddr_in6 *sin6;
-	ushort port = 0;
-	int len = 0;
-	void *src;
-	char str[128];
-	const char *ptr = NULL;
-
-	switch(sa->sa_family) {
-	case AF_INET:
-		sin = (struct sockaddr_in *)sa;
-		src = (void *)&sin->sin_addr.s_addr;
-		port = ntohs(sin->sin_port);
-#ifdef HAVE_SA_LEN
-		len = sa->sa_len;
-#else
-		len = sizeof(*sin);
-#endif
-		break;
-	case AF_INET6:
-		sin6 = (struct sockaddr_in6 *)sa;
-		src = (void *)&sin6->sin6_addr;
-		port = ntohs(sin6->sin6_port);
-#ifdef HAVE_SA_LEN
-		len = sa->sa_len;
-#else
-		len = sizeof(*sin6);
-#endif
-		break;
-	default:
-		/* TSNH: unknown family */
-		printf("[unknown address family %d]", sa->sa_family);
-		return;
-	}
-	ptr = inet_ntop(sa->sa_family, src, str, sizeof(str));
-	if (ptr != NULL) 
-		printf("%s:%u", ptr, port);
-	else
-		printf("[cannot display address]:%u", port);
-}
-
 #if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = NULL;
 
@@ -867,6 +824,7 @@ void sctp_address_monitor_stop(void)
 }
 #endif
 
+#if 0
 static void
 sctp_print_mbuf_chain(mbuf_t m)
 {
@@ -876,6 +834,7 @@ sctp_print_mbuf_chain(mbuf_t m)
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 	}  
 }
+#endif
 
 void
 sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
