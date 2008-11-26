@@ -1,5 +1,5 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -56,6 +56,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 184030 2008-10-18 15:56:12Z r
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_cc_functions.h>
+#include <netinet/udp.h>
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
@@ -250,6 +251,10 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	/* Adjust destination size limit */
 	if (net->mtu > nxtsz) {
 		net->mtu = nxtsz;
+		if (net->port) {
+			net->mtu -= sizeof(struct udphdr);
+		}
+
 	}
 	/* now what about the ep? */
 	if (stcb->asoc.smallest_mtu > nxtsz) {
@@ -2014,6 +2019,29 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		*optsize = sizeof(*av); 
 	}
 	break;
+	/* EY - set socket option for nr_sacks  */		
+	case SCTP_NR_SACK_ON_OFF:
+		{
+			struct sctp_assoc_value *av;
+
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off)) {
+				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+				if (stcb) {
+					av->assoc_value = stcb->asoc.sctp_nr_sack_on_off;
+					SCTP_TCB_UNLOCK(stcb);
+
+				} else {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTCONN);
+					error = ENOTCONN;
+				}
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOPROTOOPT);
+				error = ENOPROTOOPT;
+			}
+			*optsize = sizeof(*av);
+		}
+		break;
 	/* JRS - Get socket option for pluggable congestion control */
 	case SCTP_PLUGGABLE_CC:
 	{
@@ -2074,10 +2102,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_assoc_ids *ids;
 		unsigned int at, limit;
-
+		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
-		limit = *optsize / sizeof(sctp_assoc_t);
+		limit = (*optsize-sizeof(uint32_t))/ sizeof(sctp_assoc_t);
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if (at < limit) {
@@ -2089,7 +2117,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			}
 		}
 		SCTP_INP_RUNLOCK(inp);
-		*optsize = at * sizeof(sctp_assoc_t);
+		ids->gaids_number_of_ids = at;
+		*optsize = ((at * sizeof(sctp_assoc_t)) + sizeof(uint32_t));
 	}
 	break;
 	case SCTP_CONTEXT:
@@ -2283,6 +2312,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTHEVNT))
 			events->sctp_authentication_event = 1;
+
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_DRYEVNT))
+			events->sctp_sender_dry_event = 1;
 
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT))
 			events->sctp_stream_reset_events = 1;
@@ -2869,7 +2901,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if (stcb) {
 			/* get the active key on the assoc */
-			scact->scact_keynumber = stcb->asoc.authinfo.assoc_keyid;
+			scact->scact_keynumber = stcb->asoc.authinfo.active_keyid;
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* get the endpoint active key */
@@ -3142,6 +3174,27 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 	}
 	break;
+	/* EY nr_sack_on_off socket option */
+	case SCTP_NR_SACK_ON_OFF:
+		{
+			struct sctp_assoc_value *av;
+
+			SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off)) {
+				SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+				if (stcb) {
+					stcb->asoc.sctp_nr_sack_on_off = (uint8_t) av->assoc_value;
+					SCTP_TCB_UNLOCK(stcb);
+				} else {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTCONN);
+					error = ENOTCONN;
+				}
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOPROTOOPT);
+				error = ENOPROTOOPT;
+			}
+		}
+		break;
 	/* JRS - Set socket option for pluggable congestion control */
 	case SCTP_PLUGGABLE_CC:
 	{
@@ -3469,7 +3522,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 			shared_key->key = key;
 			shared_key->keyid = sca->sca_keynumber;
-			sctp_insert_sharedkey(shared_keys, shared_key);
+			error = sctp_insert_sharedkey(shared_keys, shared_key);
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* set it on the endpoint */
@@ -3503,7 +3556,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 			shared_key->key = key;
 			shared_key->keyid = sca->sca_keynumber;
-			sctp_insert_sharedkey(shared_keys, shared_key);
+			error = sctp_insert_sharedkey(shared_keys, shared_key);
 			SCTP_INP_WUNLOCK(inp);
 		}
 		break;
@@ -3566,22 +3619,29 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_authkeyid *scact;
 
-		SCTP_CHECK_AND_CAST(scact, optval, struct sctp_authkeyid, optsize);
+		SCTP_CHECK_AND_CAST(scact, optval, struct sctp_authkeyid,
+				    optsize);
 		SCTP_FIND_STCB(inp, stcb, scact->scact_assoc_id);
 
 		/* set the active key on the right place */
 		if (stcb) {
 			/* set the active key on the assoc */
-			if (sctp_auth_setactivekey(stcb, scact->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_auth_setactivekey(stcb,
+						   scact->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			/* set the active key on the endpoint */
 			SCTP_INP_WLOCK(inp);
-			if (sctp_auth_setactivekey_ep(inp, scact->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_auth_setactivekey_ep(inp,
+						      scact->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_INP_WUNLOCK(inp);
@@ -3592,20 +3652,58 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_authkeyid *scdel;
 
-		SCTP_CHECK_AND_CAST(scdel, optval, struct sctp_authkeyid, optsize);
+		SCTP_CHECK_AND_CAST(scdel, optval, struct sctp_authkeyid,
+				    optsize);
 		SCTP_FIND_STCB(inp, stcb, scdel->scact_assoc_id);
 
 		/* delete the key from the right place */
 		if (stcb) {
-			if (sctp_delete_sharedkey(stcb, scdel->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_delete_sharedkey(stcb,
+						  scdel->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			SCTP_INP_WLOCK(inp);
-			if (sctp_delete_sharedkey_ep(inp, scdel->scact_keynumber)) {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			if (sctp_delete_sharedkey_ep(inp,
+						     scdel->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
+				error = EINVAL;
+			}
+			SCTP_INP_WUNLOCK(inp);
+		}
+		break;
+	}
+	case SCTP_AUTH_DEACTIVATE_KEY:
+	{
+		struct sctp_authkeyid *keyid;
+
+		SCTP_CHECK_AND_CAST(keyid, optval, struct sctp_authkeyid,
+				    optsize);
+		SCTP_FIND_STCB(inp, stcb, keyid->scact_assoc_id);
+
+		/* deactivate the key from the right place */
+		if (stcb) {
+			if (sctp_deact_sharedkey(stcb,
+						 keyid->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
+				error = EINVAL;
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			SCTP_INP_WLOCK(inp);
+			if (sctp_deact_sharedkey_ep(inp,
+						    keyid->scact_keynumber)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL,
+						    SCTP_FROM_SCTP_USRREQ,
+						    EINVAL);
 				error = EINVAL;
 			}
 			SCTP_INP_WUNLOCK(inp);
@@ -3864,6 +3962,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_AUTHEVNT);
 		} else {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_AUTHEVNT);
+		}
+
+		if (events->sctp_sender_dry_event) {
+			sctp_feature_on(inp, SCTP_PCB_FLAGS_DRYEVNT);
+		} else {
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_DRYEVNT);
 		}
 
 		if (events->sctp_stream_reset_events) {
