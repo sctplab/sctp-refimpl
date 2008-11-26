@@ -441,14 +441,14 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return KERN_FAILURE;
 	}
-	
+
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive;
 #ifdef INET6
 	udp6_usrreqs.pru_soreceive = soreceive;
 #endif
 	lck_rw_done(udbinfo.mtx);
-	
+
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 #if defined(SCTP_APPLE_AUTO_ASCONF)
