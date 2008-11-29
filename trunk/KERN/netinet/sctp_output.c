@@ -12166,6 +12166,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	unsigned int num_gap_blocks = 0, num_nr_gap_blocks = 0, space;
 	int num_dups = 0;
 	int space_req;
+	unsigned int reserved = 0;
 
 	a_chk = NULL;
 	asoc = &stcb->asoc;
@@ -12508,7 +12509,6 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	 * now that the chunk is prepared queue it to the control chunk
 	 * queue.
 	 */
-	unsigned int reserved = 0;
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0){
 		num_nr_gap_blocks = num_gap_blocks;
 		num_gap_blocks = 0;
