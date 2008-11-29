@@ -429,4 +429,26 @@ void read_random(uint8_t *, unsigned int);
 #define	MD5_Update	MD5Update
 #define	MD5_Final	MD5Final
 
+#define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr)	(atomic_fetchadd_int(addr, -1) == 1)
+
+#if defined(INVARIANTS)
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
+		panic("Counter goes negative"); \
+	} \
+}
+#else
+#define SCTP_SAVE_ATOMIC_DECREMENT(addr, val) \
+{ \
+	int32_t oldval; \
+	oldval = atomic_fetchadd_int(addr, -val); \
+	if (oldval < val) { \
+		*addr = 0; \
+	} \
+}
+#endif
+
 #endif
