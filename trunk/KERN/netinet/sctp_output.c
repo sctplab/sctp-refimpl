@@ -14962,6 +14962,7 @@ sctp_lower_sosend(struct socket *so,
 		non_blocking = 1;
 	}
 	asoc = &stcb->asoc;
+	atomic_add_int(&stcb->total_sends, 1);
 
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NO_FRAGMENT)) {
 		if (sndlen > asoc->smallest_mtu) {
@@ -15317,7 +15318,6 @@ sctp_lower_sosend(struct socket *so,
 #if defined(__APPLE__)
 	error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
-	atomic_add_int(&stcb->total_sends, 1);
 	/* sndlen covers for mbuf case
 	 * uio_resid covers for the non-mbuf case
 	 * NOTE: uio will be null when top/mbuf is passed
