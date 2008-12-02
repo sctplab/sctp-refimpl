@@ -3951,48 +3951,6 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			/* advance PeerAckPoint goes forward */
 			asoc->advanced_peer_ack_point = tp1->rec.data.TSN_seq;
 			a_adv = tp1;
-			/*
-			 * we don't want to de-queue it here. Just wait for
-			 * the next peer SACK to come with a new cumTSN and
-			 * then the chunk will be droped in the normal
-			 * fashion.
-			 */
-			if (tp1->data) {
-				sctp_free_bufspace(stcb, asoc, tp1, 1);
-				/*
-				 * Maybe there should be another
-				 * notification type
-				 */
-				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
-				    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-				    tp1, SCTP_SO_NOT_LOCKED);
-				sctp_m_freem(tp1->data);
-				tp1->data = NULL;
-				if(stcb->sctp_socket) {
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-					struct socket *so;
-					
-					so = SCTP_INP_SO(stcb->sctp_ep);
-					atomic_add_int(&stcb->asoc.refcnt, 1);
-					SCTP_TCB_UNLOCK(stcb);
-					SCTP_SOCKET_LOCK(so, 1);
-					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);
-					if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
-						/* assoc was freed while we were unlocked */
-						SCTP_SOCKET_UNLOCK(so, 1);
-						return (NULL);
-					}
-#endif
-					sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-					SCTP_SOCKET_UNLOCK(so, 1);
-#endif
-					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_WAKE_LOGGING_ENABLE) {
-						sctp_wakeup_log(stcb, tp1->rec.data.TSN_seq, 1, SCTP_WAKESND_FROM_FWDTSN);
-					}
-				}
-			}
 		} else {
 			/*
 			 * If it is still in RESEND we can advance no
