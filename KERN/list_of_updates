@@ -6,6 +6,9 @@ Has of 11/12/2008 all items sync'd to Head in FreeBSD8.
    o don't pre-hash them when you issue one in a cookie.
    o Allow duplicates and use addresses and ports to 
      discriminate amongst the duplicates during lookup.
-   o Add note that when we put in the NAT draft we need
-     to abort at cookie processing if we detect duplicate
-     vtag/port i.e. abort-with-try-again (non-middle box flag).
+- Add support for the NAT draft draft-ietf-behave-sctpnat-00, this
+  is still experimental and needs more extensive testing with the
+  Jason Butt ipfw changes.
+- Support for the SENDER_DRY event to get DTLS in openSSH working
+  with a set of patches from Michael Tuexen.
+
