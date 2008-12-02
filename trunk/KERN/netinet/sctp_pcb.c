@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 184883 2008-11-12 14:16:39Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 185435 2008-11-29 14:32:14Z bz $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2800,12 +2800,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	struct inpcb *ip_inp;
 	int port_reuse_active = 0;
 	int bindall;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-#if defined(__Userspace__)
-        /* TODO does __Userspace__ need this? */
-#endif
-	int prison = 0;
-#endif
 #ifdef SCTP_MVRF
 	int i;
 #endif
@@ -2836,9 +2830,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	if (p == NULL)
 		panic("null proc/thread");
 #endif
-	if(p && jailed(p->td_ucred)) {
-		prison = 1;
-	}
 #endif
 	if (addr != NULL) {
 		switch (addr->sa_family) {
@@ -2861,16 +2852,14 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sin = (struct sockaddr_in *)addr;
 			lport = sin->sin_port;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			if(prison) {
-				/* For INADDR_ANY and  LOOPBACK the prison_ip()
-				 * call will transmute the ip address to the proper
-				 * value (i.e. the IP address owned by the jail).
-				 */
-				if (prison_ip(p->td_ucred, 0, &sin->sin_addr.s_addr)) {
-					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
-					return(EINVAL);
-				}
-			}
+ 				/*
+ 				 * For LOOPBACK the prison_local_ip4() call will transmute the ip address
+ 				 * to the proper value.
+ 				 */
+ 				if (p && prison_local_ip4(p->td_ucred, &sin->sin_addr) != 0) {
+ 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+ 					return (EINVAL);
+  				}
 #endif
 			if (sin->sin_addr.s_addr != INADDR_ANY) {
 				bindall = 0;
@@ -2894,12 +2883,16 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			lport = sin6->sin6_port;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			/* 
-			 * Jail checks for IPv6 should go HERE!
-			 * i.e. add the prison_ip() equivilant 
-			 * in this postion to transmute the addresses
-			 * to the proper one jailed.
-			 */
+ 
+  				/*
+ 				 * For LOOPBACK the prison_local_ip6() call will transmute the ipv6 address
+ 				 * to the proper value.
+  				 */
+ 				if (p && prison_local_ip6(p->td_ucred, &sin6->sin6_addr,
+ 				    (SCTP_IPV6_V6ONLY(inp) != 0)) != 0) {
+ 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+ 					return (EINVAL);
+ 				}
 #endif
 			if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 				bindall = 0;
@@ -3782,7 +3775,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	cnt = 0;
 	if (so) {
 #ifdef IPSEC
-		ipsec4_delete_pcbpolicy(ip_pcb);
+		ipsec_delete_pcbpolicy(ip_pcb);
 #endif				/* IPSEC */
 
 		/* Unlocks not needed since the socket is gone now */
