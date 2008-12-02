@@ -9,6 +9,13 @@ Has of 11/12/2008 all items sync'd to Head in FreeBSD8.
 - Add support for the NAT draft draft-ietf-behave-sctpnat-00, this
   is still experimental and needs more extensive testing with the
   Jason Butt ipfw changes.
-- Support for the SENDER_DRY event to get DTLS in openSSH working
+- Support for the SENDER_DRY event to get DTLS in OpenSSL working
   with a set of patches from Michael Tuexen.
+- Update the support of SCTP-AUTH by Peter Lei.
+- Use macros for refcounting.
+- Fix MTU for UDP encapsulation.
+- Fix reporting back of unsent data.
+- Update assoc send counter handling to be consistent with endpoint sent counter.
+
+
 
