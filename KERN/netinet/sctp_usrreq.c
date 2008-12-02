@@ -4768,31 +4768,39 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 #ifdef INET6
 	if (addr->sa_family == AF_INET6) {
+#if defined(__FreeBSD__)
 		struct sockaddr_in6 *sin6p;
 
+#endif
 		if (addr->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
+#if defined(__FreeBSD__)
 		sin6p = (struct sockaddr_in6 *)addr;
 		if (p != NULL && prison_remote_ip6(p->td_ucred, &sin6p->sin6_addr) != 0) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
+#endif
 	} else
 #endif
 	if (addr->sa_family == AF_INET) {
+#if defined(__FreeBSD__)
 		struct sockaddr_in *sinp;
 
+#endif
 		if (addr->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
+#if defined(__FreeBSD__)
 		sinp = (struct sockaddr_in *)addr;
 		if (p != NULL && prison_remote_ip4(p->td_ucred, &sinp->sin_addr) != 0) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
+#endif
 	} else {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EAFNOSUPPORT);
  		return (EAFNOSUPPORT);
