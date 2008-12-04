@@ -30,7 +30,7 @@
   POSSIBILITY OF SUCH DAMAGE.
 
 ******************************************************************************/
-/*$FreeBSD: $*/
+/*$FreeBSD: head/sys/dev/e1000/e1000_82575.c 185353 2008-11-26 23:57:23Z jfv $*/
 
 /*
  * 82575EB Gigabit Network Connection
@@ -1008,7 +1008,7 @@ static void e1000_update_mc_addr_list_82575(struct e1000_hw *hw,
 
 	/* Load any remaining multicast addresses into the hash table. */
 	for (; mc_addr_count > 0; mc_addr_count--) {
-		hash_value = e1000_hash_mc_addr_generic(hw, mc_addr_list);
+		hash_value = e1000_hash_mc_addr(hw, mc_addr_list);
 		DEBUGOUT1("Hash value = 0x%03X\n", hash_value);
 		hw->mac.ops.mta_set(hw, hash_value);
 		mc_addr_list += ETH_ADDR_LEN;
@@ -1538,62 +1538,60 @@ static void e1000_power_down_phy_copper_82575(struct e1000_hw *hw)
  **/
 static void e1000_clear_hw_cntrs_82575(struct e1000_hw *hw)
 {
-	volatile u32 temp;
-
 	DEBUGFUNC("e1000_clear_hw_cntrs_82575");
 
 	e1000_clear_hw_cntrs_base_generic(hw);
 
-	temp = E1000_READ_REG(hw, E1000_PRC64);
-	temp = E1000_READ_REG(hw, E1000_PRC127);
-	temp = E1000_READ_REG(hw, E1000_PRC255);
-	temp = E1000_READ_REG(hw, E1000_PRC511);
-	temp = E1000_READ_REG(hw, E1000_PRC1023);
-	temp = E1000_READ_REG(hw, E1000_PRC1522);
-	temp = E1000_READ_REG(hw, E1000_PTC64);
-	temp = E1000_READ_REG(hw, E1000_PTC127);
-	temp = E1000_READ_REG(hw, E1000_PTC255);
-	temp = E1000_READ_REG(hw, E1000_PTC511);
-	temp = E1000_READ_REG(hw, E1000_PTC1023);
-	temp = E1000_READ_REG(hw, E1000_PTC1522);
+	E1000_READ_REG(hw, E1000_PRC64);
+	E1000_READ_REG(hw, E1000_PRC127);
+	E1000_READ_REG(hw, E1000_PRC255);
+	E1000_READ_REG(hw, E1000_PRC511);
+	E1000_READ_REG(hw, E1000_PRC1023);
+	E1000_READ_REG(hw, E1000_PRC1522);
+	E1000_READ_REG(hw, E1000_PTC64);
+	E1000_READ_REG(hw, E1000_PTC127);
+	E1000_READ_REG(hw, E1000_PTC255);
+	E1000_READ_REG(hw, E1000_PTC511);
+	E1000_READ_REG(hw, E1000_PTC1023);
+	E1000_READ_REG(hw, E1000_PTC1522);
 
-	temp = E1000_READ_REG(hw, E1000_ALGNERRC);
-	temp = E1000_READ_REG(hw, E1000_RXERRC);
-	temp = E1000_READ_REG(hw, E1000_TNCRS);
-	temp = E1000_READ_REG(hw, E1000_CEXTERR);
-	temp = E1000_READ_REG(hw, E1000_TSCTC);
-	temp = E1000_READ_REG(hw, E1000_TSCTFC);
+	E1000_READ_REG(hw, E1000_ALGNERRC);
+	E1000_READ_REG(hw, E1000_RXERRC);
+	E1000_READ_REG(hw, E1000_TNCRS);
+	E1000_READ_REG(hw, E1000_CEXTERR);
+	E1000_READ_REG(hw, E1000_TSCTC);
+	E1000_READ_REG(hw, E1000_TSCTFC);
 
-	temp = E1000_READ_REG(hw, E1000_MGTPRC);
-	temp = E1000_READ_REG(hw, E1000_MGTPDC);
-	temp = E1000_READ_REG(hw, E1000_MGTPTC);
+	E1000_READ_REG(hw, E1000_MGTPRC);
+	E1000_READ_REG(hw, E1000_MGTPDC);
+	E1000_READ_REG(hw, E1000_MGTPTC);
 
-	temp = E1000_READ_REG(hw, E1000_IAC);
-	temp = E1000_READ_REG(hw, E1000_ICRXOC);
+	E1000_READ_REG(hw, E1000_IAC);
+	E1000_READ_REG(hw, E1000_ICRXOC);
 
-	temp = E1000_READ_REG(hw, E1000_ICRXPTC);
-	temp = E1000_READ_REG(hw, E1000_ICRXATC);
-	temp = E1000_READ_REG(hw, E1000_ICTXPTC);
-	temp = E1000_READ_REG(hw, E1000_ICTXATC);
-	temp = E1000_READ_REG(hw, E1000_ICTXQEC);
-	temp = E1000_READ_REG(hw, E1000_ICTXQMTC);
-	temp = E1000_READ_REG(hw, E1000_ICRXDMTC);
+	E1000_READ_REG(hw, E1000_ICRXPTC);
+	E1000_READ_REG(hw, E1000_ICRXATC);
+	E1000_READ_REG(hw, E1000_ICTXPTC);
+	E1000_READ_REG(hw, E1000_ICTXATC);
+	E1000_READ_REG(hw, E1000_ICTXQEC);
+	E1000_READ_REG(hw, E1000_ICTXQMTC);
+	E1000_READ_REG(hw, E1000_ICRXDMTC);
 
-	temp = E1000_READ_REG(hw, E1000_CBTMPC);
-	temp = E1000_READ_REG(hw, E1000_HTDPMC);
-	temp = E1000_READ_REG(hw, E1000_CBRMPC);
-	temp = E1000_READ_REG(hw, E1000_RPTHC);
-	temp = E1000_READ_REG(hw, E1000_HGPTC);
-	temp = E1000_READ_REG(hw, E1000_HTCBDPC);
-	temp = E1000_READ_REG(hw, E1000_HGORCL);
-	temp = E1000_READ_REG(hw, E1000_HGORCH);
-	temp = E1000_READ_REG(hw, E1000_HGOTCL);
-	temp = E1000_READ_REG(hw, E1000_HGOTCH);
-	temp = E1000_READ_REG(hw, E1000_LENERRS);
+	E1000_READ_REG(hw, E1000_CBTMPC);
+	E1000_READ_REG(hw, E1000_HTDPMC);
+	E1000_READ_REG(hw, E1000_CBRMPC);
+	E1000_READ_REG(hw, E1000_RPTHC);
+	E1000_READ_REG(hw, E1000_HGPTC);
+	E1000_READ_REG(hw, E1000_HTCBDPC);
+	E1000_READ_REG(hw, E1000_HGORCL);
+	E1000_READ_REG(hw, E1000_HGORCH);
+	E1000_READ_REG(hw, E1000_HGOTCL);
+	E1000_READ_REG(hw, E1000_HGOTCH);
+	E1000_READ_REG(hw, E1000_LENERRS);
 
 	/* This register should not be read in copper configurations */
 	if (hw->phy.media_type == e1000_media_type_internal_serdes)
-		temp = E1000_READ_REG(hw, E1000_SCVPC);
+		E1000_READ_REG(hw, E1000_SCVPC);
 }
 /**
  *  e1000_rx_fifo_flush_82575 - Clean rx fifo after RX enable
@@ -1668,3 +1666,4 @@ void e1000_rx_fifo_flush_82575(struct e1000_hw *hw)
 	E1000_READ_REG(hw, E1000_RNBC);
 	E1000_READ_REG(hw, E1000_MPC);
 }
+
