@@ -757,8 +757,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
 					}
+					continue;
 				}
-				continue;
 			}
 			if (PR_SCTP_RTX_ENABLED(chk->flags)) {
 				/* Has it been retransmitted tv_sec times? */
@@ -769,8 +769,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
 					}
+					continue;
 				}
-				continue;
 			}
 			if (chk->sent < SCTP_DATAGRAM_RESEND) {
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);

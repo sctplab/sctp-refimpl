@@ -20,4 +20,5 @@ Has of 11/12/2008 all items sync'd to Head in FreeBSD8.
 - Fix so we only send another FWD-TSN when a SACK arrives IF and only
   if the adv-peer-ack point progressed. However we still make sure
   a timer is running if we do have an adv_peer_ack point.
-
+- Fix PR-SCTP bug where chunks were retransmitted if they are sent
+  unreliable but not abandoned yet.
