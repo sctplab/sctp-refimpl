@@ -232,7 +232,7 @@
 #define IGB_TSO_SEG_SIZE	4096	/* Max dma segment size */
 #define ETH_ZLEN		60
 #define ETH_ADDR_LEN		6
-#define CSUM_OFFLOAD		7	/* Offload bits in mbuf flag */
+#define CSUM_OFFLOAD		15	/* Offload bits in mbuf flag */
 
 #ifdef IGB_TIMESYNC
 /* Precision Time Sync (IEEE 1588) defines */
