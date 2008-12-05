@@ -1079,7 +1079,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 					 * more, request a RTT update
 					 */
 					if(sctp_send_hb(stcb, 1, net) < 0) 
-						return 1;
+					    /* Less than 0 means we lost the assoc */					    
+						return (1);
 				}
 			}
 		}
@@ -1137,7 +1138,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 *  state, a PF-heartbeat needs to be sent manually.
 		 */
 		if(sctp_send_hb(stcb, 1, net) < 0)
-			return 1;
+		    /* Return less than 0 means we lost the association */
+			return (1);
 	}
 	/*
 	 * Special case for cookie-echo'ed case, we don't do output but must
