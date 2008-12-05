@@ -1136,7 +1136,7 @@ igb_init_locked(struct adapter *adapter)
 	/* Set hardware offload abilities */
 	ifp->if_hwassist = 0;
 	if (ifp->if_capenable & IFCAP_TXCSUM)
-		ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP);
+		ifp->if_hwassist |= (CSUM_TCP | CSUM_UDP | CSUM_SCTP);
 	if (ifp->if_capenable & IFCAP_TSO4)
 		ifp->if_hwassist |= CSUM_TSO;
 
@@ -3171,6 +3171,12 @@ igb_tx_ctx_setup(struct tx_ring *txr, struct mbuf *mp)
 				type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_UDP;
 			break;
 		}
+		case IPPROTO_SCTP:
+		{
+			if (mp->m_pkthdr.csum_flags & CSUM_SCTP)
+				type_tucmd_mlhl |= E1000_ADVTXD_TUCMD_L4T_SCTP;
+			break;
+		}
 		default:
 			offload = FALSE;
 			break;
@@ -4058,6 +4064,11 @@ igb_rx_checksum(u32 staterr, struct mbuf *mp)
 			mp->m_pkthdr.csum_data = htons(0xffff);
 		}
 	}
+	
+	if (status & E1000_RXD_STAT_CRCV) {
+			mp->m_pkthdr.csum_flags = CSUM_SCTP_VALID;		
+	}
+	
 	return;
 }
 
