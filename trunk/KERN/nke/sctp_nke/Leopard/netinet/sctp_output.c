@@ -11842,7 +11842,7 @@ sctp_fill_in_rest:
 			strseq++;
 			at = tp1;
 		}
-        }
+    }
 	return;
 
 }
