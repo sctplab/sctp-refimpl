@@ -4438,7 +4438,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		old_adv_peer_ack_point = asoc->advanced_peer_ack_point;
 		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
 		/* C3. See if we need to send a Fwd-TSN */
-		if (compare_with_wrap(asoc->advanced_peer_ack_point, cum_ack,
+		if (compare_with_wrap(asoc->advanced_peer_ack_point, cumack,
 				      MAX_TSN)) {
 			/*
 			 * ISSUE with ECN, see FWD-TSN processing for notes
