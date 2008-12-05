@@ -4430,7 +4430,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		done_once = 1;
 		goto again;
 	}
-
 	/**********************************/
 	/* Now what about shutdown issues */
 	/**********************************/
@@ -4514,6 +4513,38 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
+		}
+	}
+	/* PR-Sctp issues need to be addressed too */
+	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
+		struct sctp_tmit_chunk *lchk;
+		uint32_t old_adv_peer_ack_point;
+		
+		old_adv_peer_ack_point = asoc->advanced_peer_ack_point;
+		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
+		/* C3. See if we need to send a Fwd-TSN */
+		if (compare_with_wrap(asoc->advanced_peer_ack_point, cumack,
+				      MAX_TSN)) {
+			/*
+			 * ISSUE with ECN, see FWD-TSN processing for notes
+			 * on issues that will occur when the ECN NONCE
+			 * stuff is put into SCTP for cross checking.
+			 */
+			if (compare_with_wrap(asoc->advanced_peer_ack_point, old_adv_peer_ack_point,
+								  MAX_TSN)) {
+			  send_forward_tsn(stcb, asoc);
+			  /*
+			   * ECN Nonce: Disable Nonce Sum check when FWD TSN
+			   * is sent and store resync tsn
+			   */
+			  asoc->nonce_sum_check = 0;
+			  asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			}
+		}
+		if (lchk) {
+		      /* Assure a timer is up */
+		      sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+							   stcb->sctp_ep, stcb, lchk->whoTo);
 		}
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_RWND_LOGGING_ENABLE) {
@@ -5229,34 +5260,6 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	if (compare_with_wrap(cum_ack, asoc->advanced_peer_ack_point, MAX_TSN)) {
 		asoc->advanced_peer_ack_point = cum_ack;
 	}
-	/* C2. try to further move advancedPeerAckPoint ahead */
-	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
-		struct sctp_tmit_chunk *lchk;
-
-		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
-		/* C3. See if we need to send a Fwd-TSN */
-		if (compare_with_wrap(asoc->advanced_peer_ack_point, cum_ack,
-				      MAX_TSN)) {
-			/*
-			 * ISSUE with ECN, see FWD-TSN processing for notes
-			 * on issues that will occur when the ECN NONCE
-			 * stuff is put into SCTP for cross checking.
-			 */
-			send_forward_tsn(stcb, asoc);
-
-			/*
-			 * ECN Nonce: Disable Nonce Sum check when FWD TSN
-			 * is sent and store resync tsn
-			 */
-			asoc->nonce_sum_check = 0;
-			asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
-			if (lchk) {
-				/* Assure a timer is up */
-				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
-						 stcb->sctp_ep, stcb, lchk->whoTo);
-			}
-		}
-	}
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_fr(stcb, asoc);
 
@@ -5418,7 +5421,38 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		done_once = 1;
 		goto again;
 	}
-
+	/* C2. try to further move advancedPeerAckPoint ahead */
+	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
+		struct sctp_tmit_chunk *lchk;
+		uint32_t old_adv_peer_ack_point;
+		
+		old_adv_peer_ack_point = asoc->advanced_peer_ack_point;
+		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
+		/* C3. See if we need to send a Fwd-TSN */
+		if (compare_with_wrap(asoc->advanced_peer_ack_point, cum_ack,
+				      MAX_TSN)) {
+			/*
+			 * ISSUE with ECN, see FWD-TSN processing for notes
+			 * on issues that will occur when the ECN NONCE
+			 * stuff is put into SCTP for cross checking.
+			 */
+			if (compare_with_wrap(asoc->advanced_peer_ack_point, old_adv_peer_ack_point,
+								  MAX_TSN)) {
+			  send_forward_tsn(stcb, asoc);
+			  /*
+			   * ECN Nonce: Disable Nonce Sum check when FWD TSN
+			   * is sent and store resync tsn
+			   */
+			  asoc->nonce_sum_check = 0;
+			  asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			}
+		}
+		if (lchk) {
+		      /* Assure a timer is up */
+			  sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+							   stcb->sctp_ep, stcb, lchk->whoTo);
+		}
+	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_RWND_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
 			       a_rwnd,
@@ -7620,42 +7654,7 @@ done_with_it:
 		sctp_strike_gap_ack_chunks(stcb, asoc, biggest_tsn_acked,
 		    biggest_tsn_newly_acked, this_sack_lowest_newack, accum_moved);
 	}
-	/*********************************************/
-	/* Here we perform PR-SCTP procedures        */
-	/* (section 4.2)                             */
-	/*********************************************/
-	/* C1. update advancedPeerAckPoint */
-	if (compare_with_wrap(cum_ack, asoc->advanced_peer_ack_point, MAX_TSN)) {
-		asoc->advanced_peer_ack_point = cum_ack;
-	}
-	/* C2. try to further move advancedPeerAckPoint ahead */
-	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
-		struct sctp_tmit_chunk *lchk;
 
-		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
-		/* C3. See if we need to send a Fwd-TSN */
-		if (compare_with_wrap(asoc->advanced_peer_ack_point, cum_ack,
-		    MAX_TSN)) {
-			/*
-			 * ISSUE with ECN, see FWD-TSN processing for notes
-			 * on issues that will occur when the ECN NONCE
-			 * stuff is put into SCTP for cross checking.
-			 */
-			send_forward_tsn(stcb, asoc);
-
-			/*
-			 * ECN Nonce: Disable Nonce Sum check when FWD TSN
-			 * is sent and store resync tsn
-			 */
-			asoc->nonce_sum_check = 0;
-			asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
-			if (lchk) {
-				/* Assure a timer is up */
-				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
-				    stcb->sctp_ep, stcb, lchk->whoTo);
-			}
-		}
-	}
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_fr(stcb, asoc);
 
@@ -7817,6 +7816,47 @@ again:
 		done_once = 1;
 		goto again;
 	}
+	/*********************************************/
+	/* Here we perform PR-SCTP procedures        */
+	/* (section 4.2)                             */
+	/*********************************************/
+	/* C1. update advancedPeerAckPoint */
+	if (compare_with_wrap(cum_ack, asoc->advanced_peer_ack_point, MAX_TSN)) {
+		asoc->advanced_peer_ack_point = cum_ack;
+	}
+	/* C2. try to further move advancedPeerAckPoint ahead */
+	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
+		struct sctp_tmit_chunk *lchk;
+		uint32_t old_adv_peer_ack_point;
+		
+		old_adv_peer_ack_point = asoc->advanced_peer_ack_point;
+		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
+		/* C3. See if we need to send a Fwd-TSN */
+		if (compare_with_wrap(asoc->advanced_peer_ack_point, cum_ack,
+		    MAX_TSN)) {
+			/*
+			 * ISSUE with ECN, see FWD-TSN processing for notes
+			 * on issues that will occur when the ECN NONCE
+			 * stuff is put into SCTP for cross checking.
+			 */
+			if (compare_with_wrap(asoc->advanced_peer_ack_point, old_adv_peer_ack_point,
+								  MAX_TSN)) {
+			  send_forward_tsn(stcb, asoc);
+			  /*
+			   * ECN Nonce: Disable Nonce Sum check when FWD TSN
+			   * is sent and store resync tsn
+			   */
+			  asoc->nonce_sum_check = 0;
+			  asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			}
+		}
+		if (lchk) {
+		  /* Assure a timer is up */
+		  sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+						   stcb->sctp_ep, stcb, lchk->whoTo);
+		}
+	}
+
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_RWND_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_RWND_UPDATE,
 		    a_rwnd,
