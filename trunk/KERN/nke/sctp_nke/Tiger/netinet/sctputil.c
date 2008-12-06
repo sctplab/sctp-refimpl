@@ -4901,7 +4901,9 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 
 #endif
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
-			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, SCTP_SO_NOT_LOCKED);
+			sctp_flight_size_decrease(tp1);
+			sctp_total_flight_decrease(stcb, tp1);
+			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
