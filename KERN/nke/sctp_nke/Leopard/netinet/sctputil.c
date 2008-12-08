@@ -2472,48 +2472,6 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return;
 }
 
-#ifdef SCTP_USE_ADLER32
-static uint32_t
-update_adler32(uint32_t adler, uint8_t * buf, int32_t len)
-{
-	uint32_t s1 = adler & 0xffff;
-	uint32_t s2 = (adler >> 16) & 0xffff;
-	int n;
-
-	for (n = 0; n < len; n++, buf++) {
-		/* s1 = (s1 + buf[n]) % BASE */
-		/* first we add */
-		s1 = (s1 + *buf);
-		/*
-		 * now if we need to, we do a mod by subtracting. It seems a
-		 * bit faster since I really will only ever do one subtract
-		 * at the MOST, since buf[n] is a max of 255.
-		 */
-		if (s1 >= SCTP_ADLER32_BASE) {
-			s1 -= SCTP_ADLER32_BASE;
-		}
-		/* s2 = (s2 + s1) % BASE */
-		/* first we add */
-		s2 = (s2 + s1);
-		/*
-		 * again, it is more efficent (it seems) to subtract since
-		 * the most s2 will ever be is (BASE-1 + BASE-1) in the
-		 * worse case. This would then be (2 * BASE) - 2, which will
-		 * still only do one subtract. On Intel this is much better
-		 * to do this way and avoid the divide. Have not -pg'd on
-		 * sparc.
-		 */
-		if (s2 >= SCTP_ADLER32_BASE) {
-			s2 -= SCTP_ADLER32_BASE;
-		}
-	}
-	/* Return the adler32 of the bytes buf[0..len-1] */
-	return ((s2 << 16) + s1);
-}
-
-#endif
-
-
 uint32_t
 sctp_calculate_len(struct mbuf *m)
 {
@@ -2547,37 +2505,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	return (0);
 }
 
-#elif defined(SCTP_USE_INCHKSUM)
-
-#include <machine/in_cksum.h>
-
-uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
-{
-	/*
-	 * given a mbuf chain with a packetheader offset by 'offset'
-	 * pointing at a sctphdr (with csum set to 0) go through the chain
-	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This also
-	 * has a side bonus as it will calculate the total length of the
-	 * mbuf chain. Note: if offset is greater than the total mbuf length,
-	 * checksum=1, pktlen=0 is returned (ie. no real error code)
-	 */
-	int32_t tlen = 0;
-	struct mbuf *at;
-	uint32_t the_sum, retsum;
-
-	at = m;
-	while (at) {
-		tlen += SCTP_BUF_LEN(at);
-		at = SCTP_BUF_NEXT(at);
-	}
-	the_sum = (uint32_t) (in_cksum_skip(m, tlen, offset));
-	if (pktlen != NULL)
-		*pktlen = (tlen - offset);
-	retsum = htons(the_sum);
-	return (the_sum);
-}
-
 #else
 
 uint32_t
@@ -2592,12 +2519,7 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
 	int32_t tlen = 0;
-
-#ifdef SCTP_USE_ADLER32
-	uint32_t base = 1L;
-#else
 	uint32_t base = 0xffffffff;
-#endif
 	struct mbuf *at;
 
 	at = m;
@@ -2608,11 +2530,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	}
 	while (at != NULL) {
 		if ((SCTP_BUF_LEN(at) - offset) > 0) {
-#ifdef SCTP_USE_ADLER32
-			base = update_adler32(base,
-					      (unsigned char *)(SCTP_BUF_AT(at, offset)),
-					      (unsigned int)(SCTP_BUF_LEN(at) - offset));
-#else
 			if ((SCTP_BUF_LEN(at) - offset) < 4) {
 				/* Use old method if less than 4 bytes */
 				base = old_update_crc32(base, 
@@ -2623,7 +2540,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 						    (unsigned char *)(SCTP_BUF_AT(at, offset)),
 						    (unsigned int)(SCTP_BUF_LEN(at) - offset));
 			}
-#endif
 			tlen += SCTP_BUF_LEN(at) - offset;
 			/* we only offset once into the first mbuf */
 		}
@@ -2638,13 +2554,7 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	if (pktlen != NULL) {
 		*pktlen = tlen;
 	}
-#ifdef SCTP_USE_ADLER32
-	/* Adler32 */
-	base = htonl(base);
-#else
-	/* CRC-32c */
-	base = sctp_csum_finalize(base);
-#endif
+	base = sctp_finalize_crc32(base);
 	return (base);
 }
 
