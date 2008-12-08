@@ -4548,7 +4548,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (td != NULL && prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr))) {
 				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
 				error = EADDRNOTAVAIL;
@@ -4563,7 +4563,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (td != NULL && prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
 											   (SCTP_IPV6_V6ONLY(inp) != 0)) != 0) {
 			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
@@ -4598,7 +4598,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		if (td != NULL && prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr))) {
 				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
 				error = EADDRNOTAVAIL;
@@ -4613,7 +4613,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (td != NULL && prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
 											   (SCTP_IPV6_V6ONLY(inp) != 0)) != 0) {
 			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
@@ -4768,7 +4768,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 #ifdef INET6
 	if (addr->sa_family == AF_INET6) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in6 *sin6p;
 
 #endif
@@ -4776,7 +4776,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		sin6p = (struct sockaddr_in6 *)addr;
 		if (p != NULL && prison_remote_ip6(p->td_ucred, &sin6p->sin6_addr) != 0) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
@@ -4786,7 +4786,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	} else
 #endif
 	if (addr->sa_family == AF_INET) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in *sinp;
 
 #endif
@@ -4794,7 +4794,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		sinp = (struct sockaddr_in *)addr;
 		if (p != NULL && prison_remote_ip4(p->td_ucred, &sinp->sin_addr) != 0) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);

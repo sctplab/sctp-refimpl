@@ -2851,7 +2851,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			sin = (struct sockaddr_in *)addr;
 			lport = sin->sin_port;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
  				/*
  				 * For LOOPBACK the prison_local_ip4() call will transmute the ip address
  				 * to the proper value.
@@ -2882,7 +2882,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 #endif
 
 			lport = sin6->sin6_port;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
  
   				/*
  				 * For LOOPBACK the prison_local_ip6() call will transmute the ipv6 address
