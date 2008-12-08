@@ -4066,7 +4066,7 @@ igb_rx_checksum(u32 staterr, struct mbuf *mp)
 	}
 	
 	if (status & E1000_RXD_STAT_CRCV) {
-			mp->m_pkthdr.csum_flags = CSUM_SCTP_VALID;		
+			mp->m_pkthdr.csum_flags |= CSUM_SCTP_VALID;		
 	}
 	
 	return;
