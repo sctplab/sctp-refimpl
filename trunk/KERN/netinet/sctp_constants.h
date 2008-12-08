@@ -327,21 +327,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 185694 2008-12-06 13:19:54
 #define SCTP_SIGNATURE_SIZE	SCTP_AUTH_DIGEST_LEN_SHA1
 #define SCTP_SIGNATURE_ALOC_SIZE SCTP_SIGNATURE_SIZE
 
-/* DEFINE HERE WHAT CRC YOU WANT TO USE */
-#define SCTP_USECRC_RFC2960  1
-/* #define SCTP_USECRC_FLETCHER 1 */
-/* #define SCTP_USECRC_SSHCRC32 1 */
-/* #define SCTP_USECRC_FASTCRC32 1 */
-/* #define SCTP_USECRC_CRC32 1 */
-/* #define SCTP_USECRC_TCP32 1 */
-/* #define SCTP_USECRC_CRC16SMAL 1 */
-/* #define SCTP_USECRC_CRC16 1 */
-/* #define SCTP_USECRC_MODADLER 1 */
-
-#ifndef SCTP_ADLER32_BASE
-#define SCTP_ADLER32_BASE 65521
-#endif
-
 /*
  * the SCTP protocol signature this includes the version number encoded in
  * the last 4 bits of the signature.
