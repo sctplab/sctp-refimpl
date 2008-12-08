@@ -207,6 +207,36 @@
 #define E1000_RXDEXT_STATERR_IPE   0x40000000
 #define E1000_RXDEXT_STATERR_RXE   0x80000000
 
+/* Packet type descriptor field */
+#define E1000_RXD_RSS_TYPE          0x0000000f   /* Bottom 4 bits are RSS type */
+/* The following are the break down of the
+ * RSS_TYPE field.
+ */
+#define E1000_RXD_RSS_HASH_TCPV4    0x01
+#define E1000_RXD_RSS_HASH_V4       0x02
+#define E1000_RXD_RSS_HASH_TCPV6    0x03
+#define E1000_RXD_RSS_HASH_V6_EX    0x04
+#define E1000_RXD_RSS_HASH_V6       0x05
+#define E1000_RXD_RSS_HASH_TCPV6_EX 0x06
+#define E1000_RXD_RSS_HASH_UDPV4    0x07
+#define E1000_RXD_RSS_HASH_UDPV6    0x08
+#define E1000_RXD_RSS_HASH_UDPV6_EX 0x09
+/* Reserved 0xa - 0xf */
+
+/* The next 12 bits are the Packet Type */
+#define E1000_RXD_PTYPE_V4HDR       0x001
+#define E1000_RXD_PTYPE_V4HDR_EXT   0x002
+#define E1000_RXD_PTYPE_V6HDR       0x004
+#define E1000_RXD_PTYPE_V6HDR_EXT   0x008
+#define E1000_RXD_PTYPE_TCP         0x010
+#define E1000_RXD_PTYPE_UDP         0x020
+#define E1000_RXD_PTYPE_SCTP        0x040
+#define E1000_RXD_PTYPE_NFS         0x080
+#define E1000_RXD_PTYPE_IPSEC_ESP   0x100
+#define E1000_RXD_PTYPE_IPSEC_AH    0x200
+#define E1000_RXD_PTYPE_RESERVE     0x400
+#define E1000_RXD_PTYPE_L2_PKT      0x800
+
 /* mask to determine if packets should be dropped due to frame errors */
 #define E1000_RXD_ERR_FRAME_ERR_MASK ( \
     E1000_RXD_ERR_CE  |                \
