@@ -4039,14 +4039,15 @@ igb_rx_checksum(u32 staterr, struct mbuf *mp, u32 pkt_type)
 {
 	u16 status = (u16)staterr;
 	u8  errors = (u8) (staterr >> 24);
-    u8  rss_type = pkt_type & E1000_RXD_RSS_TYPE;
+	u8  rss_type = pkt_type & E1000_RXD_RSS_TYPE;
 	u16 ptype = pkt_type >> 4;
 
 	if (ptype & E1000_RXD_PTYPE_L2_PKT) {
- 	    /* gak, its a L2 packet no sum can be determined I think */
+	    /* gak, its a L2 packet no sum can be determined I think */
 	    mp->m_pkthdr.csum_flags = 0;
 	    return;
 	}
+	
 	/* Ignore Checksum bit is set */
 	if (status & E1000_RXD_STAT_IXSM) {
 		mp->m_pkthdr.csum_flags = 0;
@@ -4067,20 +4068,20 @@ igb_rx_checksum(u32 staterr, struct mbuf *mp, u32 pkt_type)
 	if (status & E1000_RXD_STAT_TCPCS) {
 		/* Did it pass? */
 		if (!(errors & E1000_RXD_ERR_TCPE)) {
-		  /* Now what type was it that passed? */
-		  if ((ptype & E1000_RXD_PTYPE_TCP)||
-			  (ptype & E1000_RXD_PTYPE_UDP)) {
-			  mp->m_pkthdr.csum_flags |=
-				(CSUM_DATA_VALID | CSUM_PSEUDO_HDR);
-  			  mp->m_pkthdr.csum_data = htons(0xffff);
-		  } else if (ptype & E1000_RXD_PTYPE_SCTP) {
-			  mp->m_pkthdr.csum_flags |= CSUM_SCTP_VALID;
-		  }
+			/* Now what type was it that passed? */
+			if ((ptype & E1000_RXD_PTYPE_TCP)||
+			    (ptype & E1000_RXD_PTYPE_UDP)) {
+				mp->m_pkthdr.csum_flags |= CSUM_DATA_VALID;
+				mp->m_pkthdr.csum_flags |= CSUM_PSEUDO_HDR;
+				mp->m_pkthdr.csum_data = htons(0xffff);
+			} else if (ptype & E1000_RXD_PTYPE_SCTP) {
+				mp->m_pkthdr.csum_flags |= CSUM_SCTP_VALID;
+			}
 		}
 	}
-	/*	
+	/*
 	if (status & E1000_RXD_STAT_CRCV) {
-	mp->m_pkthdr.csum_flags |= CSUM_SCTP_VALID;		
+		mp->m_pkthdr.csum_flags |= CSUM_SCTP_VALID;
 	}
 	*/
 	return;
