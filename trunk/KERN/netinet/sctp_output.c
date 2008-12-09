@@ -5292,7 +5292,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	struct mbuf *newm;
 	struct sctphdr *sctphdr;
 	int packet_length;
-	uint32_t csum;
 	int ret;
 	uint32_t vrf_id;
 	sctp_route_t *ro = NULL;
@@ -5326,11 +5325,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	}
 	/* Calculate the csum and fill in the length of the packet */
 	sctphdr = mtod(m, struct sctphdr *);
+	sctphdr->checksum = 0;
 	if (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
-	    (stcb) &&
-	    (to->sa_family == AF_INET) &&
-	    (stcb->asoc.loopback_scope)) {
-		sctphdr->checksum = 0;
+	    (stcb) && (stcb->asoc.loopback_scope)) {
 		/*
 		 * This can probably now be taken out since my audit shows
 		 * no more bad pktlen's coming in. But we will wait a while
@@ -5338,9 +5335,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 */
 		packet_length = sctp_calculate_len(m);
 	} else {
-		sctphdr->checksum = 0;
-		csum = sctp_calculate_sum(m, &packet_length, 0);
-		sctphdr->checksum = csum;
+		sctphdr->checksum = sctp_calculate_sum(m, &packet_length, 0);
 	}
 
 	if (to->sa_family == AF_INET) {
