@@ -5674,6 +5674,12 @@ sctp_input(i_pak, va_alist)
 	NTOHS(ip->ip_len);
 #endif
 
+	/* validate mbuf chain length with IP payload length */
+	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
+		SCTP_STAT_INCR(sctps_hdrops);
+		goto bad;
+	}
+
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 	SCTPDBG(SCTP_DEBUG_INPUT1,
@@ -5700,7 +5706,7 @@ sctp_input(i_pak, va_alist)
 			goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+	calc_check = sctp_calculate_sum(m, NULL, iphlen);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
 			calc_check, check, m, mlen, iphlen);
@@ -5733,11 +5739,6 @@ sctp_input(i_pak, va_alist)
 		goto bad;
 	}
 
-	/* validate mbuf chain length with IP payload length */
-	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
-		SCTP_STAT_INCR(sctps_hdrops);
-		goto bad;
-	}
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
