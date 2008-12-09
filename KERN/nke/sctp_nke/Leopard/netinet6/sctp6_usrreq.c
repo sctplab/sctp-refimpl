@@ -142,7 +142,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	uint32_t vrf_id = 0;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
-	int length, mlen, offset, iphlen;
+	int length, offset, iphlen;
 	uint8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
 	int pkt_len = 0;
@@ -233,10 +233,10 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		goto sctp_skip_csum;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+	calc_check = sctp_calculate_sum(m, NULL, iphlen);
 	if (calc_check != check) {
-		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-			calc_check, check, m, mlen, iphlen);
+		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
+			calc_check, check, m, iphlen);
 		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
 						 sh, ch, &in6p, &net, vrf_id);
 		if ((net) && (port)) {
