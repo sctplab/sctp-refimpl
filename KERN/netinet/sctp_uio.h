@@ -961,6 +961,9 @@ struct xsctp_inpcb {
 	uint16_t local_port;
 	uint16_t qlen;
 	uint16_t maxqlen;
+#if defined(__Windows__)
+	uint16_t padding;
+#endif
 };
 
 struct xsctp_tcb {
@@ -1011,6 +1014,9 @@ struct xsctp_raddr {
 	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
 	uint8_t confirmed;                 /*                            */
 	uint8_t heartbeat_enabled;         /* sctpAssocLocalRemEntry 4   */
+#if defined(__Windows__)
+	uint8_t padding;
+#endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
 };
 
