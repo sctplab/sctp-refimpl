@@ -314,10 +314,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 185694 2008-12-06 13:19:54
 
 #define SCTP_PARTIAL_DELIVERY_SHIFT 1
 
-/* Minimum number of bytes read by user before we
- * condsider doing a rwnd update
- */
-
 /*
  * default HMAC for cookies, etc... use one of the AUTH HMAC id's
  * SCTP_HMAC is the HMAC_ID to use
@@ -612,41 +608,14 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 185694 2008-12-06 13:19:54
 #define SCTP_MAIN_TIMER_DEFAULT		10
 #endif
 
-/*
- * Number of ticks before the soxwakeup() event that is delayed is sent AFTER
- * the accept() call
- */
-
-/*
- * Of course we really don't collect stale cookies, being folks of decerning
- * taste. However we do count them, if we get too many before the association
- * comes up.. we give up. Below is the constant that dictates when we give it
- * up...this is a implemenation dependent treatment. In ours we do not ask
- * for a extension of time, but just retry this many times...
- */
-
 /* max number of TSN's dup'd that I will hold */
 #define SCTP_MAX_DUP_TSNS	20
 
 /*
  * Here we define the types used when setting the retry amounts.
  */
-/* constants for type of set */
-
-/* Maximum TSN's we will summarize in a drop report */
-
 /* How many drop re-attempts we make on  INIT/COOKIE-ECHO */
 #define SCTP_RETRY_DROPPED_THRESH 4
-
-/*
- * And the max we will keep a history of in the tcb which MUST be lower than
- * 256.
- */
-
-/*
- * Here we define the default timers and the default number of attemts we
- * make for each respective side (send/init).
- */
 
 /*
  * Maxmium number of chunks a single association can have on it. Note that
@@ -780,7 +749,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 185694 2008-12-06 13:19:54
 
 #define SCTP_INITIAL_CWND 4380
 
-#define SCTP_DEFAULT_MTU 1500 /* emegency default MTU */
+#define SCTP_DEFAULT_MTU 1500 /* emergency default MTU */
 /* amount peer is obligated to have in rwnd or I will abort */
 #define SCTP_MIN_RWND	1500
 
@@ -997,13 +966,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 185694 2008-12-06 13:19:54
  * reject it.
  */
 #define SCTP_STACK_VTAG_HASH_SIZE   32
-
-
-/*
- * If we use the per-endpoint model than we do not have a hash table of
- * entries but instead have a single head pointer and we must crawl through
- * the entire list.
- */
 
 /*
  * Number of seconds of time wait for a vtag.
