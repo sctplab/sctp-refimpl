@@ -147,6 +147,9 @@ struct sctp_tagblock {
 
 
 struct sctp_epinfo {
+#ifdef __FreeBSD__
+    struct socket *udp_tun_socket;
+#endif  
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
 

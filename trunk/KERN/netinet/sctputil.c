@@ -7061,13 +7061,71 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
  * so we can do UDP tunneling. In
  * the mean-time, we return error
  */
+#include <netinet/udp_var.h>
+#include <sys/proc.h>
+
+static void
+sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
+{
+  /* Do nothing for now */
+  m_freem(m);
+}
 
 void sctp_over_udp_stop(void)
 {
-         return;
+     struct socket *sop;
+     if (SCTP_BASE_INFO(udp_tun_socket) == NULL) {
+	   /* Nothing to do */
+	   return;
+	 }
+	 sop = SCTP_BASE_INFO(udp_tun_socket);
+	 soclose(sop);
+	 SCTP_BASE_INFO(udp_tun_socket) = NULL;
 }
 int sctp_over_udp_start(void)
 {
-         return(-1);
+     uint16_t port;
+	 int ret;
+	 struct sockaddr_in sin;
+	 struct socket *sop=NULL;
+	 struct thread *th;
+	 struct ucred *cred;
+	 port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
+	 if (port == 0) {
+	   /* Must have a port set */
+	   return(EINVAL);
+	 }
+	 if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
+	   /* Already running -- must stop first */
+	   return(EALREADY);
+	 }
+	 th = curthread;
+	 cred = th->td_ucred;
+	 if ((ret = socreate(PF_INET, &sop,
+				  SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
+	   return (ret);
+	 }
+	 SCTP_BASE_INFO(udp_tun_socket) = sop;
+	 /* call the special UDP hook */
+	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
+	 if (ret) {
+	   goto exit_stage_left;
+	 }
+	 /* Ok we have a socket, bind it to the port*/
+	 memset(&sin, 0, sizeof(sin));
+	 sin.sin_len = sizeof(sin);
+	 sin.sin_family = AF_INET;
+	 sin.sin_port = htons(port);
+	 ret = sobind(sop, (struct sockaddr *)&sin, curthread);
+	 if (ret) {
+	   /* Close up we cant get the port */
+	 exit_stage_left:
+	   sctp_over_udp_stop();
+	   return (ret);
+	 }
+	 /* Ok we should now get UDP packets directly to our input routine
+	  * sctp_recv_upd_tunneled_packet().
+	  */
+	 return (0);
 }
 #endif
