@@ -7084,6 +7084,7 @@ void sctp_over_udp_stop(void)
 }
 int sctp_over_udp_start(void)
 {
+#if __FreeBSD_version >= 800044
      uint16_t port;
 	 int ret;
 	 struct sockaddr_in sin;
@@ -7127,5 +7128,8 @@ int sctp_over_udp_start(void)
 	  * sctp_recv_upd_tunneled_packet().
 	  */
 	 return (0);
+#else
+	 return (1);
+#endif	 
 }
 #endif
