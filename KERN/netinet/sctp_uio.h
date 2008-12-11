@@ -817,6 +817,10 @@ struct sctpstat {
 	uint32_t  sctps_recvauthfailed;      /* total number of auth failed */
 	uint32_t  sctps_recvexpress;         /* total fast path receives all one chunk */
 	uint32_t  sctps_recvexpressm;        /* total fast path multi-part data */
+	uint32_t  sctps_recvnocrc;
+	uint32_t  sctps_recvswcrc;
+	uint32_t  sctps_recvhwcrc;
+	
 	/* output statistics: */
 	uint32_t  sctps_sendpackets;         /* total output packets       */
 	uint32_t  sctps_sendsacks;           /* total output SACKs         */
@@ -829,7 +833,10 @@ struct sctpstat {
 	uint32_t  sctps_sendheartbeat;       /* total output HB chunks     */
 	uint32_t  sctps_sendecne;            /* total output ECNE chunks    */
 	uint32_t  sctps_sendauth;            /* total output AUTH chunks FIXME   */
-	uint32_t  sctps_senderrors;	   /* ip_output error counter */
+	uint32_t  sctps_senderrors;	     /* ip_output error counter */
+	uint32_t  sctps_sendnocrc;
+	uint32_t  sctps_sendswcrc;
+	uint32_t  sctps_sendhwcrc;
 	/* PCKDROPREP statistics: */
 	uint32_t  sctps_pdrpfmbox;           /* Packet drop from middle box */
 	uint32_t  sctps_pdrpfehos;           /* P-drop from end host */

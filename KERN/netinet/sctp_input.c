@@ -5698,15 +5698,21 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
+	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
+		SCTP_STAT_INCR(sctps_recvhwcrc);
+		goto sctp_skip_csum_4;
+	}
 	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
 	     (SCTP_IS_IT_LOOPBACK(m)))
 		) {
-			goto sctp_skip_csum_4;
+		SCTP_STAT_INCR(sctps_recvnocrc);
+		goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
 	calc_check = sctp_calculate_sum(m, NULL, iphlen);
+	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
 			calc_check, check, m, mlen, iphlen);
