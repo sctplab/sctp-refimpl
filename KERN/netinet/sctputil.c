@@ -7076,6 +7076,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
    * IP header in m, place the
    * rest in the sp.
    */
+  printf("SCTP:Got a UDP tunneled packet!\n");
   if ((m->m_flags & M_PKTHDR) == 0) {
 	/* Can't handle one that is not a pkt hdr */
 	goto out;
@@ -7159,35 +7160,46 @@ int sctp_over_udp_start(void)
 	 port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
 	 if (port == 0) {
 	   /* Must have a port set */
+	   printf("SCTP:No port set in sctp_udp_tunneling_port:%d - set fails\n", port);
 	   return(EINVAL);
 	 }
 	 if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
 	   /* Already running -- must stop first */
+	   printf("SCTP:Tunneling socket not NULL:%p must first close the old port\n", SCTP_BASE_INFO(udp_tun_socket));
 	   return(EALREADY);
 	 }
 	 th = curthread;
 	 cred = th->td_ucred;
 	 if ((ret = socreate(PF_INET, &sop,
 				  SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
+	   printf("SCTP:Open of tunneling socket ret:%d - fails\n", ret);
 	   return (ret);
 	 }
 	 SCTP_BASE_INFO(udp_tun_socket) = sop;
-	 /* call the special UDP hook */
-	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
-	 if (ret) {
-	   goto exit_stage_left;
-	 }
 	 /* Ok we have a socket, bind it to the port*/
 	 memset(&sin, 0, sizeof(sin));
 	 sin.sin_len = sizeof(sin);
 	 sin.sin_family = AF_INET;
 	 sin.sin_port = htons(port);
-	 ret = sobind(sop, (struct sockaddr *)&sin, curthread);
+	 printf("SCTP:sop:%p - Attempt to bind port:%d (%x) - net ver:%x\n",
+			sop,
+			(int)port, (unsigned int)port, (unsigned int)sin.sin_port);
+
+	 ret = sobind(sop, (struct sockaddr *)&sin, th);
 	 if (ret) {
 	   /* Close up we cant get the port */
+	   printf("SCTP:Bind of port:%x (%d) fails ret:%d - fails\n",
+			  (unsigned int)port, (int)port,
+			  ret);
 	 exit_stage_left:
 	   sctp_over_udp_stop();
 	   return (ret);
+	 }
+	 /* call the special UDP hook */
+	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
+	 if (ret) {
+	   printf("SCTP:Set kernel_tunneling fails ret:%d - fails\n", ret);
+	   goto exit_stage_left;
 	 }
 	 /* Ok we should now get UDP packets directly to our input routine
 	  * sctp_recv_upd_tunneled_packet().
