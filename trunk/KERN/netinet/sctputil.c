@@ -7085,7 +7085,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
   }
   /* pull the src port */
   iph = mtod(m, struct ip *);
-  uhdr = (struct udphdr *)((caddr_t)ip + off);
+  uhdr = (struct udphdr *)((caddr_t)iph + off);
 
   port = uhdr->uh_sport;
   sp = m_split(m, off, M_DONTWAIT);
