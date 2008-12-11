@@ -7055,16 +7055,18 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 }
 
 #endif
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__)
 /* We will need to add support
  * to bind the ports and such here
  * so we can do UDP tunneling. In
  * the mean-time, we return error
  */
+#include <netinet/udp.h>
 #include <netinet/udp_var.h>
 #include <sys/proc.h>
 #include <netinet6/sctp6_var.h>
 
+#if __FreeBSD_version >= 800044
 static void
 sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
 {
@@ -7144,6 +7146,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
  out:
   m_freem(m);
 }
+#endif
 
 void sctp_over_udp_stop(void)
 {
