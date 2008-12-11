@@ -77,6 +77,9 @@ int main(int argc, char *argv[])
 	p(sctps_recvauthfailed,      "authfailed");
 	p(sctps_recvexpress,         "expressd");
 	p(sctps_recvexpressm,        "expressdm");
+	p(sctps_recvnocrc,           "nocrc");
+	p(sctps_recvhwcrc,           "hwcrc");
+	p(sctps_recvswcrc,           "swcrc");
 	nl("SEND");
 	p(sctps_sendpackets,         "packets");
 	p(sctps_sendsacks,           "sacks");
@@ -88,6 +91,9 @@ int main(int argc, char *argv[])
 	p(sctps_sendecne,            "ecne");
 	p(sctps_sendauth,            "auth");
 	p(sctps_senderrors,           "ifp:io_errors");
+	p(sctps_sendnocrc,           "nocrc");
+	p(sctps_sendhwcrc,           "hwcrc");
+	p(sctps_sendswcrc,           "swcrc");
 	nl("PDRP");
 	p(sctps_pdrpfmbox,           "fmbox");
 	p(sctps_pdrpfehos,           "fehos");
