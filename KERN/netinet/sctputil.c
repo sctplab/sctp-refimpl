@@ -7176,6 +7176,12 @@ int sctp_over_udp_start(void)
 	   return (ret);
 	 }
 	 SCTP_BASE_INFO(udp_tun_socket) = sop;
+ 	 /* call the special UDP hook */
+	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
+	 if (ret) {
+	   printf("SCTP:Set kernel_tunneling fails ret:%d - fails\n", ret);
+	   goto exit_stage_left;
+	 }
 	 /* Ok we have a socket, bind it to the port*/
 	 memset(&sin, 0, sizeof(sin));
 	 sin.sin_len = sizeof(sin);
@@ -7194,12 +7200,6 @@ int sctp_over_udp_start(void)
 	 exit_stage_left:
 	   sctp_over_udp_stop();
 	   return (ret);
-	 }
-	 /* call the special UDP hook */
-	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
-	 if (ret) {
-	   printf("SCTP:Set kernel_tunneling fails ret:%d - fails\n", ret);
-	   goto exit_stage_left;
 	 }
 	 /* Ok we should now get UDP packets directly to our input routine
 	  * sctp_recv_upd_tunneled_packet().
