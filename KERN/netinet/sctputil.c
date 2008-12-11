@@ -7063,11 +7063,76 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
  */
 #include <netinet/udp_var.h>
 #include <sys/proc.h>
+#include <netinet6/sctp6_var.h>
 
 static void
 sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
 {
-  /* Do nothing for now */
+  struct ip *iph;
+  struct mbuf *sp, *last;
+  int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
+
+  /* Split out the mbuf chain. Leave the
+   * IP header in m, place the
+   * rest in the sp.
+   */
+  if ((m->m_flags & M_PKTHDR) == 0) {
+	/* Can't handle one that is not a pkt hdr */
+	goto out;
+  }
+  sp = m_split(m, off, M_DONTWAIT);
+  if (sp == NULL) {
+	/* Gak, drop packet, we can't do a split */
+	goto out;
+  }
+  if (sp->m_pkthdr.len < header_size) {
+	/* Gak, packet can't have an SCTP header in it - to small */
+	m_freem(sp);
+	goto out;
+  }
+  /* ok now pull up the UDP header and SCTP header together */
+  sp = m_pullup(sp, header_size);
+  if (sp == NULL) {
+	/* Gak pullup failed */
+	goto out;
+  }
+  /* trim out the UDP header */
+  m_adj(sp, sizeof(struct udphdr));
+
+  /* Now reconstruct the mbuf chain */
+  /* 1) find last one */
+  last = m;
+  while (last->m_next != NULL) {
+	last = last->m_next;
+  }
+  last->m_next = sp;
+  m->m_pkthdr.len += sp->m_pkthdr.len;
+
+  /* Now its ready for sctp_input or sctp6_input */
+  iph = mtod(m, struct ip *);
+  switch (iph->ip_v) {
+  case IPVERSION:
+	{
+	  /* its IPv4 */
+	    sctp_input(m, off);
+  	    break;
+	}
+#ifdef INET6
+  case IPV6_VERSION >> 4:
+	{
+		/* its IPv6 */
+	    sctp6_input(&m, &off, 0);
+		break;
+	}
+#endif
+  default:
+	{
+	  m_freem(m);
+	  break;
+	}
+  }
+  return;
+ out:
   m_freem(m);
 }
 
