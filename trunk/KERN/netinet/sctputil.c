@@ -7070,6 +7070,8 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
 {
   struct ip *iph;
   struct mbuf *sp, *last;
+  struct udphdr *uhdr;
+  uint16_t port=0;
   int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
 
   /* Split out the mbuf chain. Leave the
@@ -7081,6 +7083,11 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
 	/* Can't handle one that is not a pkt hdr */
 	goto out;
   }
+  /* pull the src port */
+  iph = mtod(m, struct ip *);
+  uhdr = (struct udphdr *)((caddr_t)ip + off);
+
+  port = uhdr->uh_sport;
   sp = m_split(m, off, M_DONTWAIT);
   if (sp == NULL) {
 	/* Gak, drop packet, we can't do a split */
@@ -7115,15 +7122,16 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
   case IPVERSION:
 	{
 	  /* its IPv4 */
-	    sctp_input(m, off);
+	    sctp_input_with_port(m, off, port);
   	    break;
 	}
 #ifdef INET6
   case IPV6_VERSION >> 4:
 	{
-		/* its IPv6 */
-	    sctp6_input(&m, &off, 0);
+		/* its IPv6 - NOT supported */
+		goto out;	  
 		break;
+
 	}
 #endif
   default:
