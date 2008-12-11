@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 185895 2008-12-10 23:12:39Z zec $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -76,6 +76,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 185694 2008-12-06 13:19:54Z r
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/route.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
+#include <net/vnet.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -106,6 +109,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 185694 2008-12-06 13:19:54Z r
 #include <netinet6/ip6protosw.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
+#include <netinet6/vinet6.h>
+#endif
 #endif /* INET6 */
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
@@ -170,16 +176,12 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define MOD_IPSEC ipsec
 
 /* then define the macro(s) that hook into the vimage macros */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800044 && defined(VIMAGE)
-#if 0
-#define VSYMNAME(__MODULE) vnet_ ## __MODULE
-#define MODULE_GLOBAL(__MODULE, __SYMBOL) VSYM(VSYMNAME(__MODULE), __SYMBOL)
-#else
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
 #define MODULE_GLOBAL(__MODULE, __SYMBOL) V_ ## __SYMBOL
-#endif
 #else
 #define MODULE_GLOBAL(__MODULE, __SYMBOL) (__SYMBOL)
 #endif
+
 /*
  *
  */
@@ -476,11 +478,7 @@ typedef struct callout sctp_os_timer_t;
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
-#if __FreeBSD_version >= 800045
-#define SCTP_RTALLOC(ro, vrf_id) in_rtalloc_ign((struct route *)ro, 0UL, vrf_id)
-#else
 #define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
-#endif
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)

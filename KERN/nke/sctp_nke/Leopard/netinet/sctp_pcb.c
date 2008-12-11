@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 185895 2008-12-10 23:12:39Z zec $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -83,11 +83,11 @@ SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	struct sockaddr_in6 tmp_a, tmp_b;
 
 	memcpy(&tmp_a, a, sizeof(struct sockaddr_in6));
-	if (sa6_embedscope(&tmp_a, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone))) != 0) {
+	if (sa6_embedscope(&tmp_a, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0) {
 		return 0;
 	}
 	memcpy(&tmp_b, b, sizeof(struct sockaddr_in6));
-	if (sa6_embedscope(&tmp_b, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone))) != 0) {
+	if (sa6_embedscope(&tmp_b, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0) {
 		return 0;
 	}
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a.sin6_addr, &tmp_b.sin6_addr));
@@ -2114,7 +2114,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
 		(void)sa6_recoverscope(from6);
-		sa6_embedscope(from6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)));
+		sa6_embedscope(from6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
@@ -2170,7 +2170,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #ifdef SCTP_KAME
 		/* we probably don't need these operations */
 		(void)sa6_recoverscope(to6);
-		sa6_embedscope(to6, MODULE_GLOBAL(MOD_INET6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)));
+		sa6_embedscope(to6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
