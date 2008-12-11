@@ -9316,7 +9316,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
-	uint16_t auth_keyid = 0;
+	uint16_t auth_keyid;
+	int override_ok = 1;
 	int data_auth_reqd = 0;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 		the destination. */
@@ -9332,6 +9333,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #endif
 	*num_out = 0;
 	cwnd_full_ind = 0;
+	auth_keyid = stcb->asoc.authinfo.active_keyid;
 
 	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
 	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
@@ -10084,8 +10086,13 @@ again_one_more_time:
 										       &auth_offset,
 										       stcb,
 										       SCTP_DATA);
-							SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 							auth_keyid = chk->auth_keyid;
+							override_ok = 0;
+							SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
+						} else if (override_ok) {
+							/* use this data's keyid */
+							auth_keyid = chk->auth_keyid;
+							override_ok = 0;
 						} else if (auth_keyid != chk->auth_keyid) {
 							/* different keyid, so done bundling */
 							break;
@@ -10211,9 +10218,6 @@ again_one_more_time:
 			shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 			shdr->checksum = 0;
 			auth_offset += sizeof(struct sctphdr);
-			/* if data auth isn't needed, use the assoc active key */
-			if (!data_auth_reqd)
-				auth_keyid = stcb->asoc.authinfo.active_keyid;
 			if ((error = sctp_lowlevel_chunk_output(inp, 
 								stcb, 
 								net,
@@ -10858,7 +10862,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	int error, i, one_chunk, fwd_tsn, ctl_cnt, tmr_started;
 	struct sctp_auth_chunk *auth = NULL;
 	uint32_t auth_offset = 0;
-	uint16_t auth_keyid = 0;
+	uint16_t auth_keyid;
+	int override_ok = 1;
 	int data_auth_reqd = 0;
 	uint32_t dmtu = 0;
 
@@ -10876,6 +10881,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	*cnt_out = 0;
 	fwd = NULL;
 	endofchain = m = NULL;
+	auth_keyid = stcb->asoc.authinfo.active_keyid;
 #ifdef SCTP_AUDITING_ENABLED
 	sctp_audit_log(0xC3, 1);
 #endif
@@ -11084,8 +11090,12 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 								&auth_offset,
 								stcb,
 								SCTP_DATA);
-					SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 					auth_keyid = chk->auth_keyid;
+					override_ok = 0;
+					SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
+				} else if (override_ok) {
+					auth_keyid = chk->auth_keyid;
+					override_ok = 0;
 				} else if (chk->auth_keyid != auth_keyid) {
 					/* different keyid, so done bundling */
 					break;
@@ -11140,8 +11150,12 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 										&auth_offset,
 										stcb,
 										SCTP_DATA);
-							SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 							auth_keyid = fwd->auth_keyid;
+							override_ok = 0;
+							SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
+						} else if (override_ok) {
+							auth_keyid = fwd->auth_keyid;
+							override_ok = 0;
 						} else if (fwd->auth_keyid != auth_keyid) {
 							/* different keyid, so done bundling */
 							break;
@@ -11197,12 +11211,6 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			shdr->v_tag = htonl(stcb->asoc.peer_vtag);
 			shdr->checksum = 0;
 			auth_offset += sizeof(struct sctphdr);
-			/*
-			 * if doing DATA auth, use the data chunk(s) key id,
-			 * otherwise use the assoc's active key id
-			 */
-			if (!data_auth_reqd)
-				auth_keyid = stcb->asoc.authinfo.active_keyid;
 			/* Now lets send it, if there is anything to send :> */
 			if ((error = sctp_lowlevel_chunk_output(inp, stcb, net,
 								(struct sockaddr *)&net->ro._l_addr, m,

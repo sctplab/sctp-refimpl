@@ -327,10 +327,12 @@ do { \
 	} \
 } while (0)
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__)
 /* new functions to start/stop udp tunneling */
 void sctp_over_udp_stop(void);
 int sctp_over_udp_start(void);
+#elif defined(__Windows__)
+void sctp_over_udp_restart(void);
 #endif
 
 int
