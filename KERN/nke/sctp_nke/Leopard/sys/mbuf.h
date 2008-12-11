@@ -237,7 +237,8 @@ struct mbuf {
 #define CSUM_DATA_VALID         0x0400          /* csum_data field is valid */
 #define CSUM_PSEUDO_HDR         0x0800          /* csum_data has pseudo hdr */
 #define CSUM_TCP_SUM16          0x1000          /* simple TCP Sum16 computation */
- 
+#define CSUM_SCTP_VALID         0x2000          /* SCTP checksum is valid */
+
 #define CSUM_DELAY_DATA         (CSUM_TCP | CSUM_UDP)
 #define CSUM_DELAY_IP           (CSUM_IP)       /* XXX add ipv6 here too? */
 /*
