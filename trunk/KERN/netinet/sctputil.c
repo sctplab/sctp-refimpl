@@ -7073,14 +7073,13 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
   struct ip *iph;
   struct mbuf *sp, *last;
   struct udphdr *uhdr;
-  uint16_t port=0;
+  uint16_t port=0, len;
   int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
 
   /* Split out the mbuf chain. Leave the
    * IP header in m, place the
    * rest in the sp.
    */
-  printf("SCTP:Got a UDP tunneled packet!\n");
   if ((m->m_flags & M_PKTHDR) == 0) {
 	/* Can't handle one that is not a pkt hdr */
 	goto out;
@@ -7117,13 +7116,19 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
   }
   last->m_next = sp;
   m->m_pkthdr.len += sp->m_pkthdr.len;
-
+  last = m;
+  while (last != NULL) {
+	last = last->m_next;
+  }
   /* Now its ready for sctp_input or sctp6_input */
   iph = mtod(m, struct ip *);
   switch (iph->ip_v) {
   case IPVERSION:
 	{
 	  /* its IPv4 */
+	    len = SCTP_GET_IPV4_LENGTH(iph);
+		len -= sizeof(struct udphdr);
+        SCTP_GET_IPV4_LENGTH(iph) = len;
 	    sctp_input_with_port(m, off, port);
   	    break;
 	}
