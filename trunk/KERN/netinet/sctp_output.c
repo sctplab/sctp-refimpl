@@ -6157,7 +6157,6 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	sup_addr->addr_type[1] = htons(0); /* this is the padding */
 #endif
 	SCTP_BUF_LEN(m) += sizeof(*sup_addr) + sizeof(uint16_t);
-
 	/* adaptation layer indication parameter */
 	ali = (struct sctp_adaptation_layer_indication *)((caddr_t)sup_addr + sizeof(*sup_addr) + sizeof(uint16_t));
 	ali->ph.param_type = htons(SCTP_ULP_ADAPTATION);
@@ -6166,6 +6165,17 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	SCTP_BUF_LEN(m) += sizeof(*ali);
 	ecn = (struct sctp_ecn_supported_param *)((caddr_t)ali + sizeof(*ali));
 
+	if (SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly)) {
+	  /* Add NAT friendly parameter */
+	  struct sctp_paramhdr *ph;
+	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
+	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
+	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
+	  SCTP_BUF_LEN(m) += sizeof(struct sctp_paramhdr);
+	  ecn = (struct sctp_ecn_supported_param *)((caddr_t)ph + sizeof(*ph));
+	}
+
+	
 	/* now any cookie time extensions */
 	if (stcb->asoc.cookie_preserve_req) {
 		struct sctp_cookie_perserve_param *cookie_preserve;
@@ -6215,6 +6225,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	bzero((caddr_t)pr_supported + p_len, SCTP_SIZE32(p_len) - p_len);
 	SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);
 
+
 	/* ECN nonce: And now tell the peer we support ECN nonce */
 	if (SCTP_BASE_SYSCTL(sctp_ecn_nonce)) {
 		ecn_nonce = (struct sctp_ecn_nonce_supported_param *)
@@ -6223,14 +6234,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 		ecn_nonce->ph.param_length = htons(sizeof(*ecn_nonce));
 		SCTP_BUF_LEN(m) += sizeof(*ecn_nonce);
 	}
-	if (SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly)) {
-	  /* Add NAT friendly parameter */
-	  struct sctp_paramhdr *ph;
-	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
-	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
-	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
-	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
-	}
+
 	/* add authentication parameters */
 	if (!SCTP_BASE_SYSCTL(sctp_auth_disable)) {
 		struct sctp_auth_random *randp;
@@ -7346,7 +7350,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	  ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 	  ph->param_type = htons(SCTP_HAS_NAT_SUPPORT);
 	  ph->param_length = htons(sizeof(struct sctp_paramhdr));
-	  SCTP_BUF_LEN(m) += sizeof(sizeof(struct sctp_paramhdr));
+	  SCTP_BUF_LEN(m) += sizeof(struct sctp_paramhdr);
 	}
 	/* And now tell the peer we do all the extensions */
 	pr_supported = (struct sctp_supported_chunk_types_param *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
