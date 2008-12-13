@@ -666,15 +666,13 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	/* we only want the interface address */
 	sa = rti_info[RTAX_IFA];
 
-	/*
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
-		printf("if_index %u: adding ", ifa_msg->ifam_index);
+		printf("SCTP-NKE: if_index %u: adding ", ifa_msg->ifam_index);
 	} else {
-		printf("if_index %u: deleting ", ifa_msg->ifam_index);
+		printf("SCTP-NKE: if_index %u: deleting ", ifa_msg->ifam_index);
 	}
-	print_address(sa);
+	sctp_print_address(sa);
 	printf("\n");
-	*/
 	/*
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
