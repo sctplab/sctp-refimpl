@@ -5331,7 +5331,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 	      (stcb) &&
 	      (stcb->asoc.loopback_scope))) {
-		sctphdr->checksum = sctp_calculate_sum(m, 0);
+		sctphdr->checksum = sctp_calculate_cksum(m, 0);
 	}
 
 	if (to->sa_family == AF_INET) {
@@ -12783,7 +12783,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	comp_cp->shut_cmp.ch.chunk_length = htons(sizeof(struct sctp_shutdown_complete_chunk));
 
 	/* add checksum */
-	comp_cp->sh.checksum = sctp_calculate_sum(mout, offset_out);
+	comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
 	if (iph_out != NULL) {
 		sctp_route_t ro;
 		int ret;
@@ -13808,7 +13808,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	}
 
 	/* add checksum */
-	abm->sh.checksum = sctp_calculate_sum(mout, iphlen_out);
+	abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
 	if (SCTP_GET_HEADER_FOR_OUTPUT(o_pak)) {
 		/* no mbuf's */
 		sctp_m_freem(mout);
@@ -13964,7 +13964,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		m_copyback(scm, len, padlen, (caddr_t)&cpthis);
 		len += padlen;
 	}
-	val = sctp_calculate_sum(scm, 0);
+	val = sctp_calculate_cksum(scm, 0);
 #ifdef INET6
 	if (port) {
 		mout = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr) + sizeof(struct udphdr), 1, M_DONTWAIT, 1, MT_DATA);
