@@ -2489,26 +2489,15 @@ sctp_calculate_len(struct mbuf *m)
 #if defined(SCTP_WITH_NO_CSUM)
 
 uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
+sctp_calculate_sum(struct mbuf *m, uint32_t offset)
 {
-	/*
-	 * given a mbuf chain with a packetheader offset by 'offset'
-	 * pointing at a sctphdr (with csum set to 0) go through the chain
-	 * of SCTP_BUF_NEXT()'s and calculate the SCTP checksum. This also
-	 * has a side bonus as it will calculate the total length of the
-	 * mbuf chain. Note: if offset is greater than the total mbuf length,
-	 * checksum=1, pktlen=0 is returned (ie. no real error code)
-	 */
-	if (pktlen == NULL)
-		return (0);
-	*pktlen = sctp_calculate_len(m);
 	return (0);
 }
 
 #else
 
 uint32_t
-sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
+sctp_calculate_sum(struct mbuf *m, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
@@ -2518,7 +2507,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 	 * mbuf chain. Note: if offset is greater than the total mbuf length,
 	 * checksum=1, pktlen=0 is returned (ie. no real error code)
 	 */
-	int32_t tlen = 0;
 	uint32_t base = 0xffffffff;
 	struct mbuf *at;
 
@@ -2540,7 +2528,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 						    (unsigned char *)(SCTP_BUF_AT(at, offset)),
 						    (unsigned int)(SCTP_BUF_LEN(at) - offset));
 			}
-			tlen += SCTP_BUF_LEN(at) - offset;
 			/* we only offset once into the first mbuf */
 		}
 		if (offset) {
@@ -2550,9 +2537,6 @@ sctp_calculate_sum(struct mbuf *m, int32_t *pktlen, uint32_t offset)
 				offset -= SCTP_BUF_LEN(at);
 		}
 		at = SCTP_BUF_NEXT(at);
-	}
-	if (pktlen != NULL) {
-		*pktlen = tlen;
 	}
 	base = sctp_finalize_crc32(base);
 	return (base);

@@ -227,6 +227,12 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0)
 		goto bad;
+
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum;
@@ -238,7 +244,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		goto sctp_skip_csum;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, NULL, iphlen);
+	calc_check = sctp_calculate_sum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
