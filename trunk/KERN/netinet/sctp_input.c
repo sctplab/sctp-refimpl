@@ -5698,6 +5698,11 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum_4;
@@ -5711,7 +5716,7 @@ sctp_input(i_pak, va_alist)
 		goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, NULL, iphlen);
+	calc_check = sctp_calculate_sum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
