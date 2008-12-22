@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 185694 2008-12-06 13:19:54Z rr
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/sctp_crc32.h>
 #include <netinet/udp.h>
 
 #if defined(__APPLE__)
