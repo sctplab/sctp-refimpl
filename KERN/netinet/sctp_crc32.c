@@ -790,7 +790,7 @@ sctp_delayed_cksum(struct mbuf *m)
 	
 	ip = mtod(m, struct ip *);
 	offset = ip->ip_hl << 2;
-	checksum = sctp_calculate_sum(m, offset);
+	checksum = sctp_calculate_cksum(m, offset);
 	offset += offsetof(struct sctphdr, checksum);
 
 	if (offset + sizeof(uint32_t) > (uint32_t)(m->m_len)) {
