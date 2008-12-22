@@ -36,6 +36,7 @@
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 184027 2008-10-18 15:53:31Z rrs $");
 #endif
 
+#include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_crc32.h>
 
@@ -728,13 +729,13 @@ sctp_finalize_crc32(uint32_t crc32c)
 
 #if defined(SCTP_WITH_NO_CSUM)
 uint32_t
-sctp_calculate_sum(struct mbuf *m, uint32_t offset)
+sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
 {
 	return (0);
 }
 #else
 uint32_t
-sctp_calculate_sum(struct mbuf *m, uint32_t offset)
+sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
@@ -779,3 +780,29 @@ sctp_calculate_sum(struct mbuf *m, uint32_t offset)
 	return (base);
 }
 #endif
+
+void
+sctp_delayed_cksum(struct mbuf *m)
+{
+	struct ip *ip;
+	uint32_t checksum;
+	uint32_t offset;
+	
+	ip = mtod(m, struct ip *);
+	offset = ip->ip_hl << 2;
+	checksum = sctp_calculate_sum(m, offset);
+	offset += offsetof(struct sctphdr, checksum);
+
+	if (offset + sizeof(uint32_t) > (uint32_t)(m->m_len)) {
+		printf("delayed m_pullup, m->len: %d  off: %d  p: %d\n",
+		    (uint32_t)m->m_len, offset, ip->ip_p);
+		/*
+		 * XXX
+		 * this shouldn't happen, but if it does, the
+		 * correct behavior may be to insert the checksum
+		 * in the appropriate next mbuf in the chain.
+		 */
+		return;
+	}
+	*(uint32_t *)(m->m_data + offset) = checksum;
+}
