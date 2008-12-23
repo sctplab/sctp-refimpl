@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 185694 2008-12-06 13:19:54Z rr
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/sctp_crc32.h>
 #include <netinet/udp.h>
 
 #if defined(__APPLE__)
@@ -5698,6 +5699,19 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
+#if defined(__FreeBSD__) && __FreeBSD_version > 800000
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		if_name(m->m_pkthdr.rcvif),
+		m->m_pkthdr.rcvif->if_dunit,
+		m->m_pkthdr.csum_flags);
+#else 
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
+#endif
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum_4;
@@ -5711,7 +5725,7 @@ sctp_input(i_pak, va_alist)
 		goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, NULL, iphlen);
+	calc_check = sctp_calculate_cksum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
