@@ -55,6 +55,7 @@ __FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 185694 2008-12-06 13:19:54Z
 #include <netinet/sctp_input.h>
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_crc32.h>
 #include <netinet/udp.h>
 
 #if defined(__APPLE__)
@@ -227,6 +228,20 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0)
 		goto bad;
+
+#if defined(__FreeBSD__) && __FreeBSD_version > 800000
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		if_name(m->m_pkthdr.rcvif),
+		m->m_pkthdr.rcvif->if_dunit,
+		m->m_pkthdr.csum_flags);
+#else 
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
+#endif
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum;
@@ -238,7 +253,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		goto sctp_skip_csum;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, NULL, iphlen);
+	calc_check = sctp_calculate_cksum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
