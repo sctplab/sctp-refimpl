@@ -5707,7 +5707,7 @@ sctp_input(i_pak, va_alist)
 #else
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet received on %s with csum_flags 0x%x.\n",
-		m->m_pkthdr.rcvif->ifx_name,
+		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
 #else 
