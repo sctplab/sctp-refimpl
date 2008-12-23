@@ -6992,7 +6992,7 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 
 #if __FreeBSD_version >= 800044
 static void
-sctp_recv_udp_tunneled_packet(struct mbuf *m, int off)
+sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 {
   struct ip *iph;
   struct mbuf *sp, *last;
