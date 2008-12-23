@@ -5699,11 +5699,19 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
+#if defined(__FreeBSD__) && __FreeBSD_version > 800000
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		if_name(m->m_pkthdr.rcvif),
+		m->m_pkthdr.rcvif->if_dunit,
+		m->m_pkthdr.csum_flags);
+#else 
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
 		m->m_pkthdr.rcvif->if_name,
 		m->m_pkthdr.rcvif->if_unit,
 		m->m_pkthdr.csum_flags);
+#endif
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum_4;
