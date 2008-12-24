@@ -896,7 +896,7 @@ sctp6_attach(struct socket *so, int proto, struct proc *p)
 	 * wildcard address, which may match an IPv4-mapped IPv6 address.
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
-	inp6->inp_ip_ttl = MODULE_GLOBAL(MOD_INET, ip_defttl);
+	inp6->inp_ip_ttl = MODULE_GLOBAL(MOD_INET, V_ip_defttl);
 #else
 	inp->inp_ip_ttl = ip_defttl;
 #endif
@@ -1139,7 +1139,7 @@ sctp6_send(struct socket *so, int flags, struct mbuf *m, struct mbuf *nam,
 		}
 	}
 	if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-		if (!MODULE_GLOBAL(MOD_INET6, ip6_v6only)) {
+		if (!MODULE_GLOBAL(MOD_INET6, V_ip6_v6only)) {
 			struct sockaddr_in sin;
 
 			/* convert v4-mapped into v4 addr and send */
@@ -1298,7 +1298,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		}
 	}
 	if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-		if (!MODULE_GLOBAL(MOD_INET6, ip6_v6only)) {
+		if (!MODULE_GLOBAL(MOD_INET6, V_ip6_v6only)) {
 			/* convert v4-mapped into v4 addr */
 			in6_sin6_2_sin((struct sockaddr_in *)&ss, sin6);
 			addr = (struct sockaddr *)&ss;
