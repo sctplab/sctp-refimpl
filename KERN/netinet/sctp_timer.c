@@ -1760,7 +1760,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 					(void)in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL);
 #elif defined(SCTP_KAME)
-                			(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
+                			(void)sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone));
 #else
                 			(void)in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
