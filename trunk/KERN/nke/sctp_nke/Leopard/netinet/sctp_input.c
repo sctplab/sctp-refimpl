@@ -5609,7 +5609,6 @@ sctp_input(i_pak, va_alist)
 	 */
 	off = sizeof(struct ip);
 #endif
-
  	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
 		SCTP_RELEASE_PKT(i_pak);
 		return;
@@ -5699,12 +5698,18 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
-#if defined(__FreeBSD__) && __FreeBSD_version > 800000
+#if defined(__FreeBSD__) 
+#if __FreeBSD_version > 800000
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
-		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		"sctp_input(): Packet received on %s with csum_flags 0x%x.\n",
 		if_name(m->m_pkthdr.rcvif),
-		m->m_pkthdr.rcvif->if_dunit,
 		m->m_pkthdr.csum_flags);
+#else
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.rcvif->if_xname,
+		m->m_pkthdr.csum_flags);
+#endif
 #else 
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
