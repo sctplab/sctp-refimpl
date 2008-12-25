@@ -673,7 +673,7 @@ sctp_addr_watchdog()
 			case AF_INET:
 			case AF_INET6:
 				sctp_print_addr(sa);
-				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_LOCKED) == NULL) {
+				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
 					printf("! ");
 				} else {
 					printf(" ");
