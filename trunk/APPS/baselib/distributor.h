@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.4 2008-05-25 09:06:17 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.5 2008-12-26 14:45:12 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -56,10 +56,19 @@ There are still LOTS of bugs in this code... I always run on the motto
 #include <stdio.h>
 #include <poll.h>
 #include <sys/time.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <memcheck.h>
+#include <stdint.h>
 #include <errno.h>
-#include "return_status.h"
-#include "dlist.h"
-#include "HashedTbl.h"
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <return_status.h>
+#include <dlist.h>
+#include <hlist.h>
+#include <HashedTbl.h>
 
 /*
  * This is the main distributor class. You ususally
@@ -112,10 +121,11 @@ typedef struct messageEnvolope{
   /* Question: Do we need an association id besides
    * the from address?
    */
-  u_int TSN;
-  u_int protocolId;
-  u_short streamNo;
-  u_short streamSeq;
+  uint32_t TSN;
+  uint32_t protocolId;
+  sctp_assoc_t assoc_id;
+  uint32_t streamNo;
+  uint32_t streamSeq;
   /* The total fields are used to carry
    * the base pointer and size for
    * the free() operation, if you snarf
@@ -136,9 +146,9 @@ typedef struct messageEnvolope{
    * the message in.
    */
   void *from;
-  u_int from_len;
+  uint32_t from_len;
   void *to;
-  u_int to_len;
+  uint32_t to_len;
   int type;
   /* this is the base transport that 
    * brought the PDU in. In the
@@ -243,7 +253,7 @@ typedef void(*startStopFunc)(void *,int);
  * This is your timer signature, it passes you
  * two voids if the alarm goes off.
  */
-typedef void(*timerFunc)(void *,void *);
+typedef void(*timerFunc)(void *,void *, int);
 /*
  * Here is our message passing friend. You see
  * the message envolope and a void * arg which
@@ -289,12 +299,17 @@ typedef struct StartStop{
   startStopFunc activate;
 }StartStop;
 
-typedef struct timerEntry{
-  struct timeval started;
-  struct timeval expireTime;
+typedef struct hashableTimeEnt {
   void *arg1;
   void *arg2;
   timerFunc action;
+  int timer_issued_cnt;
+}hashableTimeEnt;
+
+typedef struct timerEntry{
+  struct timeval started;
+  struct timeval expireTime;
+  hashableTimeEnt ent;
   u_long tv_sec;
   u_long tv_usec;
 }timerEntry;
@@ -307,7 +322,7 @@ typedef struct fdEntry{
 }fdEntry;
 
 typedef struct hashableDlist{
-  int streamNo;
+  uint32_t streamNo;
   dlist_t *list;
 }hashableDlist;
 
@@ -340,28 +355,68 @@ typedef struct distributor{
   /* list of entries that want a audit tick */
   dlist_t *lazyClockTickList;
   dlist_t *startStopList;
-
+  hlist_t *tmp_timer_list;
+  
   int numfds;
   int numused;
+  int timer_issued_cnt;
   struct pollfd *fdlist;
-  dlist_t *timerlist;
+  hlist_t *timerlist;
+  HashedTbl *timerhash;
   int notdone;
   struct timeval lastKnownTime;
   struct timeval idleClockTick;
+  uint8_t msgs_round_robin;
+  uint8_t no_dup_timer;
+  uint8_t resv[2];
 }distributor;
 
+/*************************/
+/* protocolID protocol's */
+/*************************/
+/* DIST_SCTP_PROTO_ID_DEFAULT is used to
+ * specify the "unspecified" protocol. This will
+ * vector to its own hash table of streams. If
+ * a PID is not found or 0 it uses this table.
+ */
+#define DIST_SCTP_PROTO_ID_DEFAULT  0
 
+/* Some registration protocols we will use
+ * to segregate messages in the sinfo_ppid field.
+ */
+#define CONNECT_EVENT_PROTOCOL  0xf0000001
+#define DISTRIBUTE_TCP_PROTOCOL 0xf0000002
+#define DISTRIBUTE_SCTP_NOTIFY  0xf0000003
+
+/*******************************************/
+/* Special registration stream for default */
+/*******************************************/
+/* Use DIST_STREAM_DEFAULT if you wish to get
+ * any stream after it has gone through the
+ * lookup of the individual stream and passing
+ * through that message list (if any).
+ */
+#define DIST_STREAM_DEFAULT        0x10000
+
+/***********************/
+/* origType protocol's */
+/***********************/
 /* protocol types found in type and origType 
  * in the message envolope, more will be added
  * as thing progress (possibly).
  */
-#define PROTOCOL_Unknown   0
-#define PROTOCOL_Sctp      1
-#define PROTOCOL_Tcp       2
-#define PROTOCOL_Udp       3
-#define PROTOCOL_Asap      4
-#define PROTOCOL_Enrp      5
-#define PROTOCOL_MultiCast 6
+#define PROTOCOL_Unknown     0x0
+#define PROTOCOL_Sctp        0x1
+#define PROTOCOL_Tcp         0x2
+#define PROTOCOL_Udp         0x3
+#define PROTOCOL_Asap        0x4
+#define PROTOCOL_Enrp        0x5
+#define PROTOCOL_MultiCast   0x6
+#define PROTOCOL_Sctp_Notify 0x7
+
+
+
+
 /* According to http://www.isi.edu/in-notes/iana/assignments/protocol-numbers
  * 61 is "any host internal protocol" so we should never see an IP packet with
  * this protocol ID.
@@ -397,6 +452,7 @@ typedef struct msgConsumer{
 #define DIST_IDLE_CLOCK_USEC 0
 
 
+#define DIST_TIMER_START_CNT 101
 /* 
  * This is the creation function. You normally
  * call this in main and get a pointer back as
@@ -438,7 +494,7 @@ dist_TimerStart(distributor *o,timerFunc f, u_long t_sec,
  * a call to this will stop one of them, not all.
  */
 int
-dist_TimerStop(distributor *o,timerFunc f, void *arg1, void *arg2);
+dist_TimerStop(distributor *o,timerFunc f, void *arg1, void *arg2, int ent);
 
 /*
  * This is how you get a file descriptor added to the
@@ -462,6 +518,41 @@ dist_deleteFd(distributor *o,int fd);
  */
 int
 dist_changeFd(distributor *o,int fd,int newmask);
+
+/*
+ * Normal behavior is that messages always
+ * start distribution at the head of the list.
+ * if you set round robin, then the list
+ * of message consumers continues where it
+ * left off and wraps. This breaks all the
+ * priority stuff and makes all consumers
+ * round robin within the two sets of
+ * consumers note that there are two sets
+ * one for the stream/protocol and then
+ * the generic. Call the set to turn
+ * on the behavior, call the clr to turn
+ * it off.
+ */
+#define dist_setRoundRobinMsgs(o) do {	\
+  o->msgs_round_robin = 1;			\
+}while(0)
+  
+#define dist_clrRoundRobinMsgs(o) do {	\
+  o->msgs_round_robin = 0;			\
+}while(0)
+
+/* Normal behavior of the distributor
+ * is to allow NO duplicate timers to be
+ * entered in the list.  If you want to
+ * have duplicates then you must record
+ * the postive return value from the timer
+ * start (1-7fffffff) and use that with the
+ * stop. If you do the default, no duplicates,
+ * the id will not be used for stopping the
+ * timer.
+ */
+int dist_set_No_Dup_timer(distributor *o);
+int dist_clr_No_Dup_timer(distributor *o);
 
 
 /* Oh, heres some older comment sof mine. I will leave
@@ -493,21 +584,6 @@ dist_changeFd(distributor *o,int fd,int newmask);
  * most any func will be called is twice (even if on the 4 possible
  * lists).
  */
-
-/* DIST_SCTP_PROTO_ID_DEFAULT is used to
- * specify the "unspecified" protocol. This will
- * vector to its own hash table of streams. If
- * a PID is not found or 0 it uses this table.
- */
-
-#define DIST_SCTP_PROTO_ID_DEFAULT  0
-
-/* Use DIST_STREAM_DEFAULT if you wish to get
- * any stream after it has gone through the
- * lookup of the individual stream and passing
- * through that message list (if any).
- */
-#define DIST_STREAM_DEFAULT        0x10000
 
 
 /* Here is how you subscribe to get the 

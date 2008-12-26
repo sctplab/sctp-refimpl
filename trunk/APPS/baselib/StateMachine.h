@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/StateMachine.h,v 1.2 2008-05-08 14:10:51 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/StateMachine.h,v 1.3 2008-12-26 14:45:12 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -115,7 +115,7 @@ stateCallBack(stateMachineS *obj,int arg1,void *arg2);
 /* distributor access functions of the SM */
 /******************************************/
 void
-stateTimer(void *sm, void *timerNo);
+stateTimer(void *sm, void *timerNo, int timno);
 
 void
 stateMessage(void *sm, messageEnvolope *msg);

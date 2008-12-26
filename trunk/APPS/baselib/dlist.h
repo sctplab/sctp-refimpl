@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/dlist.h,v 1.3 2008-05-25 09:06:17 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/dlist.h,v 1.4 2008-12-26 14:45:12 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -57,6 +57,9 @@ There are still LOTS of bugs in this code... I always run on the motto
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
+#include <memcheck.h>
+
 #include "return_status.h"
 struct dlist_dlink{
   struct dlist_dlink *prev;

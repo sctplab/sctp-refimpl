@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/llist.h,v 1.2 2008-05-08 14:10:51 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/llist.h,v 1.3 2008-12-26 14:45:12 randall Exp $
 
 */
 
@@ -40,6 +40,9 @@ $Header: /usr/sctpCVS/APPS/baselib/llist.h,v 1.2 2008-05-08 14:10:51 randall Exp
 #include <sys/types.h>
 #include <stdio.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <string.h>
+#include <memcheck.h>
 #include "return_status.h"
 
 struct llist_slink{

@@ -1,4 +1,5 @@
 #include <sys/types.h>
+#include <netinet/in.h>
 #include <sctp_csum.h>
 
 #define SCTP_CRC32C_POLY 0x1EDC6F41
@@ -24,7 +25,7 @@
 /* IEEE Transactions on Communications, Vol.41, No.6, June 1993  */
 /* * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * * */
 
-unsigned long  sctp_crc_c[256] = {
+unsigned long sctp_crc_c[256] = {
 	0x00000000L, 0xF26B8303L, 0xE13B70F7L, 0x1350F3F4L,
 	0xC79A971FL, 0x35F1141CL, 0x26A1E7E8L, 0xD4CA64EBL,
 	0x8AD958CFL, 0x78B2DBCCL, 0x6BE22838L, 0x9989AB3BL,
@@ -93,7 +94,7 @@ unsigned long  sctp_crc_c[256] = {
 
 u_int32_t
 update_crc32(u_int32_t crc32,
-	     unsigned char *buffer, unsigned int length)
+    unsigned char *buffer, unsigned int length)
 {
 	unsigned int i;
 
@@ -108,16 +109,18 @@ u_int32_t
 sctp_csum_finalize(u_int32_t crc32)
 {
 	u_int32_t result;
+
 #if BYTE_ORDER == BIG_ENDIAN
 	u_int8_t byte0, byte1, byte2, byte3;
+
 #endif
 	/* Complement the result */
 	result = ~crc32;
 #if BYTE_ORDER == BIG_ENDIAN
 	/*
 	 * For BIG-ENDIAN.. aka Motorola byte order the result is in
-	 * little-endian form. So we must manually swap the bytes. Then
-	 * we can call htonl() which does nothing...
+	 * little-endian form. So we must manually swap the bytes. Then we
+	 * can call htonl() which does nothing...
 	 */
 	byte0 = result & 0x000000ff;
 	byte1 = (result >> 8) & 0x000000ff;
@@ -127,9 +130,9 @@ sctp_csum_finalize(u_int32_t crc32)
 	crc32 = htonl(result);
 #else
 	/*
-	 * For INTEL platforms the result comes out in network order.
-	 * No htonl is required or the swap above. So we optimize out
-	 * both the htonl and the manual swap above.
+	 * For INTEL platforms the result comes out in network order. No
+	 * htonl is required or the swap above. So we optimize out both the
+	 * htonl and the manual swap above.
 	 */
 	crc32 = result;
 #endif
