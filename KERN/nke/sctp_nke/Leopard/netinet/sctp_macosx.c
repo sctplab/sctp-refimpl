@@ -735,11 +735,11 @@ sctp_vtag_watchdog()
 		if (((i + 1) % 16) == 0) {
 			printf("\n");
 		}
-		
 	}
 	SCTP_INP_INFO_RUNLOCK();
 	return;
 }
+
 /* MT FIXME: This should be made sysctlable */
 uint32_t sctp_addr_watchdog_limit = 0;
 uint32_t sctp_vtag_watchdog_limit = 0;
