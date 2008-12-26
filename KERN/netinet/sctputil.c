@@ -6957,6 +6957,30 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 {	
 	uint32_t saveindex, newindex;
 
+#if defined(__Windows__)
+	if (SCTP_BASE_SYSCTL(sctp_log) == NULL) {
+		return;
+	}
+	do {
+		saveindex = SCTP_BASE_SYSCTL(sctp_log)->index;
+		if(saveindex >= SCTP_MAX_LOGGING_SIZE) {
+			newindex = 1;
+		} else {
+			newindex = saveindex + 1;
+		}
+	} while (atomic_cmpset_int(&SCTP_BASE_SYSCTL(sctp_log)->index, saveindex, newindex) == 0);
+	if(saveindex >= SCTP_MAX_LOGGING_SIZE) {
+		saveindex = 0;
+	}
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].timestamp = SCTP_GET_CYCLECOUNT;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].subsys = subsys;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[0] = a;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[1] = b;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[2] = c;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[3] = d;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[4] = e;
+	SCTP_BASE_SYSCTL(sctp_log)->entry[saveindex].params[5] = f;
+#else
 	do {
 		saveindex = SCTP_BASE_SYSCTL(sctp_log).index;
 		if(saveindex >= SCTP_MAX_LOGGING_SIZE) {
@@ -6976,6 +7000,7 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 	SCTP_BASE_SYSCTL(sctp_log).entry[saveindex].params[3] = d;
 	SCTP_BASE_SYSCTL(sctp_log).entry[saveindex].params[4] = e;
 	SCTP_BASE_SYSCTL(sctp_log).entry[saveindex].params[5] = f;
+#endif
 }
 
 #endif
