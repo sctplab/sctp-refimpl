@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/msgDirector.h,v 1.2 2008-05-08 14:10:51 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/msgDirector.h,v 1.3 2008-12-26 14:45:12 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,

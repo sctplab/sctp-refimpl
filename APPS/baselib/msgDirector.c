@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/msgDirector.c,v 1.1.1.1 2004-06-23 13:07:29 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/msgDirector.c,v 1.2 2008-12-26 14:45:12 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -33,81 +33,77 @@
 /*
  * You provide a function that looks as follows.
  * Your function will be called with the specific
- * object looked up by the query function. The 
+ * object looked up by the query function. The
  * query function has access to the hash table stored
  * with this object.
  */
 void
-distribMessage(void *obj, messageEnvolope *msg)
+distribMessage(void *obj, messageEnvolope * msg)
 {
-  void *passObj;
-  messageDir *dir;
-  dir = (messageDir *)obj;
-  passObj = (*dir->query)(dir->objinfo,msg,dir->hash);
-  if(passObj == NULL)
-    /* no one to handle the message */
-    return;
-  /* we have a live one :), pass it off */
-  (*dir->mf)(passObj,msg);
+	void *passObj;
+	messageDir *dir;
+
+	dir = (messageDir *) obj;
+	passObj = (*dir->query) (dir->objinfo, msg, dir->hash);
+	if (passObj == NULL)
+		/* no one to handle the message */
+		return;
+	/* we have a live one :), pass it off */
+	(*dir->mf) (passObj, msg);
 }
 
-/* 
+/*
  * Creation and registration.
  */
 
 messageDir *
-messageDir_create(distributor *o,
-		  void *objinfo, 
-		  messageFunc mf, 
-		  messageQuery qry,
-		  int priority)
+messageDir_create(distributor * o,
+    void *objinfo,
+    messageFunc mf,
+    messageQuery qry,
+    int priority)
 {
-  int x;
-  messageDir *ret;
-  ret = calloc(1,sizeof(messageDir));
-  if(ret == NULL)
-    return(ret);
-  ret->hash = HashedTbl_create("msgD tb",26);
-  if(ret->hash == NULL){
-    free(ret);
-    return(NULL);
-  }
-  ret->obj = o;
-  ret->objinfo = objinfo;
-  ret->mf = mf;
-  ret->query = qry;
-  /* now register for messages */
-  x = dist_msgSubscribe(o,distribMessage,
-			DIST_SCTP_PROTO_ID_DEFAULT,
-			DIST_STREAM_DEFAULT,priority,
-			(void *)ret);
-  if(x < LIB_STATUS_GOOD){
-    /* error, we can't register? */
-    HashedTbl_destroy(ret->hash);
-    free(ret);
-    return(NULL);
-  }
-  return(ret);
+	int x;
+	messageDir *ret;
+
+	ret = (messageDir *) CALLOC(1, sizeof(messageDir));
+	if (ret == NULL)
+		return (ret);
+	ret->hash = HashedTbl_create("msgD tb", 26);
+	if (ret->hash == NULL) {
+		FREE(ret);
+		return (NULL);
+	}
+	ret->obj = o;
+	ret->objinfo = objinfo;
+	ret->mf = mf;
+	ret->query = qry;
+	/* now register for messages */
+	x = dist_msgSubscribe(o, distribMessage,
+	    DIST_SCTP_PROTO_ID_DEFAULT,
+	    DIST_STREAM_DEFAULT, priority,
+	    (void *)ret);
+	if (x < LIB_STATUS_GOOD) {
+		/* error, we can't register? */
+		HashedTbl_destroy(ret->hash);
+		FREE(ret);
+		return (NULL);
+	}
+	return (ret);
 }
 
-/* 
+/*
  * Destructor function.
  */
 int
-messageDir_destroy(messageDir *dir)
+messageDir_destroy(messageDir * dir)
 {
-  dist_msgUnsubscribe(dir->obj,
-		    distribMessage,
-		    DIST_SCTP_PROTO_ID_DEFAULT,
-		    DIST_STREAM_DEFAULT,
-		    (void *)dir);
-  HashedTbl_destroy(dir->hash);
-  free(dir);
-  return(LIB_STATUS_GOOD);
+	dist_msgUnsubscribe(dir->obj,
+	    distribMessage,
+	    DIST_SCTP_PROTO_ID_DEFAULT,
+	    DIST_STREAM_DEFAULT,
+	    (void *)dir);
+	HashedTbl_destroy(dir->hash);
+	FREE(dir);
+	return (LIB_STATUS_GOOD);
 }
-
-
-
-
-
-

@@ -1,5 +1,5 @@
 /*
-  $Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.4 2008-05-08 17:24:25 randall Exp $
+  $Header: /usr/sctpCVS/APPS/baselib/HashedTbl.h,v 1.5 2008-12-26 14:45:12 randall Exp $
  * Copyright (C) 2002 Cisco Systems Inc,
  * All rights reserved.
  *
@@ -50,6 +50,10 @@ double sqrt(double);
 
 #include <stddef.h>
 #include <stdlib.h>
+#include <unistd.h>
+#include <memcheck.h>
+
+
 #include <fcntl.h>
 #include <termios.h>
 #include <math.h>
@@ -124,7 +128,7 @@ void HashTableHandle_Init(HashTableHandle *t);
  *  char data2[30];
  * }*foo;
  * 
- * foo = calloc(1,sizeof(struct mystruct));
+ * foo = CALLOC(1,sizeof(struct mystruct));
  * memcpy(foo->data2,stuff,sizeof(stuff));
  * memcpy(foo->data1,otherstuff,sizeof(otherstuff));
  * memcpy(foo->key,akey,sizeof(akey));
@@ -302,7 +306,7 @@ int __HashedTbl_getOptSize(int,int *);
 int ___getHandle(HashedTbl *);
 
 HashedTbl *
-HashedTbl_create(char*name,int sizeEstimate);
+HashedTbl_create(const char*name, int sizeEstimate);
 
 void
 HashedTbl_destroy(HashedTbl *tbl);
