@@ -12,7 +12,10 @@ LOCAL_CFLAGS=
 
 
 SRCS= dlist.c llist.c HashedTbl.c distributor.c StateMachine.c \
-	msgDirector.c udpDist.c sctp_csum.c
+	msgDirector.c udpDist.c sctp_csum.c byte_work.c hlist.c \
+	memcheck.c printMessageHandler.c processObj.c signalCleanup.c
+
+
 
 OBJS= $(SRCS:%.c=$(OBJDIR)/%.o)
 
