@@ -660,7 +660,7 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 	ip_inp = &inp->ip_inp.inp;
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 	ip_inp->inp_vflag |= INP_IPV4;
-	ip_inp->inp_ip_ttl = MODULE_GLOBAL(MOD_INET, V_ip_defttl);
+	ip_inp->inp_ip_ttl = MODULE_GLOBAL(MOD_INET, ip_defttl);
 #else
 	inp->inp_vflag |= INP_IPV4;
 	inp->inp_ip_ttl = ip_defttl;

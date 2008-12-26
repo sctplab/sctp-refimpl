@@ -5709,7 +5709,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-		  if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone)) != 0)
+		  if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -5778,7 +5778,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 				if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone)) != 0)
+				if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -5816,7 +5816,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 			if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-			if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone)) != 0)
+			if (sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone)) != 0)
 #else
 			if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -7074,7 +7074,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
 #elif defined(SCTP_KAME)
-				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone));
+				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
@@ -7119,7 +7119,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
 #elif defined(SCTP_KAME)
-				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone));
+				sa6_embedscope(sin6, MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 #else
 				in6_embedscope(&sin6->sin6_addr, sin6);
 #endif
@@ -12733,7 +12733,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 		/* Fill in the IPv6 header for the ABORT */
 		ip6_out->ip6_flow = ip6->ip6_flow;
-		ip6_out->ip6_hlim = MODULE_GLOBAL(MOD_INET6, V_ip6_defhlim);
+		ip6_out->ip6_hlim = MODULE_GLOBAL(MOD_INET6, ip6_defhlim);
 		if (port) {
 			ip6_out->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -13738,7 +13738,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 
 		/* Fill in the IP6 header for the ABORT */
 		ip6_out->ip6_flow = ip6->ip6_flow;
-		ip6_out->ip6_hlim = MODULE_GLOBAL(MOD_INET6, V_ip6_defhlim);
+		ip6_out->ip6_hlim = MODULE_GLOBAL(MOD_INET6, ip6_defhlim);
 		if (port) {
 			ip6_out->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -14084,7 +14084,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		in6 = mtod(m, struct ip6_hdr *);
 		out6 = mtod(mout, struct ip6_hdr *);
 		out6->ip6_flow = in6->ip6_flow;
-		out6->ip6_hlim = MODULE_GLOBAL(MOD_INET6, V_ip6_defhlim);
+		out6->ip6_hlim = MODULE_GLOBAL(MOD_INET6, ip6_defhlim);
 		if (port) {
 			out6->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -16036,7 +16036,7 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 		return (0);
 
 	/* get prefix entry of address */
-	LIST_FOREACH(pfx, &MODULE_GLOBAL(MOD_INET6, V_nd_prefix), ndpr_entry) {
+	LIST_FOREACH(pfx, &MODULE_GLOBAL(MOD_INET6, nd_prefix), ndpr_entry) {
 		if (pfx->ndpr_stateflags & NDPRF_DETACHED) 
 			continue;
 		if (IN6_ARE_MASKED_ADDR_EQUAL(&pfx->ndpr_prefix.sin6_addr,
