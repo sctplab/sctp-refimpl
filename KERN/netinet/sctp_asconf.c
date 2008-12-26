@@ -908,7 +908,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 			/* we probably don't need these operations */
 			(void)sa6_recoverscope(from6);
 			sa6_embedscope(from6,
-			       MODULE_GLOBAL(MOD_INET6, V_ip6_use_defzone));
+			       MODULE_GLOBAL(MOD_INET6, ip6_use_defzone));
 			
 #else
 			(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
