@@ -5084,7 +5084,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(asoc->my_vtag, inp->sctp_lport, stcb->rport, SCTP_TIME_WAIT);
+	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_TIME_WAIT, inp->sctp_lport, stcb->rport);
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 
@@ -6903,6 +6903,8 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
+					twait_block->vtag_block[i].lport = 0;
+					twait_block->vtag_block[i].rport = 0;
 				} else if ((twait_block->vtag_block[i].v_tag == tag) &&
 					   (twait_block->vtag_block[i].lport == lport) &&
 					   (twait_block->vtag_block[i].rport == rport)) {
