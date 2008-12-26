@@ -692,8 +692,57 @@ out:
 	return;
 }
 
+static void
+sctp_vtag_watchdog()
+{
+	struct timeval now;
+	uint32_t i, j, free_cnt, expired_cnt, inuse_cnt, other_cnt;
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block;
+
+	(void)SCTP_GETTIME_TIMEVAL(&now);
+	SCTP_INP_INFO_RLOCK();
+	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
+		chain = &SCTP_BASE_INFO(vtag_timewait)[i];
+		free_cnt = 0;
+		expired_cnt = 0;
+		inuse_cnt = 0;
+		other_cnt = 0;
+		if (!SCTP_LIST_EMPTY(chain)) {
+			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+				for (j = 0; j < SCTP_NUMBER_IN_VTAG_BLOCK; j++) {
+					if ((twait_block->vtag_block[j].v_tag == 0) &&
+					    (twait_block->vtag_block[j].lport == 0) &&
+					    (twait_block->vtag_block[j].rport == 0) &&
+					    (twait_block->vtag_block[j].tv_sec_at_expire == 0)) {
+						free_cnt++;
+					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					           ((long)twait_block->vtag_block[j].tv_sec_at_expire < now.tv_sec)) {
+						expired_cnt++;
+					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					           ((long)twait_block->vtag_block[j].tv_sec_at_expire >= now.tv_sec)) {
+						inuse_cnt++;
+					} else {
+						other_cnt++;
+					}
+				}
+			}
+		}
+		if ((i % 16) == 0) {
+			printf("vtag_timewait[%04x] (f/e/i): ", i);
+		}
+		printf(" %d/%d/%d", free_cnt, expired_cnt, inuse_cnt);
+		if (((i + 1) % 16) == 0) {
+			printf("\n");
+		}
+		
+	}
+	SCTP_INP_INFO_RUNLOCK();
+	return;
+}
 /* MT FIXME: This should be made sysctlable */
 uint32_t sctp_addr_watchdog_limit = 0;
+uint32_t sctp_vtag_watchdog_limit = 0;
 
 #if defined(__APPLE__)
 void
@@ -702,6 +751,7 @@ sctp_slowtimo()
 	struct inpcb *inp, *inp_next;
 	struct socket *so;
 	static uint32_t sctp_addr_watchdog_cnt = 0;
+	static uint32_t sctp_vtag_watchdog_cnt = 0;
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
@@ -710,6 +760,11 @@ sctp_slowtimo()
 	    (++sctp_addr_watchdog_cnt >= sctp_addr_watchdog_limit)) {
 		sctp_addr_watchdog_cnt = 0;
 		sctp_addr_watchdog();
+	}
+	if ((sctp_vtag_watchdog_limit > 0) &&
+	    (++sctp_vtag_watchdog_cnt >= sctp_vtag_watchdog_limit)) {
+		sctp_vtag_watchdog_cnt = 0;
+		sctp_vtag_watchdog();
 	}
 
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
