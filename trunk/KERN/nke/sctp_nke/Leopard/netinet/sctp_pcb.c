@@ -5854,7 +5854,13 @@ sctp_pcb_init()
 	SCTP_BASE_VAR(sctp_pcb_initialized) = 1;
 
 #if defined(SCTP_LOCAL_TRACE_BUF)
+#if defined(__Windows__)
+	if (SCTP_BASE_SYSCTL(sctp_log) != NULL) {
+		bzero(SCTP_BASE_SYSCTL(sctp_log), sizeof(struct sctp_log));
+	}
+#else
 	bzero(&SCTP_BASE_SYSCTL(sctp_log), sizeof(struct sctp_log));
+#endif
 #endif
 	(void)SCTP_GETTIME_TIMEVAL(&tv);
 	SCTP_BASE_STAT(sctps_discontinuitytime).tv_sec = (uint32_t)tv.tv_sec;
