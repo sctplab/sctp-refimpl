@@ -101,7 +101,11 @@ struct sctp_sysctl {
         uint32_t sctp_mobility_fasthandoff;
         uint32_t sctp_inits_include_nat_friendly;  
 #if defined(SCTP_LOCAL_TRACE_BUF)
+#if defined(__Windows__)
+	struct sctp_log *sctp_log;
+#else
 	struct sctp_log sctp_log;
+#endif
 #endif
 	uint32_t sctp_udp_tunneling_for_client_enable;
 	uint32_t sctp_udp_tunneling_port;
@@ -524,6 +528,9 @@ SYSCTL_DECL(_net_inet_sctp);
 #endif
 
 void sctp_init_sysctls(void);
+#if defined(__Windows__)
+void sctp_finish_sysctls(void);
+#endif
 
 #endif /* _KERNEL */
 #endif /* __sctp_sysctl_h__ */

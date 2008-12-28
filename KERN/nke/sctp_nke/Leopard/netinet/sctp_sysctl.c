@@ -108,7 +108,12 @@ sctp_init_sysctls()
 	SCTP_BASE_SYSCTL(sctp_mobility_base) = SCTPCTL_MOBILITY_BASE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_mobility_fasthandoff) = SCTPCTL_MOBILITY_FASTHANDOFF_DEFAULT;
 #if defined(SCTP_LOCAL_TRACE_BUF)
+#if defined(__Windows__)
+	/* On Windows, the resource for global variables is limited. */
+	MALLOC(SCTP_BASE_SYSCTL(sctp_log), struct sctp_log *, sizeof(struct sctp_log), M_SYSCTL, M_ZERO);
+#else
 	memset(&SCTP_BASE_SYSCTL(sctp_log), 0, sizeof(struct sctp_log));
+#endif
 #endif
 	SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable) = SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
@@ -125,6 +130,19 @@ sctp_init_sysctls()
 	SCTP_BASE_SYSCTL(sctp_output_unlocked) = SCTPCTL_OUTPUT_UNLOCKED_DEFAULT;
 #endif
 }
+
+#if defined(__Windows__)
+void
+sctp_finish_sysctls()
+{
+#if defined(SCTP_LOCAL_TRACE_BUF)
+	if (SCTP_BASE_SYSCTL(sctp_log) != NULL) {
+		FREE(SCTP_BASE_SYSCTL(sctp_log), M_SYSCTL);
+		SCTP_BASE_SYSCTL(sctp_log) = NULL;
+	}
+#endif
+}
+#endif
 
 #if defined(__APPLE__) || defined(__FreeBSD__) || defined(__Windows__)
 /* It returns an upper limit. No filtering is done here */
@@ -799,8 +817,20 @@ sysctl_sctp_cleartrace SYSCTL_HANDLER_ARGS
 sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 #endif
 {
-  memset(&SCTP_BASE_SYSCTL(sctp_log), 0, sizeof(struct sctp_log));
-  return (0);
+	int error = 0;
+#if defined(__Windows__)
+	int value = 0;
+	if (req->new_data == NULL) {
+		return (error);
+	}
+	error = SYSCTL_IN(req, &value, sizeof(int));
+	if (error == 0 && value != 0 && SCTP_BASE_SYSCTL(sctp_log) != NULL) {
+		memset(SCTP_BASE_SYSCTL(sctp_log), 0, sizeof(struct sctp_log));
+	}
+#else
+	memset(&SCTP_BASE_SYSCTL(sctp_log), 0, sizeof(struct sctp_log));
+#endif
+	return (error);
 }
 #endif
 
@@ -1329,11 +1359,11 @@ void sysctl_setup_sctp(void)
 
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	sysctl_add_oid(&sysctl_oid_top, "sctp_log", CTLTYPE_STRUCT|CTLFLAG_RD,
-	    &SCTP_BASE_SYSCTL(sctp_log), sizeof(SCTP_BASE_SYSCTL(sctp_log), NULL,
+	    SCTP_BASE_SYSCTL(sctp_log), sizeof(struct sctp_log), NULL,
 	    "SCTP logging (struct sctp_log)");
 
-	sysctl_add_oid(, "clear_trace", CTLTYPE_OPAQUE|CTLFLAG_RW,
-	    &SCTP_BASE_SYSCTL(sctp_log), 0, sysctl_sctp_cleartrace
+	sysctl_add_oid(&sysctl_oid_top, "clear_trace", CTLTYPE_INT|CTLFLAG_WR,
+	    NULL, 0, sysctl_sctp_cleartrace,
 	    "Clear SCTP Logging buffer");
 #endif
 
