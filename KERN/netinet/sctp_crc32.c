@@ -42,7 +42,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 184027 2008-10-18 15:53:31Z rr
 #include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_crc32.h>
-
+#include <netinet/sctp_pcb.h>
 
 
 /**
@@ -794,6 +794,8 @@ sctp_delayed_cksum(struct mbuf *m)
 	ip = mtod(m, struct ip *);
 	offset = ip->ip_hl << 2;
 	checksum = sctp_calculate_cksum(m, offset);
+	SCTP_STAT_DECR(sctps_sendhwcrc);
+	SCTP_STAT_INCR(sctps_sendswcrc);
 	offset += offsetof(struct sctphdr, checksum);
 
 	if (offset + sizeof(uint32_t) > (uint32_t)(m->m_len)) {
