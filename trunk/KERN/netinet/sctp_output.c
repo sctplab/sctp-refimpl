@@ -5581,6 +5581,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip) + sizeof(struct udphdr));
+				SCTP_STAT_INCR(sctps_sendswcrc);
+			} else {
+				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
@@ -5590,9 +5593,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(__FreeBSD__) && __FreeBSD_version>= 800000
 				m->m_pkthdr.csum_flags = CSUM_SCTP;
 				m->m_pkthdr.csum_data = 0; /* FIXME MT */
+				SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip));
+				SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
+			} else {
+				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
 		}
 		/* send it out.  table id is taken from stcb */
@@ -5954,6 +5961,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr) + sizeof(struct udphdr));
+				SCTP_STAT_INCR(sctps_sendswcrc);
+			} else {
+				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
 #if defined(__Windows__)
 			udp->uh_sum = 0;
@@ -5969,9 +5979,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(__FreeBSD__) && __FreeBSD_version>= 800000
 				m->m_pkthdr.csum_flags = CSUM_SCTP;
 				m->m_pkthdr.csum_data = 0; /* FIXME MT */
+				SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr));
+				SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
+			} else {
+				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
 		}
 		/* send it out. table id is taken from stcb */
@@ -12770,13 +12784,16 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 		if (port) {
 			comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(mout);
 		} else {
 #if defined(__FreeBSD__) && __FreeBSD_version>= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
+			SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 			comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
 		}
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
@@ -12810,13 +12827,14 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
+		SCTP_STAT_INCR(sctps_sendswcrc);
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		if (port) {
 #if defined(__Windows__)
 			udp->uh_sum = 0;
 #elif !defined(__Userspace__) /* UDP __Userspace__ missing Linux fields */
 			if ((udp->uh_sum = in6_cksum(o_pak, IPPROTO_UDP, sizeof(struct ip6_hdr), 
-						     sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
+			                             sizeof(struct sctp_shutdown_complete_msg) + sizeof(struct udphdr))) == 0) {
 				udp->uh_sum = 0xffff;
 			}
 #endif
@@ -13823,13 +13841,16 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
 			abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
 #if defined(__FreeBSD__) && __FreeBSD_version>= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
+			SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 			abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
 		}
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
@@ -13868,6 +13889,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
+		SCTP_STAT_INCR(sctps_sendswcrc);
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
 #if defined(__Windows__)
@@ -14077,13 +14099,16 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
 			sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
 #if defined(__FreeBSD__) && __FreeBSD_version>= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
+			SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 			sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
+			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
 		}
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
@@ -14120,6 +14145,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			sctp_packet_log(mout, len);
 #endif
 		sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
+		SCTP_STAT_INCR(sctps_sendswcrc);
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
 #if defined(__Windows__)
