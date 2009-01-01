@@ -1373,14 +1373,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			/* FOOBAR */
 			return (NULL);
 		}
-		/* pre-reserve some space */
-#ifdef INET6
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-#else
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
-#endif
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
 		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
 		ph = mtod(op_err, struct sctp_paramhdr *);
@@ -2010,7 +2002,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
-	if(netp)
+	if (netp)
 		*netp = sctp_findnet(stcb, init_src);
 
 	asoc = &stcb->asoc;
@@ -2500,15 +2492,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* FOOBAR */
 			return (NULL);
 		}
-		/* pre-reserve some space */
-#ifdef INET6
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-#else
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
-#endif
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
-
 		/* Set the len */
 		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_stale_cookie_msg);
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
@@ -2595,9 +2578,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			}
 		}
 	}
-	if(to == NULL)
+	if (to == NULL) {
 		return (NULL);
-
+	}
+	
 	cookie_len -= SCTP_SIGNATURE_SIZE;
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
@@ -2772,7 +2756,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
 			 */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* yep it was, we leave the
 				 * assoc attached to the socket since
 				 * the sctp_inpcb_free() call will send
@@ -4767,16 +4751,16 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				struct mbuf *ret_buf;
 				struct sctp_inpcb *linp;
-				if(stcb) {
+				if (stcb) {
 					linp = NULL;
 				} else {
 					linp = inp;
 				}
 
-				if(linp) {
+				if (linp) {
 					SCTP_ASOC_CREATE_LOCK(linp);
 				}
-				if(netp) {
+				if (netp) {
 					ret_buf =
 						sctp_handle_cookie_echo(m, iphlen,
 									*offset, sh,
@@ -4791,7 +4775,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				} else {
 					ret_buf = NULL;
 				}
-				if(linp) {
+				if (linp) {
 					SCTP_ASOC_CREATE_UNLOCK(linp);
 				}
 				if (ret_buf == NULL) {
