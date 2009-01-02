@@ -3282,7 +3282,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		}		
 #endif
 		socantsendmore(stcb->sctp_socket);
-		socantrcvmore(stcb->sctp_socket);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -3451,6 +3450,13 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		/* If the socket is gone we are out of here */
+		return;
+	}
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
+	if (stcb->sctp_socket->so_rcv.sb_state & SBS_CANTRCVMORE) {
+#else
+	if (stcb->sctp_socket->so_state & SS_CANTRCVMORE) {
+#endif
 		return;
 	}
 #if defined(__APPLE__)
@@ -5090,7 +5096,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock=0;
 #endif
-	if(uio == NULL) {
+	if (uio == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
 	}
@@ -5155,12 +5161,12 @@ sctp_sorecvmsg(struct socket *so,
 	sockbuf_lock=1;
 #endif
 #endif
-	if(error) {
+	if (error) {
 		goto release_unlocked;
 	}
  restart:
 #if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
-	if(hold_sblock == 0) {
+	if (hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
 	}
@@ -5174,34 +5180,33 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 
  restart_nosblocks:
-	if(hold_sblock == 0) {
+	if (hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
 	}
-	if((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
 		goto out;
 	}
 #if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
-	if (so->so_rcv.sb_state & SBS_CANTRCVMORE)
+	if (so->so_rcv.sb_state & SBS_CANTRCVMORE) {
 #else
-    if (so->so_state & SS_CANTRCVMORE)
+	if (so->so_state & SS_CANTRCVMORE) {
 #endif
-		{
-			if (so->so_error) {
-				error = so->so_error;
-				if ((in_flags & MSG_PEEK) == 0)
-					so->so_error = 0;
-				goto out;
-			} else {
-			  if (so->so_rcv.sb_cc == 0) {
+		if (so->so_error) {
+			error = so->so_error;
+			if ((in_flags & MSG_PEEK) == 0)
+				so->so_error = 0;
+			goto out;
+		} else {
+			if (so->so_rcv.sb_cc == 0) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
 				/* indicate EOF */
 				error = 0;
 				goto out;
-			  }
 			}
 		}
+	}
 	if ((so->so_rcv.sb_cc <= held_length) && block_allowed) {
 		/* we need to wait for data */
 		if ( (so->so_rcv.sb_cc == 0) && 
@@ -5855,14 +5860,14 @@ sctp_sorecvmsg(struct socket *so,
 		}
 #endif
 
-		if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)
 			goto release;
 
-		if(hold_rlock == 1) {
+		if (hold_rlock == 1) {
 			SCTP_INP_READ_UNLOCK(inp);
 			hold_rlock = 0;
 		}
-		if(hold_sblock == 0) {
+		if (hold_sblock == 0) {
 			SOCKBUF_LOCK(&so->so_rcv);
 			hold_sblock = 1;
 		}
@@ -5874,7 +5879,7 @@ sctp_sorecvmsg(struct socket *so,
 			){
 			goto release;
 		}
-		if(so->so_rcv.sb_cc <= control->held_length) {
+		if (so->so_rcv.sb_cc <= control->held_length) {
 			error = sbwait(&so->so_rcv);
 			if (error){
 #if defined(__FreeBSD__)
@@ -5888,7 +5893,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__APPLE__)
 		error = sblock(&so->so_rcv, SBLOCKWAIT(in_flags));
 #endif
-		if(hold_sblock) {
+		if (hold_sblock) {
 			SOCKBUF_UNLOCK(&so->so_rcv);
 			hold_sblock = 0;
 		}
@@ -5897,7 +5902,7 @@ sctp_sorecvmsg(struct socket *so,
 			if(control->end_added == 1) {
 				/* he aborted, or is done i.e.did a shutdown */
 				out_flags |= MSG_EOR;
-				if(control->pdapi_aborted) {
+				if (control->pdapi_aborted) {
 					if ((control->do_not_ref_stcb == 0) && ((control->spec_flags & M_NOTIFICATION) == 0))
 						control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 
@@ -5921,13 +5926,13 @@ sctp_sorecvmsg(struct socket *so,
 			if ((control->length > 0) && (control->data == NULL)) {
 				/* big trouble.. we have the lock and its corrupt? */
 #ifdef INVARIANTS
-			  panic ("Impossible data==NULL length !=0");
+				panic ("Impossible data==NULL length !=0");
 #endif
-			  out_flags |= MSG_EOR;
-			  out_flags |= MSG_TRUNC;
-			  control->length = 0;
-			  SCTP_INP_READ_UNLOCK(inp);
-			  goto done_with_control;
+				out_flags |= MSG_EOR;
+				out_flags |= MSG_TRUNC;
+				control->length = 0;
+				SCTP_INP_READ_UNLOCK(inp);
+				goto done_with_control;
 			}
 			SCTP_INP_READ_UNLOCK(inp);
 			/* We will fall around to get more data */
@@ -5980,17 +5985,17 @@ sctp_sorecvmsg(struct socket *so,
 		}
 	}
  release:
-	if(hold_rlock == 1) {
+	if (hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
 #if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
-	if(hold_sblock == 0) {
+	if (hold_sblock == 0) {
 		SOCKBUF_LOCK(&so->so_rcv);
 		hold_sblock = 1;
 	}
 #else
-	if(hold_sblock == 1) {
+	if (hold_sblock == 1) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
@@ -6007,7 +6012,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 
  release_unlocked:
-	if(hold_sblock) {
+	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
@@ -6029,16 +6034,16 @@ sctp_sorecvmsg(struct socket *so,
 		s_extra = (struct sctp_extrcvinfo *)sinfo;
 		s_extra->sreinfo_next_flags = SCTP_NO_NEXT_MSG;
 	}
-	if(hold_rlock == 1) {
+	if (hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
-	if(hold_sblock) {
+	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
-	if(sockbuf_lock) {
+	if (sockbuf_lock) {
 		sbunlock(&so->so_rcv);
 	}
 #endif
