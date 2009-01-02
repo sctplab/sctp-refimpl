@@ -636,12 +636,21 @@ uint32_t
 sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 {
 	socklen_t len;
+	char *buf;
+	unsigned int i;
 	
-	len = (socklen_t) (n * sizeof(sctp_assoc_t));
-	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)ids, &len) < 0)
+	len = (socklen_t) (n * sizeof(sctp_assoc_t)) + sizeof(uint32_t);
+	buf = (char *)malloc(len);
+	if (getsockopt(fd, IPPROTO_SCTP, SCTP_GET_ASSOC_ID_LIST, (void *)buf, &len) < 0) {
+		free(buf);
 		return -1;
-	else
-		return (len / sizeof(sctp_assoc_t));
+	} else {
+		for (i = 0; i < ((struct sctp_assoc_ids *)buf)->gaids_number_of_ids; i++) {
+			ids[i] = ((struct sctp_assoc_ids *)buf)->gaids_assoc_id[i];
+		}
+		free(buf);
+		return ((struct sctp_assoc_ids *)buf)->gaids_number_of_ids;
+	}
 }
 
 
