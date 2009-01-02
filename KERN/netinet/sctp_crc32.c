@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 184027 2008-10-18 15:53:31Z rr
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_pcb.h>
 
-
+#if !defined(SCTP_WITH_NO_CSUM)
 /**
  *
  * Routine Description:
@@ -527,6 +527,7 @@ uint32_t sctp_crc_tableil8_o88[256] =
  * end of the CRC lookup table crc_tableil8_o88
  */
 
+
 static uint32_t
 sctp_crc32c_sb8_64_bit(uint32_t crc,
     unsigned char *p_buf,
@@ -729,6 +730,8 @@ sctp_finalize_crc32(uint32_t crc32c)
 #endif
 	return (crc32c);
 }
+
+#endif /* !defined(SCTP_WITH_NO_CSUM)*/
 
 #if defined(SCTP_WITH_NO_CSUM)
 uint32_t
