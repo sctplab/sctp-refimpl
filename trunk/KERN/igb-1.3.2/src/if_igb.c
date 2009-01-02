@@ -3647,7 +3647,9 @@ igb_initialize_receive_units(struct adapter *adapter)
 		E1000_WRITE_REG(&adapter->hw, E1000_RXCSUM, rxcsum);
 	} else if (ifp->if_capenable & IFCAP_RXCSUM) {
 		rxcsum = E1000_READ_REG(&adapter->hw, E1000_RXCSUM);
-		rxcsum |= (E1000_RXCSUM_IPOFL | E1000_RXCSUM_TUOFL);
+		rxcsum |= (E1000_RXCSUM_IPOFL | 
+		           E1000_RXCSUM_TUOFL |
+		           E1000_RXCSUM_CRCOFL);
 		E1000_WRITE_REG(&adapter->hw, E1000_RXCSUM, rxcsum);
 	}
 
