@@ -3282,7 +3282,6 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		}		
 #endif
 		socantsendmore(stcb->sctp_socket);
-		socantrcvmore(stcb->sctp_socket);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
