@@ -1,2 +1,11 @@
+- Cleanup checksum code.
+- Prepare for CRC offloading, add MIB counters.
+- Bugfix: Disable CRC computation for IPv6 addresses with local scope.
+- Bugfix: Handle close() with SO_LINGER correctly when notifications
+          are generated during the close() call.
+- Bugfix: Generate DRY event when sender is dry during subscription.
+          Only for 1-to-1 style sockets.
+- Bugfix: Put vtags for the correct amount of time into time-wait.
+- Bugfix: Clear vtag entries correctly on expiration.
 Has of 12/08/2008 all items sync'd to Head in FreeBSD8.
 --------------
