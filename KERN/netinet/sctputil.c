@@ -3453,6 +3453,13 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		/* If the socket is gone we are out of here */
 		return;
 	}
+#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
+	if (stcb->sctp_socket->so_rcv.sb_state & SBS_CANTRCVMORE) {
+#else
+	if (stcb->sctp_socket->so_state & SS_CANTRCVMORE) {
+#endif
+		return;
+	}
 #if defined(__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
