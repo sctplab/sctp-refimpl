@@ -5590,7 +5590,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
-#if defined(__FreeBSD__) && __FreeBSD_version>= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 				m->m_pkthdr.csum_flags = CSUM_SCTP;
 				m->m_pkthdr.csum_data = 0; /* FIXME MT */
 				SCTP_STAT_INCR(sctps_sendhwcrc);
@@ -5976,7 +5976,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
-#if defined(__FreeBSD__) && __FreeBSD_version>= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 				m->m_pkthdr.csum_flags = CSUM_SCTP;
 				m->m_pkthdr.csum_data = 0; /* FIXME MT */
 				SCTP_STAT_INCR(sctps_sendhwcrc);
@@ -12787,7 +12787,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(mout);
 		} else {
-#if defined(__FreeBSD__) && __FreeBSD_version>= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
 			SCTP_STAT_INCR(sctps_sendhwcrc);
@@ -13844,7 +13844,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
-#if defined(__FreeBSD__) && __FreeBSD_version>= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
 			SCTP_STAT_INCR(sctps_sendhwcrc);
@@ -14102,7 +14102,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			SCTP_STAT_INCR(sctps_sendswcrc);
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
-#if defined(__FreeBSD__) && __FreeBSD_version>= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0; /* FIXME MT */
 			SCTP_STAT_INCR(sctps_sendhwcrc);
