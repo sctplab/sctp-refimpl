@@ -1194,7 +1194,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 		
 	if (sctp_get_number_of_associations(fd) != 0) {
 		close(fd);
-		return strerror(errno);
+		return "Wrong number of identifiers";
 	}
 	
 	result = sctp_get_association_identifiers(fd, &id, 1);
