@@ -638,6 +638,7 @@ sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 	socklen_t len;
 	char *buf;
 	unsigned int i;
+	uint32_t number;
 	
 	len = (socklen_t) (n * sizeof(sctp_assoc_t)) + sizeof(uint32_t);
 	buf = (char *)malloc(len);
@@ -648,8 +649,9 @@ sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 		for (i = 0; i < ((struct sctp_assoc_ids *)buf)->gaids_number_of_ids; i++) {
 			ids[i] = ((struct sctp_assoc_ids *)buf)->gaids_assoc_id[i];
 		}
+		number = ((struct sctp_assoc_ids *)buf)->gaids_number_of_ids;
 		free(buf);
-		return ((struct sctp_assoc_ids *)buf)->gaids_number_of_ids;
+		return(number);
 	}
 }
 
