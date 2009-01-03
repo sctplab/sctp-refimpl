@@ -5701,7 +5701,7 @@ sctp_input(i_pak, va_alist)
 		m->m_pkthdr.rcvif->if_unit,
 		m->m_pkthdr.csum_flags);
 #endif
-#if __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum_4;
