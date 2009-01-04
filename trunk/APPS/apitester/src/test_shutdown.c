@@ -48,12 +48,18 @@ DEFINE_APITEST(shutdown, 1to1_not_connected)
 	int fd, n;
 	
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-	if (fd < 0)
+	if (fd < 0) {
 		return strerror(errno);
+	}
 	n = shutdown(fd, SHUT_WR);
 	close(fd);
-	if (n < 0)
-		RETURN_PASSED;
-	else
+	if (n < 0) {
+		if (errno == ENOTCONN) {
+			RETURN_PASSED;
+		} else {
+			RETURN_FAILED("errno is %d instead of %d", errno, ENOTCONN);
+	}
+	else {
 		RETURN_FAILED("shutdown() was successful");
+	}
 }
