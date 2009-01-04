@@ -1223,6 +1223,11 @@ sctp_shutdown(struct socket *so)
 		struct sctp_tcb *stcb;
 		struct sctp_association *asoc;
 
+		if ((so->so_state &
+		     (SS_ISCONNECTED|SS_ISCONNECTING|SS_ISDISCONNECTING)) == 0) {
+			SCTP_INP_RUNLOCK(inp);
+			return (ENOTCONN);
+		}
 		socantsendmore(so);
 
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
