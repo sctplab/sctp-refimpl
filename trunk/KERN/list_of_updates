@@ -7,5 +7,7 @@
           Only for 1-to-1 style sockets.
 - Bugfix: Put vtags for the correct amount of time into time-wait.
 - Bugfix: Clear vtag entries correctly on expiration.
-Has of 12/08/2008 all items sync'd to Head in FreeBSD8.
+- Bugfix: shutdown() indicates ENOTCONN when called for unconnected
+          1-to-1 style sockets.
+As of 12/08/2008 all items sync'd to Head in FreeBSD8.
 --------------
