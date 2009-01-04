@@ -67,9 +67,9 @@ DEFINE_APITEST(bind, port_s_a_s_p)
 	close(fd);
 	
 	if (port != 12345)
-		return "Wrong port";
+		RETURN_FAILED("Wrong port: %d instead of %d.", port, 12345);
 	else
-		return NULL;
+		RETURN_PASSED;
 }
 
 /*

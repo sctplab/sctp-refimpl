@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001-2007 by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2001-2007, by Michael Tuexen, tuexen@fh-muenster.de. All rights reserved.
+ * Copyright (c) 2001-2008, by Michael Tuexen, tuexen@fh-muenster.de. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,26 +29,37 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-#define REGISTER_APITEST(suite, case) {0, #suite"_"#case, #suite, suite##case}
-#define DECLARE_APITEST(suite, case) extern char *suite##case(void)
-#define DEFINE_APITEST(suite, case) char *suite##case(void)
-#define RETURN_FAILED(format, ...) \
-		do { \
-			snprintf(description, 41, format, ##__VA_ARGS__); \
-			return (description); \
-		} while (0)
-#define RETURN_PASSED return (NULL)
+#include <sys/types.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <arpa/inet.h>
+#include <string.h>
+#include <stdio.h>
+#include <unistd.h>
+#include <assert.h>
+#include <errno.h>
+#include <fcntl.h>
+#include <netinet/sctp.h>
+#include "sctp_utilities.h"
+#include "api_tests.h"
 
-struct test {
-	int enabled;
-	char *case_name;
-	char *suite_name;
-	char *(*func)(void);
-};
-
-char description[41];
-
-#define I_AM_HERE \
-		do { \
-			printf("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
-		} while (0)
+/*
+ * TEST-TITLE connect/non_listen
+ * TEST-DESCR: On a 1-1 socket, get two sockets.
+ * TEST-DESCR: Neither should listen, attempt to
+ * TEST-DESCR: connect one to the other. This should fail.
+ */
+DEFINE_APITEST(shutdown, 1tom)
+{
+	int fd, n;
+	
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0)
+		return strerror(errno);
+	n = shutdown(fd, SHUT_RD);
+	close(fd);
+	if (n < 0)
+		RETURN_PASSED;
+	else
+		RETURN_FAILED("shutdown() was successful");
+}
