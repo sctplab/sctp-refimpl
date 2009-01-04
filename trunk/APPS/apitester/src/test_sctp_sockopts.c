@@ -1190,8 +1190,8 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 	sctp_assoc_t id;
 	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-	    	return strerror(errno);
-		
+		return strerror(errno);
+
 	if (sctp_get_number_of_associations(fd) != 0) {
 		close(fd);
 		return "Wrong number of identifiers";

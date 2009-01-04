@@ -160,13 +160,13 @@ main(int argc, char *argv[])
 
 	enable_tests(argc - optind, argv + optind);
 	printf("Name                          Verdict  Info\n");
-	printf("================================================================================\n");
+	printf("===============================================================================\n");
 	if (test_randomly)
 		run_tests_random(ignore_failed);
 	else if (test_loop)
 		run_tests_loop(ignore_failed);
 	else
-		run_tests_once(ignore_failed);		
+		run_tests_once(ignore_failed);
 	printf("===============================================================================\n");
 	printf("Summary: Number of tests run:    %3u\n", run);
 	printf("         Number of tests passed: %3u\n", passed);
