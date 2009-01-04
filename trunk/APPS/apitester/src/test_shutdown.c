@@ -43,14 +43,14 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
-DEFINE_APITEST(shutdown, 1to1)
+DEFINE_APITEST(shutdown, 1to1_not_connected)
 {
 	int fd, n;
 	
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	if (fd < 0)
 		return strerror(errno);
-	n = shutdown(fd, SHUT_RD);
+	n = shutdown(fd, SHUT_WR);
 	close(fd);
 	if (n < 0)
 		RETURN_PASSED;
