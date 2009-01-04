@@ -43,17 +43,11 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
-/*
- * TEST-TITLE connect/non_listen
- * TEST-DESCR: On a 1-1 socket, get two sockets.
- * TEST-DESCR: Neither should listen, attempt to
- * TEST-DESCR: connect one to the other. This should fail.
- */
-DEFINE_APITEST(shutdown, 1tom)
+DEFINE_APITEST(shutdown, 1to1)
 {
 	int fd, n;
 	
-	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	if (fd < 0)
 		return strerror(errno);
 	n = shutdown(fd, SHUT_RD);
