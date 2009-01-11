@@ -242,11 +242,11 @@ struct sctp_epinfo {
 	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #elif defined(__Windows__)
-	KSPIN_LOCK ipi_ep_lock;
-	KSPIN_LOCK it_lock;
-	KSPIN_LOCK ipi_iterator_wq_lock;
-	KSPIN_LOCK ipi_addr_lock;
-	KSPIN_LOCK ipi_pktlog_mtx;
+	struct rwlock ipi_ep_lock;
+	struct spinlock it_lock;
+	struct spinlock ipi_iterator_wq_lock;
+	struct rwlock ipi_addr_lock;
+	struct spinlock ipi_pktlog_mtx;
 #elif defined(__Userspace__)
     /* TODO decide on __Userspace__ locks */
 #endif
@@ -509,9 +509,9 @@ struct sctp_inpcb {
 	lck_mtx_t *inp_create_mtx;
 	lck_mtx_t *inp_rdata_mtx;
 #elif defined(__Windows__)
-	KSPIN_LOCK inp_lock;
-	KSPIN_LOCK inp_create_lock;
-	KSPIN_LOCK inp_rdata_lock;
+	struct rwlock inp_lock;
+	struct spinlock inp_create_lock;
+	struct spinlock inp_rdata_lock;
 	int32_t refcount;
 #elif defined(__Userspace__)
     /* TODO decide on __Userspace__ locks */
@@ -592,8 +592,8 @@ struct sctp_tcb {
 	lck_mtx_t* tcb_mtx;
 	lck_mtx_t* tcb_send_mtx;
 #elif defined(__Windows__)
-	KSPIN_LOCK tcb_lock;
-	KSPIN_LOCK tcb_send_lock;
+	struct spinlock tcb_lock;
+	struct spinlock tcb_send_lock;
 #elif defined(__Userspace__)
     /* TODO decide on __Userspace__ locks */
 #endif

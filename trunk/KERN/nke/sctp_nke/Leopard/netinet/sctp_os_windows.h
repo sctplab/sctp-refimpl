@@ -1,5 +1,5 @@
 /*
- * Copyright (c) 2008 CO-CONV, Inc. All rights reserved.
+ * Copyright (c) 2008 CO-CONV, Corp. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -44,6 +44,9 @@
 #include <sys/atomic.h>
 #include <sys/queue.h>
 #include <sys/malloc.h>
+#include <sys/lock.h>
+#include <sys/spinlock.h>
+#include <sys/rwlock.h>
 #include <sys/mbuf.h>
 #include <sys/domain.h>
 #include <sys/poll.h>
@@ -135,11 +138,9 @@ get_cyclecount(void)
 }
 #define SCTP_GET_CYCLECOUNT get_cyclecount()
 #define SCTP_CTR6 sctp_log_trace
-#else
-#define SCTP_CTR6 CTR6
+#define KTR_SUBSYS 0
 #endif
 
-#define CTR6(m, d, p1, p2, p3, p4, p5, p6)
 #define SCTP_LTRACE_CHK(a, b, c, d)
 #define SCTP_LTRACE_ERR(a, b, c, d)
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
