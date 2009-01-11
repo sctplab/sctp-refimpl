@@ -664,6 +664,10 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 {
 	int error;
 	uint32_t old_sctp_udp_tunneling_port;
+#if defined(__Windows__)
+	KIRQL oldIrql;
+	oldIrql = KeRaiseIrqlToDpcLevel();
+#endif
 
 	SCTP_INP_INFO_WLOCK();
 	old_sctp_udp_tunneling_port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
@@ -689,6 +693,9 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 	}
  out:
 	SCTP_INP_INFO_WUNLOCK();
+#if defined(__Windows__)
+	KeLowerIrql(oldIrql);
+#endif
 	return (error);
 }
 
