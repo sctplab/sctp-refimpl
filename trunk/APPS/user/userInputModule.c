@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.110 2008-11-18 17:19:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.111 2009-01-11 13:23:46 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -88,6 +88,7 @@
 #if defined(__BSD_SCTP_STACK__)
 #include <netinet/sctp_uio.h>
 #endif
+#include <printMessageHandler.h>
 
 static int execute_line(const char *line);
 static char *command_generator(char *text, int state);
@@ -941,7 +942,7 @@ sendBulkTransfer(int fd,int sz)
 
 
 void
-checkBulkTranfer(void *v,void *xxx)
+checkBulkTranfer(void *v,void *xxx, int foo)
 {	
 	int fd;
 	int ret,cnt;
@@ -1077,7 +1078,7 @@ handleMultiplePongs(int fd, struct sockaddr *from, int theStream)
 /*--------------------------------------------------*/
 
 void
-SCTPdataTimerTicks(void *o,void *b)
+SCTPdataTimerTicks(void *o,void *b, int foo)
 {
   int ret;
   int fd;
@@ -1102,59 +1103,12 @@ SCTPdataTimerTicks(void *o,void *b)
 }
 
 
-void
-printArry(uint8_t *data, int sz)
-{
-  /* if debug is on hex dump a array */
-  int i,j,linesOut;
-  char buff1[64];
-  char buff2[64];
-  char *ptr1,*ptr2,*dptrlast,*dptr;
-  char *hexes = "0123456789ABCDEF";
-  ptr1 = buff1;
-  ptr2 = buff2;
-  dptrlast = dptr = (char *)data;
-  for(i=0,linesOut=0;i<sz;i++){
-    *ptr1++ = hexes[0x0f&((*dptr)>>4)];
-    *ptr1++ = hexes[0x0f&(*dptr)];
-    *ptr1++ = ' ';
-    if((*dptr >= 040) && (*dptr <= 0176))
-      *ptr2++ = *dptr;
-    else
-      *ptr2++ = '.';
-    dptr++;
-    if(((i+1) % 16) == 0){
-      *ptr1 = 0;
-      *ptr2 = 0;
-      printf("%s %s\n",buff1,buff2);
-      linesOut++;
-      ptr1 = buff1;
-      ptr2 = buff2;
-      dptrlast = dptr;
-    }
-  }
-  if((linesOut*16) < sz){
-    char spaces[64];
-    int dist,sp;
-
-    j=(linesOut*16);
-    dist = ((16 - (i - j)) * 3);
-    *ptr1 = 0;
-    *ptr2 = 0;
-    for(sp=0;sp<dist;sp++){
-      spaces[sp] = ' ';
-    }
-    spaces[sp] = 0;
-    printf("%s %s%s\n",buff1,spaces,buff2);
-  }
-  fflush(stdout);
-}
 
 static int str1Flow=0;
 static int str2Flow=0;
 
 void
-sendRftpTransfer(void *v, void *xxx)
+sendRftpTransfer(void *v, void *xxx, int foo)
 {
   char cbuf[10000];
   int bsz, readsz, ret1, ret2, sndsz;
@@ -2042,13 +1996,13 @@ cmd_setdebug(char *argv[], int argc)
 	  num |= SCTP_DEBUG_INDATA3;
 	}else if (argv[0][6] == '4'){
 	  printf("adding indata level 4\n");
-	  num |= SCTP_DEBUG_INDATA4;
+	  num |= SCTP_DEBUG_INDATA3;
 	}else{
 	  printf("adding all indata levels\n");
 	  num |= SCTP_DEBUG_INDATA1;
 	  num |= SCTP_DEBUG_INDATA2;
 	  num |= SCTP_DEBUG_INDATA3;
-	  num |= SCTP_DEBUG_INDATA4;
+	  num |= SCTP_DEBUG_INDATA3;
 	}
       }else if(strncmp(argv[0],"usrreq",6) == 0){
 	if (argv[0][6] == '1'){
@@ -2910,7 +2864,7 @@ cmd_sendN(char *argv[], int argc)
     /* prepare ping buffer */
     /* ask for the time */
 	strncpy(pingBuffer,"bulk",4);
-    checkBulkTranfer((void *)&adap->fd,NULL);
+    checkBulkTranfer((void *)&adap->fd,NULL, 0);
     for (i=0; i<bulkCount; i++) {
       ret = sctpSEND(fd,bulkStream,pingBuffer,bulkBufSize,SCTP_getAddr(NULL),sendOptions,payload,0);
 	  if (ret < 0) {
@@ -2970,7 +2924,7 @@ cmd_bulk(char *argv[], int argc)
       strncpy(pingBuffer,"bulk",4);
     }
     bulkInProgress = 1;
-    checkBulkTranfer((void *)&adap->fd,NULL);
+    checkBulkTranfer((void *)&adap->fd,NULL, 0);
     if(bulkCount == 0){
 	printf("bulk: bulk message are now queued\n");
     }else{
@@ -3653,6 +3607,9 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_recvauthfailed,      "authfailed");
 	p(sctps_recvexpress,         "expressd");
 	p(sctps_recvexpressm,        "expressdm");
+	p(sctps_recvnocrc,           "recvnocrc");
+	p(sctps_recvswcrc,           "recvswcrc");
+	p(sctps_recvhwcrc,           "recvhwcrc");
 	nl("SEND");
 	p(sctps_sendpackets,         "packets");
 	p(sctps_sendsacks,           "sacks");
@@ -3663,7 +3620,11 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_sendheartbeat,       "heartbeat");
 	p(sctps_sendecne,            "ecne");
 	p(sctps_sendauth,            "auth");
-	p(sctps_senderrors,           "ifp:io_errors");
+	p(sctps_senderrors,          "ifp:io_errors");
+	p(sctps_sendnocrc,           "sendnocrc");
+	p(sctps_sendswcrc,           "sendswcrc");
+	p(sctps_sendhwcrc,           "sendhwcrc");
+
 	nl("PDRP");
 	p(sctps_pdrpfmbox,           "fmbox");
 	p(sctps_pdrpfehos,           "fehos");
@@ -4248,7 +4209,7 @@ cmd_hulkstop(char *argv[], int argc)
     hulkfile = NULL;
     dist_TimerStop(dist,
 		   SCTPdataTimerTicks, 
-		      (void *)NULL,(void *)&adap->fd);
+		      (void *)NULL,(void *)&adap->fd, 0);
     return 0;
 }
 
@@ -4567,7 +4528,7 @@ cmd_rftp(char *argv[], int argc)
     rftp_ending1 = rftp_ending2 = 0;
     str1Flow = str2Flow=0;
 
-    sendRftpTransfer((void *)&adap->fd, NULL);
+    sendRftpTransfer((void *)&adap->fd, NULL, 0);
 
     return 0;
 }

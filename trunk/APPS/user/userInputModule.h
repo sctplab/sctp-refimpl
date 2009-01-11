@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.h,v 1.2 2006-01-25 18:46:40 lei Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.h,v 1.3 2009-01-11 13:23:46 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -75,7 +75,7 @@ typedef struct {
 
 #define MAX_PING_PONG_CONTEXTS 10
   void SCTPPrintAnAddress(struct sockaddr *a);
-  void checkBulkTranfer(void *v,void *xx);	/* timer function */
+  void checkBulkTranfer(void *v,void *xx, int tmrno);	/* timer function */
   void sctpInput(void *m,messageEnvolope *msg);
   void handleStdin(sctpAdaptorMod *mod);
   u_long translateIPAddress(char *);
