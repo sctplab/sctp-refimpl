@@ -230,7 +230,7 @@ sctpTables_arch_load(sctpTables_containers * containers, u_long * flags)
 	  /* Remote addresses */
 	  xraddr = (struct xsctp_raddr *)(buf + offset);
 	  while (xraddr->last == 0) {
-		parse_remaddr_xladdr(containers, xraddr);
+		parse_remaddr_xraddr(containers, xraddr);
 		offset += sizeof(struct xsctp_raddr);
 		xraddr = (struct xsctp_raddr *)(buf + offset);
 	  }
