@@ -506,7 +506,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.heartbeat_interval = stcb->asoc.heart_beat_delay;
 			xstcb.state = SCTP_GET_STATE(&stcb->asoc); /* FIXME */
 #if defined(__FreeBSD__)
-#if _FreeBSD_version >= 800000
+#if __FreeBSD_version >= 800000
 			/* 7.0 does not support this */
 			xstcb.assoc_id = sctp_get_associd(stcb);
 #endif			
