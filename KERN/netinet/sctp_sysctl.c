@@ -505,6 +505,14 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xstcb.primary_addr = stcb->asoc.primary_destination->ro._l_addr;
 			xstcb.heartbeat_interval = stcb->asoc.heart_beat_delay;
 			xstcb.state = SCTP_GET_STATE(&stcb->asoc); /* FIXME */
+#if defined(__FreeBSD__)
+#if _FreeBSD_version >= 800000
+			/* 7.0 does not support this */
+			xstcb.assoc_id = sctp_get_associd(stcb);
+#endif			
+#else
+			xstcb.assoc_id = sctp_get_associd(stcb);
+#endif
 			xstcb.in_streams = stcb->asoc.streamincnt;
 			xstcb.out_streams = stcb->asoc.streamoutcnt;
 			xstcb.max_nr_retrans = stcb->asoc.overall_error_count;
