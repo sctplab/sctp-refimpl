@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.3 2009-01-15 14:35:15 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.4 2009-01-15 15:08:13 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1264,11 +1264,6 @@ dist_process(distributor * o)
 				if (timeout > 11) {
 					timeout -= 10;
 				}
-				/* Now round up a bit to make sure we have
-				 * a timeout, else wise we end up with
-				 * a situation where we have a 3 ms to.
-				 */
-				timeout += 9;
 			} else {
 				/* expire time is past? */
 				timeout = 0;
