@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.4 2009-01-15 15:08:13 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.5 2009-01-15 15:32:08 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1143,7 +1143,7 @@ dist_startupChange(distributor * o, startStopFunc sf, void *arg, int howmask)
 timerEntry *
 __dist_get_next_to_expire(distributor *o)
 {
-  int i;
+  int i, calc;
   timerEntry *te, *lowest;
   if (o->timer_cnt == 0) {
 	return (NULL);
@@ -1152,7 +1152,7 @@ __dist_get_next_to_expire(distributor *o)
 	return (o->soonest_timer);
   /* need to find the next timer to expire */
   lowest = NULL;
-  for (i=0; i<TIMERS_NUMBER_OF_ENT; i++) {
+  for (i=o->lasttimeoutchk; i<TIMERS_NUMBER_OF_ENT; i++) {
 	te = LIST_FIRST(&o->timers[i]);
 	if (te) {
 	  /* is it the lowest? */
@@ -1169,7 +1169,57 @@ __dist_get_next_to_expire(distributor *o)
 		 * in the same bucket.
 		 */
 	  }
+	  if (te->expireTime.tv_sec > o->lastKnownTime.tv_sec)
+		calc = (int)te->expireTime.tv_sec - o->lastKnownTime.tv_sec;
+	  else
+		/* Past expiration */
+		calc = 0;
+	  
+	  if (calc < TIMERS_NUMBER_OF_ENT) {
+		/* By defintion if we are less then
+		 * one wheel, this is the lowest value
+		 * we will find.
+		 */
+		o->soonest_timer = lowest;
+		return (lowest);
+	  }
 	}
+  }
+  for (i=0; i<o->lasttimeoutchk; i++) {
+	te = LIST_FIRST(&o->timers[i]);
+	if (te) {
+	  /* is it the lowest? */
+	  if (lowest == NULL) {
+		/* First one we saw */
+		lowest = te;
+	  } else {
+		/* Ok lets check */
+		if(te->expireTime.tv_sec < lowest->tv_sec) {
+		  /* A new winner */
+		  lowest = te;
+		}
+
+		/* We don't check usec, since those all fall
+		 * in the same bucket.
+		 */
+	  }
+	  if (te->expireTime.tv_sec > o->lastKnownTime.tv_sec)
+		calc = (int)te->expireTime.tv_sec - o->lastKnownTime.tv_sec;
+	  else
+		/* Past expiration */
+		calc = 0;
+	  
+	  if (calc < TIMERS_NUMBER_OF_ENT) {
+		/* By defintion if we are less then
+		 * one wheel, this is the lowest value
+		 * we will find.
+		 */
+		o->soonest_timer = lowest;
+		return (lowest);
+	  }
+
+	}
+
   }
   /* cache it and return */
   o->soonest_timer = lowest;
