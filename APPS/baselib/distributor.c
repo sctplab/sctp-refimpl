@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.5 2009-01-15 15:32:08 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.6 2009-01-15 22:03:43 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1148,8 +1148,9 @@ __dist_get_next_to_expire(distributor *o)
   if (o->timer_cnt == 0) {
 	return (NULL);
   }
-  if (o->soonest_timer)
+  if (o->soonest_timer) {
 	return (o->soonest_timer);
+  }
   /* need to find the next timer to expire */
   lowest = NULL;
   for (i=o->lasttimeoutchk; i<TIMERS_NUMBER_OF_ENT; i++) {
@@ -1161,7 +1162,7 @@ __dist_get_next_to_expire(distributor *o)
 		lowest = te;
 	  } else {
 		/* Ok lets check */
-		if(te->expireTime.tv_sec < lowest->tv_sec) {
+		if(te->expireTime.tv_sec < lowest->expireTime.tv_sec) {
 		  /* A new winner */
 		  lowest = te;
 		}
@@ -1169,12 +1170,12 @@ __dist_get_next_to_expire(distributor *o)
 		 * in the same bucket.
 		 */
 	  }
-	  if (te->expireTime.tv_sec > o->lastKnownTime.tv_sec)
+	  if (te->expireTime.tv_sec >= o->lastKnownTime.tv_sec) {
 		calc = (int)te->expireTime.tv_sec - o->lastKnownTime.tv_sec;
-	  else
+	  } else {
 		/* Past expiration */
 		calc = 0;
-	  
+	  }
 	  if (calc < TIMERS_NUMBER_OF_ENT) {
 		/* By defintion if we are less then
 		 * one wheel, this is the lowest value
@@ -1194,7 +1195,7 @@ __dist_get_next_to_expire(distributor *o)
 		lowest = te;
 	  } else {
 		/* Ok lets check */
-		if(te->expireTime.tv_sec < lowest->tv_sec) {
+		if(te->expireTime.tv_sec < lowest->expireTime.tv_sec) {
 		  /* A new winner */
 		  lowest = te;
 		}
@@ -1203,11 +1204,12 @@ __dist_get_next_to_expire(distributor *o)
 		 * in the same bucket.
 		 */
 	  }
-	  if (te->expireTime.tv_sec > o->lastKnownTime.tv_sec)
+	  if (te->expireTime.tv_sec >= o->lastKnownTime.tv_sec)
 		calc = (int)te->expireTime.tv_sec - o->lastKnownTime.tv_sec;
-	  else
+	  else {
 		/* Past expiration */
 		calc = 0;
+	  }
 	  
 	  if (calc < TIMERS_NUMBER_OF_ENT) {
 		/* By defintion if we are less then
@@ -1222,6 +1224,7 @@ __dist_get_next_to_expire(distributor *o)
 
   }
   /* cache it and return */
+  printf("fall return %p\n", lowest);
   o->soonest_timer = lowest;
   return (lowest);
 }
@@ -1257,7 +1260,6 @@ dist_process(distributor * o)
 	/* Set the point on the wheel where we start */
 	o->lasttimeoutchk = o->lastKnownTime.tv_sec % TIMERS_NUMBER_OF_ENT;
 	while (o->notdone) {
-	    te = __dist_get_next_to_expire(o);
 #ifdef USE_SELECT
 		/* spin through and setup things. */
 		FD_ZERO(&readfds);
@@ -1284,9 +1286,10 @@ dist_process(distributor * o)
 #ifndef MINIMIZE_TIME_CALLS
 		gettimeofday(&o->lastKnownTime, (struct timezone *)NULL);
 #endif
+	    te = __dist_get_next_to_expire(o);
 		if (te != NULL) {
 			/* yep, a timer is running use the delta */
-			clockTickFlag = 0;
+			int clktick;
 			if (te->expireTime.tv_sec >= o->lastKnownTime.tv_sec) {
 				timeout = ((te->expireTime.tv_sec - o->lastKnownTime.tv_sec) * 1000);
 				if (te->expireTime.tv_usec > o->lastKnownTime.tv_usec) {
@@ -1322,6 +1325,14 @@ dist_process(distributor * o)
 				/* problem, time out has occured */
 				__check_time_out_list(o);
 				continue;
+			}
+			clktick = (o->idleClockTick.tv_sec * 1000) + o->idleClockTick.tv_usec / 1000;
+			if (clktick < timeout) {
+			  /* clock tick is sooner */
+			  timeout = clktick;
+			  clockTickFlag = 1;
+			} else {
+			  clockTickFlag = 0;
 			}
 		} else {
 			/* no timeout setup default */
