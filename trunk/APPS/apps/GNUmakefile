@@ -9,7 +9,7 @@ include $(TOPDIR)/GNUmakeconfig
 include $(TOPDIR)/GNUmakerules
 
 LOCAL_CFLAGS=-g
-LDFLAGS= -lsctp
+LDFLAGS= 
 
 ifeq ($(GUESS_HOST),Darwin)
 LOCAL_LIBS+= -L/usr/local/lib -L/usr/lib  -L../../KERN/usr.lib  -lreadline -lm -lpthread
