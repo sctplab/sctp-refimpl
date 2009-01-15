@@ -2,7 +2,7 @@
 
 This file is part of the SCTP reference Implementation
 
-$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.5 2008-12-26 14:45:12 randall Exp $
+$Header: /usr/sctpCVS/APPS/baselib/distributor.h,v 1.6 2009-01-15 14:35:15 randall Exp $
 */
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -69,7 +69,7 @@ There are still LOTS of bugs in this code... I always run on the motto
 #include <dlist.h>
 #include <hlist.h>
 #include <HashedTbl.h>
-
+#include <sys/queue.h>
 /*
  * This is the main distributor class. You ususally
  * build one of these in your main, build other
@@ -307,12 +307,16 @@ typedef struct hashableTimeEnt {
 }hashableTimeEnt;
 
 typedef struct timerEntry{
+  LIST_ENTRY(timerEntry) next;
   struct timeval started;
   struct timeval expireTime;
   hashableTimeEnt ent;
   u_long tv_sec;
   u_long tv_usec;
 }timerEntry;
+
+#define TIMERS_NUMBER_OF_ENT 3600 /* 1 for every second in an hour */
+LIST_HEAD(timerentries, timerEntry);
 
 typedef struct fdEntry{
   int onTheList;
@@ -361,8 +365,11 @@ typedef struct distributor{
   int numused;
   int timer_issued_cnt;
   struct pollfd *fdlist;
-  hlist_t *timerlist;
+  struct timerentries  timers[TIMERS_NUMBER_OF_ENT];
+  timerEntry *soonest_timer;
   HashedTbl *timerhash;
+  int lasttimeoutchk;
+  int timer_cnt;
   int notdone;
   struct timeval lastKnownTime;
   struct timeval idleClockTick;
