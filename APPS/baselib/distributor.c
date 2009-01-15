@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.2 2008-12-26 14:45:12 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.3 2009-01-15 14:35:15 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -194,21 +194,6 @@ createDistributor()
 		o->fdlist[i].events = 0;
 		o->fdlist[i].revents = 0;
 	}
-	o->timerlist = hlist_create("timer list", DIST_TIMER_START_CNT);
-	if (o->timerlist == NULL) {
-		/* failed to create */
-		FREE(o->fdlist);
-		destroy_hashDlist(o->msgSubZeroNoStrm);
-		destroy_hashableHash(o->msgSubZero);
-		HashedTbl_destroy(o->msgSubscribers);
-		dlist_destroy(o->msgSubscriberList);
-		HashedTbl_destroy(o->fdSubscribers);
-		dlist_destroy(o->fdSubscribersList);
-		dlist_destroy(o->lazyClockTickList);
-		dlist_destroy(o->startStopList);
-		FREE(o);
-		return (NULL);
-	}
 	o->tmp_timer_list = hlist_create("tmp timer list", DIST_TIMER_START_CNT);
 	if (o->tmp_timer_list == NULL) {
 		FREE(o->fdlist);
@@ -220,7 +205,6 @@ createDistributor()
 		dlist_destroy(o->fdSubscribersList);
 		dlist_destroy(o->lazyClockTickList);
 		dlist_destroy(o->startStopList);
-		hlist_destroy(o->timerlist);
 		FREE(o);
 		return (NULL);
 	}
@@ -240,7 +224,6 @@ createDistributor()
 	    sizeof(o->msgSubZeroNoStrm->streamNo));
 	if (ret != LIB_STATUS_GOOD) {
 		/* We have a problem. bail. */
-		hlist_destroy(o->timerlist);
 		FREE(o->fdlist);
 		destroy_hashDlist(o->msgSubZeroNoStrm);
 		destroy_hashableHash(o->msgSubZero);
@@ -250,7 +233,6 @@ createDistributor()
 		dlist_destroy(o->fdSubscribersList);
 		dlist_destroy(o->lazyClockTickList);
 		dlist_destroy(o->startStopList);
-		hlist_destroy(o->timerlist);
 		hlist_destroy(o->tmp_timer_list);
 		FREE(o);
 		return (NULL);
@@ -264,7 +246,6 @@ createDistributor()
 	    sizeof(int));
 	if (ret != LIB_STATUS_GOOD) {
 		/* We have a problem. bail. */
-		hlist_destroy(o->timerlist);
 		FREE(o->fdlist);
 		destroy_hashDlist(o->msgSubZeroNoStrm);
 		destroy_hashableHash(o->msgSubZero);
@@ -280,7 +261,6 @@ createDistributor()
 	}
 	o->timerhash = HashedTbl_create("Master Hash of Timers", DIST_TIMER_START_CNT);
 	if (o->timerhash == NULL) {
-		hlist_destroy(o->timerlist);
 		FREE(o->fdlist);
 		destroy_hashDlist(o->msgSubZeroNoStrm);
 		destroy_hashableHash(o->msgSubZero);
@@ -294,6 +274,12 @@ createDistributor()
 		FREE(o);
 		return (NULL);
 	}
+
+	for(i=0; i<TIMERS_NUMBER_OF_ENT; i++) {
+	  /* Initialize the timer wheel */
+	  LIST_INIT(&o->timers[i]);
+	}
+
 	/* set the I am not done flag */
 	o->notdone = 1;
 	o->no_dup_timer = 1;
@@ -311,7 +297,7 @@ void
 destroyDistributor(distributor * o)
 {
 	timerEntry *te;
-	void *v;
+	int i;
 	fdEntry *fe;
 	hashableHash *hh;
 	hashableDlist *he;
@@ -330,17 +316,26 @@ destroyDistributor(distributor * o)
 	 */
 
 	/* the list of timers first. */
-	hlist_reset(o->timerlist);
-	while ((te = (timerEntry *) hlist_getNext(o->timerlist)) != NULL) {
+	for (i=0; i<TIMERS_NUMBER_OF_ENT ;i++) {
+	  while((te = LIST_FIRST(&o->timers[i])) != NULL) {
+		LIST_REMOVE(te, next);
 		FREE(te);
+	  }
 	}
-	hlist_destroy(o->timerlist);
-
-	while ((v = hlist_getNext(o->tmp_timer_list)) != NULL) {
-		v = NULL;
+	/* If we exited from a timer, the tmp list may have
+	 * te's in it that are not on the wheel. Free them too.
+	 */
+ 	while ((te = (timerEntry *)hlist_getNext(o->tmp_timer_list)) != NULL) {
+	  FREE(te);
 	}
 	hlist_destroy(o->tmp_timer_list);
 
+	/* We just nuke this list since the memory is kept in
+	 * the wheel
+	 */
+ 	HashedTbl_destroy(o->timerhash);
+
+	
 	/* now FREE audit tick list */
 	dlist_reset(o->lazyClockTickList);
 	while ((at = (auditTick *) dlist_getNext(o->lazyClockTickList)) != NULL) {
@@ -407,10 +402,8 @@ dist_pull_timer(distributor * o, timerFunc f, void *a, void *b, int entry)
 {
 	/* find the first timer with matching function and args */
 	/* and remove it from the list */
-	timerEntry *pe, *pf, *pose;
+    timerEntry *pe;
 	hashableTimeEnt h;
-	int pos_worked = 0;
-
 	if (o->no_dup_timer) {
 		entry = 0;
 	}
@@ -419,143 +412,140 @@ dist_pull_timer(distributor * o, timerFunc f, void *a, void *b, int entry)
 	h.arg1 = a;
 	h.arg2 = b;
 	h.timer_issued_cnt = entry;
-	/* See if we can find a positioning entry */
-	pose = (timerEntry *) HashedTbl_lookup(o->timerhash,
-	    &h,
-	    sizeof(h),
-	    NULL);
-	if (pose) {
-		if (hlist_moveToThis(o->timerlist, pose) != LIB_STATUS_GOOD) {
-			/* Did not find it */
-			hlist_reset(o->timerlist);
-		} else {
-			pos_worked = 1;
-		}
-	} else {
-		hlist_reset(o->timerlist);
+	/* See if we can find the timer */
+	pe = (timerEntry *) HashedTbl_lookup(o->timerhash,
+										 &h,
+										 sizeof(h),
+										 NULL);
+	if (pe) {
+	    /* we found it - remove it */
+	    LIST_REMOVE(pe, next);
+		HashedTbl_remove(o->timerhash, (void *)&pe->ent,
+						 sizeof(hashableTimeEnt), NULL);
 	}
-	while ((pe = (timerEntry *) hlist_get(o->timerlist)) != NULL) {
-		if ((pe->ent.action == f) &&
-		    (pe->ent.arg1 == a) &&
-		    (pe->ent.arg2 == b) &&
-		    (pe->ent.timer_issued_cnt == entry)
-		    ) {
-			pf = (timerEntry *) hlist_getThis(o->timerlist);
-			if (pf != pe) {
-				/*
-				 * tragic list failure, here during debug
-				 * only.
-				 */
-				abort();
-				return (NULL);
-			} else {
-				HashedTbl_remove(o->timerhash, (void *)&pe->ent, sizeof(hashableTimeEnt), NULL);
-				return (pe);
-			}
-		}
-	}
-	return (NULL);
+	return (pe);
 }
 
 int
 dist_TimerStart(distributor * o, timerFunc f, u_long a, u_long b, void *c, void *d)
 {
-	int ret;
-	timerEntry *te = NULL, *pe;
-	int used_entry = 0;
+  int ret, listentry;
+  struct timerentries *thelist;
+  struct timerEntry *te = NULL, *pe, *nxt;
+  int used_entry = 0;
 
-	if (o->no_dup_timer) {
-		te = dist_pull_timer(o, f, c, d, 0);
-	}
-	/* allocate a new timer element */
+  if (o->no_dup_timer) {
+	te = dist_pull_timer(o, f, c, d, 0);
+  }
+  /* allocate a new timer element */
+  if (te == NULL) {
+	te = (timerEntry *) CALLOC(1, sizeof(timerEntry));
 	if (te == NULL) {
-		te = (timerEntry *) CALLOC(1, sizeof(timerEntry));
-		if (te == NULL) {
-		  DEBUG_PRINTF("dist:Can't get memory for timer entry??\n");
-		  return (-1);
-		}
+	  DEBUG_PRINTF("dist:Can't get memory for timer entry??\n");
+	  return (-1);
 	}
-	memset(te, 0, sizeof(timerEntry));
-	te->ent.arg1 = c;
-	te->ent.arg2 = d;
-	te->ent.action = f;
-	if (o->no_dup_timer == 0) {
-		te->ent.timer_issued_cnt = o->timer_issued_cnt;
-		used_entry = te->ent.timer_issued_cnt;
-		o->timer_issued_cnt++;
-		if (o->timer_issued_cnt == 0x7fffffff) {
-			o->timer_issued_cnt = 1;
-		}
-	} else {
-		used_entry = te->ent.timer_issued_cnt = 0;
+  } else {
+	/* We are re-using a timer */
+	o->timer_cnt--;
+  }
+  memset(te, 0, sizeof(timerEntry));
+  te->ent.arg1 = c;
+  te->ent.arg2 = d;
+  te->ent.action = f;
+  if (o->no_dup_timer == 0) {
+	te->ent.timer_issued_cnt = o->timer_issued_cnt;
+	used_entry = te->ent.timer_issued_cnt;
+	o->timer_issued_cnt++;
+	if (o->timer_issued_cnt == 0x7fffffff) {
+	  o->timer_issued_cnt = 1;
 	}
-	HashedTbl_enter(o->timerhash, (void *)&te->ent, (void *)te, sizeof(hashableTimeEnt));
-	te->tv_sec = a;
-	te->tv_usec = b;
+  } else {
+	used_entry = te->ent.timer_issued_cnt = 0;
+  }
+  HashedTbl_enter(o->timerhash, (void *)&te->ent, (void *)te, sizeof(hashableTimeEnt));
+  te->tv_sec = a;
+  te->tv_usec = b;
 #ifdef MINIMIZE_TIME_CALLS
-	te->started.tv_sec = o->lastKnownTime.tv_sec;
-	te->started.tv_usec = o->lastKnownTime.tv_usec;
+  te->started.tv_sec = o->lastKnownTime.tv_sec;
+  te->started.tv_usec = o->lastKnownTime.tv_usec;
 #else
-	gettimeofday(&te->started, (struct timezone *)NULL);
-	/*
-	 * update the time, which is used before we go back into the
-	 * poll()/select().
-	 */
-	o->lastKnownTime.tv_sec = te->started.tv_sec;
-	o->lastKnownTime.tv_usec = te->started.tv_usec;
+  gettimeofday(&te->started, (struct timezone *)NULL);
+  /*
+   * update the time, which is used before we go back into the
+   * poll()/select().
+   */
+  o->lastKnownTime.tv_sec = te->started.tv_sec;
+  o->lastKnownTime.tv_usec = te->started.tv_usec;
 #endif
-	/* now setup the expire time */
-	te->expireTime.tv_sec = te->started.tv_sec + a;
-	te->expireTime.tv_usec = te->started.tv_usec + b;
-
-	while (te->expireTime.tv_usec > 1000000) {
-		te->expireTime.tv_sec++;
-		te->expireTime.tv_usec -= 1000000;
-	}
-	/*
-	 * put in a special precaution because I am paranoid. Set bad status
-	 * in case my logic is wrong :/
-	 */
-	ret = -1;
-	/* carefully place it on the list */
-	hlist_reset(o->timerlist);
-	while ((pe = (timerEntry *) hlist_get(o->timerlist)) != NULL) {
-		if (pe->expireTime.tv_sec > te->expireTime.tv_sec) {
-			/* this one expires after the new one */
-			ret = hlist_insertHere(o->timerlist, (void *)te);
-			break;
-		} else if (pe->expireTime.tv_sec == te->expireTime.tv_sec) {
-			/*
-			 * got to check usec's since equal seconds of
-			 * expiration
-			 */
-			if (pe->expireTime.tv_usec > te->expireTime.tv_usec) {
-				/*
-				 * ok we are expiring some time sooner than
-				 * this dude
-				 */
-				ret = hlist_insertHere(o->timerlist, (void *)te);
-				break;
-			}
-		}
+  /* now setup the expire time */
+  te->expireTime.tv_sec = te->started.tv_sec + a;
+  te->expireTime.tv_usec = te->started.tv_usec + b;
+  while (te->expireTime.tv_usec > 1000000) {
+	te->expireTime.tv_sec++;
+	te->expireTime.tv_usec -= 1000000;
+  }
+  /*
+   * put in a special precaution because I am paranoid. Set bad status
+   * in case my logic is wrong :/
+   */
+  ret = -1;
+  /* carefully place it on the right list in the wheel */
+	
+  listentry = te->expireTime.tv_sec % TIMERS_NUMBER_OF_ENT;
+  thelist = &o->timers[listentry];
+  pe = LIST_FIRST(thelist);
+  if (pe) {
+	do {
+	  if (pe->expireTime.tv_sec > te->expireTime.tv_sec) {
+		/* this one expires after the new one */
+		LIST_INSERT_BEFORE(pe, te, next);
+		o->timer_cnt++;
+		break;
+	  } else if (pe->expireTime.tv_sec == te->expireTime.tv_sec) {
 		/*
-		 * otherwise we expire after this one and fall out hitting
-		 * the next get.
+		 * got to check usec's since equal seconds of
+		 * expiration
 		 */
+		if (pe->expireTime.tv_usec > te->expireTime.tv_usec) {
+		  /*
+		   * ok we are expiring some time sooner than
+		   * this dude
+		   */
+		  LIST_INSERT_BEFORE(pe, te, next);
+		  o->timer_cnt++;
+		  break;
+		}
+	  }
+	  nxt = LIST_NEXT(pe, next);
+	  if (nxt == NULL) {
+		/* Goes at the tail */
+		LIST_INSERT_AFTER(pe, te, next);
+		o->timer_cnt++;
+		break;
+	  }
+	  pe = nxt;
+	}while (pe);
+
+  } else {
+	/* nothing in the list */
+	LIST_INSERT_HEAD(&o->timers[listentry], te, next);
+	o->timer_cnt++;
+  }
+  if (o->soonest_timer == NULL) {
+	o->soonest_timer = te;
+  } else {
+	/* Do we have a new low one to cache */
+	if(o->soonest_timer->expireTime.tv_sec > te->expireTime.tv_sec) {
+	  /* Yes */
+	  o->soonest_timer = te;
+	} else if (o->soonest_timer->expireTime.tv_sec == te->expireTime.tv_sec) {
+	  if (o->soonest_timer->expireTime.tv_usec > te->expireTime.tv_usec) {
+		/* Yes */
+		o->soonest_timer = te;
+	  }
 	}
-	if (pe == NULL) {
-		/* at the end of the list, and never got in append it. */
-		ret = hlist_append(o->timerlist, (void *)te);
-	}
-	hlist_reset(o->timerlist);
-	if (ret != LIB_STATUS_GOOD) {
-		/* we could not insert it into the list */
-		/* clean up and fail */
-		FREE(te);
-		return (-1);
-	}
-	/* and now return */
-	return (used_entry);
+  }
+  return (used_entry);
 }
 
 int
@@ -569,7 +559,16 @@ dist_TimerStop(distributor * o, timerFunc f, void *a, void *b, int entry)
 	if (pe == NULL) {
 		return (LIB_STATUS_BAD);
 	}
+	if(o->soonest_timer == pe) {
+	  o->soonest_timer = NULL;
+	}
+	o->timer_cnt--;
+	printf("timer_cnt now:%d (reduce 0) pe:%p removed\n", o->timer_cnt, pe);
 	FREE(pe);
+	if (o->timer_cnt < 0) {
+	  printf("timer disparity - 1\n");
+	  abort();
+	}
 	return (LIB_STATUS_GOOD);
 }
 
@@ -1021,36 +1020,48 @@ void
 __check_time_out_list(distributor * o)
 {
 	/* some timeout has occured ? */
-	timerEntry *te;
-	hlist_hlink *dl, *tmpl;
-
-	tmpl = NULL;
+    timerEntry *te, *nxt;
+	struct timerentries *curlist;
+	int start, stop, i;
 	/* first get the time */
 	gettimeofday(&o->lastKnownTime, (struct timezone *)NULL);
-
+	start = o->lasttimeoutchk;
+	stop = o->lastKnownTime.tv_sec % TIMERS_NUMBER_OF_ENT;
 	/* get each one and have a look */
-	hlist_reset(o->timerlist);
-	while ((te = (timerEntry *) hlist_get(o->timerlist)) != NULL) {
+	for (i=start; i<=stop; i++) {
+	  curlist = &o->timers[i];
+	  te = LIST_FIRST(curlist);
+	  while(te != NULL) {
+		nxt = LIST_NEXT(te, next);
 		if ((te->expireTime.tv_sec < o->lastKnownTime.tv_sec) ||
 		    ((te->expireTime.tv_sec == o->lastKnownTime.tv_sec) &&
 		    (te->expireTime.tv_usec < o->lastKnownTime.tv_usec))
 		    ) {
-			/* ok this one has expired */
-			dl = hlist_getThisHlist(o->timerlist);
-			if (dl) {
-				(void)hlist_appendhlink(o->tmp_timer_list, dl);
-			}
+		  
+		  hlist_append(o->tmp_timer_list, te);
+		  LIST_REMOVE(te, next);
+		  o->timer_cnt--;
+		  if (o->timer_cnt < 0) {
+			printf("timer disparity - 2\n");
+			abort();
+		  }
 		} else {
 			/* ok the time is beyond this one I am looking at */
 			/* we should have no more after this */
 			break;
 		}
+		te = nxt;
+	  }
 	}
+	o->lasttimeoutchk = stop;
 	/* call every timer that is up on our temp list */
 	hlist_reset(o->tmp_timer_list);
 	while ((te = (timerEntry *) hlist_getNext(o->tmp_timer_list)) != NULL) {
 		HashedTbl_remove(o->timerhash, (void *)&te->ent, sizeof(hashableTimeEnt), NULL);
 		(*te->ent.action) (te->ent.arg1, te->ent.arg2, te->ent.timer_issued_cnt);
+		if(o->soonest_timer == te) {
+		  o->soonest_timer = NULL;
+		}
 		FREE(te);
 	}
 }
@@ -1129,6 +1140,42 @@ dist_startupChange(distributor * o, startStopFunc sf, void *arg, int howmask)
 }
 
 
+timerEntry *
+__dist_get_next_to_expire(distributor *o)
+{
+  int i;
+  timerEntry *te, *lowest;
+  if (o->timer_cnt == 0) {
+	return (NULL);
+  }
+  if (o->soonest_timer)
+	return (o->soonest_timer);
+  /* need to find the next timer to expire */
+  lowest = NULL;
+  for (i=0; i<TIMERS_NUMBER_OF_ENT; i++) {
+	te = LIST_FIRST(&o->timers[i]);
+	if (te) {
+	  /* is it the lowest? */
+	  if (lowest == NULL) {
+		/* First one we saw */
+		lowest = te;
+	  } else {
+		/* Ok lets check */
+		if(te->expireTime.tv_sec < lowest->tv_sec) {
+		  /* A new winner */
+		  lowest = te;
+		}
+		/* We don't check usec, since those all fall
+		 * in the same bucket.
+		 */
+	  }
+	}
+  }
+  /* cache it and return */
+  o->soonest_timer = lowest;
+  return (lowest);
+}
+	 
 int
 dist_process(distributor * o)
 {
@@ -1154,11 +1201,13 @@ dist_process(distributor * o)
 		return (LIB_STATUS_BAD);
 	}
 	i = 0;
+	gettimeofday(&o->lastKnownTime, (struct timezone *)NULL);
 	doingMultipleReads = 0;
 	__sendStartStopEvent(o, DIST_CALL_ME_ON_START);
+	/* Set the point on the wheel where we start */
+	o->lasttimeoutchk = o->lastKnownTime.tv_sec % TIMERS_NUMBER_OF_ENT;
 	while (o->notdone) {
-		hlist_reset(o->timerlist);
-		te = (timerEntry *) hlist_get(o->timerlist);
+	    te = __dist_get_next_to_expire(o);
 #ifdef USE_SELECT
 		/* spin through and setup things. */
 		FD_ZERO(&readfds);
@@ -1215,6 +1264,11 @@ dist_process(distributor * o)
 				if (timeout > 11) {
 					timeout -= 10;
 				}
+				/* Now round up a bit to make sure we have
+				 * a timeout, else wise we end up with
+				 * a situation where we have a 3 ms to.
+				 */
+				timeout += 9;
 			} else {
 				/* expire time is past? */
 				timeout = 0;
@@ -1488,7 +1542,7 @@ dist_changelazyclock(distributor * o, struct timeval *tm)
 int
 dist_set_No_Dup_timer(distributor * o)
 {
-	if (o->timerlist->cntIn) {
+	if (o->timer_cnt) {
 		return (LIB_STATUS_BAD);
 	}
 	o->no_dup_timer = 1;
@@ -1498,7 +1552,7 @@ dist_set_No_Dup_timer(distributor * o)
 int
 dist_clr_No_Dup_timer(distributor * o)
 {
-	if (o->timerlist->cntIn) {
+	if (o->timer_cnt) {
 		return (LIB_STATUS_BAD);
 	}
 	o->no_dup_timer = 0;
