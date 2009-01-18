@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.6 2009-01-15 22:03:43 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/baselib/distributor.c,v 1.7 2009-01-18 11:28:33 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -1224,7 +1224,6 @@ __dist_get_next_to_expire(distributor *o)
 
   }
   /* cache it and return */
-  printf("fall return %p\n", lowest);
   o->soonest_timer = lowest;
   return (lowest);
 }
