@@ -1000,6 +1000,7 @@ struct xsctp_tcb {
 	uint16_t remote_port;                   /* sctpAssocEntry 4   */
 	struct sctp_timeval start_time;         /* sctpAssocEntry 16  */
 	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
+	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
 };
 
 struct xsctp_laddr {
