@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 188067 2009-02-03 11:04:03Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -677,8 +677,9 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 	oldIrql = KeRaiseIrqlToDpcLevel();
 #endif
 
-	SCTP_INP_INFO_WLOCK();
+	SCTP_INP_INFO_RLOCK();
 	old_sctp_udp_tunneling_port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
+	SCTP_INP_INFO_RUNLOCK();
 	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
 	if (error == 0) {
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port), SCTPCTL_UDP_TUNNELING_PORT_MIN, SCTPCTL_UDP_TUNNELING_PORT_MAX);
@@ -687,6 +688,7 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 		  error = 0;
 		  goto out;
 		}
+		SCTP_INP_INFO_WLOCK();
 		if (old_sctp_udp_tunneling_port) {
 			sctp_over_udp_stop();
 		}
@@ -698,9 +700,9 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 #else
 		sctp_over_udp_restart();
 #endif
+		SCTP_INP_INFO_WUNLOCK();
 	}
  out:
-	SCTP_INP_INFO_WUNLOCK();
 #if defined(__Windows__)
 	KeLowerIrql(oldIrql);
 #endif
