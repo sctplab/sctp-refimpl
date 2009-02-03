@@ -9,5 +9,6 @@
 - Bugfix: Clear vtag entries correctly on expiration.
 - Bugfix: shutdown() indicates ENOTCONN when called for unconnected
           1-to-1 style sockets.
-As of 12/08/2008 all items sync'd to Head in FreeBSD8.
---------------
+- Bugfix: In sctp Auth code (Peter Lei).
+- Add support for devices that support SCTP csum offload (igb).
+- Add missing sctp_associd to mib sysctl xsctp_tcb structure.
