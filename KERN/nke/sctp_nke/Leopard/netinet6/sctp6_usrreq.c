@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 188067 2009-02-03 11:04:03Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -232,18 +232,21 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #if defined(__FreeBSD__) 
 #if __FreeBSD_version >= 800000
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
-		"sctp_input(): Packet received on %s with csum_flags 0x%x.\n",
+		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
 		if_name(m->m_pkthdr.rcvif),
 		m->m_pkthdr.csum_flags);
 #else
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
-		"sctp_input(): Packet received on %s with csum_flags 0x%x.\n",
+		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
 		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
 #else 
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
-		"sctp_input(): Packet received on %s%d with csum_flags 0x%x.\n",
+		"sctp_input(): Packet of length %d received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
 		m->m_pkthdr.rcvif->if_name,
 		m->m_pkthdr.rcvif->if_unit,
 		m->m_pkthdr.csum_flags);
