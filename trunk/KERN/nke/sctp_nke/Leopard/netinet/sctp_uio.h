@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 188067 2009-02-03 11:04:03Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -1000,7 +1000,13 @@ struct xsctp_tcb {
 	uint16_t remote_port;                   /* sctpAssocEntry 4   */
 	struct sctp_timeval start_time;         /* sctpAssocEntry 16  */
 	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
-	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+#if defined(__FreeBSD__)
+#if __FreeBSD_version >= 800000
+     sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+#endif
+#else
+     sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+#endif
 };
 
 struct xsctp_laddr {
