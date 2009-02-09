@@ -971,6 +971,7 @@ struct xsctp_inpcb {
 #if defined(__Windows__)
 	uint16_t padding;
 #endif
+  uint32_t extra_padding[8]; /* future */
 };
 
 struct xsctp_tcb {
@@ -1007,12 +1008,14 @@ struct xsctp_tcb {
 #else
      sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
 #endif
+    uint32_t extra_padding[8]; /* future */
 };
 
 struct xsctp_laddr {
 	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
 	uint32_t last;
 	struct sctp_timeval start_time;  /* sctpAssocLocalAddrEntry 3   */
+    uint32_t extra_padding[8]; /* future */
 };
 
 struct xsctp_raddr {
@@ -1032,6 +1035,7 @@ struct xsctp_raddr {
 	uint8_t padding;
 #endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
+    uint32_t extra_padding[8]; /* future */
 };
 
 #define SCTP_MAX_LOGGING_SIZE 30000
