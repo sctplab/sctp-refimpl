@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 188067 2009-02-03 11:04:03Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 188299 2009-02-08 03:03:55Z piso $");
 #endif
 
 #include <sys/types.h>
@@ -601,7 +601,7 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
  *
  *		none
  */
-static uint32_t
+uint32_t
 update_crc32(uint32_t crc32c,
     unsigned char *buffer,
     unsigned int length)
@@ -699,7 +699,7 @@ old_update_crc32(uint32_t crc32c,
 }
 
 
-static uint32_t
+uint32_t
 sctp_finalize_crc32(uint32_t crc32c)
 {
 	uint32_t result;
@@ -731,8 +731,19 @@ sctp_finalize_crc32(uint32_t crc32c)
 #endif
 	return (crc32c);
 }
+#else
+uint32_t
+update_crc32(uint32_t crc32c, unsigned char *buffer, unsigned int length)
+{
+	return (0);
+}
 
-#endif /* !defined(SCTP_WITH_NO_CSUM)*/
+uint32_t
+sctp_finalize_crc32(uint32_t crc32c)
+{
+	return (0);
+}
+#endif				/* !defined(SCTP_WITH_NO_CSUM) */
 
 #if defined(SCTP_WITH_NO_CSUM)
 uint32_t
