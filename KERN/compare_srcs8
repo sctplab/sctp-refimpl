@@ -7,7 +7,7 @@ else
 echo use src as the src tree
 SRC=src
 fi
-./export_to_freebsd 800056
+./export_to_freebsd 800000
 cd export_freebsd/netinet
 for j in `ls *.c *.h`
 do
