@@ -507,11 +507,13 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.state = SCTP_GET_STATE(&stcb->asoc); /* FIXME */
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
-			/* 7.0 does not support this */
+			/* 7.0 does not support these */
 			xstcb.assoc_id = sctp_get_associd(stcb);
+			xstcb.peers_rwnd = stcb->asoc.peers_rwnd;
 #endif			
 #else
 			xstcb.assoc_id = sctp_get_associd(stcb);
+			xstcb.peers_rwnd = stcb->asoc.peers_rwnd;
 #endif
 			xstcb.in_streams = stcb->asoc.streamincnt;
 			xstcb.out_streams = stcb->asoc.streamoutcnt;
@@ -533,7 +535,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.cumulative_tsn = stcb->asoc.last_acked_seq;
 			xstcb.cumulative_tsn_ack = stcb->asoc.cumulative_tsn;
 			xstcb.mtu = stcb->asoc.smallest_mtu;
-			xstcb.peers_rwnd = stcb->asoc.peers_rwnd;
 			xstcb.refcnt = stcb->asoc.refcnt;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
