@@ -716,7 +716,7 @@ calculate_crc32c(uint32_t crc32c,
 #if !defined(SCTP_WITH_NO_CSUM)
 
 static uint32_t
-sctp_finalize_crc32(uint32_t crc32c)
+sctp_finalize_crc32c(uint32_t crc32c)
 {
 	uint32_t result;
 
