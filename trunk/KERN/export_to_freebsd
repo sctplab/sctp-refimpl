@@ -8,17 +8,19 @@ if test $1 -eq "800000"
 then
     ver=800056
     echo "using ver:$ver"
-else
+    prepare_script="freebsd_prepare8"
+fi
+if test $1 -ne "800000"
+then
     echo "using ver:$1"
     ver=$1
+    prepare_script="freebsd_prepare"
 fi
 if test $# -eq 2
 then
 prepare_script=$2
-else
-prepare_script=freebsd_prepare
 fi
-
+echo "prepare script is $prepare_script"
 for j in `cat export_freebsd_list`
 do
 	./$prepare_script $ver $j
