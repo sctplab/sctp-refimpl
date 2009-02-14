@@ -9,34 +9,34 @@ include $(TOPDIR)/GNUmakeconfig
 include $(TOPDIR)/GNUmakerules
 
 LOCAL_CFLAGS=-g
-LDFLAGS= -lsctp
+LDFLAGS=
 
 ifeq ($(GUESS_HOST),Darwin)
-LOCAL_LIBS+= -L/usr/local/lib -L/usr/lib  -L../../KERN/usr.lib  -lreadline -lm -lpthread
+LOCAL_LIBS+= -L/usr/local/lib -L/usr/lib  -L../../KERN/usr.lib  -lreadline -lm -lpthread -lsctp
 else
 ifeq ($(GUESS_HOST),LynxOS)
-LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm 
+LOCAL_LIBS+= -L/usr/local/v6/lib -mthreads -lnetinet -lnsl -lm  -lsctp
 else
 ifeq ($(GUESS_HOST),Linux)
-LOCAL_LIBS+= -lnsl -lm -ltermcap -lreadline 
+LOCAL_LIBS+= -lnsl -lm -ltermcap -lreadline  -lsctp
 else
 ifeq ($(GUESS_HOST),FreeBSD)
 LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline   -lpthread
 #LOCAL_LIBS+= /usr/local/v6/lib/libsctp.a -lm -lreadline
 else
 ifeq ($(GUESS_HOST),NetBSD)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap   -lpthread
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap   -lpthread -lsctp
 else
 ifeq ($(GUESS_HOST),OpenBSD)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap 
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lreadline -ltermcap  -lsctp
 else
 ifeq ($(GUESS_HOST),AIX)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lm
+LOCAL_LIBS+= -L/usr/local/v6/lib -lm -lsctp
 else
 ifeq ($(GUESS_HOST),SunOS)
-LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread -ltermcap -lreadline -lhistory 
+LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread -ltermcap -lreadline -lhistory  -lsctp
 else
-LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread 
+LOCAL_LIBS+= -L/usr/local/v6/lib -lsocket -lnsl -lm -lposix4 -lpthread  -lsctp
 endif
 endif
 endif
