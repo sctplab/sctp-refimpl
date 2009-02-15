@@ -1002,13 +1002,13 @@ struct xsctp_tcb {
 	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
-        sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
-        uint32_t extra_padding[8];              /* future */
+	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+	uint32_t extra_padding[8];              /* future */
 #endif
 #else
 	uint32_t peers_rwnd;
-        sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
-        uint32_t extra_padding[8];              /* future */
+	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+	uint32_t extra_padding[8];              /* future */
 #endif
 };
 
@@ -1016,7 +1016,7 @@ struct xsctp_laddr {
 	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
 	uint32_t last;
 	struct sctp_timeval start_time;  /* sctpAssocLocalAddrEntry 3   */
-    uint32_t extra_padding[8]; /* future */
+	uint32_t extra_padding[8];       /* future */
 };
 
 struct xsctp_raddr {
@@ -1036,7 +1036,7 @@ struct xsctp_raddr {
 	uint8_t padding;
 #endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
-    uint32_t extra_padding[8]; /* future */
+	uint32_t extra_padding[8];         /* future */
 };
 
 #define SCTP_MAX_LOGGING_SIZE 30000
