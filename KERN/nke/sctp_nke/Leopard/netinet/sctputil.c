@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 188067 2009-02-03 11:04:03Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 188387 2009-02-09 11:41:54Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -7019,7 +7019,9 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
 #include <sys/proc.h>
+#ifdef INET6
 #include <netinet6/sctp6_var.h>
+#endif
 
 #if __FreeBSD_version >= 800044
 static void
