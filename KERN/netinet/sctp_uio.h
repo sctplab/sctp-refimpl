@@ -971,7 +971,7 @@ struct xsctp_inpcb {
 #if defined(__Windows__)
 	uint16_t padding;
 #endif
-  uint32_t extra_padding[8]; /* future */
+	uint32_t extra_padding[8]; /* future */
 };
 
 struct xsctp_tcb {
@@ -1002,11 +1002,11 @@ struct xsctp_tcb {
 	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
-	uint32_t peers_rwnd;
         sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
         uint32_t extra_padding[8];              /* future */
 #endif
 #else
+	uint32_t peers_rwnd;
         sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
         uint32_t extra_padding[8];              /* future */
 #endif

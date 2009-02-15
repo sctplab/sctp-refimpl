@@ -40,7 +40,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 188388 2009-02-09 11:42:23Z rr
 #include <sys/socket.h>
 #include <sys/socketvar.h>
 #include <sys/uio.h>
+#if defined(__FreeBSD__)
 #include <sys/libkern.h>
+#endif
 #include <netinet/sctp.h>
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_crc32.h>
@@ -532,9 +534,9 @@ static uint32_t sctp_crc_tableil8_o88[256] =
 
 static uint32_t
 sctp_crc32c_sb8_64_bit(uint32_t crc,
-    unsigned char *p_buf,
-    uint32_t length,
-    uint32_t init_bytes)
+                       const unsigned char *p_buf,
+                       uint32_t length,
+                       uint32_t init_bytes)
 {
 	uint32_t li;
 	uint32_t term1, term2;
@@ -604,8 +606,8 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
  */
 static uint32_t
 multitable_crc32c(uint32_t crc32c,
-    unsigned char *buffer,
-    unsigned int length)
+                  const unsigned char *buffer,
+                  unsigned int length)
 {
 	uint32_t to_even_word;
 
@@ -688,8 +690,8 @@ static uint32_t sctp_crc_c[256] = {
 
 static uint32_t
 singletable_crc32c(uint32_t crc32c,
-		 unsigned char *buffer,
-		 unsigned int length)
+                   const unsigned char *buffer,
+                   unsigned int length)
 {
 	unsigned int i;
 
@@ -702,8 +704,8 @@ singletable_crc32c(uint32_t crc32c,
 
 static uint32_t
 calculate_crc32c(uint32_t crc32c,
-    const unsigned char *buffer,
-    unsigned int length)
+                 const unsigned char *buffer,
+                 unsigned int length)
 {
 	if (length < 4) {
 		return (singletable_crc32c(crc32c, buffer, length));
