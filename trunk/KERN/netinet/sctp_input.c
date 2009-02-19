@@ -3725,58 +3725,59 @@ static void
 sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk,
 							   struct sctp_stream_reset_add_strm  *str_add)
 {
-  /* Peer is requesting to add more streams.
-   * If its within our max-streams we will 
-   * allow it.
-   */
-  int num_stream,i;
-  uint32_t seq;
-  /* Get the number. */
-  seq = ntohl(str_add->request_seq);
-  num_stream = ntohs(str_add->number_of_streams);
-  /* Now what would be the new total? */
-  num_stream += stcb->asoc.streamincnt;
-  if(num_stream > stcb->asoc.max_inbound_streams) {
-	/* We must reject it they ask for to many */
-  denied:
-	sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
-	stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
-	stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+	/* Peer is requesting to add more streams.
+	 * If its within our max-streams we will 
+	 * allow it.
+	 */
+	uint16_t num_stream, i;
+	uint32_t seq;
 
-  } else {
-	/* Ok, we can do that :-) */
-	struct sctp_stream_in *oldstrm;
+	/* Get the number. */
+	seq = ntohl(str_add->request_seq);
+	num_stream = ntohs(str_add->number_of_streams);
+	/* Now what would be the new total? */
+	num_stream += stcb->asoc.streamincnt;
+	if (num_stream > stcb->asoc.max_inbound_streams) {
+		/* We must reject it they ask for to many */
+ denied:
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
+		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+	} else {
+		/* Ok, we can do that :-) */
+		struct sctp_stream_in *oldstrm;
 
-	/* save off the old */
-	oldstrm = stcb->asoc.strmin;
-	SCTP_MALLOC(stcb->asoc.strmin, struct sctp_stream_in *,  
-				(num_stream * sizeof(struct sctp_stream_in)),
-				SCTP_M_STRMI);
-	if (stcb->asoc.strmin == NULL){
-	  stcb->asoc.strmin = oldstrm;
-	  goto denied;
+		/* save off the old */
+		oldstrm = stcb->asoc.strmin;
+		SCTP_MALLOC(stcb->asoc.strmin, struct sctp_stream_in *,  
+		            (num_stream * sizeof(struct sctp_stream_in)),
+		            SCTP_M_STRMI);
+		if (stcb->asoc.strmin == NULL){
+			stcb->asoc.strmin = oldstrm;
+			goto denied;
+		}
+		/* copy off the old data */
+		memcpy(stcb->asoc.strmin, oldstrm,
+		       (stcb->asoc.streamincnt * sizeof(struct sctp_stream_in)));
+		/* Init the new streams */
+		for (i=stcb->asoc.streamincnt; i <num_stream; i++) {
+			TAILQ_INIT(&stcb->asoc.strmin[i].inqueue);
+			stcb->asoc.strmin[i].stream_no = i;
+			stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
+			stcb->asoc.strmin[i].delivery_started = 0;
+		}
+		SCTP_FREE(oldstrm, SCTP_M_STRMI);
+		/* update the size */
+		stcb->asoc.streamincnt = num_stream;
+		/* Send the ack */
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_PERFORMED);
+		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+		sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_INSTREAM_ADD_OK, stcb, 
+		                (uint32_t)stcb->asoc.streamincnt, NULL, SCTP_SO_NOT_LOCKED);
 	}
-	/* copy off the old data */
-	memcpy(stcb->asoc.strmin, oldstrm,
-		   (stcb->asoc.streamincnt * sizeof(struct sctp_stream_in)));
-	/* Init the new streams */
-	for (i=stcb->asoc.streamincnt; i <num_stream; i++) {
-	  TAILQ_INIT(&stcb->asoc.strmin[i].inqueue);
-	  stcb->asoc.strmin[i].stream_no = i;
-	  stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
-	  stcb->asoc.strmin[i].delivery_started = 0;
-	}
-	SCTP_FREE(oldstrm, SCTP_M_STRMI);
-	/* update the size */
-	stcb->asoc.streamincnt = num_stream;
-	/* Send the ack */
-	sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_PERFORMED);
-	stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
-	stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
-	sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_INSTREAM_ADD_OK, stcb, 
-					(uint32_t)stcb->asoc.streamincnt, NULL, SCTP_SO_NOT_LOCKED);
-  }
 }
+
 #if !defined(__Panda__)
 #ifdef __GNUC__
 __attribute__ ((noinline))
