@@ -928,7 +928,7 @@ struct sctpstat {
 	uint32_t  sctps_cached_chk;       /* Number of cached chunks used */
 	uint32_t  sctps_cached_strmoq;    /* Number of cached stream oq's used */
 	uint32_t  sctps_left_abandon;     /* Number of unread message abandonded by close */
-	uint32_t  sctps_send_burst_avoid; /* Send burst avoidance, already max burst inflight to net */
+	uint32_t  sctps_send_burst_avoid; /* Unused */
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
 
