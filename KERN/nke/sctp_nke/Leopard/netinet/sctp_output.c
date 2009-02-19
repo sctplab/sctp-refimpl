@@ -15579,10 +15579,7 @@ sctp_lower_sosend(struct socket *so,
 		} else {
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 				   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
-			if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
-				queue_only = 1;
-				SCTP_STAT_INCR(sctps_send_burst_avoid);
-			} else if (net->flight_size > net->cwnd) {
+			if (net->flight_size > net->cwnd) {
 				queue_only = 1;
 				SCTP_STAT_INCR(sctps_send_cwnd_avoid);
 			} else {
@@ -15860,10 +15857,7 @@ sctp_lower_sosend(struct socket *so,
 	} else {
 		un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 		           (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
-		if (net->flight_size > (net->mtu * stcb->asoc.max_burst)) {
-			queue_only = 1;
-			SCTP_STAT_INCR(sctps_send_burst_avoid);
-		} else if (net->flight_size > net->cwnd) {
+		if (net->flight_size > net->cwnd) {
 			queue_only = 1;
 			SCTP_STAT_INCR(sctps_send_cwnd_avoid);
 		} else {
