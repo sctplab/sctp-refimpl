@@ -135,14 +135,14 @@ sctp_init(void)
 void
 sctp_finish(void)
 {
-	sctp_pcb_finish();
-#if defined(__Windows__)
-	sctp_finish_sysctls();
-#endif
 #if defined(__APPLE__)
 	sctp_over_udp_stop();
 	sctp_address_monitor_stop();
 	sctp_stop_main_timer();
+#endif
+	sctp_pcb_finish();
+#if defined(__Windows__)
+	sctp_finish_sysctls();
 #endif
 }
 
