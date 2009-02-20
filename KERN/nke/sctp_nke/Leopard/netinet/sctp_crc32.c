@@ -556,7 +556,7 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
 		crc ^= (*p_buf++) << 16;
 		crc ^= (*p_buf++) << 24;
 #else
-		crc ^= *(uint32_t *) p_buf;
+		crc ^= *(const uint32_t *) p_buf;
 		p_buf += 4;
 #endif
 		term1 = sctp_crc_tableil8_o88[crc & 0x000000FF] ^
@@ -572,10 +572,10 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
 		crc ^= sctp_crc_tableil8_o40[*p_buf++];
 		crc ^= sctp_crc_tableil8_o32[*p_buf++];
 #else
-		term1 = sctp_crc_tableil8_o56[(*(uint32_t *) p_buf) & 0x000000FF] ^
-		    sctp_crc_tableil8_o48[((*(uint32_t *) p_buf) >> 8) & 0x000000FF];
+		term1 = sctp_crc_tableil8_o56[(*(const uint32_t *) p_buf) & 0x000000FF] ^
+		    sctp_crc_tableil8_o48[((*(const uint32_t *) p_buf) >> 8) & 0x000000FF];
 
-		term2 = (*(uint32_t *) p_buf) >> 16;
+		term2 = (*(const uint32_t *) p_buf) >> 16;
 		crc = crc ^
 		    term1 ^
 		    sctp_crc_tableil8_o40[term2 & 0x000000FF] ^
