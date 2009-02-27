@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.h 189121 2009-02-27 20:54:45Z rrs $");
 #endif
 
 #ifndef __sctp_output_h__
@@ -103,6 +103,11 @@ void sctp_send_cookie_ack(struct sctp_tcb *);
 void
 sctp_send_heartbeat_ack(struct sctp_tcb *, struct mbuf *, int, int,
     struct sctp_nets *);
+
+void
+sctp_remove_from_wheel(struct sctp_tcb *stcb,
+					   struct sctp_association *asoc,
+					   struct sctp_stream_out *strq, int holds_lock);
 
 
 void sctp_send_shutdown(struct sctp_tcb *, struct sctp_nets *);
