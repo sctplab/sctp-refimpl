@@ -44,7 +44,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 188605 2009-02-14 11:34:57Z rr
 #include <sys/libkern.h>
 #endif
 #include <netinet/sctp.h>
-#include <netinet/sctp_os.h>
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_pcb.h>
 
