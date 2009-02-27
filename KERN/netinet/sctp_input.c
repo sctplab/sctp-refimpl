@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 188854 2009-02-20 15:03:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 189121 2009-02-27 20:54:45Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5645,10 +5645,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 void
-sctp_input_with_port(i_pak, off, port)
-	struct mbuf *i_pak;
-	int off;
-	uint16_t port;
+sctp_input_with_port(struct mbuf *i_pak, int off, uint16_t port)
 #else
 #if defined(__Panda__)
 void
