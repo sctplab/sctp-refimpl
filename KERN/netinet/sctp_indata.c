@@ -4020,6 +4020,7 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	}
 	/* Now mark for resend */
 	tp1->sent = SCTP_DATAGRAM_RESEND;
+	asoc->sent_queue_retran_cnt++;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_WP, 
 			       tp1->whoTo->flight_size,
