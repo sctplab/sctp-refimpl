@@ -4005,9 +4005,7 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 			   struct sctp_nets *net,
 			   struct sctp_tmit_chunk *tp1)
 {
-	struct sctp_tmit_chunk *chk;
-
-	/* First setup this one and get it moved back */
+	/* First setup this by shrinking flight */
 	sctp_flight_size_decrease(tp1);
 	sctp_total_flight_decrease(stcb, tp1);
 	tp1->window_probe = 0;
@@ -4020,32 +4018,14 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 			       tp1->rec.data.TSN_seq);
 		return;
 	}
-	tp1->sent = SCTP_DATAGRAM_UNSENT;
+	/* Now mark for resend */
+	tp1->sent = SCTP_DATAGRAM_RESEND;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_WP, 
 			       tp1->whoTo->flight_size,
 			       tp1->book_size, 
 			       (uintptr_t)tp1->whoTo, 
 			       tp1->rec.data.TSN_seq);
-	}
-	TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-	TAILQ_INSERT_HEAD(&asoc->send_queue, tp1, sctp_next);
-	asoc->sent_queue_cnt--;
-	asoc->send_queue_cnt++;
-	/* Now all guys marked for RESEND on the sent_queue
-	 * must be moved back too.
-	 */
-	TAILQ_FOREACH(chk, &asoc->sent_queue, sctp_next) {
-		if (chk->sent == SCTP_DATAGRAM_RESEND) {
-			/* Another chunk to move */
-			chk->sent = SCTP_DATAGRAM_UNSENT;
-			/* It should not be in flight */
-			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
-			TAILQ_INSERT_AFTER(&asoc->send_queue, tp1, chk, sctp_next);
-			asoc->sent_queue_cnt--;
-			asoc->send_queue_cnt++;
-			sctp_ucount_decr(asoc->sent_queue_retran_cnt);
-		}
 	}
 }
 
