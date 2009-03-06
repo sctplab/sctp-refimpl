@@ -4005,11 +4005,8 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 			   struct sctp_nets *net,
 			   struct sctp_tmit_chunk *tp1)
 {
-	/* First setup this by shrinking flight */
-	sctp_flight_size_decrease(tp1);
-	sctp_total_flight_decrease(stcb, tp1);
 	tp1->window_probe = 0;
-	if ((tp1->sent == SCTP_FORWARD_TSN_SKIP) || (tp1->data == NULL)) {
+	if ((tp1->sent >= SCTP_DATAGRAM_ACKED) || (tp1->data == NULL)) {
 		/* TSN's skipped we do NOT move back. */
 		sctp_misc_ints(SCTP_FLIGHT_LOG_DWN_WP_FWD, 
 			       tp1->whoTo->flight_size,
@@ -4018,6 +4015,9 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 			       tp1->rec.data.TSN_seq);
 		return;
 	}
+	/* First setup this by shrinking flight */
+	sctp_flight_size_decrease(tp1);
+	sctp_total_flight_decrease(stcb, tp1);
 	/* Now mark for resend */
 	tp1->sent = SCTP_DATAGRAM_RESEND;
 	asoc->sent_queue_retran_cnt++;
@@ -4355,31 +4355,39 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
  again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+	  int to_ticks;
 		if (win_probe_recovery && (net->window_probe)) {
-			net->window_probe = 0;
 			win_probe_recovered=1;
 			/* Find first chunk that was used with window probe and clear the sent */
 			/*sa_ignore FREED_MEMORY*/
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 				if(tp1->window_probe) {
-					/* move back to data send queue */
 					sctp_window_probe_recovery(stcb, asoc, net, tp1);
 					break;
 				}
 			}
 		}
+		if (net->RTO == 0) {
+		  to_ticks  = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+		} else {
+		  to_ticks = MSEC_TO_TICKS(net->RTO);
+		}
 		if(net->flight_size) {
-			int to_ticks;
-			if (net->RTO == 0) {
-				to_ticks  = MSEC_TO_TICKS(stcb->asoc.initial_rto);
-			} else {
-				to_ticks = MSEC_TO_TICKS(net->RTO);
-			}
 			j++;
 			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
 						  sctp_timeout_handler, &net->rxt_timer);
+			if (net->window_probe) {
+			    net->window_probe = 0;
+			}
 		} else {
-			if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+		    if (net->window_probe) {
+			  /* In window probes we must assure a timer is still running there */
+			  net->window_probe = 0;
+			  if(!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+				SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
+									sctp_timeout_handler, &net->rxt_timer);
+			  }
+			}else if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 						stcb, net,
 						SCTP_FROM_SCTP_INDATA+SCTP_LOC_22);
@@ -5350,7 +5358,6 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if (win_probe_recovery && (net->window_probe)) {
-			net->window_probe = 0;
 			win_probe_recovered = 1;
 			/*-
 			 * Find first chunk that was used with 
@@ -5369,8 +5376,18 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			j++;
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 					 stcb->sctp_ep, stcb, net);
+			if (net->window_probe) {
+			}
 		} else {
-			if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+		    if (net->window_probe) {
+			  /* In window probes we must assure a timer is still running there */
+
+			  if(!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+								 stcb->sctp_ep, stcb, net);
+
+			  }
+			}else if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 						stcb, net,
 						SCTP_FROM_SCTP_INDATA+SCTP_LOC_22);
@@ -6250,8 +6267,8 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+	    int to_ticks;
 		if (win_probe_recovery && (net->window_probe)) {
-			net->window_probe = 0;
 			win_probe_recovered = 1;
 			/*
 			 * Find first chunk that was used with window probe
@@ -6266,30 +6283,37 @@ again:
 				}
 			}
 		}
+		if (net->RTO == 0) {
+		  to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+		} else {
+		  to_ticks = MSEC_TO_TICKS(net->RTO);
+		}
 		if (net->flight_size) {
-			int to_ticks;
 
-			if (net->RTO == 0) {
-				to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
-			} else {
-				to_ticks = MSEC_TO_TICKS(net->RTO);
-			}
 			j++;
 			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
 			    sctp_timeout_handler, &net->rxt_timer);
+			if (net->window_probe) {
+			  net->window_probe = 0;
+			}
 		} else {
-			if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				    stcb, net,
-				    SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
+		  if (net->window_probe) {
+			/* In window probes we must assure a timer is still running there */		      
+			net->window_probe = 0;
+			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
+									  sctp_timeout_handler, &net->rxt_timer);
+		  } else if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
+							stcb, net,
+							SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
+		  }
+		  if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
+			if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
+			  SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
+			  sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
+							  SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
 			}
-			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-					    SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
-				}
-			}
+		  }
 		}
 	}
 	if ((j == 0) &&
@@ -7749,7 +7773,6 @@ again:
 	j = 0;
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if (win_probe_recovery && (net->window_probe)) {
-			net->window_probe = 0;
 			win_probe_recovered = 1;
 			/*-
 			 * Find first chunk that was used with
@@ -7768,8 +7791,15 @@ again:
 			j++;
 			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
 			    stcb->sctp_ep, stcb, net);
+			if (net->window_probe) {
+			  net->window_probe = 0;
+			}
 		} else {
-			if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+		    if (net->window_probe) {
+			  net->window_probe = 0;
+			  sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+							   stcb->sctp_ep, stcb, net);
+			} else if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				    stcb, net,
 				    SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
