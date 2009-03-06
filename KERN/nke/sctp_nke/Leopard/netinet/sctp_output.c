@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 189121 2009-02-27 20:54:45Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 189444 2009-03-06 11:03:52Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -10183,7 +10183,7 @@ again_one_more_time:
 							SCTP_STAT_INCR_COUNTER64(sctps_fragusrmsgs);
 					}
 					if ((mtu == 0) || (r_mtu == 0) || (one_chunk)) {
-						if ( one_chunk ) {
+						if ((one_chunk) && (stcb->asoc.total_flight == 0)) {
 							data_list[0]->window_probe = 1;
 							net->window_probe = 1;
 						}
