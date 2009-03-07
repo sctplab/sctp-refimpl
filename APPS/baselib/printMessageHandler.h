@@ -90,8 +90,10 @@ struct print_msg_info {
 #define DEBUG_PRINTF_L3_ON 1
 
  */
-
-#define SEND_ALARM_MSG(parms...) syslog((LOG_LOCAL4|LOG_CRIT), parms)
+#define SEND_ALARM_CRIT(parms...) syslog((LOG_LOCAL4|LOG_CRIT), parms)
+#define SEND_ALARM_MAJR(parms...) syslog((LOG_LOCAL4|LOG_ALERT), parms)
+#define SEND_ALARM_MINR(parms...) syslog((LOG_LOCAL4|LOG_ERR), parms)
+#define SEND_ALARM_INFO(parms...) syslog((LOG_LOCAL4|LOG_INFO), parms)
 
 struct print_msg_info *
 create_printMessageHandler(distributor *o, int quietmode);
@@ -107,6 +109,8 @@ void printAnAddress(struct sockaddr *a);
 void printArry(uint8_t *data, int sz);
 
 void printSetOutput(char *fullpath);
+
+void printFlushOutput(void);
 
 void printCheckLogFile(int maxsize, int maxfiles);
 
