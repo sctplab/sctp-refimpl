@@ -306,7 +306,14 @@ printSetOutput(char *fullpath)
 	}
 }
 
-
+void
+printFlushOutput(void)
+{
+  if (print_output)
+    fflush(print_output);
+  else
+	fflush(stdout);
+}
 
 static void
 printRollLogFile(int maxfiles)
