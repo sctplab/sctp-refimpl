@@ -309,7 +309,7 @@ struct sctp_data_chunkrec {
 
 	/* ECN Nonce: Nonce Value for this chunk */
 	uint8_t ect_nonce;
-
+	uint8_t fwd_tsn_cnt;
 	/*
 	 * part of the Highest sacked algorithm to be able to stroke counts
 	 * on ones that are FR'd.

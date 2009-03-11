@@ -3898,6 +3898,13 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			/* no chance to advance, out of here */
 			break;
 		}
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
+			if (tp1->sent == SCTP_FORWARD_TSN_SKIP) {
+				sctp_misc_ints(SCTP_FWD_TSN_CHECK,
+					       asoc->advanced_peer_ack_point,
+					       tp1->rec.data.TSN_seq, 0, 0);
+			}
+		}
 		if (!PR_SCTP_ENABLED(tp1->flags)) {
 			/*
 			 * We can't fwd-tsn past any that are reliable aka
@@ -3949,8 +3956,12 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 */
 		if (tp1->sent == SCTP_FORWARD_TSN_SKIP) {
 			/* advance PeerAckPoint goes forward */
-			asoc->advanced_peer_ack_point = tp1->rec.data.TSN_seq;
-			a_adv = tp1;
+			if (compare_with_wrap(tp1->rec.data.TSN_seq, 
+					      asoc->advanced_peer_ack_point, 
+					      MAX_TSN)) {
+				asoc->advanced_peer_ack_point = tp1->rec.data.TSN_seq;
+				a_adv = tp1;
+			}
 		} else {
 			/*
 			 * If it is still in RESEND we can advance no
@@ -4626,10 +4637,6 @@ sctp_handle_sack(struct mbuf *m, int offset,
 	num_seg = ntohs(sack->num_gap_ack_blks);
 	a_rwnd = rwnd;
 
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
-		sctp_misc_ints(SCTP_SACK_LOG_NORMAL, cum_ack,
-			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
-	}
 	/* CMT DAC algo */
 	cmt_dac_flag = ch->ch.chunk_flags & SCTP_SACK_CMT_DAC;
 	num_dup = ntohs(sack->num_dup_tsns);
@@ -5444,6 +5451,11 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			 * on issues that will occur when the ECN NONCE
 			 * stuff is put into SCTP for cross checking.
 			 */
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
+				sctp_misc_ints(SCTP_FWD_TSN_CHECK,
+					       0xee, cum_ack, asoc->advanced_peer_ack_point,
+					       old_adv_peer_ack_point);
+			}
 			if (compare_with_wrap(asoc->advanced_peer_ack_point, old_adv_peer_ack_point,
 								  MAX_TSN)) {
 			  send_forward_tsn(stcb, asoc);
@@ -5453,6 +5465,13 @@ sctp_handle_sack(struct mbuf *m, int offset,
 			   */
 			  asoc->nonce_sum_check = 0;
 			  asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			} else if (lchk) {
+				/* try to FR fwd-tsn's that get lost too */
+				lchk->rec.data.fwd_tsn_cnt++;
+				if (lchk->rec.data.fwd_tsn_cnt > 3) {
+					send_forward_tsn(stcb, asoc);
+					lchk->rec.data.fwd_tsn_cnt = 0;
+				}
 			}
 		}
 		if (lchk) {
