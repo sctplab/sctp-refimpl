@@ -666,11 +666,28 @@ print_event_misc(struct sctp_cwnd_log *log)
 		       log->x.misc.log4);
 				       
 	} else if (log->from == SCTP_FWD_TSN_CHECK) {
-		printf("%s:%s advpeerack:%x tp1tsn:%x", 
-		       ts,
-		       from_str[log->from],
-		       log->x.misc.log1,
-		       log->x.misc.log2);
+		if (log->x.misc.log1 == 0xee) {
+			printf("%s:%s contemplate cum:%u apa:%u old-apa:%u\n", 
+			       ts,
+			       from_str[log->from],
+			       log->x.misc.log2,
+			       log->x.misc.log3,
+			       log->x.misc.log4);
+
+		} else if (log->x.misc.log1 == 0xff) {
+			printf("%s:%s output %u %u %u\n", 
+			       ts,
+			       from_str[log->from],
+			       log->x.misc.log2,
+			       log->x.misc.log3,
+			       log->x.misc.log4);
+		} else {
+			printf("%s:%s advpeerack:%u tp1tsn:%u\n", 
+			       ts,
+			       from_str[log->from],
+			       log->x.misc.log1,
+			       log->x.misc.log2);
+		}
 	} else if (log->from == SCTP_THRESHOLD_CLEAR) {
 		printf("%s:Clear asoc threshold old val:%d new val:%d FILE:%x LINE:%d\n",
 		       ts,
