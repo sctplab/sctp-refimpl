@@ -174,8 +174,11 @@ static char *from_str[]= {
 	/* 117 */ "log sack express",
 	/* 118 */ "tsn enters",
 	/* 119 */ "Tsn Enters in_data",
-	/* 120 */ "increment threshold",
-	/* 121 */ "max"
+	/* 120 */ "clear threshold",
+	/* 121 */ "increment threshold",
+	/* 122 */ "flight log down wp",
+	/* 123 */ "FWD TSN check"
+	/* 124 */ "max"
 
 };
 
@@ -662,6 +665,12 @@ print_event_misc(struct sctp_cwnd_log *log)
 		       log->x.misc.log3,
 		       log->x.misc.log4);
 				       
+	} else if (log->from == SCTP_FWD_TSN_CHECK) {
+		printf("%s:%s advpeerack:%x tp1tsn:%x", 
+		       ts,
+		       from_str[log->from],
+		       log->x.misc.log1,
+		       log->x.misc.log2);
 	} else if (log->from == SCTP_THRESHOLD_CLEAR) {
 		printf("%s:Clear asoc threshold old val:%d new val:%d FILE:%x LINE:%d\n",
 		       ts,
