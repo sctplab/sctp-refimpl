@@ -5756,7 +5756,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			return;
 		}
 		SCTP_STAT_INCR(sctps_fwdtsn_map_over);
-	slide_out:
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		cumack_set_flag = 1;
 		asoc->mapping_array_base_tsn = new_cum_tsn + 1;
