@@ -8568,9 +8568,10 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	    chk; chk = nchk) {
 		nchk = TAILQ_NEXT(chk, sctp_next);
 		if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
-			(chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK) ||	/* EY */
+		    (chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK) ||	/* EY */
 		    (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) ||
 		    (chk->rec.chunk_id.id == SCTP_HEARTBEAT_ACK) ||
+		    (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN) ||
 		    (chk->rec.chunk_id.id == SCTP_SHUTDOWN) ||
 		    (chk->rec.chunk_id.id == SCTP_SHUTDOWN_ACK) ||
 		    (chk->rec.chunk_id.id == SCTP_OPERATION_ERROR) ||
@@ -11697,7 +11698,7 @@ send_forward_tsn(struct sctp_tcb *stcb,
 {
         struct sctp_tmit_chunk *chk;
 	struct sctp_forward_tsn_chunk *fwdtsn;
-
+	uint32_t advance_peer_ack_point;
         SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN) {
@@ -11774,11 +11775,23 @@ sctp_fill_in_rest:
 			/* trim to a mtu size */
 			cnt_of_space = asoc->smallest_mtu - ovh;
 		}
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
+			sctp_misc_ints(SCTP_FWD_TSN_CHECK,
+				       0xff, 0, cnt_of_skipped,
+				       asoc->advanced_peer_ack_point);
+			
+		}
+		advance_peer_ack_point = asoc->advanced_peer_ack_point;
 		if (cnt_of_space < space_needed) {
 			/*-
 			 * ok we must trim down the chunk by lowering the
 			 * advance peer ack point.
 			 */
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
+				sctp_misc_ints(SCTP_FWD_TSN_CHECK,
+					       0xff, 0xff, cnt_of_space,
+					       space_needed);
+			}
 			cnt_of_skipped = (cnt_of_space -
 			    ((sizeof(struct sctp_forward_tsn_chunk)) /
 			    sizeof(struct sctp_strseq)));
@@ -11791,12 +11804,17 @@ sctp_fill_in_rest:
 				tp1 = TAILQ_NEXT(at, sctp_next);
 				at = tp1;
 			}
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
+				sctp_misc_ints(SCTP_FWD_TSN_CHECK,
+					       0xff, cnt_of_skipped, at->rec.data.TSN_seq,
+					       asoc->advanced_peer_ack_point);
+			}
 			last = at;
 			/*-
 			 * last now points to last one I can report, update
 			 * peer ack point
 			 */
-			asoc->advanced_peer_ack_point = last->rec.data.TSN_seq;
+			advance_peer_ack_point = last->rec.data.TSN_seq;
 			space_needed -= (cnt_of_skipped * sizeof(struct sctp_strseq));
 		}
 		chk->send_size = space_needed;
@@ -11805,7 +11823,7 @@ sctp_fill_in_rest:
 		fwdtsn->ch.chunk_length = htons(chk->send_size);
 		fwdtsn->ch.chunk_flags = 0;
 		fwdtsn->ch.chunk_type = SCTP_FORWARD_CUM_TSN;
-		fwdtsn->new_cumulative_tsn = htonl(asoc->advanced_peer_ack_point);
+		fwdtsn->new_cumulative_tsn = htonl(advance_peer_ack_point);
 		chk->send_size = (sizeof(struct sctp_forward_tsn_chunk) +
 		    (cnt_of_skipped * sizeof(struct sctp_strseq)));
 		SCTP_BUF_LEN(chk->data) = chk->send_size;
@@ -11836,12 +11854,15 @@ sctp_fill_in_rest:
 				at = tp1;
 				continue;
 			}
+			if (at->rec.data.TSN_seq == advance_peer_ack_point) {
+				at->rec.data.fwd_tsn_cnt = 0;
+			}
 			strseq->stream = ntohs(at->rec.data.stream_number);
 			strseq->sequence = ntohs(at->rec.data.stream_seq);
 			strseq++;
 			at = tp1;
 		}
-    }
+	}
 	return;
 
 }
