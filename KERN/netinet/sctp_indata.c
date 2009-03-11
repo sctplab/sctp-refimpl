@@ -5757,9 +5757,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		}
 		SCTP_STAT_INCR(sctps_fwdtsn_map_over);
 	slide_out:
-		printf("In slide out ocum:%u new:%u\n",
-		       asoc->cumulative_tsn, 
-		       new_cum_tsn);
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		cumack_set_flag = 1;
 		asoc->mapping_array_base_tsn = new_cum_tsn + 1;
@@ -5781,16 +5778,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		asoc->last_echo_tsn = asoc->highest_tsn_inside_map;
 	} else {
 		SCTP_TCB_LOCK_ASSERT(stcb);
-		if ((compare_with_wrap(((uint32_t)asoc->cumulative_tsn+gap),asoc->highest_tsn_inside_map, MAX_TSN)) ||
-		    (((uint32_t)asoc->cumulative_tsn+gap) == asoc->highest_tsn_inside_map)) {
-			printf("jump to slideout cum:%u gap:%d highest:%u\n",
-			       asoc->cumulative_tsn, gap, asoc->highest_tsn_inside_map
-				);
-			goto slide_out;
-		} else {
-			for (i = 0; i <= gap; i++) {
-				SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
-			}
+		for (i = 0; i <= gap; i++) {
+			SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
 		}
 		/*
 		 * Now after marking all, slide thing forward but no sack please.
@@ -5799,7 +5788,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		if (*abort_flag)
 			return;
 	}
-
 	/*************************************************************/
 	/* 2. Clear up re-assembly queue                             */
 	/*************************************************************/
