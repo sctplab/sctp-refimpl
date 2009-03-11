@@ -5722,6 +5722,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 
 	if (gap >= m_size) {
+		printf("gap %d > m_size %d\n", gap, m_size);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 		}
@@ -5756,6 +5757,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		}
 		SCTP_STAT_INCR(sctps_fwdtsn_map_over);
 	slide_out:
+		printf("In slide out ocum:%u new:%u\n",
+		       asoc->cumulative_tsn, 
+		       new_cum_tsn);
 		memset(stcb->asoc.mapping_array, 0, stcb->asoc.mapping_array_size);
 		cumack_set_flag = 1;
 		asoc->mapping_array_base_tsn = new_cum_tsn + 1;
@@ -5779,6 +5783,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		SCTP_TCB_LOCK_ASSERT(stcb);
 		if ((compare_with_wrap(((uint32_t)asoc->cumulative_tsn+gap),asoc->highest_tsn_inside_map, MAX_TSN)) ||
 		    (((uint32_t)asoc->cumulative_tsn+gap) == asoc->highest_tsn_inside_map)) {
+			printf("jump to slideout cum:%u gap:%d highest:%u\n",
+			       asoc->cumulative_tsn, gap, asoc->highest_tsn_inside_map
+				);
 			goto slide_out;
 		} else {
 			for (i = 0; i <= gap; i++) {
