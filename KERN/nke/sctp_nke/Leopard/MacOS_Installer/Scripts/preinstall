@@ -1,0 +1,36 @@
+#!/bin/bash
+#
+# $1: The full path to the installation package.
+# $2: The full path to the installation destination.
+# $3: The mountpoint of the destination volume.
+# $4: The root directory for the current System folder.
+#
+# (c) Copyright 2006/2007/2008/2009 Andreas Fink <andreas@fink.org>
+
+LOG="/var/log/sctp.log"
+
+echo "*** Preinstall ***" >> $LOG 2>> $LOG
+echo \$1 = $1 >> $LOG 2>> $LOG
+echo \$2 = $2 >> $LOG 2>> $LOG
+echo \$3 = $3 >> $LOG 2>> $LOG
+echo \$4 = $4 >> $LOG 2>> $LOG
+#
+
+if [ "$4" == "upgrade" ]
+then
+    if [ -d /System/Library/Extensions/SCTP.kext ]
+    then
+        if /sbin/kextunload /System/Library/Extensions/SCTP.kext  >> $LOG 2>> $LOG
+        then
+            echo "/sbin/kextunload /System/Library/Extensions/SCTP.kext  FAILED"  >> $LOG 2>> $LOG
+        else
+            echo "/sbin/kextunload /System/Library/Extensions/SCTP.kext  SUCCESS"  >> $LOG 2>> $LOG
+        fi
+    else
+        echo "no directory named /System/Library/Extensions/SCTP.kext"  >> $LOG 2>> $LOG
+    fi
+else
+    echo "not an upgrade" >> $LOG 2>> $LOG
+fi
+echo "*** Preinstall completed ***" >> $LOG 2>> $LOG
+exit 0
