@@ -5749,7 +5749,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 
 	if (gap >= m_size) {
-		printf("gap %d > m_size %d\n", gap, m_size);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 		}
@@ -5837,9 +5836,9 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
 			at = TAILQ_NEXT(chk, sctp_next);
-			if (compare_with_wrap(asoc->cumulative_tsn,
-					      chk->rec.data.TSN_seq, MAX_TSN) ||
-			    asoc->cumulative_tsn == chk->rec.data.TSN_seq) {
+			if ((compare_with_wrap(new_cum_tsn,
+					       chk->rec.data.TSN_seq, MAX_TSN)) ||
+			    (new_cum_tsn == chk->rec.data.TSN_seq)) {
 				/* It needs to be tossed */
 				TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
 				if (compare_with_wrap(chk->rec.data.TSN_seq,
