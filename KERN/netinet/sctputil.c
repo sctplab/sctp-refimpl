@@ -3724,10 +3724,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 		while (chk) {
 			TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
 			asoc->sent_queue_cnt--;
-			sctp_free_bufspace(stcb, asoc, chk, 1);
-			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
-			    SCTP_NOTIFY_DATAGRAM_SENT, chk, so_locked);
-			if (chk->data) {
+			if (chk->data != NULL) {
+				sctp_free_bufspace(stcb, asoc, chk, 1);
+				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
+						SCTP_NOTIFY_DATAGRAM_SENT, chk, so_locked);
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
@@ -3742,9 +3742,10 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 		while (chk) {
 			TAILQ_REMOVE(&asoc->send_queue, chk, sctp_next);
 			asoc->send_queue_cnt--;
-			sctp_free_bufspace(stcb, asoc, chk, 1);
-			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, SCTP_NOTIFY_DATAGRAM_UNSENT, chk, so_locked);
-			if (chk->data) {
+			if (chk->data != NULL) {
+				sctp_free_bufspace(stcb, asoc, chk, 1);
+				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, 
+						SCTP_NOTIFY_DATAGRAM_UNSENT, chk, so_locked);
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
@@ -4804,7 +4805,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	do {
 		ret_sz += tp1->book_size;
 		tp1->sent = SCTP_FORWARD_TSN_SKIP;
-		if (tp1->data) {
+		if (tp1->data != NULL) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
 
