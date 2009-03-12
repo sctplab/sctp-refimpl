@@ -740,10 +740,6 @@ sctp_vtag_watchdog()
 	return;
 }
 
-/* MT FIXME: This should be made sysctlable */
-uint32_t sctp_addr_watchdog_limit = 0;
-uint32_t sctp_vtag_watchdog_limit = 0;
-
 #if defined(__APPLE__)
 void
 sctp_slowtimo()
@@ -755,14 +751,13 @@ sctp_slowtimo()
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
-
-	if ((sctp_addr_watchdog_limit > 0) &&
-	    (++sctp_addr_watchdog_cnt >= sctp_addr_watchdog_limit)) {
+	if ((SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit) > 0) &&
+	    (++sctp_addr_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit))) {
 		sctp_addr_watchdog_cnt = 0;
 		sctp_addr_watchdog();
 	}
-	if ((sctp_vtag_watchdog_limit > 0) &&
-	    (++sctp_vtag_watchdog_cnt >= sctp_vtag_watchdog_limit)) {
+	if ((SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit) > 0) &&
+	    (++sctp_vtag_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit))) {
 		sctp_vtag_watchdog_cnt = 0;
 		sctp_vtag_watchdog();
 	}
