@@ -4899,6 +4899,11 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			/* Ok this one may be our victim */
 			if (sp->strseq == seq) {
 				sp->discard_rest = 1;
+				/* Advance the next TSN by one 
+				 * to "cover" this last big TSN
+				 * that would have had the LAST bit.
+				 */
+				atomic_add_int(&stcb->asoc.sending_seq, 1);
 				if (sp->sender_all_done) {
 					/* Arrange for it to be killed */
 					sp->msg_is_complete = 1;

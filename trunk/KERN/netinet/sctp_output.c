@@ -8778,7 +8778,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			}
 			sp->length = 0;
 			sp->some_taken = 1;
-			SCTP_TCB_SEND_UNLOCK(stcb);
 			*locked = 1;
 			*giveup = 1;
 			to_move = 0;
