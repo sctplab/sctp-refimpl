@@ -340,6 +340,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 #else
 
 #define sctp_total_flight_decrease(stcb, tp1) do { \
+        tp1->window_probe = 0; \
 	if (stcb->asoc.total_flight >= tp1->book_size) { \
 		stcb->asoc.total_flight -= tp1->book_size; \
 		if (stcb->asoc.total_flight_count > 0) \
