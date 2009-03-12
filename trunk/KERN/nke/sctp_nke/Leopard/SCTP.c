@@ -405,6 +405,7 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
 	sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
+    sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
 
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;

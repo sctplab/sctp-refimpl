@@ -116,6 +116,8 @@ struct sctp_sysctl {
 #if defined(__APPLE__)
 	uint32_t sctp_ignore_vmware_interfaces ;
 	uint32_t sctp_main_timer;
+        uint32_t sctp_addr_watchdog_limit;
+        uint32_t sctp_vtag_watchdog_limit;
 #endif
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	uint32_t sctp_output_unlocked;
@@ -517,6 +519,16 @@ struct sctp_sysctl {
 #define SCTPCTL_OUTPUT_UNLOCKED_MIN	0
 #define SCTPCTL_OUTPUT_UNLOCKED_MAX	1
 #define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN	
+#endif
+
+#if defined(__APPLE__)
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_MIN	0
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_MAX	0xFFFFFFFF
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_DEFAULT	SCTPCTL_ADDR_WATCHDOG_LIMIT_MIN
+
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_MIN	0
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_MAX	0xFFFFFFFF
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_DEFAULT	SCTPCTL_VTAG_WATCHDOG_LIMIT_MIN
 #endif
 
 
