@@ -4794,7 +4794,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	int ret_sz = 0;
 	int notdone;
 	uint8_t foundeom = 0;
-
+	uint16_t stream, seq;
 #if defined(__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -4802,6 +4802,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
+	stream = tp1->rec.data.stream_number;
+	seq = tp1->rec.data.stream_seq;
 	do {
 		ret_sz += tp1->book_size;
 		tp1->sent = SCTP_FORWARD_TSN_SKIP;
@@ -4813,6 +4815,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 			sctp_flight_size_decrease(tp1);
 			sctp_total_flight_decrease(stcb, tp1);
+			stcb->asoc.peers_rwnd += tp1->send_size;
+			stcb->asoc.peers_rwnd += SCTP_BASE_SYSCTL(sctp_peer_chunk_oh);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
@@ -4867,6 +4871,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		}
 	} while (tp1 && notdone);
 	if ((foundeom == 0) && (queue == &stcb->asoc.sent_queue)) {
+		struct sctp_stream_out *strq;
+		struct sctp_stream_queue_pending *sp;
 		/*
 		 * The multi-part message was scattered across the send and
 		 * sent queue.
@@ -4876,12 +4882,47 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		 * recurse throught the send_queue too, starting at the
 		 * beginning.
 		 */
-		if (tp1) {
+		if ((tp1) && 
+		    (tp1->rec.data.stream_number == stream) &&
+		    (tp1->rec.data.stream_seq == seq)
+			){
 			ret_sz += sctp_release_pr_sctp_chunk(stcb, tp1, reason,
 			    &stcb->asoc.send_queue, so_locked);
 		} else {
 			SCTP_PRINTF("hmm, nothing on the send queue and no EOM?\n");
 		}
+		/* Now make sure there is nothing on the stream out queue itself */
+		strq = &stcb->asoc.strmout[stream];
+		SCTP_TCB_SEND_LOCK(stcb);
+		sp = TAILQ_FIRST(&strq->outqueue);
+		while (sp->strseq <= seq) {
+			/* Ok this one may be our victim */
+			if (sp->strseq == seq) {
+				sp->discard_rest = 1;
+				if (sp->sender_all_done) {
+					/* Arrange for it to be killed */
+					sp->msg_is_complete = 1;
+					/* Whack down the size */
+					atomic_subtract_int(&stcb->asoc.total_output_queue_size, sp->length);
+					if ((stcb->sctp_socket != NULL) && \
+					    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || 
+					     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { 
+						atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc, sp->length);
+					}
+					sp->length = 0;
+					sp->put_last_out = 1;
+					if (sp->data) {
+						sctp_m_freem(sp->data);
+						sp->data = NULL;
+						sp->tail_mbuf = NULL;
+					}
+				}
+				break;
+			} else {
+				sp = TAILQ_NEXT(sp, next);
+			}
+		}
+		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
 	return (ret_sz);
 }

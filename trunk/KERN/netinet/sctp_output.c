@@ -8706,7 +8706,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		goto out_of;
 	}
-
 	if ((sp->msg_is_complete) && (sp->length == 0)) {
 		if (sp->sender_all_done) {
 			/* We are doing differed cleanup. Last
@@ -8734,7 +8733,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 				sp->data = NULL;
 			}
 			sctp_free_a_strmoq(stcb, sp);
-
 			/* we can't be locked to it */
 			*locked = 0;
 			stcb->asoc.locked_on_sending = NULL;
@@ -8757,6 +8755,30 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 		/* is there some to get */
 		if (sp->length == 0) {
 			/* no */
+			*locked = 1;
+			*giveup = 1;
+			to_move = 0;
+			goto out_of;
+		} else if (sp->discard_rest) {
+			if (send_lock_up == 0) {
+				SCTP_TCB_SEND_LOCK(stcb);
+				send_lock_up = 1;
+			}
+			/* Whack down the size */
+			atomic_subtract_int(&stcb->asoc.total_output_queue_size, sp->length);
+			if ((stcb->sctp_socket != NULL) &&	     \
+			    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || 
+			     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { 
+				atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc, sp->length);
+			}
+			if (sp->data) {
+				sctp_m_freem(sp->data);
+				sp->data = NULL;
+				sp->tail_mbuf = NULL;
+			}
+			sp->length = 0;
+			sp->some_taken = 1;
+			SCTP_TCB_SEND_UNLOCK(stcb);
 			*locked = 1;
 			*giveup = 1;
 			to_move = 0;

@@ -12,13 +12,13 @@ cd export_freebsd/netinet
 for j in `ls *.c *.h`
 do
 echo /usr/$SRC/sys/netinet/$j
-diff -c $j /usr/$SRC/sys/netinet/$j
+diff -c /usr/$SRC/sys/netinet/$j $j
 done
 cd ../netinet6
 for j in `ls *.c *.h`
 do
 echo /usr/$SRC/sys/netinet6/$j
-diff -c $j /usr/$SRC/sys/netinet6/$j
+diff -c /usr/$SRC/sys/netinet6/$j $j
 done
 echo "Thats all"
 
