@@ -4783,18 +4783,21 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 #endif
 
+static uint16_t stream=0, seq=0;
+static uint8_t foundeom = 0;
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
-    int reason, struct sctpchunk_listhead *queue, int so_locked
+			   int reason, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
-    SCTP_UNUSED
+			   SCTP_UNUSED
 #endif
-    )
+	)
 {
+	struct sctp_stream_out *strq;
+	struct sctp_tmit_chunk *chk=NULL;
+	struct sctp_stream_queue_pending *sp;
 	int ret_sz = 0;
 	int notdone;
-	uint8_t foundeom = 0;
-	uint16_t stream, seq;
 #if defined(__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -4841,16 +4844,9 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 				SCTP_SOCKET_UNLOCK(so, 1);
 			}
 #endif
-		}
-		if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
-			stcb->asoc.sent_queue_cnt_removeable--;
-		}
-		if (queue == &stcb->asoc.send_queue) {
-			TAILQ_REMOVE(&stcb->asoc.send_queue, tp1, sctp_next);
-			/* on to the sent queue */
-			TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, tp1,
-			    sctp_next);
-			stcb->asoc.sent_queue_cnt++;
+			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
+				stcb->asoc.sent_queue_cnt_removeable--;
+			}
 		}
 		if ((tp1->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) ==
 		    SCTP_DATA_NOT_FRAG) {
@@ -4870,13 +4866,12 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 		}
 	} while (tp1 && notdone);
-	if ((foundeom == 0) && (queue == &stcb->asoc.sent_queue)) {
-		struct sctp_stream_out *strq;
-		struct sctp_stream_queue_pending *sp;
+	if (foundeom == 0) {
 		/*
 		 * The multi-part message was scattered across the send and
 		 * sent queue.
 		 */
+	next_on_sent:
 		tp1 = TAILQ_FIRST(&stcb->asoc.send_queue);
 		/*
 		 * recurse throught the send_queue too, starting at the
@@ -4886,47 +4881,124 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		    (tp1->rec.data.stream_number == stream) &&
 		    (tp1->rec.data.stream_seq == seq)
 			){
-			ret_sz += sctp_release_pr_sctp_chunk(stcb, tp1, reason,
-			    &stcb->asoc.send_queue, so_locked);
-		} else {
-			SCTP_PRINTF("hmm, nothing on the send queue and no EOM?\n");
+			/* save to chk in case we have some on stream out
+			 * queue. If so and we have an un-transmitted one
+			 * we don't have to fudge the TSN.
+			 */
+			chk = tp1;
+			ret_sz += tp1->book_size;
+			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
+			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
+			sctp_m_freem(tp1->data);
+			tp1->data = NULL;
+			if (tp1->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
+				foundeom = 1;
+			}
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+			so = SCTP_INP_SO(stcb->sctp_ep);
+			if (!so_locked) {
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_SOCKET_LOCK(so, 1);
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+					/* assoc was freed while we were unlocked */
+					SCTP_SOCKET_UNLOCK(so, 1);
+					return (ret_sz);
+				}
+			}
+#endif
+			sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+			if (!so_locked) {
+				SCTP_SOCKET_UNLOCK(so, 1);
+			}
+#endif
+			tp1->sent = SCTP_FORWARD_TSN_SKIP;
+			TAILQ_REMOVE(&stcb->asoc.send_queue, tp1, sctp_next);
+			/* on to the sent queue so we can wait for it to be passed by. */
+			TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, tp1,
+					  sctp_next);
+			stcb->asoc.sent_queue_cnt++;
+			goto next_on_sent;
 		}
-		/* Now make sure there is nothing on the stream out queue itself */
+	}
+	if (foundeom ==  0) {
+		/* 
+		 * Still no eom found. That means there
+		 * is stuff left on the stream out queue.. yuck.
+		 */
 		strq = &stcb->asoc.strmout[stream];
 		SCTP_TCB_SEND_LOCK(stcb);
 		sp = TAILQ_FIRST(&strq->outqueue);
 		while (sp->strseq <= seq) {
-			/* Ok this one may be our victim */
+			/* Check if its our SEQ */
 			if (sp->strseq == seq) {
 				sp->discard_rest = 1;
-				/* Advance the next TSN by one 
-				 * to "cover" this last big TSN
-				 * that would have had the LAST bit.
+				/* 
+				 * We may need to put a chunk on the
+				 * queue that holds the TSN that 
+				 * would have been sent with the LAST
+				 * bit. 
 				 */
-				atomic_add_int(&stcb->asoc.sending_seq, 1);
-				if (sp->sender_all_done) {
-					/* Arrange for it to be killed */
-					sp->msg_is_complete = 1;
-					/* Whack down the size */
+				if (chk == NULL) {
+					/* Yep, we have to */
+					sctp_alloc_a_chunk(stcb, chk);
+					if (chk == NULL) {
+						/* we are hosed. All we can
+						 * do is nothing.. which will
+						 * cause an abort if the peer is
+						 * paying attention.
+						 */
+						goto oh_well;
+					}
+					memset(chk, 0, sizeof(*chk));
+					chk->rec.data.rcv_flags = SCTP_DATA_LAST_FRAG;
+					chk->sent = SCTP_FORWARD_TSN_SKIP;
+					chk->asoc = &stcb->asoc;
+					chk->rec.data.stream_seq = sp->strseq;
+					chk->rec.data.stream_number = sp->stream;
+					chk->rec.data.payloadtype = sp->ppid;
+					chk->rec.data.context = sp->context;
+					chk->flags = sp->act_flags;
+					chk->addr_over = sp->addr_over;
+					chk->whoTo = sp->net;
+					atomic_add_int(&chk->whoTo->ref_count, 1);
+#if defined(__FreeBSD__) || defined(__Panda__)
+					chk->rec.data.TSN_seq = atomic_fetchadd_int(&stcb->asoc.sending_seq, 1);
+#else
+					chk->rec.data.TSN_seq = stcb->asoc.sending_seq++;
+#endif
+					stcb->asoc.pr_sctp_cnt++;
+					chk->pr_sctp_on = 1;
+					stcb->asoc.chunks_on_out_queue++;
+					TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, chk, sctp_next);
+					stcb->asoc.sent_queue_cnt++;
+				}
+			oh_well:
+				if (sp->data) {
+					/* Pull any data to free up the SB and
+					 * allow sender to "add more" whilc we
+					 * will throw away :-)
+					 */
 					atomic_subtract_int(&stcb->asoc.total_output_queue_size, sp->length);
+					sp->some_taken = 1;
 					if ((stcb->sctp_socket != NULL) && \
 					    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || 
 					     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { 
 						atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc, sp->length);
 					}
-					sp->length = 0;
-					sp->put_last_out = 1;
-					if (sp->data) {
-						sctp_m_freem(sp->data);
-						sp->data = NULL;
-						sp->tail_mbuf = NULL;
-					}
+					sctp_m_freem(sp->data);
+					sp->data = NULL;
+					sp->tail_mbuf = NULL;
 				}
 				break;
 			} else {
+				/* Next one please */
 				sp = TAILQ_NEXT(sp, next);
 			}
-		}
+		} /* End while */
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
 	return (ret_sz);

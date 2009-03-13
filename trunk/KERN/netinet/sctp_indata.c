@@ -3513,7 +3513,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					if (tp1->data != NULL) {
 						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &asoc->sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3526,7 +3526,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					if (tp1->data != NULL) {
 						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &asoc->sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
@@ -3939,7 +3939,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 				if (tp1->data) {
 					(void)sctp_release_pr_sctp_chunk(stcb, tp1,
 					    (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-					    &asoc->sent_queue, SCTP_SO_NOT_LOCKED);
+					    SCTP_SO_NOT_LOCKED);
 				}
 			} else {
 				/*

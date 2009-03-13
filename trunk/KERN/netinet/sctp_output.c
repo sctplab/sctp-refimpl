@@ -7689,7 +7689,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 							cause = SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_UNSENT;
 						ret_spc = sctp_release_pr_sctp_chunk(stcb, chk,
 						    cause,
-						    &asoc->sent_queue, SCTP_SO_LOCKED);
+						    SCTP_SO_LOCKED);
 						freed_spc += ret_spc;
 						if (freed_spc >= dataout) {
 							return;
@@ -7714,7 +7714,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 
 						ret_spc = sctp_release_pr_sctp_chunk(stcb, chk,
 						    SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_UNSENT,
-						    &asoc->send_queue, SCTP_SO_LOCKED);
+						    SCTP_SO_LOCKED);
 
 						freed_spc += ret_spc;
 						if (freed_spc >= dataout) {
