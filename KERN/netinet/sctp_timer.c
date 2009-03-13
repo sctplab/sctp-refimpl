@@ -755,7 +755,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						(void)sctp_release_pr_sctp_chunk(stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					continue;
 				}
@@ -767,7 +767,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						(void)sctp_release_pr_sctp_chunk(stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					continue;
 				}
