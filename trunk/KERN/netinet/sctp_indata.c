@@ -3959,6 +3959,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			if (compare_with_wrap(tp1->rec.data.TSN_seq, 
 					      asoc->advanced_peer_ack_point, 
 					      MAX_TSN)) {
+
 				asoc->advanced_peer_ack_point = tp1->rec.data.TSN_seq;
 				a_adv = tp1;
 			} else if (tp1->rec.data.TSN_seq == asoc->advanced_peer_ack_point) {
@@ -4577,6 +4578,13 @@ again:
 				 */
 				asoc->nonce_sum_check = 0;
 				asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			} else if (lchk) {
+				/* try to FR fwd-tsn's that get lost too */
+				lchk->rec.data.fwd_tsn_cnt++;
+				if (lchk->rec.data.fwd_tsn_cnt > 3) {
+					send_forward_tsn(stcb, asoc);
+					lchk->rec.data.fwd_tsn_cnt = 0;
+				}
 			}
 		}
 		if (lchk) {
@@ -7914,6 +7922,13 @@ again:
 				 */
 				asoc->nonce_sum_check = 0;
 				asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			} else if (lchk) {
+				/* try to FR fwd-tsn's that get lost too */
+				lchk->rec.data.fwd_tsn_cnt++;
+				if (lchk->rec.data.fwd_tsn_cnt > 3) {
+					send_forward_tsn(stcb, asoc);
+					lchk->rec.data.fwd_tsn_cnt = 0;
+				}
 			}
 		}
 		if (lchk) {

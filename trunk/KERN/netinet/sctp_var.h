@@ -100,7 +100,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
 	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
-	if ((_strmoq)) { \
+         if ((_strmoq)) {			  \
+		memset(_strmoq, 0, sizeof(struct sctp_stream_queue_pending)); \
 		SCTP_INCR_STRMOQ_COUNT(); \
 		(_strmoq)->holds_key_ref = 0; \
  	} \

@@ -8712,7 +8712,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 			 * time through when we took all the data
 			 * the sender_all_done was not set.
 			 */
-			if (sp->put_last_out == 0) {
+			if ((sp->put_last_out == 0) && (sp->discard_rest == 0)) {
 				SCTP_PRINTF("Gak, put out entire msg with NO end!-1\n");
 				SCTP_PRINTF("sender_done:%d len:%d msg_comp:%d put_last_out:%d send_lock:%d\n",
 				             sp->sender_all_done,
@@ -14645,7 +14645,7 @@ sctp_lower_sosend(struct socket *so,
                   struct proc *p
 #endif
 #endif
-)
+	)
 {
 	unsigned int sndlen = 0, max_len;
 	int error, len;
@@ -14952,11 +14952,11 @@ sctp_lower_sosend(struct socket *so,
 #endif
 			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
 #if !( defined( __Panda__) || defined(__Userspace__) )
-							 p
+					       p
 #else
-							 (struct proc *)NULL
+					       (struct proc *)NULL
 #endif
-							 );
+				);
 			if (stcb == NULL) {
 				/* Error is setup for us in the call */
 				goto out_unlocked;
@@ -15064,9 +15064,9 @@ sctp_lower_sosend(struct socket *so,
 	}
 	if ((SCTP_SO_IS_NBIO(so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-	   || (flags & MSG_NBIO)
+	     || (flags & MSG_NBIO)
 #endif
-	   )) {
+		    )) {
 		non_blocking = 1;
 	}
 	asoc = &stcb->asoc;
@@ -15419,7 +15419,7 @@ sctp_lower_sosend(struct socket *so,
 		SOCKBUF_UNLOCK(&so->so_snd);
 	}
 
- skip_preblock:
+skip_preblock:
 	if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
 		goto out_unlocked;
 	}
@@ -15485,275 +15485,275 @@ sctp_lower_sosend(struct socket *so,
 					               (uintptr_t)stcb, sp->length, 
 					               (uint32_t)((srcv->sinfo_stream << 16) | sp->strseq), 0);
 				}
-			strm->next_sequence_sent++;
-		} else {
-			SCTP_STAT_INCR(sctps_sends_with_unord);
-		}
-		TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
-		if ((strm->next_spoke.tqe_next == NULL) &&
-		    (strm->next_spoke.tqe_prev == NULL)) {
-			/* Not on wheel, insert */
-			sctp_insert_on_wheel(stcb, asoc, strm, 1);
-		}
-		SCTP_TCB_SEND_UNLOCK(stcb);
-	} else {
-		SCTP_TCB_SEND_LOCK(stcb);
-		sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
-		SCTP_TCB_SEND_UNLOCK(stcb);
-		if (sp == NULL) {
-			/* ???? Huh ??? last msg is gone */
-#ifdef INVARIANTS 
-			panic("Warning: Last msg marked incomplete, yet nothing left?");
-#else
-			SCTP_PRINTF("Warning: Last msg marked incomplete, yet nothing left?\n");
-			strm->last_msg_incomplete = 0;
-#endif
-			goto do_a_copy_in;
-
-		}
-	}
-	while (uio->uio_resid > 0) {
-		/* How much room do we have? */
-		struct mbuf *new_tail, *mm;
-
-		if (SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
-			max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
-		else
-			max_len = 0;
-
-		if ((max_len > SCTP_BASE_SYSCTL(sctp_add_more_threshold)) ||
-		    (max_len && (SCTP_SB_LIMIT_SND(so) < SCTP_BASE_SYSCTL(sctp_add_more_threshold))) ||
-		    (uio->uio_resid && (uio->uio_resid <= (int)max_len))) {
-			sndout = 0;
-			new_tail = NULL;
-			if (hold_tcblock) {
-				SCTP_TCB_UNLOCK(stcb);
-				hold_tcblock = 0;
-			}
-#if defined(__APPLE__)
-			SCTP_SOCKET_UNLOCK(so, 0);
-#endif
-			mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
-#if defined(__APPLE__)
-			SCTP_SOCKET_LOCK(so, 0);
-#endif
-			if ((mm == NULL) || error) {
-				if (mm) {
-					sctp_m_freem(mm);
-				}
-				goto out;
-			}
-			/* Update the mbuf and count */
-			SCTP_TCB_SEND_LOCK(stcb);
-			if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
-				/* we need to get out.
-				 * Peer probably aborted.
-				 */
-				sctp_m_freem(mm);
-				if (stcb->asoc.state & SCTP_PCB_FLAGS_WAS_ABORTED) {
-					SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_OUTPUT, ECONNRESET);
-					error = ECONNRESET;
-				}
-				SCTP_TCB_SEND_UNLOCK(stcb);
-				goto out;
-			}
-			if (sp->tail_mbuf) {
-				/* tack it to the end */
-				SCTP_BUF_NEXT(sp->tail_mbuf) = mm;
-				sp->tail_mbuf = new_tail;
+				strm->next_sequence_sent++;
 			} else {
-				/* A stolen mbuf */
-				sp->data = mm;
-				sp->tail_mbuf = new_tail;
+				SCTP_STAT_INCR(sctps_sends_with_unord);
 			}
-			sctp_snd_sb_alloc(stcb, sndout);
-			atomic_add_int(&sp->length,sndout);
-			len += sndout;
-
-			/* Did we reach EOR? */
-			if ((uio->uio_resid == 0) &&
-			    ((user_marks_eor == 0) || 
-			     (srcv->sinfo_flags & SCTP_EOF) ||
-			     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))) {
-				sp->msg_is_complete = 1;
-			} else {
-				sp->msg_is_complete = 0;
+			TAILQ_INSERT_TAIL(&strm->outqueue, sp, next);
+			if ((strm->next_spoke.tqe_next == NULL) &&
+			    (strm->next_spoke.tqe_prev == NULL)) {
+				/* Not on wheel, insert */
+				sctp_insert_on_wheel(stcb, asoc, strm, 1);
 			}
 			SCTP_TCB_SEND_UNLOCK(stcb);
-		}
-		if (uio->uio_resid == 0) {
-			/* got it all? */
-			continue;
-		}
-		/* PR-SCTP? */
-		if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
-			/* This is ugly but we must assure locking order */
-			if (hold_tcblock == 0) {
-				SCTP_TCB_LOCK(stcb);
-				hold_tcblock = 1;
+		} else {
+			SCTP_TCB_SEND_LOCK(stcb);
+			sp = TAILQ_LAST(&strm->outqueue, sctp_streamhead);
+			SCTP_TCB_SEND_UNLOCK(stcb);
+			if (sp == NULL) {
+				/* ???? Huh ??? last msg is gone */
+#ifdef INVARIANTS 
+				panic("Warning: Last msg marked incomplete, yet nothing left?");
+#else
+				SCTP_PRINTF("Warning: Last msg marked incomplete, yet nothing left?\n");
+				strm->last_msg_incomplete = 0;
+#endif
+				goto do_a_copy_in;
+
 			}
-			sctp_prune_prsctp(stcb, asoc, srcv, sndlen);
-			inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+		}
+		while (uio->uio_resid > 0) {
+			/* How much room do we have? */
+			struct mbuf *new_tail, *mm;
+
 			if (SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
-				max_len = SCTP_SB_LIMIT_SND(so) - inqueue_bytes;
+				max_len = SCTP_SB_LIMIT_SND(so) - stcb->asoc.total_output_queue_size;
 			else
 				max_len = 0;
-			if (max_len > 0) {
+
+			if ((max_len > SCTP_BASE_SYSCTL(sctp_add_more_threshold)) ||
+			    (max_len && (SCTP_SB_LIMIT_SND(so) < SCTP_BASE_SYSCTL(sctp_add_more_threshold))) ||
+			    (uio->uio_resid && (uio->uio_resid <= (int)max_len))) {
+				sndout = 0;
+				new_tail = NULL;
+				if (hold_tcblock) {
+					SCTP_TCB_UNLOCK(stcb);
+					hold_tcblock = 0;
+				}
+#if defined(__APPLE__)
+				SCTP_SOCKET_UNLOCK(so, 0);
+#endif
+				mm = sctp_copy_resume(sp, uio, srcv, max_len, user_marks_eor, &error, &sndout, &new_tail);
+#if defined(__APPLE__)
+				SCTP_SOCKET_LOCK(so, 0);
+#endif
+				if ((mm == NULL) || error) {
+					if (mm) {
+						sctp_m_freem(mm);
+					}
+					goto out;
+				}
+				/* Update the mbuf and count */
+				SCTP_TCB_SEND_LOCK(stcb);
+				if (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) {
+					/* we need to get out.
+					 * Peer probably aborted.
+					 */
+					sctp_m_freem(mm);
+					if (stcb->asoc.state & SCTP_PCB_FLAGS_WAS_ABORTED) {
+						SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTP_OUTPUT, ECONNRESET);
+						error = ECONNRESET;
+					}
+					SCTP_TCB_SEND_UNLOCK(stcb);
+					goto out;
+				}
+				if (sp->tail_mbuf) {
+					/* tack it to the end */
+					SCTP_BUF_NEXT(sp->tail_mbuf) = mm;
+					sp->tail_mbuf = new_tail;
+				} else {
+					/* A stolen mbuf */
+					sp->data = mm;
+					sp->tail_mbuf = new_tail;
+				}
+				sctp_snd_sb_alloc(stcb, sndout);
+				atomic_add_int(&sp->length,sndout);
+				len += sndout;
+
+				/* Did we reach EOR? */
+				if ((uio->uio_resid == 0) &&
+				    ((user_marks_eor == 0) || 
+				     (srcv->sinfo_flags & SCTP_EOF) ||
+				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))) {
+					sp->msg_is_complete = 1;
+				} else {
+					sp->msg_is_complete = 0;
+				}
+				SCTP_TCB_SEND_UNLOCK(stcb);
+			}
+			if (uio->uio_resid == 0) {
+				/* got it all? */
 				continue;
 			}
-			SCTP_TCB_UNLOCK(stcb);
-			hold_tcblock = 0;
-		}
-		/* wait for space now */
-		if (non_blocking) {
-			/* Non-blocking io in place out */
-			goto skip_out_eof;
-		}
-		if ((net->flight_size > net->cwnd) && 
-		    (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0)) {
-			queue_only = 1;
-		} else if (asoc->ifp_had_enobuf) {
-			SCTP_STAT_INCR(sctps_ifnomemqueued);
-			if (net->flight_size > (net->mtu *2)) {
-				queue_only = 1;
-			} else {
-				queue_only = 0;
-			}
-			asoc->ifp_had_enobuf = 0;
-			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-			           (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
-		} else {
-			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-				   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
-			if (net->flight_size > net->cwnd) {
-				queue_only = 1;
-				SCTP_STAT_INCR(sctps_send_cwnd_avoid);
-			} else {
-				queue_only = 0;
-			}
-		}
-		if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
-		    (stcb->asoc.total_flight > 0) &&
-		    (stcb->asoc.stream_queue_cnt < SCTP_MAX_DATA_BUNDLING) &&
-		    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
-
-			/*-
-			 * Ok, Nagle is set on and we have data outstanding.
-			 * Don't send anything and let SACKs drive out the
-			 * data unless wen have a "full" segment to send.
-			 */
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_NAGLE_LOGGING_ENABLE) {
-				sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
-			}
-			SCTP_STAT_INCR(sctps_naglequeued);
-			nagle_applies = 1;
-		} else {
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_NAGLE_LOGGING_ENABLE) {
-				if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
-					sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
-			}
-			SCTP_STAT_INCR(sctps_naglesent);
-			nagle_applies = 0;
-		}
-		/* What about the INIT, send it maybe */
-		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
-
-			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, queue_only_for_init, queue_only, 
-			               nagle_applies, un_sent);
-			sctp_misc_ints(SCTP_CWNDLOG_PRESEND, stcb->asoc.total_output_queue_size, 
-			               stcb->asoc.total_flight,
-			               stcb->asoc.chunks_on_out_queue, stcb->asoc.total_flight_count);
-		}
-		if (queue_only_for_init) {
-			if (hold_tcblock == 0) {
-				SCTP_TCB_LOCK(stcb);
-				hold_tcblock = 1;
-			}
-			if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
-				/* a collision took us forward? */
-				queue_only_for_init = 0;
-				queue_only = 0;
-			} else {
-				sctp_send_initiate(inp, stcb, SCTP_SO_LOCKED);
-				SCTP_SET_STATE(asoc, SCTP_STATE_COOKIE_WAIT);
-				queue_only_for_init = 0;
-				queue_only = 1;
-			}
-		}
-		if ((queue_only == 0) && (nagle_applies == 0)) {
-			/*-
-			 * need to start chunk output
-			 * before blocking.. note that if
-			 * a lock is already applied, then
-			 * the input via the net is happening
-			 * and I don't need to start output :-D
-			 */
-			if (hold_tcblock == 0) {
-				if (SCTP_TCB_TRYLOCK(stcb)) {
+			/* PR-SCTP? */
+			if ((asoc->peer_supports_prsctp) && (asoc->sent_queue_cnt_removeable > 0)) {
+				/* This is ugly but we must assure locking order */
+				if (hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
 					hold_tcblock = 1;
-					sctp_chunk_output(inp, 
-					                  stcb, 
-					                  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 				}
-			} else {
-				sctp_chunk_output(inp, 
-				                  stcb, 
-				                  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
-			}
-			if (hold_tcblock == 1) {
+				sctp_prune_prsctp(stcb, asoc, srcv, sndlen);
+				inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+				if (SCTP_SB_LIMIT_SND(so) > stcb->asoc.total_output_queue_size)
+					max_len = SCTP_SB_LIMIT_SND(so) - inqueue_bytes;
+				else
+					max_len = 0;
+				if (max_len > 0) {
+					continue;
+				}
 				SCTP_TCB_UNLOCK(stcb);
 				hold_tcblock = 0;
 			}
-		}
-		SOCKBUF_LOCK(&so->so_snd);
-		/*-
-		 * This is a bit strange, but I think it will
-		 * work. The total_output_queue_size is locked and
-		 * protected by the TCB_LOCK, which we just released.
-		 * There is a race that can occur between releasing it
-		 * above, and me getting the socket lock, where sacks
-		 * come in but we have not put the SB_WAIT on the
-		 * so_snd buffer to get the wakeup. After the LOCK
-		 * is applied the sack_processing will also need to
-		 * LOCK the so->so_snd to do the actual sowwakeup(). So
-		 * once we have the socket buffer lock if we recheck the
-		 * size we KNOW we will get to sleep safely with the
-		 * wakeup flag in place.
-		 */
-		if (SCTP_SB_LIMIT_SND(so) <= (stcb->asoc.total_output_queue_size + 
-		                             min(SCTP_BASE_SYSCTL(sctp_add_more_threshold), SCTP_SB_LIMIT_SND(so)))) {
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
-				sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
-				               so, asoc, uio->uio_resid);
+			/* wait for space now */
+			if (non_blocking) {
+				/* Non-blocking io in place out */
+				goto skip_out_eof;
 			}
-			be.error = 0;
-#if !defined(__Panda__) && !defined(__Windows__)
-			stcb->block_entry = &be;
-#endif
-#if defined(__APPLE__)
-			sbunlock(&so->so_snd, 1);
-#endif
-			error = sbwait(&so->so_snd);
-			stcb->block_entry = NULL;
-
-			if (error || so->so_error || be.error) {
-				if (error == 0) {
-					if (so->so_error)
-						error = so->so_error;
-					if (be.error) {
-						error = be.error;
-					}
+			if ((net->flight_size > net->cwnd) && 
+			    (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0)) {
+				queue_only = 1;
+			} else if (asoc->ifp_had_enobuf) {
+				SCTP_STAT_INCR(sctps_ifnomemqueued);
+				if (net->flight_size > (net->mtu *2)) {
+					queue_only = 1;
+				} else {
+					queue_only = 0;
 				}
-				SOCKBUF_UNLOCK(&so->so_snd);
-				goto out_unlocked;
+				asoc->ifp_had_enobuf = 0;
+				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+					   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
+			} else {
+				un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
+					   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
+				if (net->flight_size > net->cwnd) {
+					queue_only = 1;
+					SCTP_STAT_INCR(sctps_send_cwnd_avoid);
+				} else {
+					queue_only = 0;
+				}
 			}
+			if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
+			    (stcb->asoc.total_flight > 0) &&
+			    (stcb->asoc.stream_queue_cnt < SCTP_MAX_DATA_BUNDLING) &&
+			    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
+
+				/*-
+				 * Ok, Nagle is set on and we have data outstanding.
+				 * Don't send anything and let SACKs drive out the
+				 * data unless wen have a "full" segment to send.
+				 */
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_NAGLE_LOGGING_ENABLE) {
+					sctp_log_nagle_event(stcb, SCTP_NAGLE_APPLIED);
+				}
+				SCTP_STAT_INCR(sctps_naglequeued);
+				nagle_applies = 1;
+			} else {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_NAGLE_LOGGING_ENABLE) {
+					if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY))
+						sctp_log_nagle_event(stcb, SCTP_NAGLE_SKIPPED);
+				}
+				SCTP_STAT_INCR(sctps_naglesent);
+				nagle_applies = 0;
+			}
+			/* What about the INIT, send it maybe */
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
+
+				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, queue_only_for_init, queue_only, 
+					       nagle_applies, un_sent);
+				sctp_misc_ints(SCTP_CWNDLOG_PRESEND, stcb->asoc.total_output_queue_size, 
+					       stcb->asoc.total_flight,
+					       stcb->asoc.chunks_on_out_queue, stcb->asoc.total_flight_count);
+			}
+			if (queue_only_for_init) {
+				if (hold_tcblock == 0) {
+					SCTP_TCB_LOCK(stcb);
+					hold_tcblock = 1;
+				}
+				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
+					/* a collision took us forward? */
+					queue_only_for_init = 0;
+					queue_only = 0;
+				} else {
+					sctp_send_initiate(inp, stcb, SCTP_SO_LOCKED);
+					SCTP_SET_STATE(asoc, SCTP_STATE_COOKIE_WAIT);
+					queue_only_for_init = 0;
+					queue_only = 1;
+				}
+			}
+			if ((queue_only == 0) && (nagle_applies == 0)) {
+				/*-
+				 * need to start chunk output
+				 * before blocking.. note that if
+				 * a lock is already applied, then
+				 * the input via the net is happening
+				 * and I don't need to start output :-D
+				 */
+				if (hold_tcblock == 0) {
+					if (SCTP_TCB_TRYLOCK(stcb)) {
+						hold_tcblock = 1;
+						sctp_chunk_output(inp, 
+								  stcb, 
+								  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
+					}
+				} else {
+					sctp_chunk_output(inp, 
+							  stcb, 
+							  SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
+				}
+				if (hold_tcblock == 1) {
+					SCTP_TCB_UNLOCK(stcb);
+					hold_tcblock = 0;
+				}
+			}
+			SOCKBUF_LOCK(&so->so_snd);
+			/*-
+			 * This is a bit strange, but I think it will
+			 * work. The total_output_queue_size is locked and
+			 * protected by the TCB_LOCK, which we just released.
+			 * There is a race that can occur between releasing it
+			 * above, and me getting the socket lock, where sacks
+			 * come in but we have not put the SB_WAIT on the
+			 * so_snd buffer to get the wakeup. After the LOCK
+			 * is applied the sack_processing will also need to
+			 * LOCK the so->so_snd to do the actual sowwakeup(). So
+			 * once we have the socket buffer lock if we recheck the
+			 * size we KNOW we will get to sleep safely with the
+			 * wakeup flag in place.
+			 */
+			if (SCTP_SB_LIMIT_SND(so) <= (stcb->asoc.total_output_queue_size + 
+						      min(SCTP_BASE_SYSCTL(sctp_add_more_threshold), SCTP_SB_LIMIT_SND(so)))) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
+					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+						       so, asoc, uio->uio_resid);
+				}
+				be.error = 0;
+#if !defined(__Panda__) && !defined(__Windows__)
+				stcb->block_entry = &be;
+#endif
+#if defined(__APPLE__)
+				sbunlock(&so->so_snd, 1);
+#endif
+				error = sbwait(&so->so_snd);
+				stcb->block_entry = NULL;
+
+				if (error || so->so_error || be.error) {
+					if (error == 0) {
+						if (so->so_error)
+							error = so->so_error;
+						if (be.error) {
+							error = be.error;
+						}
+					}
+					SOCKBUF_UNLOCK(&so->so_snd);
+					goto out_unlocked;
+				}
 
 #if defined(__APPLE__)
-			error = sblock(&so->so_snd, SBLOCKWAIT(flags));
+				error = sblock(&so->so_snd, SBLOCKWAIT(flags));
 #endif
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
-				sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
-				               so, asoc, stcb->asoc.total_output_queue_size);
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
+					sctp_log_block(SCTP_BLOCK_LOG_OUTOF_BLK,
+						       so, asoc, stcb->asoc.total_output_queue_size);
 				}
 			}
 			SOCKBUF_UNLOCK(&so->so_snd);
@@ -15798,7 +15798,7 @@ sctp_lower_sosend(struct socket *so,
 	if (error) {
 		goto out;
 	}
- dataless_eof:
+dataless_eof:
 	/* EOF thing ? */
 	if ((srcv->sinfo_flags & SCTP_EOF) &&
 	    (got_all_of_the_send == 1) &&
@@ -15883,7 +15883,7 @@ sctp_lower_sosend(struct socket *so,
 			}
 		}
 	}
- skip_out_eof:
+skip_out_eof:
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
 		some_on_control = 1;
 	}
@@ -15985,11 +15985,11 @@ sctp_lower_sosend(struct socket *so,
 		stcb->asoc.total_flight, stcb->asoc.chunks_on_out_queue,
 	        stcb->asoc.total_output_queue_size, error);
 
- out:
+out:
 #if defined(__APPLE__)
 	sbunlock(&so->so_snd, 1);
 #endif
- out_unlocked:
+out_unlocked:
 
 	if (local_soresv && stcb) {
 		atomic_subtract_int(&stcb->asoc.sb_send_resv, sndlen);
