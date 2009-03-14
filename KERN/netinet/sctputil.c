@@ -4812,10 +4812,6 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 		ret_sz += tp1->book_size;
 		tp1->sent = SCTP_FORWARD_TSN_SKIP;
 		if (tp1->data != NULL) {
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			struct socket *so;
-
-#endif
 			printf("Release PR-SCTP chunk tsn:%u flags:%x\n",
 				   tp1->rec.data.TSN_seq,
 				   (unsigned int)tp1->rec.data.rcv_flags);
@@ -4968,6 +4964,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	}
 	if (do_wakeup_routine) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		struct socket *so;
+
 		so = SCTP_INP_SO(stcb->sctp_ep);
 		if (!so_locked) {
 			atomic_add_int(&stcb->asoc.refcnt, 1);
