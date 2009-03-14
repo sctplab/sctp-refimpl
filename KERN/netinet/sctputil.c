@@ -4783,8 +4783,6 @@ sctp_free_bufspace(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 #endif
 
-static uint16_t stream=0, seq=0;
-static uint8_t foundeom = 0;
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			   int reason, int so_locked
@@ -4796,8 +4794,11 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	struct sctp_stream_out *strq;
 	struct sctp_tmit_chunk *chk=NULL;
 	struct sctp_stream_queue_pending *sp;
+	uint16_t stream=0, seq=0;
+	uint8_t foundeom = 0;
 	int ret_sz = 0;
 	int notdone;
+	int do_wakeup_routine=0;
 #if defined(__APPLE__)
 	if (so_locked) {
 		sctp_lock_assert(SCTP_INP_SO(stcb->sctp_ep));
@@ -4823,27 +4824,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
 			sctp_m_freem(tp1->data);
 			tp1->data = NULL;
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			so = SCTP_INP_SO(stcb->sctp_ep);
-			if (!so_locked) {
-				atomic_add_int(&stcb->asoc.refcnt, 1);
-				SCTP_TCB_UNLOCK(stcb);
-				SCTP_SOCKET_LOCK(so, 1);
-				SCTP_TCB_LOCK(stcb);
-				atomic_subtract_int(&stcb->asoc.refcnt, 1);
-				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
-					/* assoc was freed while we were unlocked */
-					SCTP_SOCKET_UNLOCK(so, 1);
-					return (ret_sz);
-				}
-			}
-#endif
-			sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			if (!so_locked) {
-				SCTP_SOCKET_UNLOCK(so, 1);
-			}
-#endif
+			do_wakeup_routine = 1;
 			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				stcb->asoc.sent_queue_cnt_removeable--;
 			}
@@ -4894,32 +4875,13 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			if (tp1->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 				foundeom = 1;
 			}
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			so = SCTP_INP_SO(stcb->sctp_ep);
-			if (!so_locked) {
-				atomic_add_int(&stcb->asoc.refcnt, 1);
-				SCTP_TCB_UNLOCK(stcb);
-				SCTP_SOCKET_LOCK(so, 1);
-				SCTP_TCB_LOCK(stcb);
-				atomic_subtract_int(&stcb->asoc.refcnt, 1);
-				if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
-					/* assoc was freed while we were unlocked */
-					SCTP_SOCKET_UNLOCK(so, 1);
-					return (ret_sz);
-				}
-			}
-#endif
-			sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			if (!so_locked) {
-				SCTP_SOCKET_UNLOCK(so, 1);
-			}
-#endif
+			do_wakeup_routine = 1;
 			tp1->sent = SCTP_FORWARD_TSN_SKIP;
 			TAILQ_REMOVE(&stcb->asoc.send_queue, tp1, sctp_next);
 			/* on to the sent queue so we can wait for it to be passed by. */
 			TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, tp1,
 					  sctp_next);
+			stcb->asoc.send_queue_cnt--;
 			stcb->asoc.sent_queue_cnt++;
 			goto next_on_sent;
 		}
@@ -4972,9 +4934,10 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 #endif
 					stcb->asoc.pr_sctp_cnt++;
 					chk->pr_sctp_on = 1;
-					stcb->asoc.chunks_on_out_queue++;
 					TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, chk, sctp_next);
 					stcb->asoc.sent_queue_cnt++;
+				} else {
+					chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
 				}
 			oh_well:
 				if (sp->data) {
@@ -4982,14 +4945,13 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 					 * allow sender to "add more" whilc we
 					 * will throw away :-)
 					 */
-					atomic_subtract_int(&stcb->asoc.total_output_queue_size, sp->length);
+					sctp_free_spbufspace(stcb, &stcb->asoc, 
+							     sp);
+					ret_sz += sp->length;
+					do_wakeup_routine = 1;
 					sp->some_taken = 1;
-					if ((stcb->sctp_socket != NULL) && \
-					    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) || 
-					     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) { 
-						atomic_subtract_int(&stcb->sctp_socket->so_snd.sb_cc, sp->length);
-					}
 					sctp_m_freem(sp->data);
+					sp->length = 0;
 					sp->data = NULL;
 					sp->tail_mbuf = NULL;
 				}
@@ -5000,6 +4962,29 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			}
 		} /* End while */
 		SCTP_TCB_SEND_UNLOCK(stcb);
+	}
+	if (do_wakeup_routine) {
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		so = SCTP_INP_SO(stcb->sctp_ep);
+		if (!so_locked) {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
+				/* assoc was freed while we were unlocked */
+				SCTP_SOCKET_UNLOCK(so, 1);
+				return (ret_sz);
+			}
+		}
+#endif
+		sctp_sowwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if (!so_locked) {
+			SCTP_SOCKET_UNLOCK(so, 1);
+		}
+#endif
 	}
 	return (ret_sz);
 }
