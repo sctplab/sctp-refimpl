@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 188854 2009-02-20 15:03:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 189790 2009-03-14 13:42:13Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4816,6 +4816,9 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			struct socket *so;
 
 #endif
+			printf("Release PR-SCTP chunk tsn:%u flags:%x\n",
+				   tp1->rec.data.TSN_seq,
+				   (unsigned int)tp1->rec.data.rcv_flags);
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 			sctp_flight_size_decrease(tp1);
 			sctp_total_flight_decrease(stcb, tp1);
