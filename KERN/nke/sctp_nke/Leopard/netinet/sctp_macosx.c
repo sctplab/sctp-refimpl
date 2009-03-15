@@ -751,6 +751,7 @@ sctp_slowtimo()
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
+
 	if ((SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit) > 0) &&
 	    (++sctp_addr_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit))) {
 		sctp_addr_watchdog_cnt = 0;
