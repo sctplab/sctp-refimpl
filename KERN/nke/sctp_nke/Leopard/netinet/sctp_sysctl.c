@@ -131,7 +131,6 @@ sctp_init_sysctls()
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	SCTP_BASE_SYSCTL(sctp_output_unlocked) = SCTPCTL_OUTPUT_UNLOCKED_DEFAULT;
 #endif
-
 }
 
 #if defined(__Windows__)
@@ -736,7 +735,7 @@ sysctl_sctp_vmware_interfaces_check SYSCTL_HANDLER_ARGS
 	return (error);
 }
 #endif
-   
+
 static int
 #if defined (__APPLE__)
 sysctl_sctp_check SYSCTL_HANDLER_ARGS
@@ -1131,15 +1130,17 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,
 
 #if defined(__APPLE__)
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, main_timer, CTLFLAG_RW,
- 	     &SCTP_BASE_SYSCTL(sctp_main_timer), 0, "Main timer interval in ms");
+           &SCTP_BASE_SYSCTL(sctp_main_timer), 0, "Main timer interval in ms");
+
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, ignore_vmware_interfaces, CTLTYPE_INT|CTLFLAG_RW,
 	    &SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces), 0, sysctl_sctp_vmware_interfaces_check, "IU",
 	    SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC);
+
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, addr_watchdog_limit, CTLFLAG_RW,
-	    &SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit), 0, "Addr watchdog intervall in ms");
+	    &SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit), 0, "Addr watchdog intervall");
+
 SYSCTL_INT(_net_inet_sctp, OID_AUTO, vtag_watchdog_limit, CTLFLAG_RW,
-	    &SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit), 0, "Vtag watchdog intervall in ms");
-	    
+	    &SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit), 0, "Vtag watchdog intervall");
 #endif
 
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -1148,7 +1149,6 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, output_unlocked, CTLTYPE_INT|CTLFLAG_RW,
 	    SCTPCTL_OUTPUT_UNLOCKED_DESC);
 #endif
 
-	    
 SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
 			  &SCTP_BASE_STATS, sctpstat ,
 	      "SCTP statistics (struct sctp_stat)");
