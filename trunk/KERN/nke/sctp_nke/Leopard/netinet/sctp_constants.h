@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 189371 2009-03-04 20:54:42Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 189790 2009-03-14 13:42:13Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -237,8 +237,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 189371 2009-03-04 20:54:42
 #define SCTP_THRESHOLD_CLEAR       120
 #define SCTP_THRESHOLD_INCR        121
 #define SCTP_FLIGHT_LOG_DWN_WP_FWD 122
-
-#define SCTP_LOG_MAX_TYPES 123
+#define SCTP_FWD_TSN_CHECK         123
+#define SCTP_LOG_MAX_TYPES 124
 /*
  * To turn on various logging, you must first enable 'options KTR' and
  * you might want to bump the entires 'options KTR_ENTRIES=80000'.
