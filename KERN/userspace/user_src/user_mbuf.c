@@ -15,7 +15,9 @@
 #include "user_include/user_atomic.h"
 
 struct mbstat mbstat;
+#define KIPC_MAX_LINKHDR        4       /* int: max length of link header (see sys/sysclt.h) */
 #define	KIPC_MAX_PROTOHDR	5	/* int: max length of network header (see sys/sysclt.h)*/
+int     max_linkhdr = KIPC_MAX_LINKHDR;
 int	max_protohdr = KIPC_MAX_PROTOHDR; /* Size of largest protocol layer header. */
 
 /*
