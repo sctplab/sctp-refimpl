@@ -76,7 +76,7 @@ struct sctp_sysctl {
 	uint32_t sctp_nr_outgoing_streams_default;
 	uint32_t sctp_cmt_on_off;
 	uint32_t sctp_cmt_use_dac;
-/* EY 5/5/08 - nr_sack flag variable */
+	/* EY 5/5/08 - nr_sack flag variable */
 	uint32_t sctp_nr_sack_on_off;
 	uint32_t sctp_cmt_pf;
 	uint32_t sctp_use_cwnd_based_maxburst;
@@ -98,8 +98,8 @@ struct sctp_sysctl {
 	uint32_t sctp_default_cc_module;
 	uint32_t sctp_default_frag_interleave;
 	uint32_t sctp_mobility_base;
-        uint32_t sctp_mobility_fasthandoff;
-        uint32_t sctp_inits_include_nat_friendly;  
+	uint32_t sctp_mobility_fasthandoff;
+	uint32_t sctp_inits_include_nat_friendly;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	struct sctp_log *sctp_log;
@@ -116,6 +116,8 @@ struct sctp_sysctl {
 #if defined(__APPLE__)
 	uint32_t sctp_ignore_vmware_interfaces ;
 	uint32_t sctp_main_timer;
+	uint32_t sctp_addr_watchdog_limit;
+	uint32_t sctp_vtag_watchdog_limit;
 #endif
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	uint32_t sctp_output_unlocked;
@@ -497,28 +499,37 @@ struct sctp_sysctl {
 #define SCTPCTL_DEBUG_DESC	"Configure debug output"
 #define SCTPCTL_DEBUG_MIN	0
 #define SCTPCTL_DEBUG_MAX	0xFFFFFFFF
-#define SCTPCTL_DEBUG_DEFAULT	0	
+#define SCTPCTL_DEBUG_DEFAULT	0
 #endif
 
 #if defined(__APPLE__)
 #define SCTPCTL_MAIN_TIMER_DESC		"Main timer interval in ms"
 #define SCTPCTL_MAIN_TIMER_MIN		1
 #define SCTPCTL_MAIN_TIMER_MAX		0xFFFFFFFF
-#define SCTPCTL_MAIN_TIMER_DEFAULT	10	
+#define SCTPCTL_MAIN_TIMER_DEFAULT	10
 
 #define SCTPCTL_IGNORE_VMWARE_INTERFACES_DESC		"Ignore VMWare Interfaces"
 #define SCTPCTL_IGNORE_VMWARE_INTERFACES_MIN		0
 #define SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX		1
-#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT	SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX	
+#define SCTPCTL_IGNORE_VMWARE_INTERFACES_DEFAULT	SCTPCTL_IGNORE_VMWARE_INTERFACES_MAX
 #endif
 
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 #define SCTPCTL_OUTPUT_UNLOCKED_DESC	"Unlock socket when sending packets down to IP."
 #define SCTPCTL_OUTPUT_UNLOCKED_MIN	0
 #define SCTPCTL_OUTPUT_UNLOCKED_MAX	1
-#define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN	
+#define SCTPCTL_OUTPUT_UNLOCKED_DEFAULT	SCTPCTL_OUTPUT_UNLOCKED_MIN
 #endif
 
+#if defined(__APPLE__)
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_MIN	0
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_MAX	0xFFFFFFFF
+#define	SCTPCTL_ADDR_WATCHDOG_LIMIT_DEFAULT	SCTPCTL_ADDR_WATCHDOG_LIMIT_MIN
+
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_MIN	0
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_MAX	0xFFFFFFFF
+#define	SCTPCTL_VTAG_WATCHDOG_LIMIT_DEFAULT	SCTPCTL_VTAG_WATCHDOG_LIMIT_MIN
+#endif
 
 #if defined(_KERNEL) || defined(__Userspace__)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
