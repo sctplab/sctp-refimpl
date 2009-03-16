@@ -348,6 +348,7 @@ void		 m_tag_delete_chain(struct mbuf *, struct m_tag *);
 void		 m_move_pkthdr(struct mbuf *, struct mbuf *);
 void		 m_tag_free_default(struct m_tag *);
 
+extern int max_linkhdr;    /* Largest link-level header */
 extern int max_protohdr; /* Size of largest protocol layer header. See user_mbuf.c */
 
 static int mbuf_constructor_dup(struct mbuf *m, int pkthdr, short type)

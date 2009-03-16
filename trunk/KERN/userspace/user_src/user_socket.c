@@ -324,6 +324,30 @@ soisconnecting(struct socket *so)
 	SOCK_UNLOCK(so);
 }
 
+/* Taken from  usr/src/sys/kern/uipc_socket.c and called within sctp_disconnect (sctp_usrreq.c).
+ *  TODO Do we use sctp_disconnect?
+ */
+void
+soisdisconnecting(struct socket *so)
+{
+
+        /*
+         * Note: This code assumes that SOCK_LOCK(so) and
+         * SOCKBUF_LOCK(&so->so_rcv) are the same.
+         */
+        SOCKBUF_LOCK(&so->so_rcv);
+        so->so_state &= ~SS_ISCONNECTING;
+        so->so_state |= SS_ISDISCONNECTING;
+        so->so_rcv.sb_state |= SBS_CANTRCVMORE;
+        sorwakeup_locked(so);
+        SOCKBUF_LOCK(&so->so_snd);
+        so->so_snd.sb_state |= SBS_CANTSENDMORE;
+        sowwakeup_locked(so);
+        wakeup("dummy",so);
+        // requires 2 args but this was in orig        wakeup(&so->so_timeo);
+}
+
+
 /* Taken from sys/kern/kern_synch.c and
    modified for __Userspace__
 */
