@@ -1,6 +1,11 @@
 /* __Userspace__ */
 #include <sys/types.h>
 
+#ifdef __Userspace_os_FreeBSD
+#ifndef _SYS_MUTEX_H_
+#include <sys/mutex.h>
+#endif
+#endif
 
 /* maxsockets is used in SCTP_ZONE_INIT call. It refers to
  * kern.ipc.maxsockets kernel environment variable.
@@ -61,13 +66,15 @@ extern int ip_defttl;
 
 
 /* dummy definitions used (temporarily?) for inpcb userspace port */
-struct mtx {};
 #define mtx_lock(arg1)
 #define mtx_unlock(arg1)
 #define mtx_assert(arg1,arg2)
 #define MA_OWNED 7 /* sys/mutex.h typically on FreeBSD */
+#if !defined(__Userspace_os_FreeBSD)
+struct mtx {};
 struct selinfo {};
 struct sx {};
+#endif
 
 /* called in sctp_usrreq.c */
 #define in6_sin_2_v4mapsin6(arg1, arg2) /* STUB */

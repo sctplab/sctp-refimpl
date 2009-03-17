@@ -670,6 +670,7 @@ int	accept_filt_generic_mod_event(module_t mod, int event, void *data);
 /* --- function prototypes (implemented in user_socket.c) --- */
 /* ---------------------------------------------------------- */
 void	soisconnecting(struct socket *so);
+void	soisdisconnecting(struct socket *so);
 void	soisconnected(struct socket *so);
 struct socket * sonewconn(struct socket *head, int connstatus);
 void	socantrcvmore(struct socket *so);
