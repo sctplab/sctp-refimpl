@@ -127,6 +127,14 @@ static INLINE uint_t ec_atomic_cas(uint_t *mem, uint_t with, uint_t cmp)
 # endif
 
 # ifndef ec_atomic_inc
+#   ifndef ec_atomic_cas
+/* this triggers on Power PC so need to translate above assembly to
+ *  that architecture...
+ *  without a definition, this will build but will fail to link when
+ *   a userspace application is built.
+ */
+//#   error "no ec_atomic_cas"
+#   endif
 static INLINE uint_t ec_atomic_inc(uint_t *mem)
 {
   register uint_t last;

@@ -2,7 +2,8 @@ CC = gcc
 OSTYPE = $(shell uname)
 UMEMMAKE = $(shell ls 2> /dev/null ../umem-1.0/Makefile)
 ATOMICMAKE = $(shell ls 2> /dev/null ../libatomic_ops-1.1/Makefile)
-CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall -march=i486
+CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall 
+# this breaks powerPC builds -march=i486 
 CPPFLAGS = -I.  -I./user_include
 DEFS = 
 INCLUDES = 
