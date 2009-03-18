@@ -1,8 +1,14 @@
 #ifndef __ipc_mutex_h__
 #define __ipc_mutex_h__
 #include <sys/types.h>
+#include <sys/sysctl.h>
+#include <sys/user.h>
 #include <stdio.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <errno.h>
 #include <sys/umtx.h>
+#include <pthread.h>
 /*
  * Shared memory is attached at 
  * a specific address. Once attached
@@ -67,6 +73,21 @@ struct ipc_mutex_shm {
 	struct ipc_mutex_names mutexs[0];
 };
 
+/* Local memory stuff */
+struct ipc_local_memory {
+	lwpid_t default_tid; /* TID to use when no pthread is passed */
+	char *pathname;
+	void *shm_base_addr;
+};
 
+#define IPC_MUTEX_CREATE 0x0001	 /* Create if not there */
+
+
+int ipc_mutex_sysinit(char *pathname, int maxmtx, int flags);
+struct ipc_mutex ipc_mutex_init(char *mutex_name, int flags);
+
+int ipc_mutex_lock(struct ipc_mutex *mtx, struct pthread thr, int flags);
+int ipc_mutex_lock_timed(struct ipc_mutex *mtx, struct pthread thr, struct timeval *tv, int flags);
+int ipc_mutex_unlock(struct ipc_mutex *mtx, struct pthread thr);
 
 #endif
