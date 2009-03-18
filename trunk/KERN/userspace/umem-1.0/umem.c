@@ -404,6 +404,10 @@
 
 size_t pagesize;
 
+#if defined(__ppc__)
+pthread_mutex_t ppc_64bit_lock = PTHREAD_MUTEX_INITIALIZER;
+#endif
+
 /*
  * The default set of caches to back umem_alloc().
  * These sizes should be reevaluated periodically.

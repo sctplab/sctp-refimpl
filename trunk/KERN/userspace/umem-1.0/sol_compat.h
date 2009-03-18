@@ -126,6 +126,7 @@ static INLINE uint_t ec_atomic_cas(uint_t *mem, uint_t with, uint_t cmp)
 }
 # endif
 
+#if !defined(__ppc__)
 # ifndef ec_atomic_inc
 #   ifndef ec_atomic_cas
 /* this triggers on Power PC so need to translate above assembly to
@@ -151,6 +152,7 @@ static INLINE uint_t ec_atomic_inc(uint_t *mem)
 # endif
 
 #endif
+#endif /* !__ppc__ */
 
 #define P2PHASE(x, align)    ((x) & ((align) - 1))
 #define P2ALIGN(x, align)    ((x) & -(align))
@@ -164,8 +166,39 @@ static INLINE uint_t ec_atomic_inc(uint_t *mem)
 #define ISP2(x)    (((x) & ((x) - 1)) == 0)
 
 /* beware! umem only uses these atomic adds for incrementing by 1 */
+#if defined(__ppc__)
+/* note: ec_atomic_inc above returns the new value, not old! */
+static INLINE uint_t atomic_add_32_nv(uint32_t *ptr, uint32_t delta)
+{
+    register uint_t val;
+
+    asm volatile (
+	"1:	lwarx	%0,0,%1		\n\
+		add	%0,%2,%0	\n\
+		stwcx.	%0,0,%1		\n\
+		bne-	1b"
+	: "=&r" (val)
+	: "r" (ptr), "r" (delta)
+	: "cc", "memory");
+
+    return val;
+}
+
+extern pthread_mutex_t ppc_64bit_lock;
+static INLINE uint64_t atomic_add_64(uint64_t *ptr, uint64_t delta)
+{
+    uint64_t val;
+
+    pthread_mutex_lock(&ppc_64bit_lock);
+    val = *ptr + delta;
+    *ptr = val;
+    pthread_mutex_unlock(&ppc_64bit_lock);
+    return val;
+}
+#else
 #define atomic_add_64(lvalptr, delta) ec_atomic_inc64(lvalptr)
 #define atomic_add_32_nv(a, b)  	  ec_atomic_inc(a) 
+#endif
 
 #ifndef NANOSEC
 #define NANOSEC 1000000000
