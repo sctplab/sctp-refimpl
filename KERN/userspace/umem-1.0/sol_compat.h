@@ -114,6 +114,25 @@ static INLINE int thr_create(void *stack_base,
 # ifdef _WIN32
 #  define ec_atomic_inc(a)		InterlockedIncrement(a)
 #  define ec_atomic_inc64(a)    InterlockedIncrement64(a)
+#elif defined(__APPLE__)
+# include <libkern/OSAtomic.h>
+# define ec_atomic_inc(a)	OSAtomicIncrement32Barrier((int32_t *)(a))
+# if defined(__i386__) || defined(__x86_64__)
+#  define ec_atomic_inc64(a)	OSAtomicIncrement64Barrier((int64_t *)(a))
+# else
+# define NEED_ATOMIC64_LOCK
+extern pthread_mutex_t atomic_64bit_lock;
+static INLINE uint64_t ec_atomic_inc64(uint64_t *ptr)
+{
+    uint64_t val;
+
+    pthread_mutex_lock(&atomic_64bit_lock);
+    val = *ptr + 1;
+    *ptr = val;
+    pthread_mutex_unlock(&atomic_64bit_lock);
+    return val;
+}
+# endif
 # elif (defined(__i386__) || defined(__x86_64__)) && defined(__GNUC__)
 static INLINE uint_t ec_atomic_cas(uint_t *mem, uint_t with, uint_t cmp)
 {
@@ -166,7 +185,7 @@ static INLINE uint_t ec_atomic_inc(uint_t *mem)
 #define ISP2(x)    (((x) & ((x) - 1)) == 0)
 
 /* beware! umem only uses these atomic adds for incrementing by 1 */
-#if defined(__ppc__)
+#if defined(__ppc__) && !defined(__APPLE__)
 /* note: ec_atomic_inc above returns the new value, not old! */
 static INLINE uint_t atomic_add_32_nv(uint32_t *ptr, uint32_t delta)
 {
@@ -184,21 +203,22 @@ static INLINE uint_t atomic_add_32_nv(uint32_t *ptr, uint32_t delta)
     return val;
 }
 
-extern pthread_mutex_t ppc_64bit_lock;
+#define NEED_ATOMIC64_LOCK
+extern pthread_mutex_t atomic_64bit_lock;
 static INLINE uint64_t atomic_add_64(uint64_t *ptr, uint64_t delta)
 {
     uint64_t val;
 
-    pthread_mutex_lock(&ppc_64bit_lock);
+    pthread_mutex_lock(&atomic_64bit_lock);
     val = *ptr + delta;
     *ptr = val;
-    pthread_mutex_unlock(&ppc_64bit_lock);
+    pthread_mutex_unlock(&atomic_64bit_lock);
     return val;
 }
 #else
 #define atomic_add_64(lvalptr, delta) ec_atomic_inc64(lvalptr)
 #define atomic_add_32_nv(a, b)  	  ec_atomic_inc(a) 
-#endif
+#endif /* __ppc__ || __APPLE__ */
 
 #ifndef NANOSEC
 #define NANOSEC 1000000000
