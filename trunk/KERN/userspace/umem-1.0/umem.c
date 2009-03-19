@@ -404,8 +404,8 @@
 
 size_t pagesize;
 
-#if defined(__ppc__)
-pthread_mutex_t ppc_64bit_lock = PTHREAD_MUTEX_INITIALIZER;
+#if defined(NEED_ATOMIC64_LOCK)
+pthread_mutex_t atomic_64bit_lock = PTHREAD_MUTEX_INITIALIZER;
 #endif
 
 /*
