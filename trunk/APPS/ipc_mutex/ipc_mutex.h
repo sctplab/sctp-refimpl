@@ -1,6 +1,38 @@
+/*
+ * Copyright (C) 2009 Randall R. Stewart
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
 #ifndef __ipc_mutex_h__
 #define __ipc_mutex_h__
+#include <machine/param.h>
 #include <sys/types.h>
+#include <machine/atomic.h>
+#include <sys/ipc.h>
+#include <sys/shm.h>
 #include <sys/sysctl.h>
 #include <sys/user.h>
 #include <stdio.h>
@@ -9,6 +41,7 @@
 #include <errno.h>
 #include <sys/umtx.h>
 #include <pthread.h>
+
 /*
  * Shared memory is attached at 
  * a specific address. Once attached
@@ -54,40 +87,78 @@
  *
  *
  */
-
-
+#define IPC_MUTEX_NAME 24
+#define IPC_INITIALIZED_PATTERN 0x61eabe11
 
 struct ipc_mutex {
+	int mutex_index;
 	struct umtx mutex;
 };
+
+#define IPC_MUTEX_UNUSED   0x00000001
+#define IPC_MUTEX_ASSIGNED 0x00000002
+#define IPC_MUTEX_DELETED  0x00000004
 
 struct ipc_mutex_names {
 	char      mutex_name[IPC_MUTEX_NAME];
 	uint32_t  mutex_flags;
-	uint32_t  mutex_offset;
+	uint32_t  mutex_index;
 };
 
 struct ipc_mutex_shm {
+	int initialized;
+	struct umtx shmlock;
 	int max_mutex;
 	int num_mutex_used;
-	struct ipc_mutex_names mutexs[0];
+	struct ipc_mutex_names names[0];
 };
 
 /* Local memory stuff */
 struct ipc_local_memory {
 	lwpid_t default_tid; /* TID to use when no pthread is passed */
-	char *pathname;
+	key_t shm_keyid;
+	int   shmid;
 	void *shm_base_addr;
+	struct ipc_mutex_shm *shm;
+	struct ipc_mutex *mtxs;
 };
 
+
+/* This is a HACK until we integrate into libthr and can
+ * include thr_private.h
+ */
+struct ipc_pthread_private {
+	/* Kernel thread id. */
+	long			tid;
+};
+
+#define IPC_SHM_FTOK_ID  0x0001  /* We alays use the same ID for ftok */
+
+
+/* Flags for create */
 #define IPC_MUTEX_CREATE 0x0001	 /* Create if not there */
 
 
 int ipc_mutex_sysinit(char *pathname, int maxmtx, int flags);
-struct ipc_mutex ipc_mutex_init(char *mutex_name, int flags);
+int ipc_mutex_sysdestroy();
 
-int ipc_mutex_lock(struct ipc_mutex *mtx, struct pthread thr, int flags);
-int ipc_mutex_lock_timed(struct ipc_mutex *mtx, struct pthread thr, struct timeval *tv, int flags);
-int ipc_mutex_unlock(struct ipc_mutex *mtx, struct pthread thr);
+
+/* Finds the lock, if you don't have the IPC_MUTEX_CREATE
+ * flag in place it will not create it if it does not exist.
+ */
+struct ipc_mutex *ipc_mutex_init(char *mutex_name, int flags);
+
+/* You must own the lock to destroy it */
+int ipc_mutex_destroy(struct ipc_mutex *mtx, pthread_t thr);
+
+
+int ipc_mutex_lock(struct ipc_mutex *mtx, pthread_t thr, int flags);
+int ipc_mutex_lock_timed(struct ipc_mutex *mtx, pthread_t thr, 
+			 const struct timespec *tv);
+int ipc_mutex_trylock(struct ipc_mutex *mtx, pthread_t thr); 
+
+int ipc_mutex_unlock(struct ipc_mutex *mtx, pthread_t thr);
+
+void ipc_mutex_show();
 
 #endif
