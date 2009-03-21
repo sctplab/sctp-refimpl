@@ -142,7 +142,7 @@ retry:
 		(sizeof(struct ipc_mutex) * maxmtx) +
 		(sizeof(struct ipc_mutex_shm)));
 	osiz = size;
-	if ((size % PAGE_SIZE) 
+	if (size % PAGE_SIZE)
 	    size += (PAGE_SIZE - (size % PAGE_SIZE));
 	/* Round up to next page size */
 	if (osiz < size) {
