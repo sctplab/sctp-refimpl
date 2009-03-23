@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.34 2009-01-11 13:23:46 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.35 2009-03-23 00:19:00 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -70,7 +70,7 @@
 static int continualINIT=0;
 static unsigned char to_ip[256];
 static socklen_t to_ip_len;
-static struct sockaddr_storage bind_ss;
+static struct sockaddr_storage bind_ss[100];
 
 sctpAdaptorMod *object_in = NULL;
 static int lastStream=0;
@@ -603,26 +603,26 @@ void
 SCTP_setBindAddr(uint32_t addr)
 {
   struct sockaddr_in *sin;
-  sin = (struct sockaddr_in *)&bind_ss;
+  sin = (struct sockaddr_in *)&bind_ss[bindSpecific];
   sin->sin_family = AF_INET;
 #ifdef HAVE_SA_LEN
   sin->sin_len = sizeof(struct sockaddr_in);
 #endif
   sin->sin_addr.s_addr = addr;
-  bindSpecific = 1;
+  bindSpecific++;
 }
 
 void
 SCTP_setBind6Addr(uint8_t *addr)
 {
   struct sockaddr_in6 *sin6;
-  sin6 = (struct sockaddr_in6 *)&bind_ss;
+  sin6 = (struct sockaddr_in6 *)&bind_ss[bindSpecific];
   sin6->sin6_family = AF_INET6;
 #ifdef HAVE_SA_LEN
   sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
   memcpy((char *)&sin6->sin6_addr, addr, sizeof(struct in6_addr));
-  bindSpecific = 1;
+  bindSpecific++;
 }
 
 /* XXX works only for IPv4
@@ -735,19 +735,26 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 	}
 	/* fill in specific local server address if doing bind specific */
 	if (bindSpecific) {
-		struct sockaddr *sa = (struct sockaddr *)&bind_ss;
-		/* copy bind address in */
-		memcpy(&inAddr6, &bind_ss, sizeof(struct sockaddr_in6));
+		int i;
+		for (i=0; i<bindSpecific; i++) {
+			struct sockaddr *sa = (struct sockaddr *)&bind_ss;
+			/* copy bind address in */
+			memcpy(&inAddr6, &bind_ss[i], sizeof(struct sockaddr_in6));
 
-		/* set desired port */
-		if (sa->sa_family == AF_INET) {
-			struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
-			sin->sin_port = htons(port); 
-			bindsa_len = sizeof(struct sockaddr_in);
-		} else {
-			inAddr6.sin6_port = htons(port);
-			bindsa_len = sizeof(struct sockaddr_in6);
-			inAddr6.sin6_scope_id = scope_id;
+			/* set desired port */
+			if (sa->sa_family == AF_INET) {
+				struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
+				sin->sin_port = htons(port); 
+				bindsa_len = sizeof(struct sockaddr_in);
+			} else {
+				inAddr6.sin6_port = htons(port);
+				bindsa_len = sizeof(struct sockaddr_in6);
+				inAddr6.sin6_scope_id = scope_id;
+			}
+			if (sctp_bindx(r->fd, 
+				       (struct sockaddr *)&inAddr6, 1, 
+				       SCTP_BINDX_ADD_ADDR) == -1) {
+			}
 		}
 	} else {
 		if (v4only) {
@@ -812,7 +819,7 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 	else
 		printf("rcv buffer is %d\n",optval);
 
-	if (port) {
+	if ((port) && (bindSpecific == 0)) {
 		if(bind(r->fd,(struct sockaddr *)&inAddr6, bindsa_len) < 0){
 			printf("bind failed err:%d\n",errno);
 			close(r->fd);
