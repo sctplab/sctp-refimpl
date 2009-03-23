@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.36 2009-03-23 00:23:42 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.37 2009-03-23 00:41:19 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -742,12 +742,11 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 	}
 	/* fill in specific local server address if doing bind specific */
 	if (bindSpecific) {
-		int i;
+		int i, ret;
 		for (i=0; i<bindSpecific; i++) {
-			struct sockaddr *sa = (struct sockaddr *)&bind_ss;
+			struct sockaddr *sa = (struct sockaddr *)&bind_ss[i];
 			/* copy bind address in */
 			memcpy(&inAddr6, &bind_ss[i], sizeof(struct sockaddr_in6));
-
 			/* set desired port */
 			if (sa->sa_family == AF_INET) {
 				struct sockaddr_in *sin = (struct sockaddr_in *)&inAddr6;
@@ -758,10 +757,10 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 				bindsa_len = sizeof(struct sockaddr_in6);
 				inAddr6.sin6_scope_id = scope_id;
 			}
-			if (sctp_bindx(r->fd, 
-				       (struct sockaddr *)&inAddr6, 1, 
-				       SCTP_BINDX_ADD_ADDR) == -1) {
-			}
+			errno = 0;
+			ret = sctp_bindx(r->fd, 
+							 (struct sockaddr *)&inAddr6, 1, 
+							 SCTP_BINDX_ADD_ADDR);
 		}
 	} else {
 		if (v4only) {
