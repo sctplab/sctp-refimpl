@@ -9450,10 +9450,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			if (!TAILQ_EMPTY(&asoc->send_queue)) {
 				goto skip_the_fill_from_streams;
 			}
-			/*
-			 * for CMT we start at the next one past the one we
-			 * last added data to.
-			 */
 			if (asoc->last_net_pushed_data_to) {
 				net = asoc->last_net_pushed_data_to;
 			} else {
