@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.35 2009-03-23 00:19:00 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.36 2009-03-23 00:23:42 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -208,7 +208,6 @@ handle_notification(int fd,char *notify_buf) {
 		break;
 	}
 	case SCTP_SENDER_DRY_EVENT:
-	  printf("Got sender DRY event\n");
 	  break;
 	case SCTP_STREAM_RESET_EVENT:
 	{
@@ -225,6 +224,14 @@ handle_notification(int fd,char *notify_buf) {
 			strscope = "inbound";
 		} else if (strrst->strreset_flags & SCTP_STRRESET_OUTBOUND_STR) {
 			strscope = "outbound";
+		}
+		if (strrst->strreset_flags & SCTP_STRRESET_ADD_STREAM) {
+		  
+		  printf("Added streams %s new stream total is:%d\n",
+				 strscope,
+				 strrst->strreset_list[0]
+				 );
+		  break;
 		}
 		if(strrst->strreset_flags & SCTP_STRRESET_ALL_STREAMS) {
 			printf("All %s streams have been reset\n",
