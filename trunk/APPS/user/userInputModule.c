@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.111 2009-01-11 13:23:46 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.112 2009-03-23 00:23:42 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -127,7 +127,7 @@ static int cmd_gethbdelay(char *argv[], int argc);
 static int cmd_getstat(char *argv[], int argc);
 static int cmd_clrstat(char *argv[], int argc);
 static int cmd_getassocstat(char *argv[], int argc);
-
+static int cmd_addstreams(char *argv[], int argc);
 
 static int cmd_getprimary(char *argv[], int argc);
 static int cmd_getrtt(char *argv[], int argc);
@@ -279,6 +279,8 @@ static struct command commands[] = {
      "                    SCTP_ACTION_QUEUE_REQUEST_ONLY=0x08\n"
      "                    (which can all be or'd together if you want)",
      cmd_addip},
+    {"addstream", "addstream number - add more streams",
+	 cmd_addstreams },
     {"assoc", "assoc - associate with the set destination",
      cmd_assoc},
     {"bindx", "bindx type address - add/delete address to the endpoint\n"
@@ -1793,6 +1795,37 @@ cmd_getloopsleep(char *argv[], int argc)
 	printf("Loop sleep is set to %d seconds\n",loop_sleep);
 	return(0);
 }
+
+int
+cmd_addstreams(char *argv[], int argc)
+{
+#if defined(__BSD_SCTP_STACK__)
+	char buffer[2048];
+	struct sctp_stream_reset *strrst;
+	memset(buffer,0,sizeof(buffer));
+        strrst = (struct sctp_stream_reset *)buffer;
+	if(argc < 1) {
+	    printf("addstream num - where num is the number to add\n");
+		return(0);
+	}
+	strrst->strrst_num_streams = strtol(argv[0], NULL, 0);
+	strrst->strrst_flags = SCTP_RESET_ADD_STREAMS;
+	strrst->strrst_assoc_id = get_assoc_id();
+	if((setsockopt(adap->fd,IPPROTO_SCTP,
+				  SCTP_RESET_STREAMS,
+				  strrst, sizeof(struct sctp_stream_reset))
+				  ) != 0){
+		printf("Stream Reset fails %d\n",errno);
+	}else{
+		printf("Stream reset succesful\n");
+	}
+	return(0);
+#else
+	printf("Not supported on this OS\n");
+	return (0);
+#endif
+}
+
 
 int
 cmd_streamreset(char *argv[], int argc)
