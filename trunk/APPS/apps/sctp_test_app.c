@@ -133,10 +133,8 @@ main(int argc, char **argv)
 			struct in_addr in;
 			if (inet_pton(AF_INET6, binda[i], (void *)&in6)) {
 				SCTP_setBind6Addr((u_char *)&in6);
-				bindSpecific = 1;
 			} else if (inet_pton(AF_INET, binda[i], (void *) &in)) {
 				SCTP_setBindAddr(in.s_addr);
-				bindSpecific = 1;
 			} else {
 				printf("Invalid bind address format [%s]!\n", binda[i]);
 				return(-3);
