@@ -9405,9 +9405,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	cwnd_full_ind = 0;
 	auth_keyid = stcb->asoc.authinfo.active_keyid;
 
-	if((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
-	   (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
-	   (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR))) {
+	if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
+	    (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED) ||
+	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR))) {
 		eeor_mode = 1;
 	} else {
 		eeor_mode = 0;
@@ -9447,30 +9447,23 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
-			/*
-			 * for CMT we start at the next one past the one we
-			 * last added data to.
-			 */
-			if (TAILQ_FIRST(&asoc->send_queue) != NULL) {
+			if (!TAILQ_EMPTY(&asoc->send_queue)) {
 				goto skip_the_fill_from_streams;
 			}
-			if (asoc->last_net_data_came_from) {
-				net = TAILQ_NEXT(asoc->last_net_data_came_from, sctp_next);
-				if (net == NULL) {
-					net = TAILQ_FIRST(&asoc->nets);
-				}
+			if (asoc->last_net_pushed_data_to) {
+				net = asoc->last_net_pushed_data_to;
 			} else {
-				/* back to start */
+				/* initially start with the first net */
 				net = TAILQ_FIRST(&asoc->nets);
 			}
 
-		/* JRI-TODO: CMT-MPI. Simply set the first destination
-		   (net) to be optimized for the next message to be
-		   pulled out of the outwheel. 
-		   1. peek at outwheel
-		   2. If large message, set net = highest_cwnd
-		   3. If small message, set net = lowest rtt
-		*/
+			/* JRI-TODO: CMT-MPI. Simply set the first destination
+			  (net) to be optimized for the next message to be
+			  pulled out of the outwheel. 
+			  1. peek at outwheel
+			  2. If large message, set net = highest_cwnd
+			  3. If small message, set net = lowest rtt
+			 */
 		} else {
 			net = asoc->primary_destination;
 			if (net == NULL) {
@@ -9523,7 +9516,10 @@ one_more_time:
 				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 			}
 			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode, &quit_now);
-			if(quit_now) {
+			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+				asoc->last_net_pushed_data_to = net;
+			}			
+			if (quit_now) {
 				/* memory alloc failure */
 				no_data_chunks = 1;
 				goto skip_the_fill_from_streams;
@@ -9533,7 +9529,7 @@ one_more_time:
 			/* got to pick up the beginning stuff. */
 			old_startat = start_at;
 			start_at = net = TAILQ_FIRST(&asoc->nets);
-			if(old_startat)
+			if (old_startat)
 				goto one_more_time;
 		}
 	}
