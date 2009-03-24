@@ -31,9 +31,8 @@
 #include <machine/param.h>
 #include <sys/types.h>
 #include <machine/atomic.h>
-#include <sys/ipc.h>
-#include <sys/shm.h>
-#include <sys/sysctl.h>
+#include <sys/mman.h>
+
 #include <sys/user.h>
 #include <stdio.h>
 #include <unistd.h>
@@ -41,6 +40,8 @@
 #include <errno.h>
 #include <sys/umtx.h>
 #include <pthread.h>
+#include <fcntl.h>
+#include <sys/sysctl.h>
 
 /*
  * Shared memory is attached at 
@@ -58,6 +59,7 @@
  *  *******
  *   max
  *   used
+ *   process_map[]
  *   names[0] ---+
  *   names[1]    |
  *   names[2]    |
@@ -89,6 +91,8 @@
  */
 #define IPC_MUTEX_NAME 24
 #define IPC_INITIALIZED_PATTERN 0x61eabe11
+#define MAX_PATHNAME 512
+#define IPC_MUTEX_MAX_MAP 512 /* Max number of processes that will attach */
 
 struct ipc_mutex {
 	int mutex_index;
@@ -103,11 +107,19 @@ struct ipc_mutex_names {
 	char      mutex_name[IPC_MUTEX_NAME];
 	uint32_t  mutex_flags;
 	uint32_t  mutex_index;
+	lwpid_t   mutex_p_tid;
+};
+
+struct mutex_proc_map {
+	pid_t     pid;
+	lwpid_t   tid;
 };
 
 struct ipc_mutex_shm {
 	int initialized;
 	struct umtx shmlock;
+	size_t size;
+	struct mutex_proc_map map[IPC_MUTEX_MAX_MAP];
 	int max_mutex;
 	int num_mutex_used;
 	struct ipc_mutex_names names[0];
@@ -116,8 +128,10 @@ struct ipc_mutex_shm {
 /* Local memory stuff */
 struct ipc_local_memory {
 	lwpid_t default_tid; /* TID to use when no pthread is passed */
-	key_t shm_keyid;
+	int   my_pidentry;
 	int   shmid;
+	size_t size;
+	char pathname[MAX_PATHNAME];
 	void *shm_base_addr;
 	struct ipc_mutex_shm *shm;
 	struct ipc_mutex *mtxs;
@@ -138,9 +152,27 @@ struct ipc_pthread_private {
 /* Flags for create */
 #define IPC_MUTEX_CREATE 0x0001	 /* Create if not there */
 
-
+/* Attach to the memory, if it does not exist and
+ * IPC_MUTEX_CREATE is not in the flags, then you will
+ * fail with an error. 
+ */
 int ipc_mutex_sysinit(char *pathname, int maxmtx, int flags);
+
+/* Gracefully release the shm leaving it around for
+ * others to use.
+ */
+void ipc_mutex_release();
+
+/* Gracefully release the shm, but also wipe it out
+ * so that at the end, it is not available to others.
+ * Note that probably current pid's will still have
+ * access to it until they exit.
+ */
 int ipc_mutex_sysdestroy();
+
+/* Audit TID space to look for dead processes */
+void ipc_audit_tid_space();
+
 
 
 /* Finds the lock, if you don't have the IPC_MUTEX_CREATE

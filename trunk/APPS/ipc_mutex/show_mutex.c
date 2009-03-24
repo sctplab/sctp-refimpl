@@ -49,5 +49,6 @@ main(int argc, char **argv)
 		return (-1);
 	}
 	ipc_mutex_show();
+	ipc_mutex_release();
 	return (0);
 }
