@@ -90,5 +90,8 @@ main(int argc, char **argv)
 	ret = ipc_mutex_unlock(mtx, NULL);
 	printf("Return ret:%d errno:%d\n", ret, errno);
 	printf("All done - bye\n");
+	if (argc == 4) {
+		ipc_mutex_release();
+	}
 	return (0);
 }

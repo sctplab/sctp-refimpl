@@ -107,5 +107,6 @@ main(int argc, char **argv)
 	pthread_join(thr1, &retb);
 	pthread_join(thr2, &retb);
 	printf("All threads are done - bye\n");
+	ipc_mutex_release();
 	return (0);
 }

@@ -37,11 +37,10 @@
 struct ipc_local_memory *_local_ipc_mem=NULL;
 
 static int
-initialize_kinfo(lwpid_t *tid)
+initialize_kinfo(pid_t pid, lwpid_t *tid)
 {
 	/* Get the TID of the main thread */
 	int name[4];
-	int pid;
 	size_t len;
 	struct kinfo_proc *kipp;
 
@@ -55,7 +54,7 @@ initialize_kinfo(lwpid_t *tid)
 	name[0] = CTL_KERN;
 	name[1] = KERN_PROC;
 	name[2] = KERN_PROC_PID;
-	name[3] = getpid();
+	name[3] = pid;
 	if (sysctl(name, 4, NULL, &len, NULL, 0) < 0) {
 		return (-1);
 	}
@@ -75,13 +74,173 @@ initialize_kinfo(lwpid_t *tid)
 }
 
 
+static void
+ipc_sub_my_tid(pid_t pid, lwpid_t tid)
+{
+	int i;
+	struct mutex_proc_map *map;
+
+	if (_local_ipc_mem == NULL) {
+		/* TSNH */
+		return;
+	}
+
+	if (_local_ipc_mem->shm == NULL) {
+		/* TSNH */
+		return;
+	}
+	map = _local_ipc_mem->shm->map;
+	map[_local_ipc_mem->my_pidentry].pid = 0;
+	map[_local_ipc_mem->my_pidentry].tid = 0;
+	return;
+}
+
+void
+ipc_audit_tid_space()
+{
+	int i;
+	struct mutex_proc_map *map;
+	lwpid_t tid;
+
+	if (_local_ipc_mem == NULL) {
+		return;
+	}
+
+	if (_local_ipc_mem->shm == NULL) {
+		return;
+	}
+	umtx_lock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+	map = _local_ipc_mem->shm->map;
+	for (i=0; i<IPC_MUTEX_MAX_MAP; i++) {
+		if (map[i].pid == 0) {
+			continue;
+		}
+		if (kill(map[i].pid, 0) == -1) {
+			/* process is dead/non-existant free it */
+			map[i].pid = 0;
+			map[i].tid = 0;
+			continue;
+		}
+		initialize_kinfo(map[i].pid, &tid);
+		if (tid != map[i].tid) {
+			/* process pid, is NOT the same pid reused */
+			map[i].pid = 0;
+			map[i].tid = 0;
+			continue;
+		}
+	}
+	umtx_unlock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+}
+
+
+void
+ipc_mutex_exits()
+{
+	int i;
+	lwpid_t id, owner;
+	struct ipc_mutex *mtx;
+	if (_local_ipc_mem == NULL)
+		/* TSNH */
+		return;
+	if (_local_ipc_mem->default_tid == UMTX_UNOWNED)
+		/* TSNH */
+		return;
+	umtx_lock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+	for(i=0; i<_local_ipc_mem->shm->max_mutex; i++) {
+		if(_local_ipc_mem->shm->names[i].mutex_p_tid ==
+		   _local_ipc_mem->default_tid) {
+			/* Look at the owner */
+			mtx = &_local_ipc_mem->mtxs[i];
+			owner = umtx_owner(&mtx->mutex);
+			if (owner != UMTX_UNOWNED) {
+				/* Some how we left with this locked */
+				umtx_unlock(&mtx->mutex, owner);
+				_local_ipc_mem->shm->names[i].mutex_p_tid = 0;
+			}
+		}
+	}
+	ipc_sub_my_tid(getpid(), _local_ipc_mem->default_tid);
+	umtx_unlock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+}
+
+
+static int
+ipc_add_my_tid(pid_t pid, lwpid_t tid)
+{
+	int i;
+	struct mutex_proc_map *map;
+
+	if (_local_ipc_mem == NULL) {
+		/* TSNH */
+		return(-1);
+	}
+
+	if (_local_ipc_mem->shm == NULL) {
+		/* TSNH */
+		return(-1);
+	}
+	map = _local_ipc_mem->shm->map;
+	for (i=0; i<IPC_MUTEX_MAX_MAP; i++) {
+		if (map[i].pid == 0) {
+			/* Got one to use */
+			_local_ipc_mem->my_pidentry = i;
+			map[i].pid = pid;
+			map[i].tid = tid;
+			return (0);
+		}
+	}
+	return (-1);
+}
+
+void
+ipc_mutex_release()
+{
+	if (_local_ipc_mem == NULL) {
+		errno = EINVAL;
+		return;
+	}
+
+	if (_local_ipc_mem->shm == NULL) {
+		errno = EINVAL;
+		return;
+	}
+	ipc_mutex_exits();
+	munmap(_local_ipc_mem->shm_base_addr, 
+	       _local_ipc_mem->size);
+	free(_local_ipc_mem);
+	_local_ipc_mem = NULL;
+}
+
+int 
+ipc_mutex_sysdestroy()
+{
+	
+	if (_local_ipc_mem == NULL) {
+		errno = EINVAL;
+		return (-1);
+	}
+
+	ipc_mutex_exits();
+	if (shm_unlink(_local_ipc_mem->pathname) == -1) {
+		return (-1);
+	}
+	if (munmap(_local_ipc_mem->shm_base_addr, _local_ipc_mem->size) == -1) {
+		return (-1);
+	}
+	free(_local_ipc_mem);
+	_local_ipc_mem = NULL;
+	return (0);
+}
+
+
+
 int
 ipc_mutex_sysinit(char *pathname, int maxmtx, int flags)
 {
 	struct stat sbuf;
-	int i;
+	int i,cnt;
 	int creator=0;
-	int upflags;
+	int prot, flg;
 	size_t size, osiz;
 	if (pathname == NULL) {
 		errno = EINVAL;
@@ -91,7 +250,6 @@ ipc_mutex_sysinit(char *pathname, int maxmtx, int flags)
 		errno = EINVAL;
 		return (-1);
 	}
-
 	if (_local_ipc_mem != NULL) {
 		/* Already init'd */
 		errno = EINVAL;
@@ -105,7 +263,7 @@ ipc_mutex_sysinit(char *pathname, int maxmtx, int flags)
 	memset(_local_ipc_mem, 0, sizeof(struct ipc_local_memory));
 
 	/* get the default tid to use */
-	if(initialize_kinfo(&_local_ipc_mem->default_tid)) {
+	if(initialize_kinfo(getpid(), &_local_ipc_mem->default_tid)) {
 		/* Can't get ki_tid? */
 		int er;
 	back_out:
@@ -115,10 +273,26 @@ ipc_mutex_sysinit(char *pathname, int maxmtx, int flags)
 		errno = er;
 		return(-1);
 	}
-
+	size = (((sizeof(struct ipc_mutex_names)) * maxmtx) +
+		(sizeof(struct ipc_mutex) * maxmtx) +
+		(sizeof(struct ipc_mutex_shm)));
+	osiz = size;
+	if (size % PAGE_SIZE) {
+		size += (PAGE_SIZE - (size % PAGE_SIZE));
+	}
+	/* Round up to next page size */
+	if (osiz < size) {
+		/* rethink the max mtx's */
+		maxmtx += ((size - osiz)/ (sizeof(struct ipc_mutex_names) +
+					   sizeof(struct ipc_mutex)));
+	}
+	osiz = size;
 	/* Now attach and setup the shared memory */
 	if (stat(pathname, &sbuf) == -1) {
+		char buf[2];
 		FILE *io;
+		int i;
+	creat_it:
 		if ((flags & IPC_MUTEX_CREATE) == 0) {
 			errno = ENOENT;
 			goto back_out;
@@ -129,47 +303,43 @@ ipc_mutex_sysinit(char *pathname, int maxmtx, int flags)
 			/* Can't create file we can't attach */
 			goto back_out;
 		}
+		buf[0] = 0;
+		/* Pad out the file to the right size */
+		for (i=0; i<size; i++) {
+			fwrite(buf, 1, 1, io);
+		}
+		fclose(io);
+	} else {
+		int saved_size, saved_maxmtx;
+		saved_size = size;
+		saved_maxmtx = maxmtx;
+		size = sbuf.st_size;
+		if (size != osiz) {
+			osiz -= (sizeof(struct ipc_mutex_shm));
+			maxmtx = osiz/ (sizeof(struct ipc_mutex_names) +
+					sizeof(struct ipc_mutex));
+			if (maxmtx < 1) {
+				size = saved_size;
+				maxmtx = saved_maxmtx;
+				goto creat_it;
+			}
+		}
 	}
 	/* Now lets generate the keyid */
-	_local_ipc_mem->shm_keyid= ftok(pathname, IPC_SHM_FTOK_ID);
-	if (_local_ipc_mem->shm_keyid == -1) {
+	strcpy(_local_ipc_mem->pathname, pathname);
+	_local_ipc_mem->shmid = shm_open(pathname, O_RDWR, 0);
+	if (_local_ipc_mem->shmid == -1) {
 		/* Can't generate the key */
 		goto back_out;
 	}
-retry:
-	upflags = SHM_R | SHM_W | (SHM_R >>3) | (SHM_W >> 3);
-	size = (((sizeof(struct ipc_mutex_names)) * maxmtx) +
-		(sizeof(struct ipc_mutex) * maxmtx) +
-		(sizeof(struct ipc_mutex_shm)));
-	osiz = size;
-	if (size % PAGE_SIZE)
-	    size += (PAGE_SIZE - (size % PAGE_SIZE));
-	/* Round up to next page size */
-	if (osiz < size) {
-		/* rethink the max mtx's */
-		maxmtx += ((size - osiz)/ (sizeof(struct ipc_mutex_names) +
-					   sizeof(struct ipc_mutex)));
-	}
-	if (creator) {
-		/* We need to create it */
-		upflags |= IPC_CREAT;
-	} else {
-		size = 0;
-	}
-	_local_ipc_mem->shmid= shmget(_local_ipc_mem->shm_keyid, size ,upflags);
-	if (_local_ipc_mem->shmid == -1) {
-		/* no shm? */
-		if ((flags & IPC_MUTEX_CREATE) && (creator == 0)) {
-			/* Ok file existed but not memory - retry */
-			creator = 1;
-			goto retry;
-		}
-		goto back_out;
-	}
-
-	_local_ipc_mem->shm_base_addr = shmat(_local_ipc_mem->shmid, 0, 0); 
-	if (_local_ipc_mem->shm_base_addr == NULL) {
+	prot = PROT_READ | PROT_WRITE;
+	flg = MAP_HASSEMAPHORE | MAP_NOSYNC | MAP_SHARED;
+	_local_ipc_mem->size = size;
+	_local_ipc_mem->shm_base_addr = mmap(0, size, prot, flg, 
+					     _local_ipc_mem->shmid, 0); 
+	if (_local_ipc_mem->shm_base_addr == MAP_FAILED) {
 		/* Huh? */
+		printf("map failed errno:%d\n", errno);
 		goto back_out;
 	}
 	/* Get our first pointer setup */
@@ -179,16 +349,12 @@ retry:
 	do_the_init:
 		umtx_init(&_local_ipc_mem->shm->shmlock);
 		umtx_lock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+		_local_ipc_mem->shm->size = size;
 		_local_ipc_mem->shm->initialized = IPC_INITIALIZED_PATTERN;
 		_local_ipc_mem->shm->max_mutex = maxmtx;
 		_local_ipc_mem->shm->num_mutex_used = 0;
 		creator = 1;
 	} else {
-		struct shmid_ds shm_buf;
-		if (shmctl(_local_ipc_mem->shmid, IPC_STAT, &shm_buf) == -1) {
-			goto back_out;
-		}
-		
  		if (_local_ipc_mem->shm->initialized != IPC_INITIALIZED_PATTERN) {
 			/* Simultaneous init? */
 			sleep(1);
@@ -197,13 +363,13 @@ retry:
 			/* The initializer died without completing? */
 
 			/* now what size is it really ? */
-			maxmtx = (shm_buf.shm_segsz - sizeof(struct ipc_mutex_shm));
+			maxmtx = (size - sizeof(struct ipc_mutex_shm));
 			maxmtx /= (sizeof(struct ipc_mutex_names) +
 				   sizeof(struct ipc_mutex));
 			goto do_the_init;
 		}
-
 		umtx_lock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);
+		_local_ipc_mem->size =_local_ipc_mem->shm->size;
 	}
 	/* Up until now we canNOT accuess _local_ipc_mem->mtxs since the
 	 * address does not get valid until we calculate it.
@@ -224,6 +390,12 @@ retry:
 		 * it and write the INIT pattern down. If we do we could
 		 * have a problem.
 		 */
+		/* First init the pid <-> tid mapping for audits */
+		for (i=0; i<IPC_MUTEX_MAX_MAP; i++) {
+			_local_ipc_mem->shm->map[i].pid = 0;
+			_local_ipc_mem->shm->map[i].tid = 0;
+		}
+		/* Now all the locks */
 		for (i=0; i<maxmtx; i++) {
 			_local_ipc_mem->shm->names[i].mutex_flags = IPC_MUTEX_UNUSED;
 			_local_ipc_mem->shm->names[i].mutex_index = i;
@@ -231,14 +403,36 @@ retry:
 			umtx_init(&_local_ipc_mem->mtxs[i].mutex);
 		}
 	}
+	cnt = 0;
+retry:
+	if(ipc_add_my_tid(getpid(), _local_ipc_mem->default_tid)) {
+		/* Can't add me to the pid cache.. its failed */
+		umtx_unlock(&_local_ipc_mem->shm->shmlock, 
+			    _local_ipc_mem->default_tid);
+		if (cnt == 0) {
+			/* Try again after an audit */
+			ipc_audit_tid_space();
+			umtx_lock(&_local_ipc_mem->shm->shmlock, 
+				  _local_ipc_mem->default_tid);			
+			cnt++;
+			goto retry;
+		}
+		goto back_out;
 
+	}
 	/****************************************************************************/
 	/* If we add a hash table, here is where we would load it to _local_ipc_mem */
 	/****************************************************************************/
 	printf("There are a maximum of %d mutexes %d are in use\n",
 	       _local_ipc_mem->shm->max_mutex,
 	       _local_ipc_mem->shm->num_mutex_used);
-	umtx_unlock(&_local_ipc_mem->shm->shmlock, _local_ipc_mem->default_tid);	
+	umtx_unlock(&_local_ipc_mem->shm->shmlock, 
+		    _local_ipc_mem->default_tid);		
+
+	/* Audit after all init and unlock */
+	if (cnt == 0)
+		ipc_audit_tid_space();
+	atexit(ipc_mutex_exits);
 	return (0);
 }
 
@@ -259,18 +453,6 @@ ipc_harvest_dead(int *empty_slot, int *empty_seen)
 	}
 }
 
-int ipc_mutex_sysdestroy()
-{
-	struct shmid_ds shm_buf;
-	if (_local_ipc_mem == NULL) {
-		errno = EINVAL;
-		return (-1);
-	}
-	if (shmctl(_local_ipc_mem->shmid, IPC_RMID, &shm_buf) == -1) {
-		return (-1);
-	}
-	return (0);
-}
 
 struct ipc_mutex *
 ipc_mutex_init(char *mutex_name, int flags)
@@ -369,6 +551,7 @@ ipc_mutex_lock(struct ipc_mutex *mtx, pthread_t thr, int flags)
 			umtx_unlock(&mtx->mutex, id);
 			return (-1);
 		}
+		_local_ipc_mem->shm->names[slot].mutex_p_tid = _local_ipc_mem->default_tid;
 	}
 	return (ret);
 }
@@ -403,6 +586,7 @@ ipc_mutex_lock_timed(struct ipc_mutex *mtx, pthread_t thr,
 			umtx_unlock(&mtx->mutex, id);
 			return (-1);
 		}
+		_local_ipc_mem->shm->names[slot].mutex_p_tid = _local_ipc_mem->default_tid;
 	}
 	return (ret);
 }
@@ -412,6 +596,7 @@ int
 ipc_mutex_unlock(struct ipc_mutex *mtx, pthread_t thr)
 {
 	lwpid_t id;
+	int slot;
 
 	if (_local_ipc_mem == NULL) {
 		errno = EINVAL;
@@ -423,6 +608,8 @@ ipc_mutex_unlock(struct ipc_mutex *mtx, pthread_t thr)
 	} else {
 		id = (lwpid_t)(((struct ipc_pthread_private *)thr)->tid);
 	}
+	slot = mtx->mutex_index;
+	_local_ipc_mem->shm->names[slot].mutex_p_tid = 0;
 	umtx_unlock(&mtx->mutex, id);
 
 }
@@ -456,6 +643,7 @@ ipc_mutex_trylock(struct ipc_mutex *mtx, pthread_t thr)
 			umtx_unlock(&mtx->mutex, id);
 			return (-1);
 		}
+		_local_ipc_mem->shm->names[slot].mutex_p_tid = _local_ipc_mem->default_tid;
 	}
 	return (ret);
 }
@@ -513,10 +701,16 @@ ipc_mutex_show()
 			       i, &_local_ipc_mem->mtxs[i]);
 		} else if (_local_ipc_mem->shm->names[i].mutex_flags & IPC_MUTEX_ASSIGNED){
 			owner = umtx_owner(&_local_ipc_mem->mtxs[i].mutex);
+			if (owner != UMTX_UNOWNED) {
 			printf("Mutex %s is assigned at slot:%d (%p) owned by %x\n", 
 			       _local_ipc_mem->shm->names[i].mutex_name,
-			       i, &_local_ipc_mem->mtxs[i], (uint)owner
-			);
+			       i, &_local_ipc_mem->mtxs[i], (uint)owner);
+			} else {
+
+			printf("Mutex %s is assigned at slot:%d (%p) and is un-owned\n", 
+			       _local_ipc_mem->shm->names[i].mutex_name,
+			       i, &_local_ipc_mem->mtxs[i]);
+			}
 		}
 	}
 }
