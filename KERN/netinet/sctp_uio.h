@@ -581,9 +581,9 @@ struct sctp_sack_info {
 struct sctp_cwnd_args {
 	struct sctp_nets *net;	/* network to */ /* FIXME: LP64 issue */
 	uint32_t cwnd_new_value;/* cwnd in k */
-	uint32_t inflight;	/* flightsize in k */
 	uint32_t pseudo_cumack;
-	uint32_t cwnd_augment;	/* increment to it */
+	uint16_t inflight;	/* flightsize in k */
+	uint16_t cwnd_augment;	/* increment to it */
 	uint8_t meets_pseudo_cumack;
 	uint8_t need_new_pseudo_cumack;
 	uint8_t cnt_in_send;
