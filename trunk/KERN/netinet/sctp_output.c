@@ -9447,9 +9447,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
-			if (!TAILQ_EMPTY(&asoc->send_queue)) {
-				goto skip_the_fill_from_streams;
-			}
 			if (asoc->last_net_pushed_data_to) {
 				net = asoc->last_net_pushed_data_to;
 			} else {
@@ -9482,13 +9479,6 @@ one_more_time:
 			
 			/* JRI: if dest is unreachable or unconfirmed, do not send data to it */
 			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
-			        continue;
-			}
-
-			/* JRI: if dest is in PF state, do not send data to it */
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
-			    (net->dest_state & SCTP_ADDR_PF)) {
 			        continue;
 			}
 
@@ -9533,7 +9523,7 @@ one_more_time:
 				goto one_more_time;
 		}
 	}
-skip_the_fill_from_streams:
+
 	*cwnd_full = cwnd_full_ind;
 
 	/* now service each destination and send out what we can for it */
@@ -10086,8 +10076,21 @@ again_one_more_time:
 					*reason_code = 2;
 					break;
 				}
+				/* JRI: if dest is in PF state, do not send data to it */
+				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+				    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+				    (net->dest_state & SCTP_ADDR_PF)) {
+					continue;
+				}
 				nchk = TAILQ_NEXT(chk, sctp_next);
-				if (chk->whoTo != net) {
+				
+				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+					if (chk->whoTo != net) {
+						sctp_free_remote_addr(chk->whoTo);
+						chk->whoTo = net;
+						atomic_add_int(&chk->whoTo->ref_count, 1);
+					}
+				} else if (chk->whoTo != net) {
 					/* No, not sent to this net */
 					continue;
 				}
