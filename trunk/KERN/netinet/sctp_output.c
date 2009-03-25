@@ -8097,7 +8097,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      struct sctp_association *asoc,
 		      int *num_out,
 		      int *reason_code,
-		      int control_only, int *cwnd_full, int from_where,
+		      int control_only, int from_where,
 		      struct timeval *now, int *now_filled, int frag_point, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
 		      SCTP_UNUSED
@@ -8267,12 +8267,12 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	if(do_chunk_output)
 	   sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_NOT_LOCKED);
 	else if(added_control) {
-		int num_out=0, reason=0, cwnd_full=0, now_filled=0;
+		int num_out=0, reason=0, now_filled=0;
 		struct timeval now;
 		int frag_point;
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_NOT_LOCKED);
+				      &reason, 1, 1, &now, &now_filled, frag_point, SCTP_SO_NOT_LOCKED);
 	}
  no_chunk_output:
 	if (ret) {
@@ -9355,7 +9355,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
     struct sctp_association *asoc,
     int *num_out,
     int *reason_code,
-    int control_only, int *cwnd_full, int from_where,
+    int control_only, int from_where,
     struct timeval *now, int *now_filled, int frag_point, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
@@ -9380,7 +9380,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int no_fragmentflg, error;
 	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
-	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
+	int bundle_at, ctl_cnt, no_data_chunks, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
@@ -9401,7 +9401,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	*num_out = 0;
-	cwnd_full_ind = 0;
 	auth_keyid = stcb->asoc.authinfo.active_keyid;
 
 	if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
@@ -9437,7 +9436,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	if (asoc->peers_rwnd == 0) {
 		/* No room in peers rwnd */
-		*cwnd_full = 1;
 		*reason_code = 1;
 		if (asoc->total_flight > 0) {
 			/* we are allowed one chunk in flight */
@@ -9468,7 +9466,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 			if (net->flight_size >= net->cwnd) {
 				/* skip this network, no room - can't fill */
-				cwnd_full_ind++;
 				continue;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
@@ -9482,7 +9479,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			}
 		}
 	}
-	*cwnd_full = cwnd_full_ind;
 	/* now service each destination and send out what we can for it */
 	/* Nothing to send? */
 	if ((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
@@ -9499,6 +9495,14 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			/*
 			 * Ref-count of 1 so we cannot have data or control
 			 * queued to this address. Skip it (non-CMT).
+			 */
+			continue;
+		}
+		if((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
+		   (TAILQ_FIRST(&asoc->asconf_send_queue) == NULL) &&
+		   (net->flight_size >= net->cwnd)) {
+			/* Nothing on control or asconf and flight is full, we can skip 
+			 * even in the CMT case.
 			 */
 			continue;
 		}
@@ -11346,7 +11350,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0, burst_cnt=0, burst_limit=0;
 	struct timeval now;
 	int now_filled = 0;
-	int cwnd_full = 0;
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 	int un_sent=0;
@@ -11400,7 +11403,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * and then the next call with get the retran's.
 			 */
  			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-						    &cwnd_full, from_where,
+						    from_where,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
@@ -11425,7 +11428,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * if queued too.
 			 */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-						    &cwnd_full, from_where,
+						    from_where,
 						    &now, &now_filled, frag_point, so_locked);
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(8, inp, stcb, NULL);
@@ -11452,7 +11455,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			sctp_auditing(10, inp, stcb, NULL);
 #endif
 			/* Push out any control */
-			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where,
+			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, from_where,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		}
@@ -11519,10 +11522,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 
 	}
 	burst_cnt = 0;
-	cwnd_full = 0;
 	do {
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
-					      &reason_code, 0, &cwnd_full, from_where,
+					      &reason_code, 0, from_where,
 					      &now, &now_filled, frag_point, so_locked);
 		if (error) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Error %d was returned from med-c-op\n", error);
@@ -15900,7 +15902,7 @@ skip_out_eof:
 		}
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 	} else if (some_on_control) {
-		int num_out, reason, cwnd_full, frag_point;
+		int num_out, reason, frag_point;
 
 		/* Here we do control only */
 		if (hold_tcblock == 0) {
@@ -15909,7 +15911,7 @@ skip_out_eof:
 		}
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-		                            &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
+		                            &reason, 1, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
 	}
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d\n",
 	        queue_only, stcb->asoc.peers_rwnd, un_sent,
