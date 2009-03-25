@@ -9495,10 +9495,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		/* how much can we send? */
 		/* SCTPDBG("Examine for sending net:%x\n", (uint32_t)net); */
 		tsns_sent = 0;
-		if (net->ref_count < 2) {
+		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 			/*
 			 * Ref-count of 1 so we cannot have data or control
-			 * queued to this address. Skip it.
+			 * queued to this address. Skip it (non-CMT).
 			 */
 			continue;
 		}
