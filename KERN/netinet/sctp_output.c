@@ -9371,7 +9371,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	 * fomulate and send the low level chunks. Making sure to combine
 	 * any control in the control chunk queue also.
 	 */
-	struct sctp_nets *net;
+	struct sctp_nets *net, *start_at, *old_start_at=NULL;
 	struct mbuf *outchain, *endoutchain;
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -9500,9 +9500,32 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		*reason_code = 8;
 		return (0);
 	}
-	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+	
+	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+		/* get the last start point */
+		start_at = asoc->last_net_cmt_send_started;
+		if (start_at == NULL) {
+			/* null so to beginning */
+			start_at = TAILQ_FIRST(&asoc->nets);
+		} else {
+			start_at = TAILQ_NEXT(asoc->last_net_cmt_send_started, sctp_next);
+			if (start_at == NULL) {
+				start_at = TAILQ_FIRST(&asoc->nets);
+			}
+		}
+		asoc->last_net_cmt_send_started = start_at;		
+	} else {
+		start_at = TAILQ_FIRST(&asoc->nets);
+	}
+	old_start_at = NULL;
+again_one_more_time:
+	for (net = start_at ; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 		/* how much can we send? */
 		/* SCTPDBG("Examine for sending net:%x\n", (uint32_t)net); */
+		if (old_start_at && (old_start_at == net)) {
+			/* through list ocmpletely. */
+			break;
+		}
 		tsns_sent = 0xa;
 		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 			/*
@@ -10324,6 +10347,13 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
 		}
 	}
+	if (old_start_at == NULL) {
+		old_start_at = start_at;
+		start_at = TAILQ_FIRST(&asoc->nets);
+		if (old_start_at)
+			goto again_one_more_time;
+	}
+
 	/*
 	 * At the end there should be no NON timed chunks hanging on this
 	 * queue.
