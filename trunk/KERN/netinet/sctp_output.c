@@ -9457,15 +9457,28 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 */
 			net->window_probe = 0;
 			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 1, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
 			        continue;
 			}
 
 			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 				/* nothing can be in queue for this guy */
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 2, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
 				continue;
 			}
 			if (net->flight_size >= net->cwnd) {
 				/* skip this network, no room - can't fill */
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 3, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
+
 				continue;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
@@ -10012,7 +10025,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			omtu = 0;
 			break;
 		}
-		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) && (skip_data_for_this_net == 0)) ||
+		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) && 
+		     (skip_data_for_this_net == 0)) ||
 		    (cookie)) {
 			for (chk = TAILQ_FIRST(&asoc->send_queue); chk; chk = nchk) {
 				if (no_data_chunks) {
@@ -10028,6 +10042,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				nchk = TAILQ_NEXT(chk, sctp_next);
 				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
 					if (chk->whoTo != net) {
+						/* 
+						 * For CMT, steal the data to this
+						 * network if its not set here.
+						 */
 						sctp_free_remote_addr(chk->whoTo);
 						chk->whoTo = net;
 						atomic_add_int(&chk->whoTo->ref_count, 1);
