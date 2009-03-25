@@ -9482,7 +9482,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				continue;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
-				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				sctp_log_cwnd(stcb, net, 4, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 			}
 			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode, &quit_now);
 			if (quit_now) {
@@ -9503,7 +9503,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		/* how much can we send? */
 		/* SCTPDBG("Examine for sending net:%x\n", (uint32_t)net); */
-		tsns_sent = 0;
+		tsns_sent = 0xa;
 		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 			/*
 			 * Ref-count of 1 so we cannot have data or control
