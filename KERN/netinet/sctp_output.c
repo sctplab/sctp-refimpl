@@ -10028,6 +10028,12 @@ again_one_more_time:
 				}
 			}
 		}
+		/* JRI: if dest is in PF state, do not send data to it */
+		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+		    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+		    (net->dest_state & SCTP_ADDR_PF)) {
+			goto no_data_fill;
+		}
 		/*********************/
 		/* Data transmission */
 		/*********************/
@@ -10076,14 +10082,7 @@ again_one_more_time:
 					*reason_code = 2;
 					break;
 				}
-				/* JRI: if dest is in PF state, do not send data to it */
-				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-				    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
-				    (net->dest_state & SCTP_ADDR_PF)) {
-					continue;
-				}
 				nchk = TAILQ_NEXT(chk, sctp_next);
-				
 				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
 					if (chk->whoTo != net) {
 						sctp_free_remote_addr(chk->whoTo);
@@ -10219,7 +10218,7 @@ again_one_more_time:
 				}
 			}	/* for (chunk gather loop for this net) */
 		}		/* if asoc.state OPEN */
-
+	no_data_fill:
 		/* Is there something to send for this destination? */
 		if (outchain) {
 			/* We may need to start a control timer or two */
