@@ -244,13 +244,15 @@ print_event_cwnd(struct sctp_cwnd_log *log)
 
 
 	} else if (log->from == SCTP_CWND_LOG_FILL_OUTQ_CALLED) {
-		printf("%s fill_outqueue called on net:%p cwnd:%d flight:%d (sendcnt:%d,strcnt:%d)\n",
+		printf("%s fill_outqueue called on net:%p cwnd:%d flight:%d (sendcnt:%d,strcnt:%d) mark:%d\n",
 		       ts,
 		       log->x.cwnd.net,
 		       log->x.cwnd.cwnd_new_value,
 		       (int)log->x.cwnd.inflight,
 		       (int)log->x.cwnd.cnt_in_send,
-		       (int)log->x.cwnd.cnt_in_str);
+		       (int)log->x.cwnd.cnt_in_str,
+		       (int)log->x.cwnd.cwnd_augment
+			);
 
 	} else if (log->from == SCTP_SEND_NOW_COMPLETES) {
 		printf("%s Send completes sending %d (sendcnt:%d,strcnt:%d)\n",
