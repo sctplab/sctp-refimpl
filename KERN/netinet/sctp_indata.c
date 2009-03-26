@@ -431,7 +431,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			else{	
 				SCTP_TCB_LOCK_ASSERT(stcb);			
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-				if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;
 			}
 		}
@@ -501,7 +501,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 							} else{
 								SCTP_TCB_LOCK_ASSERT(stcb);			
 								SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-								if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+								if(compare_with_wrap(nr_tsn,
+										     asoc->highest_tsn_inside_nr_map,
+										     MAX_TSN))
 									asoc->highest_tsn_inside_nr_map = nr_tsn;		
 							}		
 						}
@@ -637,7 +639,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			else{
 				SCTP_TCB_LOCK_ASSERT(stcb);
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-				if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;	
 			}
 		}			
@@ -683,7 +685,8 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					else{
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;
 					}
 				}				
@@ -2261,6 +2264,16 @@ finish_express_del:
 	}
 #endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+
+	if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && 
+	    asoc->peer_supports_nr_sack && 
+	    (SCTP_BASE_SYSCTL(sctp_do_drain) == 0)) {
+		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_nr_map = tsn;
+		}
+	}
+
 	/* check the special flag for stream resets */
 	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
 	    ((compare_with_wrap(asoc->cumulative_tsn, liste->tsn, MAX_TSN)) ||
@@ -2370,9 +2383,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	int slide_from, slide_end, lgap, distance;
 	
 	/* EY nr_mapping array variables */
-	int nr_at;
-	int nr_last_all_ones = 0;
-	int nr_slide_from, nr_slide_end, nr_lgap, nr_distance;
+	/* int nr_at;*/
+	/*int nr_last_all_ones = 0; */
+	/*int nr_slide_from, nr_slide_end, nr_lgap, nr_distance; */
 
 	uint32_t old_cumack, old_base, old_highest;
 	unsigned char aux_array[64];
@@ -2593,7 +2606,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			* now calculate the ceiling of the move using our highest
 			* TSN value
 			*/
-			if (asoc->highest_tsn_inside_nr_map >= asoc->nr_mapping_array_base_tsn) {
+			if (compare_with_wrap(asoc->highest_tsn_inside_nr_map,
+					      asoc->nr_mapping_array_base_tsn, MAX_TSN) ||
+			    (asoc->highest_tsn_inside_nr_map == asoc->nr_mapping_array_base_tsn)) {
 				nr_lgap = asoc->highest_tsn_inside_nr_map -
 					asoc->nr_mapping_array_base_tsn;
 			} else {
@@ -5591,7 +5606,9 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 					else{
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,
+								     asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;						
 					}
 			
@@ -5654,7 +5671,8 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 					} else {
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;										
 					}
 					
