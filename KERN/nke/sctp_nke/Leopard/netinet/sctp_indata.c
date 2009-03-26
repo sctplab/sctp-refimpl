@@ -431,7 +431,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			else{	
 				SCTP_TCB_LOCK_ASSERT(stcb);			
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-				if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;
 			}
 		}
@@ -501,7 +501,9 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 							} else{
 								SCTP_TCB_LOCK_ASSERT(stcb);			
 								SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-								if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+								if(compare_with_wrap(nr_tsn,
+										     asoc->highest_tsn_inside_nr_map,
+										     MAX_TSN))
 									asoc->highest_tsn_inside_nr_map = nr_tsn;		
 							}		
 						}
@@ -637,7 +639,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			else{
 				SCTP_TCB_LOCK_ASSERT(stcb);
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-				if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;	
 			}
 		}			
@@ -683,7 +685,8 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					else{
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;
 					}
 				}				
@@ -2261,6 +2264,16 @@ finish_express_del:
 	}
 #endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+
+	if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && 
+	    asoc->peer_supports_nr_sack && 
+	    (SCTP_BASE_SYSCTL(sctp_do_drain) == 0)) {
+		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_nr_map = tsn;
+		}
+	}
+
 	/* check the special flag for stream resets */
 	if (((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) &&
 	    ((compare_with_wrap(asoc->cumulative_tsn, liste->tsn, MAX_TSN)) ||
@@ -2370,9 +2383,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	int slide_from, slide_end, lgap, distance;
 	
 	/* EY nr_mapping array variables */
-	int nr_at;
-	int nr_last_all_ones = 0;
-	int nr_slide_from, nr_slide_end, nr_lgap, nr_distance;
+	/* int nr_at;*/
+	/*int nr_last_all_ones = 0; */
+	/*int nr_slide_from, nr_slide_end, nr_lgap, nr_distance; */
 
 	uint32_t old_cumack, old_base, old_highest;
 	unsigned char aux_array[64];
@@ -2548,103 +2561,19 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 					     asoc->cumulative_tsn, asoc->highest_tsn_inside_map,
 					     SCTP_MAP_SLIDE_RESULT);
 			}
-		}
-	}
-	/* EY if doing nr_sacks then slide the nr_mapping_array accordingly please*/
-	if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
-	
-		nr_at = 0;
-		for (nr_slide_from = 0; nr_slide_from < stcb->asoc.nr_mapping_array_size; nr_slide_from++) {
-
-			if (asoc->nr_mapping_array[nr_slide_from] == 0xff) {
-				nr_at += 8;
-				nr_last_all_ones = 1;
-			} else {
-				/* there is a 0 bit */
-				nr_at += sctp_map_lookup_tab[asoc->nr_mapping_array[nr_slide_from]];
-				nr_last_all_ones = 0;
-				break;
-			}
-		}
-	
-		nr_at++;
-	
-		if (compare_with_wrap(asoc->cumulative_tsn,
-				asoc->highest_tsn_inside_nr_map,MAX_TSN) && (at >= 8)) {
-			/* The complete array was completed by a single FR */
-			/* higest becomes the cum-ack */
-			int clr;
-
-			clr = (nr_at >> 3) + 1;
-
-			if (clr > asoc->nr_mapping_array_size)
-				clr = asoc->nr_mapping_array_size;
-			
-			memset(asoc->nr_mapping_array, 0, clr);
-			/* base becomes one ahead of the cum-ack */
-			asoc->nr_mapping_array_base_tsn = asoc->cumulative_tsn + 1;
-			asoc->highest_tsn_inside_nr_map = asoc->cumulative_tsn;
-
-		} else if (nr_at >= 8) {
-			/* we can slide the mapping array down */
-			/* Calculate the new byte postion we can move down */
-			
-			/*
-			* now calculate the ceiling of the move using our highest
-			* TSN value
-			*/
-			if (asoc->highest_tsn_inside_nr_map >= asoc->nr_mapping_array_base_tsn) {
-				nr_lgap = asoc->highest_tsn_inside_nr_map -
-					asoc->nr_mapping_array_base_tsn;
-			} else {
-				nr_lgap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) +
-					asoc->highest_tsn_inside_nr_map + 1;
-			}
-			nr_slide_end = nr_lgap >> 3;
-			if (nr_slide_end < nr_slide_from) {
-#ifdef INVARIANTS
-				panic("impossible slide");
-#else
-				printf("impossible slide?\n");
-				return;
-#endif
-			}
-		
-			if (nr_slide_end > asoc->nr_mapping_array_size) {
-#ifdef INVARIANTS
-				panic("would overrun buffer");
-#else
-				printf("Gak, would have overrun map end:%d nr_slide_end:%d\n",
-					asoc->nr_mapping_array_size, nr_slide_end);
-				nr_slide_end = asoc->nr_mapping_array_size;
-#endif
-			}			
-			nr_distance = (nr_slide_end - nr_slide_from) + 1;
-		
-			if (nr_distance + nr_slide_from > asoc->nr_mapping_array_size ||
-				nr_distance < 0) {
-				/*
-				* Here we do NOT slide forward the array so that
-				* hopefully when more data comes in to fill it up
-				* we will be able to slide it forward. Really I
-				* don't think this should happen :-0
-				*/
-				;
-			} else {
-				int ii;
-
-				for (ii = 0; ii < nr_distance; ii++) {
+			/* EY if doing nr_sacks then slide the nr_mapping_array accordingly please*/
+			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+				for (ii = 0; ii < distance; ii++) {
 					asoc->nr_mapping_array[ii] =
-						asoc->nr_mapping_array[nr_slide_from + ii];
+						asoc->nr_mapping_array[slide_from + ii];
 				}
-				for (ii = nr_distance; ii <= nr_slide_end; ii++) {
+				for (ii = distance; ii <= slide_end; ii++) {
 					asoc->nr_mapping_array[ii] = 0;
 				}
-				asoc->nr_mapping_array_base_tsn += (nr_slide_from << 3);
+				asoc->nr_mapping_array_base_tsn += (slide_from << 3);
 			}
 		}
 	}
-
 	/*
 	 * Now we need to see if we need to queue a sack or just start the
 	 * timer (if allowed).
@@ -2662,7 +2591,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			}
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 			/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack)
+			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
 				sctp_send_nr_sack(stcb);
 			else
 				sctp_send_sack(stcb);
@@ -5591,7 +5520,9 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 					else{
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,
+								     asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;						
 					}
 			
@@ -5654,7 +5585,8 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 					} else {
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(nr_tsn > asoc->highest_tsn_inside_nr_map)
+						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
+								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;										
 					}
 					
@@ -5813,6 +5745,11 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		SCTP_TCB_LOCK_ASSERT(stcb);
 		for (i = 0; i <= gap; i++) {
 			SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
+			/* EY if drain is off then every gap-ack is an nr-gap-ack */
+			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack 
+								&& SCTP_BASE_SYSCTL(sctp_do_drain) == 0){
+				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, i);
+			}
 		}
 		/*
 		 * Now after marking all, slide thing forward but no sack please.
