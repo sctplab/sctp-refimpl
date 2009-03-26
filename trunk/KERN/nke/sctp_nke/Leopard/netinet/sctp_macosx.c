@@ -742,8 +742,7 @@ sctp_vtag_watchdog()
 
 #if defined(__APPLE__)
 void
-sctp_slowtimo()
-{
+q{
 	struct inpcb *inp, *inp_next;
 	struct socket *so;
 	static uint32_t sctp_addr_watchdog_cnt = 0;
