@@ -8097,7 +8097,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      struct sctp_association *asoc,
 		      int *num_out,
 		      int *reason_code,
-		      int control_only, int *cwnd_full, int from_where,
+		      int control_only, int from_where,
 		      struct timeval *now, int *now_filled, int frag_point, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
 		      SCTP_UNUSED
@@ -8267,12 +8267,12 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	if(do_chunk_output)
 	   sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_NOT_LOCKED);
 	else if(added_control) {
-		int num_out=0, reason=0, cwnd_full=0, now_filled=0;
+		int num_out=0, reason=0, now_filled=0;
 		struct timeval now;
 		int frag_point;
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-				      &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_NOT_LOCKED);
+				      &reason, 1, 1, &now, &now_filled, frag_point, SCTP_SO_NOT_LOCKED);
 	}
  no_chunk_output:
 	if (ret) {
@@ -9355,7 +9355,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
     struct sctp_association *asoc,
     int *num_out,
     int *reason_code,
-    int control_only, int *cwnd_full, int from_where,
+    int control_only, int from_where,
     struct timeval *now, int *now_filled, int frag_point, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
@@ -9371,7 +9371,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	 * fomulate and send the low level chunks. Making sure to combine
 	 * any control in the control chunk queue also.
 	 */
-	struct sctp_nets *net;
+	struct sctp_nets *net, *start_at, *old_start_at=NULL;
 	struct mbuf *outchain, *endoutchain;
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -9380,9 +9380,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int no_fragmentflg, error;
 	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
-	int bundle_at, ctl_cnt, no_data_chunks, cwnd_full_ind, eeor_mode;
+	int bundle_at, ctl_cnt, no_data_chunks, eeor_mode;
 	unsigned int mtu, r_mtu, omtu, mx_mtu, to_out;
-	struct sctp_nets *start_at, *old_startat = NULL, *send_start_at;
 	int tsns_sent = 0;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
@@ -9402,7 +9401,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 #endif
 	*num_out = 0;
-	cwnd_full_ind = 0;
 	auth_keyid = stcb->asoc.authinfo.active_keyid;
 
 	if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
@@ -9438,7 +9436,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	if (asoc->peers_rwnd == 0) {
 		/* No room in peers rwnd */
-		*cwnd_full = 1;
 		*reason_code = 1;
 		if (asoc->total_flight > 0) {
 			/* we are allowed one chunk in flight */
@@ -9446,63 +9443,9 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
-		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
-			if (!TAILQ_EMPTY(&asoc->send_queue)) {
-				goto skip_the_fill_from_streams;
-			}
-			if (asoc->last_net_pushed_data_to) {
-				net = asoc->last_net_pushed_data_to;
-			} else {
-				/* initially start with the first net */
-				net = TAILQ_FIRST(&asoc->nets);
-			}
-
-			/* JRI-TODO: CMT-MPI. Simply set the first destination
-			  (net) to be optimized for the next message to be
-			  pulled out of the outwheel. 
-			  1. peek at outwheel
-			  2. If large message, set net = highest_cwnd
-			  3. If small message, set net = lowest rtt
-			 */
-		} else {
-			net = asoc->primary_destination;
-			if (net == NULL) {
-				/* TSNH */
-				net = TAILQ_FIRST(&asoc->nets);
-			}
-		}
-		start_at = net;
-
-one_more_time:
-		for (; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
-			net->window_probe = 0;
-			if (old_startat && (old_startat == net)) {
-				break;
-			}
-			
-			/* JRI: if dest is unreachable or unconfirmed, do not send data to it */
-			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
-			        continue;
-			}
-
-			/* JRI: if dest is in PF state, do not send data to it */
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
-			    (net->dest_state & SCTP_ADDR_PF)) {
-			        continue;
-			}
-
-			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
-				/* nothing can be in queue for this guy */
-				continue;
-			}
-			if (net->flight_size >= net->cwnd) {
-				/* skip this network, no room */
-				cwnd_full_ind++;
-				continue;
-			}
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
-			 * JRI : this for loop we are in takes in
+			 * This for loop we are in takes in
 			 * each net, if its's got space in cwnd and
 			 * has data sent to it (when CMT is off) then it
 			 * calls sctp_fill_outqueue for the net. This gets
@@ -9512,30 +9455,43 @@ one_more_time:
 			 * data is copied out of the stream buffers. Note
 			 * mostly copy by reference (we hope).
 			 */
+			net->window_probe = 0;
+			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) || (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 1, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
+			        continue;
+			}
+
+			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
+				/* nothing can be in queue for this guy */
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 2, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
+				continue;
+			}
+			if (net->flight_size >= net->cwnd) {
+				/* skip this network, no room - can't fill */
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
+					sctp_log_cwnd(stcb, net, 3, 
+						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				}
+
+				continue;
+			}
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
-				sctp_log_cwnd(stcb, net, 0, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
+				sctp_log_cwnd(stcb, net, 4, SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 			}
 			sctp_fill_outqueue(stcb, net, frag_point, eeor_mode, &quit_now);
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
-				asoc->last_net_pushed_data_to = net;
-			}			
 			if (quit_now) {
 				/* memory alloc failure */
 				no_data_chunks = 1;
-				goto skip_the_fill_from_streams;
+				break;
 			}
 		}
-		if (start_at != TAILQ_FIRST(&asoc->nets)) {
-			/* got to pick up the beginning stuff. */
-			old_startat = start_at;
-			start_at = net = TAILQ_FIRST(&asoc->nets);
-			if (old_startat)
-				goto one_more_time;
-		}
 	}
-skip_the_fill_from_streams:
-	*cwnd_full = cwnd_full_ind;
-
 	/* now service each destination and send out what we can for it */
 	/* Nothing to send? */
 	if ((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
@@ -9544,32 +9500,45 @@ skip_the_fill_from_streams:
 		*reason_code = 8;
 		return (0);
 	}
-	if (no_data_chunks) {
-		chk = TAILQ_FIRST(&asoc->asconf_send_queue);
-		if (chk == NULL)
-			chk = TAILQ_FIRST(&asoc->control_send_queue);
+	
+	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+		/* get the last start point */
+		start_at = asoc->last_net_cmt_send_started;
+		if (start_at == NULL) {
+			/* null so to beginning */
+			start_at = TAILQ_FIRST(&asoc->nets);
+		} else {
+			start_at = TAILQ_NEXT(asoc->last_net_cmt_send_started, sctp_next);
+			if (start_at == NULL) {
+				start_at = TAILQ_FIRST(&asoc->nets);
+			}
+		}
+		asoc->last_net_cmt_send_started = start_at;		
 	} else {
-		chk = TAILQ_FIRST(&asoc->send_queue);
+		start_at = TAILQ_FIRST(&asoc->nets);
 	}
-	if (chk) {
-		send_start_at = chk->whoTo;
-	} else {
-		send_start_at = TAILQ_FIRST(&asoc->nets);
-	}
-	old_startat = NULL;
+	old_start_at = NULL;
 again_one_more_time:
-	for (net = send_start_at; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
+	for (net = start_at ; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
 		/* how much can we send? */
 		/* SCTPDBG("Examine for sending net:%x\n", (uint32_t)net); */
-		if (old_startat && (old_startat == net)) {
+		if (old_start_at && (old_start_at == net)) {
 			/* through list ocmpletely. */
 			break;
 		}
-		tsns_sent = 0;
-		if (net->ref_count < 2) {
+		tsns_sent = 0xa;
+		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 			/*
 			 * Ref-count of 1 so we cannot have data or control
-			 * queued to this address. Skip it.
+			 * queued to this address. Skip it (non-CMT).
+			 */
+			continue;
+		}
+		if((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
+		   (TAILQ_FIRST(&asoc->asconf_send_queue) == NULL) &&
+		   (net->flight_size >= net->cwnd)) {
+			/* Nothing on control or asconf and flight is full, we can skip 
+			 * even in the CMT case.
 			 */
 			continue;
 		}
@@ -10038,6 +10007,12 @@ again_one_more_time:
 				}
 			}
 		}
+		/* JRI: if dest is in PF state, do not send data to it */
+		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
+		    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+		    (net->dest_state & SCTP_ADDR_PF)) {
+			goto no_data_fill;
+		}
 		/*********************/
 		/* Data transmission */
 		/*********************/
@@ -10073,7 +10048,8 @@ again_one_more_time:
 			omtu = 0;
 			break;
 		}
-		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) && (skip_data_for_this_net == 0)) ||
+		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) && 
+		     (skip_data_for_this_net == 0)) ||
 		    (cookie)) {
 			for (chk = TAILQ_FIRST(&asoc->send_queue); chk; chk = nchk) {
 				if (no_data_chunks) {
@@ -10087,7 +10063,17 @@ again_one_more_time:
 					break;
 				}
 				nchk = TAILQ_NEXT(chk, sctp_next);
-				if (chk->whoTo != net) {
+				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+					if (chk->whoTo != net) {
+						/* 
+						 * For CMT, steal the data to this
+						 * network if its not set here.
+						 */
+						sctp_free_remote_addr(chk->whoTo);
+						chk->whoTo = net;
+						atomic_add_int(&chk->whoTo->ref_count, 1);
+					}
+				} else if (chk->whoTo != net) {
 					/* No, not sent to this net */
 					continue;
 				}
@@ -10216,7 +10202,7 @@ again_one_more_time:
 				}
 			}	/* for (chunk gather loop for this net) */
 		}		/* if asoc.state OPEN */
-
+	no_data_fill:
 		/* Is there something to send for this destination? */
 		if (outchain) {
 			/* We may need to start a control timer or two */
@@ -10361,12 +10347,13 @@ again_one_more_time:
 			sctp_log_cwnd(stcb, net, tsns_sent, SCTP_CWND_LOG_FROM_SEND);
 		}
 	}
-	if (old_startat == NULL) {
-		old_startat = send_start_at;
-		send_start_at = TAILQ_FIRST(&asoc->nets);
-		if(old_startat)
+	if (old_start_at == NULL) {
+		old_start_at = start_at;
+		start_at = TAILQ_FIRST(&asoc->nets);
+		if (old_start_at)
 			goto again_one_more_time;
 	}
+
 	/*
 	 * At the end there should be no NON timed chunks hanging on this
 	 * queue.
@@ -11411,7 +11398,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0, burst_cnt=0, burst_limit=0;
 	struct timeval now;
 	int now_filled = 0;
-	int cwnd_full = 0;
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 	int un_sent=0;
@@ -11465,7 +11451,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * and then the next call with get the retran's.
 			 */
  			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-						    &cwnd_full, from_where,
+						    from_where,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		} else if (from_where != SCTP_OUTPUT_FROM_HB_TMR) {
@@ -11490,7 +11476,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * if queued too.
 			 */
 			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1,
-						    &cwnd_full, from_where,
+						    from_where,
 						    &now, &now_filled, frag_point, so_locked);
 #ifdef SCTP_AUDITING_ENABLED
 			sctp_auditing(8, inp, stcb, NULL);
@@ -11517,7 +11503,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			sctp_auditing(10, inp, stcb, NULL);
 #endif
 			/* Push out any control */
-			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, &cwnd_full, from_where,
+			(void)sctp_med_chunk_output(inp, stcb, asoc, &num_out, &reason_code, 1, from_where,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		}
@@ -11584,10 +11570,9 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 
 	}
 	burst_cnt = 0;
-	cwnd_full = 0;
 	do {
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
-					      &reason_code, 0, &cwnd_full, from_where,
+					      &reason_code, 0, from_where,
 					      &now, &now_filled, frag_point, so_locked);
 		if (error) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT1, "Error %d was returned from med-c-op\n", error);
@@ -15965,7 +15950,7 @@ skip_out_eof:
 		}
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_LOCKED);
 	} else if (some_on_control) {
-		int num_out, reason, cwnd_full, frag_point;
+		int num_out, reason, frag_point;
 
 		/* Here we do control only */
 		if (hold_tcblock == 0) {
@@ -15974,7 +15959,7 @@ skip_out_eof:
 		}
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 		(void)sctp_med_chunk_output(inp, stcb, &stcb->asoc, &num_out,
-		                            &reason, 1, &cwnd_full, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
+		                            &reason, 1, 1, &now, &now_filled, frag_point, SCTP_SO_LOCKED);
 	}
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "USR Send complete qo:%d prw:%d unsent:%d tf:%d cooq:%d toqs:%d err:%d\n",
 	        queue_only, stcb->asoc.peers_rwnd, un_sent,
