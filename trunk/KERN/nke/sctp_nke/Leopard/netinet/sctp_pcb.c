@@ -6604,7 +6604,10 @@ goto add_it_now6;
 					stcb->asoc.peer_supports_pktdrop = 1;
 					break;
 				case SCTP_NR_SELECTIVE_ACK:
-					stcb->asoc.peer_supports_nr_sack = 1;
+					if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off))
+						stcb->asoc.peer_supports_nr_sack = 1;
+					else 
+						stcb->asoc.peer_supports_nr_sack = 0;
 					break;
 				case SCTP_STREAM_RESET:
 					stcb->asoc.peer_supports_strreset = 1;
