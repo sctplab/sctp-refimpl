@@ -7572,7 +7572,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	/* temp arrays for unlinking */
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	int no_fragmentflg, error;
-	int max_rwnd_per_dest;
+	unsigned int max_rwnd_per_dest;
 	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, eeor_mode;
