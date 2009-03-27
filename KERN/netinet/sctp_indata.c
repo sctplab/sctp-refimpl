@@ -415,7 +415,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 		chk->rec.data.TSN_seq */
 		/* EY!-TODO- this tsn should be tagged nr only if it is out-of-order, the if statement should be modified */
-		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+		if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 			
 			nr_tsn = chk->rec.data.TSN_seq;
 			if ((compare_with_wrap(nr_tsn, asoc->nr_mapping_array_base_tsn, MAX_TSN)) ||
@@ -424,7 +424,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			} else {
 				nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
 			}
-			if ((nr_gap >= (asoc->nr_mapping_array_size << 3)) ||
+			if ((nr_gap >= (uint32_t)(asoc->nr_mapping_array_size << 3)) ||
 				(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))  ) {
 				/* EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
 				/* EY The 2nd should never happen, because nr_mapping_array is always expanded when mapping_array is expanded*/				
