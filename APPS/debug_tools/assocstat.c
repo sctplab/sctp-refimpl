@@ -269,8 +269,8 @@ int main(int argc, char *argv[])
 					is_primary_addr = ((primary_addr.sa.sa_family == AF_INET6) && !memcmp(&primary_addr.sin6.sin6_addr, &xraddr->address.sin6.sin6_addr, sizeof(struct in6_addr)));
 					break;
 				}
-				printf("\t\tPath towards %s, %sActive=%d, Confirmed=%d, MTU=%u, HBEnabled=%u, RTO=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
-				       inet_ntop(family, addr, buffer, ADDRSTRLEN), is_primary_addr?"Primary, " : "", xraddr->active, xraddr->confirmed, xraddr->mtu, xraddr->heartbeat_enabled, xraddr->rto, xraddr->cwnd, xraddr->flight_size, xraddr->error_counter);
+				printf("\t\tPath towards %s, %sActive=%d, Confirmed=%d, MTU=%u, HBEnabled=%u, RTO=%u, RTT=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
+				       inet_ntop(family, addr, buffer, ADDRSTRLEN), is_primary_addr?"Primary, " : "", xraddr->active, xraddr->confirmed, xraddr->mtu, xraddr->heartbeat_enabled, xraddr->rto, xraddr->rtt, xraddr->cwnd, xraddr->flight_size, xraddr->error_counter);
 				offset += sizeof(struct xsctp_raddr);
 				xraddr = (struct xsctp_raddr *)(buf + offset);
 			}
