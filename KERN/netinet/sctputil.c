@@ -4802,14 +4802,12 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 	seq = tp1->rec.data.stream_seq;
 	do {
 		ret_sz += tp1->book_size;
-		tp1->sent = SCTP_FORWARD_TSN_SKIP;
 		if (tp1->data != NULL) {
-			printf("Release PR-SCTP chunk tsn:%u flags:%x\n",
-				   tp1->rec.data.TSN_seq,
-				   (unsigned int)tp1->rec.data.rcv_flags);
+			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
+				sctp_flight_size_decrease(tp1);
+				sctp_total_flight_decrease(stcb, tp1);
+			}
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
-			sctp_flight_size_decrease(tp1);
-			sctp_total_flight_decrease(stcb, tp1);
 			stcb->asoc.peers_rwnd += tp1->send_size;
 			stcb->asoc.peers_rwnd += SCTP_BASE_SYSCTL(sctp_peer_chunk_oh);
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
@@ -4820,6 +4818,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 				stcb->asoc.sent_queue_cnt_removeable--;
 			}
 		}
+		tp1->sent = SCTP_FORWARD_TSN_SKIP;
 		if ((tp1->rec.data.rcv_flags & SCTP_DATA_NOT_FRAG) ==
 		    SCTP_DATA_NOT_FRAG) {
 			/* not frag'ed we ae done   */
@@ -4862,6 +4861,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, reason, tp1, so_locked);
 			sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
+			/* No flight involved here book the size to 0 */
+			tp1->book_size = 0;
 			tp1->data = NULL;
 			if (tp1->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 				foundeom = 1;

@@ -3160,8 +3160,10 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					       (uintptr_t)stcb, 
 					       tp1->rec.data.TSN_seq);
 			}
-			sctp_flight_size_decrease(tp1);
-			sctp_total_flight_decrease(stcb, tp1);
+			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
+				sctp_flight_size_decrease(tp1);
+				sctp_total_flight_decrease(stcb, tp1);
+			}
 		} {
 			/* audit code */
 			unsigned int audit;
