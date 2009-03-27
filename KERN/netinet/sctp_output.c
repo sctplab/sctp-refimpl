@@ -10243,7 +10243,11 @@ sctp_send_sack(struct sctp_tcb *stcb)
 
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)sack + sizeof(struct sctp_sack_chunk));
 
-	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
+	if (asoc->highest_tsn_inside_map > asoc->mapping_array_base_tsn)
+		siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
+	else 
+		siz = (((MAX_TSN - asoc->mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_map + 7) / 8;
+
 	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN )) {
 		offset = 1;
 		/*-
@@ -10548,7 +10552,11 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 
 	gap_descriptor = (struct sctp_gap_ack_block *)((caddr_t)nr_sack + sizeof(struct sctp_nr_sack_chunk));
 	
-	siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
+	if (asoc->highest_tsn_inside_map > asoc->mapping_array_base_tsn)
+		siz = (((asoc->highest_tsn_inside_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
+	else 
+		siz = (((MAX_TSN - asoc->mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_map + 7) / 8;
+
 	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 		offset = 1;
 		/*-
@@ -10632,11 +10640,15 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	nr_gap_descriptor = (struct sctp_nr_gap_ack_block *)gap_descriptor;
 
 	/* EY - there will be gaps + nr_gaps if draining is possible */	
-	if ( SCTP_BASE_SYSCTL(sctp_do_drain) ) {
+	if ((SCTP_BASE_SYSCTL(sctp_do_drain) ) && (limit_reached == 0)) {
 
 		mergeable = 0;
 
-		siz = (((asoc->highest_tsn_inside_nr_map - asoc->nr_mapping_array_base_tsn) + 1) + 7) / 8;
+		if (asoc->highest_tsn_inside_nr_map > asoc->nr_mapping_array_base_tsn)
+			siz = (((asoc->highest_tsn_inside_nr_map - asoc->nr_mapping_array_base_tsn) + 1) + 7) / 8;
+		else 
+			siz = (((MAX_TSN - asoc->nr_mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_nr_map + 7) / 8;
+
 		if (compare_with_wrap(asoc->nr_mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 			offset = 1;
 			/*-
@@ -10704,7 +10716,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 			}
 		}
 	}
-	/*---------------------------------------------------End of---filling the nr_gap_ack blocks----------------------------------------------------*/
+	/*---------------------------------------------End of---filling the nr_gap_ack blocks----------------------------------------------------*/
 	
 	/* now we must add any dups we are going to report. */
 	if ((limit_reached == 0) && (asoc->numduptsns)) {
