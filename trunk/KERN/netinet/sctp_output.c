@@ -7572,6 +7572,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	/* temp arrays for unlinking */
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	int no_fragmentflg, error;
+	int max_rwnd_per_dest;
 	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, eeor_mode;
@@ -7636,6 +7637,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			no_data_chunks = 1;
 		}
 	}
+	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight)/ asoc->numnets);
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
@@ -8207,6 +8209,13 @@ again_one_more_time:
 		    (net->dest_state & SCTP_ADDR_PF)) {
 			goto no_data_fill;
 		}
+		if (net->flight_size >= net->cwnd) {
+			goto no_data_fill;
+		}
+		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off)) &&
+		    (net->flight_size > max_rwnd_per_dest)) {
+			goto no_data_fill;
+		    }
 		/*********************/
 		/* Data transmission */
 		/*********************/
