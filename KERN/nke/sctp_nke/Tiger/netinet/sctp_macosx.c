@@ -579,17 +579,191 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
         return (m);
 }
 
+static void
+sctp_print_addr(struct sockaddr *sa)
+{
+	char ip6buf[INET6_ADDRSTRLEN];
+	ip6buf[0] = 0;
+	
+	switch (sa->sa_family) {
+	case AF_INET6:
+	{
+		struct sockaddr_in6 *sin6;
+
+		sin6 = (struct sockaddr_in6 *)sa;
+		printf("%s", ip6_sprintf(&sin6->sin6_addr));
+		break;
+	}
+	case AF_INET:
+	{
+		struct sockaddr_in *sin;
+		unsigned char *p;
+
+		sin = (struct sockaddr_in *)sa;
+		p = (unsigned char *)&sin->sin_addr;
+		printf("%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
+		break;
+	}
+	default:
+		break;
+	}
+}
+
+static void
+sctp_addr_watchdog()
+{
+	errno_t error;
+	ifnet_t *ifnetlist;
+	uint32_t i, count;
+	struct ifnet *ifn;	
+	struct ifaddr *ifa;
+	struct sockaddr *sa;
+	struct sctp_vrf *vrf;
+	struct sctp_ifn *sctp_ifn;
+	struct sctp_ifa *sctp_ifa;
+
+	ifnetlist = NULL;
+	count = 0;
+	SCTP_IPI_ADDR_RLOCK();
+	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
+	if (vrf == NULL) {
+		SCTP_IPI_ADDR_RUNLOCK();
+		printf("SCTP-NKE: Can't find default VRF.\n");
+		goto out;
+	}
+	printf("SCTP-NKE: Interfaces available for SCTP:\n");
+	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
+		printf("SCTP-NKE: \tInterface %s (index %d): ", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
+			sa = &sctp_ifa->address.sa;
+			if (sa == NULL) {
+				continue;
+			}
+			switch (sa->sa_family) {
+			case AF_INET:
+			case AF_INET6:
+				sctp_print_addr(sa);
+				printf(" ");
+				break;
+			default:
+				break;
+			}
+		}
+		printf("\n");
+	}
+	SCTP_IPI_ADDR_RUNLOCK();
+	
+	ifnetlist = NULL;
+	count = 0;
+	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+	if (error != 0) {
+		printf("SCTP-NKE: ifnet_list_get failed %d\n", error);
+		goto out;
+	}
+	printf("SCTP-NKE: Interfaces available on the system:\n");
+	for (i = 0; i < count; i++) {
+		ifn = ifnetlist[i];
+		printf("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			sa = ifa->ifa_addr;
+			if (sa == NULL) {
+				continue;
+			}
+			switch (sa->sa_family) {
+			case AF_INET:
+			case AF_INET6:
+				sctp_print_addr(sa);
+				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
+					printf("! ");
+				} else {
+					printf(" ");
+				}
+				break;
+			default:
+				break;
+			}
+		}
+		printf("\n");
+	}
+out:
+	if (ifnetlist != NULL) {
+		ifnet_list_free(ifnetlist);
+	}
+	return;
+}
+
+static void
+sctp_vtag_watchdog()
+{
+	struct timeval now;
+	uint32_t i, j, free_cnt, expired_cnt, inuse_cnt, other_cnt;
+	struct sctpvtaghead *chain;
+	struct sctp_tagblock *twait_block;
+
+	(void)SCTP_GETTIME_TIMEVAL(&now);
+	SCTP_INP_INFO_RLOCK();
+	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
+		chain = &SCTP_BASE_INFO(vtag_timewait)[i];
+		free_cnt = 0;
+		expired_cnt = 0;
+		inuse_cnt = 0;
+		other_cnt = 0;
+		if (!SCTP_LIST_EMPTY(chain)) {
+			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+				for (j = 0; j < SCTP_NUMBER_IN_VTAG_BLOCK; j++) {
+					if ((twait_block->vtag_block[j].v_tag == 0) &&
+					    (twait_block->vtag_block[j].lport == 0) &&
+					    (twait_block->vtag_block[j].rport == 0) &&
+					    (twait_block->vtag_block[j].tv_sec_at_expire == 0)) {
+						free_cnt++;
+					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					           ((long)twait_block->vtag_block[j].tv_sec_at_expire < now.tv_sec)) {
+						expired_cnt++;
+					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					           ((long)twait_block->vtag_block[j].tv_sec_at_expire >= now.tv_sec)) {
+						inuse_cnt++;
+					} else {
+						other_cnt++;
+					}
+				}
+			}
+		}
+		if ((i % 16) == 0) {
+			printf("vtag_timewait[%04x] (f/e/i): ", i);
+		}
+		printf(" %d/%d/%d", free_cnt, expired_cnt, inuse_cnt);
+		if (((i + 1) % 16) == 0) {
+			printf("\n");
+		}
+	}
+	SCTP_INP_INFO_RUNLOCK();
+	return;
+}
+
 #if defined(__APPLE__)
 void
 sctp_slowtimo()
 {
 	struct inpcb *inp, *inp_next;
 	struct socket *so;
+	static uint32_t sctp_addr_watchdog_cnt = 0;
+	static uint32_t sctp_vtag_watchdog_cnt = 0;
 #ifdef SCTP_DEBUG
 	unsigned int n = 0;
 #endif
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 
+	if ((SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit) > 0) &&
+	    (++sctp_addr_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit))) {
+		sctp_addr_watchdog_cnt = 0;
+		sctp_addr_watchdog();
+	}
+	if ((SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit) > 0) &&
+	    (++sctp_vtag_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit))) {
+		sctp_vtag_watchdog_cnt = 0;
+		sctp_vtag_watchdog();
+	}
+
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	inp = LIST_FIRST(&SCTP_BASE_INFO(inplisthead));
 	while (inp) {
 		inp_next = LIST_NEXT(inp, inp_list);
@@ -665,16 +839,6 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 	/* we only want the interface address */
 	sa = rti_info[RTAX_IFA];
-
-	/*
-	if (ifa_msg->ifam_type == RTM_NEWADDR) {
-		printf("if_index %u: adding ", ifa_msg->ifam_index);
-	} else {
-		printf("if_index %u: deleting ", ifa_msg->ifam_index);
-	}
-	print_address(sa);
-	printf("\n");
-	*/
 	/*
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
@@ -684,7 +848,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	count = 0;
 	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
 	if (error != 0) {
-		printf("ifnet_list_get failed %d\n", error);
+		printf("SCTP-NKE: ifnet_list_get failed %d\n", error);
 		goto out;
 	}
 	for (i = 0; i < count; i++) {
@@ -701,7 +865,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 	if (found_ifn == NULL) {
 		/* TSNH */
-		printf("if_index %u not found?!", ifa_msg->ifam_index);
+		printf("SCTP-NKE: if_index %u not found?!", ifa_msg->ifam_index);
 		goto out;
 	}
 
@@ -732,20 +896,27 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	if (found_ifa == NULL) {
 		/* TSNH */
-		printf("ifa not found?!");
+		printf("SCTP-NKE: ifa not found?!");
 		goto out;
 	}
 
 	/* relay the appropriate address change to the base code */
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
+		printf("SCTP-NKE: Adding ");
+		sctp_print_addr(sa);
+		printf(" to interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_ADD);
 	} else {
+		printf("SCTP-NKE: Deleting ");
+		sctp_print_addr(sa);
+		printf(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 #if defined(__APPLE__)
 out:
-	if (ifnetlist != 0)
+	if (ifnetlist != 0) {
 		ifnet_list_free(ifnetlist);
+	}
 #endif
 }
 

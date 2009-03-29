@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 189790 2009-03-14 13:42:13Z rrs $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -100,7 +100,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #define sctp_alloc_a_strmoq(_stcb, _strmoq) { \
 	(_strmoq) = SCTP_ZONE_GET(SCTP_BASE_INFO(ipi_zone_strmoq), struct sctp_stream_queue_pending); \
-	if ((_strmoq)) { \
+         if ((_strmoq)) {			  \
+		memset(_strmoq, 0, sizeof(struct sctp_stream_queue_pending)); \
 		SCTP_INCR_STRMOQ_COUNT(); \
 		(_strmoq)->holds_key_ref = 0; \
  	} \
@@ -340,6 +341,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 #else
 
 #define sctp_total_flight_decrease(stcb, tp1) do { \
+        tp1->window_probe = 0; \
 	if (stcb->asoc.total_flight >= tp1->book_size) { \
 		stcb->asoc.total_flight -= tp1->book_size; \
 		if (stcb->asoc.total_flight_count > 0) \

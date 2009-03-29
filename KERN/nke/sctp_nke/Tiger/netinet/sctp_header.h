@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 188854 2009-02-20 15:03:54Z rrs $");
 #endif
 
 #ifndef __sctp_header_h__
@@ -500,7 +500,12 @@ struct sctp_stream_reset_response_tsn {
 	uint32_t receivers_next_tsn;
 } SCTP_PACKED ;
 
-
+struct sctp_stream_reset_add_strm {
+  struct sctp_paramhdr ph;
+  uint32_t request_seq;
+  uint16_t number_of_streams;
+  uint16_t reserved;
+};
 
 #define SCTP_STREAM_RESET_NOTHING   0x00000000	/* Nothing for me to do */
 #define SCTP_STREAM_RESET_PERFORMED 0x00000001	/* Did it */

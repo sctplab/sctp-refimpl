@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 189121 2009-02-27 20:54:45Z rrs $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -135,11 +135,14 @@ sctp_init(void)
 void
 sctp_finish(void)
 {
-	sctp_pcb_finish();
 #if defined(__APPLE__)
 	sctp_over_udp_stop();
 	sctp_address_monitor_stop();
 	sctp_stop_main_timer();
+#endif
+	sctp_pcb_finish();
+#if defined(__Windows__)
+	sctp_finish_sysctls();
 #endif
 }
 
@@ -171,6 +174,10 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			 * since we sent to big of chunk
 			 */
 			chk->flags |= CHUNK_FLAGS_FRAGMENT_OK;
+			if (chk->sent < SCTP_DATAGRAM_RESEND) {
+				sctp_flight_size_decrease(chk);
+				sctp_total_flight_decrease(stcb, chk);
+			}
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			}
@@ -185,8 +192,6 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			}
 			/* Clear any time so NO RTT is being done */
 			chk->do_rtt = 0;
-			sctp_flight_size_decrease(chk);
-			sctp_total_flight_decrease(stcb, chk);
 		}
 	}
 }
@@ -1142,6 +1147,7 @@ sctp_disconnect(struct socket *so)
 					sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CLOSING, SCTP_SO_LOCKED);
 				}
 			}
+			soisdisconnecting(so);
 			SCTP_TCB_UNLOCK(stcb);
 			SCTP_INP_RUNLOCK(inp);
 			return (0);
@@ -1219,6 +1225,11 @@ sctp_shutdown(struct socket *so)
 		struct sctp_tcb *stcb;
 		struct sctp_association *asoc;
 
+		if ((so->so_state &
+		     (SS_ISCONNECTED|SS_ISCONNECTING|SS_ISDISCONNECTING)) == 0) {
+			SCTP_INP_RUNLOCK(inp);
+			return (ENOTCONN);
+		}
 		socantsendmore(so);
 
 		stcb = LIST_FIRST(&inp->sctp_asoc_list);
@@ -3715,7 +3726,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_RESET_STREAMS:
 	{
 		struct sctp_stream_reset *strrst;
-		uint8_t send_in = 0, send_tsn = 0, send_out = 0;
+		uint8_t send_in = 0, send_tsn = 0, send_out = 0, addstream=0;
+		uint16_t addstrmcnt=0;
 		int i;
 
 		SCTP_CHECK_AND_CAST(strrst, optval, struct sctp_stream_reset, optsize);
@@ -3733,7 +3745,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			 * for this feature and this peer, not the
 			 * socket request in general.
 			 */
-		        SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EPROTONOSUPPORT);
+		    SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EPROTONOSUPPORT);
 			error = EPROTONOSUPPORT;
 			SCTP_TCB_UNLOCK(stcb);
 			break;
@@ -3753,6 +3765,97 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			send_out = 1;
 		} else if (strrst->strrst_flags == SCTP_RESET_TSN) {
 			send_tsn = 1;
+		} else if (strrst->strrst_flags == SCTP_RESET_ADD_STREAMS) {
+			if (send_tsn ||
+			    send_in ||
+			    send_out) {
+				/* We can't do that and add streams */
+				error = EINVAL;
+				goto skip_stuff;
+			}
+			if (stcb->asoc.stream_reset_outstanding) {
+				error = EBUSY;
+				goto skip_stuff;
+			}
+			addstream = 1;
+			/* We allocate here */
+			addstrmcnt = strrst->strrst_num_streams;
+			if ((int)(addstrmcnt + stcb->asoc.streamoutcnt) > 0xffff) {
+				/* You can't have more than 64k */
+				error = EINVAL;
+				goto skip_stuff;
+			}
+			if ((stcb->asoc.strm_realoutsize - stcb->asoc.streamoutcnt) < addstrmcnt) {
+				/* Need to allocate more */
+				struct sctp_stream_out *oldstream;
+				struct sctp_stream_queue_pending *sp;
+				int removed;
+				
+				oldstream = stcb->asoc.strmout;
+				/* get some more */
+				SCTP_MALLOC(stcb->asoc.strmout, struct sctp_stream_out *,
+				            ((stcb->asoc.streamoutcnt+addstrmcnt) * sizeof(struct sctp_stream_out)),
+				            SCTP_M_STRMO);
+				if (stcb->asoc.strmout == NULL) {
+					stcb->asoc.strmout = oldstream;
+					error = ENOMEM;
+					goto skip_stuff;
+				}
+				/* Ok now we proceed with copying the old out stuff and
+				 * initializing the new stuff.
+				 */
+				SCTP_TCB_SEND_LOCK(stcb);
+				for (i=0; i< stcb->asoc.streamoutcnt; i++ ) {
+				  TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
+				  stcb->asoc.strmout[i].next_sequence_sent = oldstream[i].next_sequence_sent;
+				  stcb->asoc.strmout[i].last_msg_incomplete = oldstream[i].last_msg_incomplete;
+				  stcb->asoc.strmout[i].stream_no = i;
+				  if (oldstream[i].next_spoke.tqe_next) {
+					sctp_remove_from_wheel(stcb, &stcb->asoc, &oldstream[i], 1);
+					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
+					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+					removed = 1;
+				  } else {
+					/* not on out wheel */
+					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
+					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+					removed = 0;
+				  }
+				  /* now anything on those queues? */
+				  while (TAILQ_EMPTY(&oldstream[i].outqueue) == 0) {
+					sp = TAILQ_FIRST(&oldstream[i].outqueue);
+					TAILQ_REMOVE(&oldstream[i].outqueue, sp, next);
+					TAILQ_INSERT_TAIL(&stcb->asoc.strmout[i].outqueue, sp, next);
+				  }
+				  /* Did we disrupt the wheel? */
+				  if (removed) {
+					sctp_insert_on_wheel(stcb,
+										 &stcb->asoc,
+										 &stcb->asoc.strmout[i],
+										 1);
+				  }
+				  /* Now move assoc pointers too */
+				  if (stcb->asoc.last_out_stream == &oldstream[i]) {
+					stcb->asoc.last_out_stream = &stcb->asoc.strmout[i];
+				  }
+				  if (stcb->asoc.locked_on_sending == &oldstream[i]) {
+					stcb->asoc.locked_on_sending = &stcb->asoc.strmout[i];
+				  }
+				}
+				/* now the new streams */
+				for (i = stcb->asoc.streamoutcnt; i < (stcb->asoc.streamoutcnt+addstrmcnt); i++) {
+					stcb->asoc.strmout[i].next_sequence_sent = 0x0;
+					TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
+					stcb->asoc.strmout[i].stream_no = i;
+					stcb->asoc.strmout[i].last_msg_incomplete = 0;
+					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
+					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+				}
+				stcb->asoc.strm_realoutsize = stcb->asoc.streamoutcnt + addstrmcnt;
+				SCTP_FREE(oldstream, SCTP_M_STRMO);
+			}
+			SCTP_TCB_SEND_UNLOCK(stcb);
+			goto skip_stuff;
 		} else {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			error = EINVAL;
@@ -3774,6 +3877,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				goto get_out;
 			}
 		}
+	skip_stuff:
 		if (error) {
 		get_out:
 			SCTP_TCB_UNLOCK(stcb);
@@ -3782,7 +3886,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		error = sctp_send_str_reset_req(stcb, strrst->strrst_num_streams,
 						strrst->strrst_list,
 						send_out, (stcb->asoc.str_reset_seq_in - 3),
-						send_in, send_tsn);
+						send_in, send_tsn, addstream , addstrmcnt);
 
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ, SCTP_SO_LOCKED);
 		SCTP_TCB_UNLOCK(stcb);
@@ -3967,6 +4071,22 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		if (events->sctp_sender_dry_event) {
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DRYEVNT);
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
+				}
+				if (stcb &&
+				    TAILQ_EMPTY(&stcb->asoc.send_queue) &&
+				    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
+				    (stcb->asoc.stream_queue_cnt == 0)) {
+					sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_LOCKED);
+				}
+				if (stcb) {
+					SCTP_TCB_UNLOCK(stcb);
+				}
+			}
 		} else {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_DRYEVNT);
 		}
@@ -4548,10 +4668,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			if (td != NULL && prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr))) {
-				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
-				error = EADDRNOTAVAIL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+			if (td != NULL && (error = prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr)))) {
+				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
 				break;
 			}
 #endif
@@ -4563,11 +4682,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			if (td != NULL && prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
-											   (SCTP_IPV6_V6ONLY(inp) != 0)) != 0) {
-			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
-			  error = EADDRNOTAVAIL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+			if (td != NULL && (error = prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
+											   (SCTP_IPV6_V6ONLY(inp) != 0))) != 0) {
+			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
 			  break;
 			}
 #endif
@@ -4598,10 +4716,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-		if (td != NULL && prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr))) {
-				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
-				error = EADDRNOTAVAIL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+		if (td != NULL && (error = prison_local_ip4(td->td_ucred, &(((struct sockaddr_in *)(addrs->addr))->sin_addr)))) {
+				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
 				break;
 			}
 #endif
@@ -4613,11 +4730,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				break;
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-			if (td != NULL && prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
-											   (SCTP_IPV6_V6ONLY(inp) != 0)) != 0) {
-			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, EADDRNOTAVAIL);
-			  error = EADDRNOTAVAIL;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+			if (td != NULL && (error = prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
+											   (SCTP_IPV6_V6ONLY(inp) != 0))) != 0) {
+			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
 			  break;
 			}
 #endif
@@ -4768,7 +4884,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 #ifdef INET6
 	if (addr->sa_family == AF_INET6) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in6 *sin6p;
 
 #endif
@@ -4776,17 +4892,17 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		sin6p = (struct sockaddr_in6 *)addr;
-		if (p != NULL && prison_remote_ip6(p->td_ucred, &sin6p->sin6_addr) != 0) {
-			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-			return (EINVAL);
+		if (p != NULL && (error = prison_remote_ip6(p->td_ucred, &sin6p->sin6_addr)) != 0) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+			return (error);
 		}
 #endif
 	} else
 #endif
 	if (addr->sa_family == AF_INET) {
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in *sinp;
 
 #endif
@@ -4794,11 +4910,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		sinp = (struct sockaddr_in *)addr;
-		if (p != NULL && prison_remote_ip4(p->td_ucred, &sinp->sin_addr) != 0) {
-			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-			return (EINVAL);
+		if (p != NULL && (error = prison_remote_ip4(p->td_ucred, &sinp->sin_addr)) != 0) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+			return (error);
 		}
 #endif
 	} else {

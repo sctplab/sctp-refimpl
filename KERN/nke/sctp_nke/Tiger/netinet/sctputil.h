@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 189790 2009-03-14 13:42:13Z rrs $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -92,8 +92,6 @@ sctp_timer_stop(int, struct sctp_inpcb *, struct sctp_tcb *,
 
 int
 sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id);
-
-uint32_t sctp_calculate_sum(struct mbuf *, int32_t *, uint32_t);
 
 void
 sctp_mtu_size_reset(struct sctp_inpcb *, struct sctp_association *, uint32_t);
@@ -252,7 +250,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb,
 
 int
 sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
-    int, struct sctpchunk_listhead *, int
+    int, int
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
@@ -300,7 +298,6 @@ do { \
 #define sctp_free_spbufspace(stcb, asoc, sp)  \
 do { \
  	if (sp->data != NULL) { \
-                atomic_subtract_int(&(asoc)->chunks_on_out_queue, 1); \
 		if ((asoc)->total_output_queue_size >= sp->length) { \
 			atomic_subtract_int(&(asoc)->total_output_queue_size, sp->length); \
 		} else { \
@@ -327,10 +324,12 @@ do { \
 	} \
 } while (0)
 
-#ifdef __FreeBSD__
+#if defined(__FreeBSD__)
 /* new functions to start/stop udp tunneling */
 void sctp_over_udp_stop(void);
 int sctp_over_udp_start(void);
+#elif defined(__Windows__)
+void sctp_over_udp_restart(void);
 #endif
 
 int
