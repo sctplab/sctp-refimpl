@@ -384,6 +384,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	errno_t error;
 	ifnet_t *ifnetlist;
 	uint32_t i, count;
+	char name[SCTP_IFNAMSIZ];
 #endif
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
@@ -458,13 +459,16 @@ sctp_init_ifns_for_vrf(int vrfid)
 #endif
 				ifa_flags = 0;
 			}
+#if defined(__APPLE__)
+			snprintf(name, SCTP_IFNAMSIZ, "%s%d", ifn->if_name, ifn->if_unit);
+#endif
 			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
 #if !defined(__Userspace__)
 							(void *)ifn,
 							ifn->if_index, 
 							ifn->if_type,
 #if defined(__APPLE__)
-							ifn->if_name,
+							name,
 #else
 							ifn->if_xname,
 #endif

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 189121 2009-02-27 20:54:45Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -48,6 +48,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 185694 2008-12-06 13:19:54Z rr
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/sctp_crc32.h>
 #include <netinet/udp.h>
 
 #if defined(__APPLE__)
@@ -318,7 +319,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		asoc->pre_open_streams = newcnt;
 	}
 	SCTP_TCB_SEND_UNLOCK(stcb);
-	asoc->streamoutcnt = asoc->pre_open_streams;
+	asoc->strm_realoutsize = asoc->streamoutcnt = asoc->pre_open_streams;
 	/* init tsn's */
 	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
 	/* EY - nr_sack: initialize highest tsn in nr_mapping_array */
@@ -1372,14 +1373,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			/* FOOBAR */
 			return (NULL);
 		}
-		/* pre-reserve some space */
-#ifdef INET6
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-#else
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
-#endif
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
 		/* Set the len */
 		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
 		ph = mtod(op_err, struct sctp_paramhdr *);
@@ -2009,7 +2002,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 	/* get the correct sctp_nets */
-	if(netp)
+	if (netp)
 		*netp = sctp_findnet(stcb, init_src);
 
 	asoc = &stcb->asoc;
@@ -2499,15 +2492,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* FOOBAR */
 			return (NULL);
 		}
-		/* pre-reserve some space */
-#ifdef INET6
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
-#else
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
-#endif
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
-
 		/* Set the len */
 		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_stale_cookie_msg);
 		scm = mtod(op_err, struct sctp_stale_cookie_msg *);
@@ -2594,9 +2578,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			}
 		}
 	}
-	if(to == NULL)
+	if (to == NULL) {
 		return (NULL);
-
+	}
+	
 	cookie_len -= SCTP_SIGNATURE_SIZE;
 	if (*stcb == NULL) {
 		/* this is the "normal" case... get a new TCB */
@@ -2771,7 +2756,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* now we must check to see if we were aborted while
 			 * the move was going on and the lock/unlock happened.
 			 */
-			if(inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				/* yep it was, we leave the
 				 * assoc attached to the socket since
 				 * the sctp_inpcb_free() call will send
@@ -3175,8 +3160,10 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					       (uintptr_t)stcb, 
 					       tp1->rec.data.TSN_seq);
 			}
-			sctp_flight_size_decrease(tp1);
-			sctp_total_flight_decrease(stcb, tp1);
+			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
+				sctp_flight_size_decrease(tp1);
+				sctp_total_flight_decrease(stcb, tp1);
+			}
 		} {
 			/* audit code */
 			unsigned int audit;
@@ -3462,6 +3449,19 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 				if (action != SCTP_STREAM_RESET_PERFORMED) {
 					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_IN, stcb, number_entries, srparam->list_of_streams, SCTP_SO_NOT_LOCKED);
 				}
+			} else if (type == SCTP_STR_RESET_ADD_STREAMS) {
+			  /* Ok we now may have more streams */
+			  if (asoc->stream_reset_outstanding)
+				asoc->stream_reset_outstanding--;
+			  if (action == SCTP_STREAM_RESET_PERFORMED) {
+				/* Put the new streams into effect */
+				stcb->asoc.streamoutcnt = stcb->asoc.strm_realoutsize;
+ 				sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_ADD_OK, stcb, 
+								(uint32_t)stcb->asoc.streamoutcnt, NULL, SCTP_SO_NOT_LOCKED);
+			  } else {
+				sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_ADD_FAIL, stcb, 
+								(uint32_t)stcb->asoc.streamoutcnt, NULL, SCTP_SO_NOT_LOCKED);
+			  }
 			} else if (type == SCTP_STR_RESET_TSN_REQUEST) {
 				/**
 				 * a) Adopt the new in tsn.
@@ -3725,6 +3725,92 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 	}
 }
 
+static void
+sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk,
+							   struct sctp_stream_reset_add_strm  *str_add)
+{
+  /* Peer is requesting to add more streams.
+   * If its within our max-streams we will 
+   * allow it.
+   */
+  uint16_t num_stream, i;
+  uint32_t seq;
+  struct sctp_association *asoc = &stcb->asoc;
+  struct sctp_queued_to_read *ctl;
+  
+  /* Get the number. */
+  seq = ntohl(str_add->request_seq);
+  num_stream = ntohs(str_add->number_of_streams);
+  /* Now what would be the new total? */
+  if (asoc->str_reset_seq_in == seq) {
+	num_stream += stcb->asoc.streamincnt;
+	if (num_stream > stcb->asoc.max_inbound_streams) {
+	  /* We must reject it they ask for to many */
+	denied:
+	  sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
+	  stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+	  stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+	} else {
+	  /* Ok, we can do that :-) */
+	  struct sctp_stream_in *oldstrm;
+
+	  /* save off the old */
+	  oldstrm = stcb->asoc.strmin;
+	  SCTP_MALLOC(stcb->asoc.strmin, struct sctp_stream_in *,  
+				  (num_stream * sizeof(struct sctp_stream_in)),
+				  SCTP_M_STRMI);
+	  if (stcb->asoc.strmin == NULL){
+		stcb->asoc.strmin = oldstrm;
+		goto denied;
+	  }
+	  /* copy off the old data */
+	  for (i=0; i< stcb->asoc.streamincnt; i++ ) {
+		TAILQ_INIT(&stcb->asoc.strmin[i].inqueue);
+		stcb->asoc.strmin[i].stream_no = i;
+		stcb->asoc.strmin[i].last_sequence_delivered = oldstrm[i].last_sequence_delivered;
+		stcb->asoc.strmin[i].delivery_started = oldstrm[i].delivery_started;
+		/* now anything on those queues? */
+		while (TAILQ_EMPTY(&oldstrm[i].inqueue) == 0) {
+		  ctl = TAILQ_FIRST(&oldstrm[i].inqueue);
+		  TAILQ_REMOVE(&oldstrm[i].inqueue, ctl, next);
+		  TAILQ_INSERT_TAIL(&stcb->asoc.strmin[i].inqueue, ctl, next);
+		}
+	  }
+	  /* Init the new streams */
+	  for (i=stcb->asoc.streamincnt; i <num_stream; i++) {
+		TAILQ_INIT(&stcb->asoc.strmin[i].inqueue);
+		stcb->asoc.strmin[i].stream_no = i;
+		stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
+		stcb->asoc.strmin[i].delivery_started = 0;
+	  }
+	  SCTP_FREE(oldstrm, SCTP_M_STRMI);
+	  /* update the size */
+	  stcb->asoc.streamincnt = num_stream;
+	  /* Send the ack */
+	  sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_PERFORMED);
+	  stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+	  stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+	  sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_INSTREAM_ADD_OK, stcb, 
+					  (uint32_t)stcb->asoc.streamincnt, NULL, SCTP_SO_NOT_LOCKED);
+	}
+  } else if ((asoc->str_reset_seq_in - 1) == seq) {
+		/*
+		 * one seq back, just echo back last action since my
+		 * response was lost.
+		 */
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
+	} else if ((asoc->str_reset_seq_in - 2) == seq) {
+		/*
+		 * two seq back, just echo back last action since my
+		 * response was lost.
+		 */
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
+	} else {
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
+
+  }
+}
+
 #if !defined(__Panda__)
 #ifdef __GNUC__
 __attribute__ ((noinline))
@@ -3820,6 +3906,11 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 				}
 			}
 			sctp_handle_str_reset_request_out(stcb, chk, req_out, trunc);
+		} else if (ptype == SCTP_STR_RESET_ADD_STREAMS) {
+		  struct sctp_stream_reset_add_strm  *str_add;
+		  str_add = (struct sctp_stream_reset_add_strm  *)ph;
+		  num_req++;
+		  sctp_handle_str_reset_add_strm(stcb, chk, str_add);
 		} else if (ptype == SCTP_STR_RESET_IN_REQUEST) {
 			struct sctp_stream_reset_in_request *req_in;
 			num_req++;
@@ -4766,16 +4857,16 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				struct mbuf *ret_buf;
 				struct sctp_inpcb *linp;
-				if(stcb) {
+				if (stcb) {
 					linp = NULL;
 				} else {
 					linp = inp;
 				}
 
-				if(linp) {
+				if (linp) {
 					SCTP_ASOC_CREATE_LOCK(linp);
 				}
-				if(netp) {
+				if (netp) {
 					ret_buf =
 						sctp_handle_cookie_echo(m, iphlen,
 									*offset, sh,
@@ -4790,7 +4881,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				} else {
 					ret_buf = NULL;
 				}
-				if(linp) {
+				if (linp) {
 					SCTP_ASOC_CREATE_UNLOCK(linp);
 				}
 				if (ret_buf == NULL) {
@@ -5556,10 +5647,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 void
-sctp_input_with_port(i_pak, off, port)
-	struct mbuf *i_pak;
-	int off;
-	uint16_t port;
+sctp_input_with_port(struct mbuf *i_pak, int off, uint16_t port)
 #else
 #if defined(__Panda__)
 void
@@ -5608,7 +5696,6 @@ sctp_input(i_pak, va_alist)
 	 */
 	off = sizeof(struct ip);
 #endif
-
  	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
 		SCTP_RELEASE_PKT(i_pak);
 		return;
@@ -5674,6 +5761,12 @@ sctp_input(i_pak, va_alist)
 	NTOHS(ip->ip_len);
 #endif
 
+	/* validate mbuf chain length with IP payload length */
+	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
+		SCTP_STAT_INCR(sctps_hdrops);
+		goto bad;
+	}
+
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(*sh));
 	SCTPDBG(SCTP_DEBUG_INPUT1,
@@ -5692,15 +5785,46 @@ sctp_input(i_pak, va_alist)
 	}
 
 	/* validate SCTP checksum */
+#if defined(__FreeBSD__) 
+#if __FreeBSD_version >= 800000
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
+		if_name(m->m_pkthdr.rcvif),
+		m->m_pkthdr.csum_flags);
+#else
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
+		m->m_pkthdr.rcvif->if_xname,
+		m->m_pkthdr.csum_flags);
+#endif
+#endif
+#if defined(__APPLE__)
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet of length %d received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
+#endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
+		SCTP_STAT_INCR(sctps_recvhwcrc);
+		goto sctp_skip_csum_4;
+	}
+#endif
 	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
 	     (SCTP_IS_IT_LOOPBACK(m)))
 		) {
-			goto sctp_skip_csum_4;
+		SCTP_STAT_INCR(sctps_recvnocrc);
+		goto sctp_skip_csum_4;
 	}
 	sh->checksum = 0;	/* prepare for calc */
-	calc_check = sctp_calculate_sum(m, &mlen, iphlen);
+	calc_check = sctp_calculate_cksum(m, iphlen);
+	SCTP_STAT_INCR(sctps_recvswcrc);
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
 			calc_check, check, m, mlen, iphlen);
@@ -5733,11 +5857,6 @@ sctp_input(i_pak, va_alist)
 		goto bad;
 	}
 
-	/* validate mbuf chain length with IP payload length */
-	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
-		SCTP_STAT_INCR(sctps_hdrops);
-		goto bad;
-	}
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...

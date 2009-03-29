@@ -133,6 +133,8 @@ extern struct sysctl_oid sysctl__net_inet_sctp_assoclist;
 extern struct sysctl_oid sysctl__net_inet_sctp_main_timer;
 extern struct sysctl_oid sysctl__net_inet_sctp_ignore_vmware_interfaces;
 extern struct sysctl_oid sysctl__net_inet_sctp_output_unlocked;
+extern struct sysctl_oid sysctl__net_inet_sctp_addr_watchdog_limit;
+extern struct sysctl_oid sysctl__net_inet_sctp_vtag_watchdog_limit;
 
 extern struct domain inetdomain;
 #ifdef INET6
@@ -405,6 +407,8 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_register_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
 	sysctl_register_oid(&sysctl__net_inet_sctp_output_unlocked);
+	sysctl_register_oid(&sysctl__net_inet_sctp_addr_watchdog_limit);
+	sysctl_register_oid(&sysctl__net_inet_sctp_vtag_watchdog_limit);
 
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;
@@ -519,6 +523,8 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_main_timer);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ignore_vmware_interfaces);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_output_unlocked);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_addr_watchdog_limit);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_vtag_watchdog_limit);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
 	lck_mtx_lock(inetdomain.dom_mtx);

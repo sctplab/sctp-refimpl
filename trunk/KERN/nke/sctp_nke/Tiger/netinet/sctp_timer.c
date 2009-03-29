@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 189790 2009-03-14 13:42:13Z rrs $");
 #endif
 
 #define _IP_VHL
@@ -755,7 +755,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						(void)sctp_release_pr_sctp_chunk(stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					continue;
 				}
@@ -767,7 +767,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 						(void)sctp_release_pr_sctp_chunk(stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 &stcb->asoc.sent_queue, SCTP_SO_NOT_LOCKED);
+										 SCTP_SO_NOT_LOCKED);
 					}
 					continue;
 				}

@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 188854 2009-02-20 15:03:54Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -393,7 +393,7 @@ struct sctp_stream_reset_event {
 #define SCTP_STRRESET_ALL_STREAMS  0x0004
 #define SCTP_STRRESET_STREAM_LIST  0x0008
 #define SCTP_STRRESET_FAILED       0x0010
-
+#define SCTP_STRRESET_ADD_STREAM   0x0020
 
 /* SCTP notification event */
 struct sctp_tlv {
@@ -581,9 +581,9 @@ struct sctp_sack_info {
 struct sctp_cwnd_args {
 	struct sctp_nets *net;	/* network to */ /* FIXME: LP64 issue */
 	uint32_t cwnd_new_value;/* cwnd in k */
-	uint32_t inflight;	/* flightsize in k */
 	uint32_t pseudo_cumack;
-	uint32_t cwnd_augment;	/* increment to it */
+	uint16_t inflight;	/* flightsize in k */
+	uint16_t cwnd_augment;	/* increment to it */
 	uint8_t meets_pseudo_cumack;
 	uint8_t need_new_pseudo_cumack;
 	uint8_t cnt_in_send;
@@ -612,6 +612,7 @@ struct sctp_blk_args {
 #define SCTP_RESET_LOCAL_SEND  0x0002
 #define SCTP_RESET_BOTH        0x0003
 #define SCTP_RESET_TSN         0x0004
+#define SCTP_RESET_ADD_STREAMS 0x0005
 
 struct sctp_stream_reset {
 	sctp_assoc_t strrst_assoc_id;
@@ -817,6 +818,10 @@ struct sctpstat {
 	uint32_t  sctps_recvauthfailed;      /* total number of auth failed */
 	uint32_t  sctps_recvexpress;         /* total fast path receives all one chunk */
 	uint32_t  sctps_recvexpressm;        /* total fast path multi-part data */
+	uint32_t  sctps_recvnocrc;
+	uint32_t  sctps_recvswcrc;
+	uint32_t  sctps_recvhwcrc;
+	
 	/* output statistics: */
 	uint32_t  sctps_sendpackets;         /* total output packets       */
 	uint32_t  sctps_sendsacks;           /* total output SACKs         */
@@ -829,7 +834,10 @@ struct sctpstat {
 	uint32_t  sctps_sendheartbeat;       /* total output HB chunks     */
 	uint32_t  sctps_sendecne;            /* total output ECNE chunks    */
 	uint32_t  sctps_sendauth;            /* total output AUTH chunks FIXME   */
-	uint32_t  sctps_senderrors;	   /* ip_output error counter */
+	uint32_t  sctps_senderrors;	     /* ip_output error counter */
+	uint32_t  sctps_sendnocrc;
+	uint32_t  sctps_sendswcrc;
+	uint32_t  sctps_sendhwcrc;
 	/* PCKDROPREP statistics: */
 	uint32_t  sctps_pdrpfmbox;           /* Packet drop from middle box */
 	uint32_t  sctps_pdrpfehos;           /* P-drop from end host */
@@ -920,7 +928,7 @@ struct sctpstat {
 	uint32_t  sctps_cached_chk;       /* Number of cached chunks used */
 	uint32_t  sctps_cached_strmoq;    /* Number of cached stream oq's used */
 	uint32_t  sctps_left_abandon;     /* Number of unread message abandonded by close */
-	uint32_t  sctps_send_burst_avoid; /* Send burst avoidance, already max burst inflight to net */
+	uint32_t  sctps_send_burst_avoid; /* Unused */
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
 
@@ -961,6 +969,10 @@ struct xsctp_inpcb {
 	uint16_t local_port;
 	uint16_t qlen;
 	uint16_t maxqlen;
+#if defined(__Windows__)
+	uint16_t padding;
+#endif
+	uint32_t extra_padding[8]; /* future */
 };
 
 struct xsctp_tcb {
@@ -984,18 +996,29 @@ struct xsctp_tcb {
 	uint32_t cumulative_tsn;
 	uint32_t cumulative_tsn_ack;
 	uint32_t mtu;
-	uint32_t peers_rwnd;
 	uint32_t refcnt;
 	uint16_t local_port;                    /* sctpAssocEntry 3   */
 	uint16_t remote_port;                   /* sctpAssocEntry 4   */
 	struct sctp_timeval start_time;         /* sctpAssocEntry 16  */
 	struct sctp_timeval discontinuity_time; /* sctpAssocEntry 17  */
+#if defined(__FreeBSD__)
+#if __FreeBSD_version >= 800000
+	uint32_t peers_rwnd;
+	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+	uint32_t extra_padding[8];              /* future */
+#endif
+#else
+	uint32_t peers_rwnd;
+	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
+	uint32_t extra_padding[8];              /* future */
+#endif
 };
 
 struct xsctp_laddr {
 	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
 	uint32_t last;
 	struct sctp_timeval start_time;  /* sctpAssocLocalAddrEntry 3   */
+	uint32_t extra_padding[8];       /* future */
 };
 
 struct xsctp_raddr {
@@ -1011,7 +1034,12 @@ struct xsctp_raddr {
 	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
 	uint8_t confirmed;                 /*                            */
 	uint8_t heartbeat_enabled;         /* sctpAssocLocalRemEntry 4   */
+#if defined(__Windows__)
+	uint8_t padding;
+#endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
+	uint32_t rtt;
+	uint32_t extra_padding[7];         /* future */
 };
 
 #define SCTP_MAX_LOGGING_SIZE 30000

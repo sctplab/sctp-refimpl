@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 185694 2008-12-06 13:19:54Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 189836 2009-03-14 23:13:16Z rrs $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -196,6 +196,7 @@ struct sctp_nets {
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
 	int lastsv;
+	int rtt; /* last measured rtt value in ms */
 	unsigned int RTO;
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
@@ -309,7 +310,7 @@ struct sctp_data_chunkrec {
 
 	/* ECN Nonce: Nonce Value for this chunk */
 	uint8_t ect_nonce;
-
+	uint8_t fwd_tsn_cnt;
 	/*
 	 * part of the Highest sacked algorithm to be able to stroke counts
 	 * on ones that are FR'd.
@@ -445,6 +446,7 @@ struct sctp_stream_queue_pending {
 	uint8_t  pr_sctp_on;
 	uint8_t  sender_all_done;
 	uint8_t  put_last_out;
+	uint8_t  discard_rest;
 };
 
 /*
@@ -677,7 +679,7 @@ struct sctp_association {
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
 	/* For CMT */
-	struct sctp_nets *last_net_data_came_from;
+	struct sctp_nets *last_net_cmt_send_started;
 	/* last place I got a data chunk from */
 	struct sctp_nets *last_data_chunk_from;
 	/* last place I got a control from */
@@ -827,8 +829,8 @@ struct sctp_association {
 	uint32_t total_output_queue_size;
 
 	uint32_t sb_cc;		       /* shadow of sb_cc */
-    uint32_t sb_send_resv;     /* amount reserved on a send */
-    uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
+	uint32_t sb_send_resv;     /* amount reserved on a send */
+	uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
 	/* 32 bit nonce stuff */
 	uint32_t nonce_resync_tsn;
 	uint32_t nonce_wait_tsn;
@@ -933,7 +935,7 @@ struct sctp_association {
 	/* could re-arrange to optimize space here. */
 	uint16_t streamincnt;
 	uint16_t streamoutcnt;
-
+    uint16_t strm_realoutsize;
 	/* my maximum number of retrans of INIT and SEND */
 	/* copied from SCTP but should be individually setable */
 	uint16_t max_init_times;
