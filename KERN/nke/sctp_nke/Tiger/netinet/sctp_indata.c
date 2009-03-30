@@ -5615,6 +5615,88 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 	}
 }
 
+static void
+sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
+	struct sctp_association *asoc, 
+	uint16_t stream, uint16_t seq)
+{
+	struct sctp_tmit_chunk *chk, *at;
+
+	if (!TAILQ_EMPTY(&asoc->reasmqueue)) {
+		/* For each one on here see if we need to toss it */
+		/*
+		 * For now large messages held on the reasmqueue that are
+		 * complete will be tossed too. We could in theory do more
+		 * work to spin through and stop after dumping one msg aka
+		 * seeing the start of a new msg at the head, and call the
+		 * delivery function... to see if it can be delivered... But
+		 * for now we just dump everything on the queue.
+		 */
+		chk = TAILQ_FIRST(&asoc->reasmqueue);
+		while (chk) {
+			at = TAILQ_NEXT(chk, sctp_next);
+			if (chk->rec.data.stream_number != stream) {
+				chk = at;
+				continue;
+			}
+			if (chk->rec.data.stream_seq == seq) {
+				/* It needs to be tossed */
+				TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
+				if (compare_with_wrap(chk->rec.data.TSN_seq,
+						      asoc->tsn_last_delivered, MAX_TSN)) {
+					asoc->tsn_last_delivered =
+						chk->rec.data.TSN_seq;
+					asoc->str_of_pdapi =
+						chk->rec.data.stream_number;
+					asoc->ssn_of_pdapi =
+						chk->rec.data.stream_seq;
+					asoc->fragment_flags =
+						chk->rec.data.rcv_flags;
+				}
+				asoc->size_on_reasm_queue -= chk->send_size;
+				sctp_ucount_decr(asoc->cnt_on_reasm_queue);
+
+				/* Clear up any stream problem */
+				if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) !=
+				    SCTP_DATA_UNORDERED &&
+				    (compare_with_wrap(chk->rec.data.stream_seq,
+						       asoc->strmin[chk->rec.data.stream_number].last_sequence_delivered,
+						       MAX_SEQ))) {
+					/*
+					 * We must dump forward this streams
+					 * sequence number if the chunk is
+					 * not unordered that is being
+					 * skipped. There is a chance that
+					 * if the peer does not include the
+					 * last fragment in its FWD-TSN we
+					 * WILL have a problem here since
+					 * you would have a partial chunk in
+					 * queue that may not be
+					 * deliverable. Also if a Partial
+					 * delivery API as started the user
+					 * may get a partial chunk. The next
+					 * read returning a new chunk...
+					 * really ugly but I see no way
+					 * around it! Maybe a notify??
+					 */
+					asoc->strmin[chk->rec.data.stream_number].last_sequence_delivered =
+						chk->rec.data.stream_seq;
+				}
+				if (chk->data) {
+					sctp_m_freem(chk->data);
+					chk->data = NULL;
+				}
+				sctp_free_a_chunk(stcb, chk);
+			} else if (compare_with_wrap(chk->rec.data.stream_seq, seq, MAX_SEQ)) {
+				/* If the stream_seq is > than the purging one, we are done */
+				break;
+			}
+			chk = at;
+		}
+	}
+}
+
+
 void
 sctp_handle_forward_tsn(struct sctp_tcb *stcb,
     struct sctp_forward_tsn_chunk *fwd, int *abort_flag, struct mbuf *m ,int offset)
@@ -5644,13 +5726,12 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 */
 	struct sctp_association *asoc;
 	uint32_t new_cum_tsn, gap;
-	unsigned int i, cnt_gone, fwd_sz, cumack_set_flag, m_size;
+	unsigned int i, fwd_sz, cumack_set_flag, m_size;
 	struct sctp_stream_in *strm;
 	struct sctp_tmit_chunk *chk, *at;
 
 	cumack_set_flag = 0;
 	asoc = &stcb->asoc;
-	cnt_gone = 0;
 	if ((fwd_sz = ntohs(fwd->ch.chunk_length)) < sizeof(struct sctp_forward_tsn_chunk)) {
 		SCTPDBG(SCTP_DEBUG_INDATA1,
 			"Bad size too small/big fwd-tsn\n");
@@ -5801,7 +5882,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				}
 				asoc->size_on_reasm_queue -= chk->send_size;
 				sctp_ucount_decr(asoc->cnt_on_reasm_queue);
-				cnt_gone++;
 
 				/* Clear up any stream problem */
 				if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) !=
@@ -5862,7 +5942,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	if (asoc->fragmented_delivery_inprogress) {
 		/*
-		 * Ok we removed cnt_gone chunks in the PD-API queue that
+		 * Ok we removed some chunks in the PD-API queue that
 		 * were being delivered. So now we must turn off the flag.
 		 */
 		uint32_t str_seq;
@@ -5901,6 +5981,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				/* screwed up streams, stop!  */
 				break;
 			}
+			sctp_flush_reassm_for_str_seq(stcb, asoc, stseq->stream, stseq->sequence);
 			strm = &asoc->strmin[stseq->stream];
 			if (compare_with_wrap(stseq->sequence,
 					      strm->last_sequence_delivered, MAX_SEQ)) {
