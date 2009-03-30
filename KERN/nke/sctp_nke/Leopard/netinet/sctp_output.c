@@ -7637,7 +7637,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			no_data_chunks = 1;
 		}
 	}
-	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight)/ asoc->numnets);
+	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
@@ -7659,7 +7659,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				}
 			        continue;
 			}
-
 			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) && (net->ref_count < 2)) {
 				/* nothing can be in queue for this guy */
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
@@ -7674,7 +7673,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 					sctp_log_cwnd(stcb, net, 3, 
 						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
 				}
-
 				continue;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
@@ -7730,9 +7728,9 @@ again_one_more_time:
 			 */
 			continue;
 		}
-		if((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
-		   (TAILQ_FIRST(&asoc->asconf_send_queue) == NULL) &&
-		   (net->flight_size >= net->cwnd)) {
+		if ((TAILQ_FIRST(&asoc->control_send_queue) == NULL) &&
+		    (TAILQ_FIRST(&asoc->asconf_send_queue) == NULL) &&
+		    (net->flight_size >= net->cwnd)) {
 			/* Nothing on control or asconf and flight is full, we can skip 
 			 * even in the CMT case.
 			 */
@@ -7742,7 +7740,7 @@ again_one_more_time:
 		endoutchain = outchain = NULL;
 		no_fragmentflg = 1;
 		one_chunk = 0;
-		if(net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
 			skip_data_for_this_net = 1;
 		} else {
 			skip_data_for_this_net = 0;
