@@ -4875,7 +4875,6 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 					  sctp_next);
 			stcb->asoc.send_queue_cnt--;
 			stcb->asoc.sent_queue_cnt++;
-			stcb->asoc.pr_sctp_cnt++;
 			goto next_on_sent;
 		}
 	}
