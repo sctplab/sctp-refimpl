@@ -3260,8 +3260,12 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 #endif
 							}
 						}
-						/* All chunks NOT UNSENT fall through here and are marked */
-						tp1->sent = SCTP_DATAGRAM_MARKED;
+						/* All chunks NOT UNSENT fall through here and are marked 
+						 * (leave PR-SCTP ones that are to skip alone though)
+						 */
+						if (tp1->sent != SCTP_FORWARD_TSN_SKIP)
+							tp1->sent = SCTP_DATAGRAM_MARKED;
+
 						if (tp1->rec.data.chunk_was_revoked) {
 							/* deflate the cwnd */
 							tp1->whoTo->cwnd -= tp1->book_size;
