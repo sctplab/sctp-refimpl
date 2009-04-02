@@ -177,13 +177,14 @@ static char *from_str[]= {
 	/* 120 */ "clear threshold",
 	/* 121 */ "increment threshold",
 	/* 122 */ "flight log down wp",
-	/* 123 */ "FWD TSN check"
-	/* 124 */ "max"
+	/* 123 */ "FWD TSN check",
+	/* 124 */ "Fwd TSN reasm check",
+	/* 125 */ "max"
 
 };
 
 
-#define FROM_STRING_MAX 118
+#define FROM_STRING_MAX 126
 
 int graph_mode = 0;
 int comma_sep = 0;
@@ -684,11 +685,13 @@ print_event_misc(struct sctp_cwnd_log *log)
 			       log->x.misc.log3,
 			       log->x.misc.log4);
 		} else {
-			printf("%s:%s advpeerack:%u tp1tsn:%u\n", 
+			printf("%s:%s advpeerack:%u tp1tsn:%u %u %u\n", 
 			       ts,
 			       from_str[log->from],
 			       log->x.misc.log1,
-			       log->x.misc.log2);
+			       log->x.misc.log2,
+			       log->x.misc.log3,
+			       log->x.misc.log4);
 		}
 	} else if (log->from == SCTP_THRESHOLD_CLEAR) {
 		printf("%s:Clear asoc threshold old val:%d new val:%d FILE:%x LINE:%d\n",
