@@ -433,7 +433,7 @@ struct sctp_inpcb {
 	/* Socket buffer lock protects read_queue and of course sb_cc */
 	struct sctp_readhead read_queue;
 
-    LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
+	LIST_ENTRY(sctp_inpcb) sctp_list;	/* lists all endpoints */
         /* hash of all endpoints for model */
 	LIST_ENTRY(sctp_inpcb) sctp_hash;
 	/* count of local addresses bound, 0 if bound all */
