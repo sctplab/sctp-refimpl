@@ -16,6 +16,7 @@
 int cnt=0;
 int pcnt=0, icnt=0, bcnt=0;
 
+time_t up=0, down=0;
 void
 handle_notification(char *buffer)
 {
@@ -36,15 +37,18 @@ handle_notification(char *buffer)
 		switch(sac->sac_state) {
 		case SCTP_COMM_UP:
 			str = "COMMUNICATION UP";
+			down = up = now;
 			cnt = pcnt = bcnt = icnt = 0;
 			break;
 		case SCTP_COMM_LOST:
 			str = "COMMUNICATION LOST";
+			down = now;
 			printf("\n");
 			break;
 		case SCTP_RESTART:
 		        str = "RESTART";
 			printf("\n");
+			up = now;
 			break;
 		case SCTP_SHUTDOWN_COMP:
 			str = "SHUTDOWN COMPLETE";
@@ -60,6 +64,9 @@ handle_notification(char *buffer)
 		printf("SCTP_ASSOC_CHANGE: %s, assoc=0x%x - %s",
 		       str,
 		       (uint32_t)sac->sac_assoc_id, timemark);
+		if (up != down) {
+			printf("%d seconds\n", (down - up));
+		}
 		break;
 	case SCTP_PEER_ADDR_CHANGE:
 		break;
@@ -82,6 +89,9 @@ handle_notification(char *buffer)
                 sse = &snp->sn_shutdown_event;
 		printf("\nSCTP_SHUTDOWN_EVENT: assoc=0x%x - %s",
 		       (uint32_t)sse->sse_assoc_id, timemark);
+		if (up != down) {
+			printf("%d seconds\n", (down - up));
+		}
 		break;
 	default:
 		break;
