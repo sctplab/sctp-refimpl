@@ -7,6 +7,9 @@
 #include <stdio.h>
 #include <unistd.h>
 #include <time.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <getopt.h>
 
 #define PORT 30002
 #define SIZE_OF_MESSAGE (512 * 1024)
@@ -86,42 +89,81 @@ handle_notification(char *buffer)
 }
 
 
-int main() 
+int main(int argc, char **argv) 
 {
-	int fd;
+	int fd, i;
 	struct sockaddr_in saddr_in;
 	char buffer[SIZE_OF_MESSAGE];
 	int saddrlen;
 	int msg_flags=0;
 	int received;
+	struct sockaddr_in bindaddr[10];
+	char *baddr[10];
+	int bndcnt=0;
+	uint16_t port= htons(PORT);
+
 	struct sctp_event_subscribe event;
 	struct sctp_sndrcvinfo sri;
-    	struct sctp_initmsg initparams;
+	while((i= getopt(argc,argv,"P:I:B:b:h:p:m:?")) != EOF)
+	{
+		switch(i) {
+		case 'p':
+			port = htons(strtol(optarg, NULL, 0));
+			break;
 
-    	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
-        	perror("Couldn't create socket");
+		case 'b':
+			if (bndcnt < 10) {
+				baddr[bndcnt] = optarg;
+				bndcnt++;
+			}
+			break;
+		case '?':
+		default:
+			printf("Use %s [-p port -b bind -b bind]\n",
+			       argv[0]);
+			exit(-1);
+			break;
+		};
+	}
+	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
+		perror("socket");
+		exit(-1);
+	}
 
-    	bzero(&(saddr_in), sizeof(struct sockaddr_in));
-    	saddr_in.sin_family = AF_INET;
-    	saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
-    	saddr_in.sin_port = htons(PORT);
+	if (bndcnt == 0) {
+		saddr_in.sin_family = AF_INET;
+		saddr_in.sin_addr.s_addr = htonl(INADDR_ANY);
+		saddr_in.sin_port = port;
+		if (bind(fd, (struct sockaddr *)&(saddr_in),sizeof(struct sockaddr_in)) < 0)  {
+			perror("bind");
+			exit (-1);
+		}
+	} else {
+		memset(bindaddr, 0, sizeof(bindaddr));
+		for(i=0; i<bndcnt; i++) {
+			bindaddr[i].sin_len    = sizeof(struct sockaddr_in);
+			bindaddr[i].sin_family = AF_INET;
+			bindaddr[i].sin_port   = port;
+			inet_pton(AF_INET, baddr[i], &bindaddr[i].sin_addr);
+		}
+		/* bindx */
+		if (sctp_bindx(fd, (struct sockaddr *)bindaddr,
+			       bndcnt, SCTP_BINDX_ADD_ADDR) != 0) {
+			perror("bind failed");
+			exit(0);
+		}
+	}
 
-    	bzero(&initparams, sizeof(initparams));
-    	if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, &initparams, sizeof(initparams))<0)
-        	perror("SCTP_NODELAY");
-
-        if (bind(fd, (struct sockaddr *)&(saddr_in),sizeof(struct sockaddr_in)) < 0) 
-            	perror("bind");
-
-        if(listen(fd, 5)<0)
+        if(listen(fd, 5)<0) {
             	perror("listen");
+		exit (-1);
+	}
 	memset(&event, 0, sizeof(event));
 	event.sctp_association_event = 1;
 	event.sctp_shutdown_event = 1;
 	if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
 		perror("Can't do SET_EVENTS socket option!");
 	}
-	
 	bzero(&saddr_in, sizeof(struct sockaddr_in));
 	bzero(&sri, sizeof(struct sctp_sndrcvinfo));
 	saddrlen=sizeof(struct sockaddr_in);

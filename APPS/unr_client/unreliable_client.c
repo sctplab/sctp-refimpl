@@ -105,9 +105,12 @@ int main(int argc, char **argv)
 	char *toaddr = NULL;
 	int port = htons(DISCARD_PORT);
 
-	while((i= getopt(argc,argv,"P:I:B:b:h:m:?")) != EOF)
+	while((i= getopt(argc,argv,"P:I:B:b:h:p:m:?")) != EOF)
 	{
 		switch(i) {
+		case 'p':
+			port = htons(strtol(optarg, NULL, 0));
+			break;
 		case 'P':
 			pframe_rel = strtol(optarg, NULL, 0);
 			break;
@@ -148,6 +151,11 @@ int main(int argc, char **argv)
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		perror("socket");
 	
+
+	i = 1;
+    	if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, &i, sizeof(int))<0) {
+        	perror("SCTP_NODELAY");
+	}
 
 	if (bndcnt) {
 		/* prepare */
