@@ -18,7 +18,9 @@ int main()
 	int saddrlen;
 	int msg_flags=0;
 	int received;
-	int cnt;
+	int cnt=0;
+	int pcnt=0, icnt=0, bcnt=0;
+	
 	struct sctp_sndrcvinfo sri;
 
     	//Parameters to pass to the SCTP socket
@@ -54,7 +56,15 @@ int main()
 	                &sri, &msg_flags              // struct sctp_sndrcvinfo and flags received
 		       );
 		cnt++;
-		printf("%d\r",cnt);
+		if (buffer[0] == 'I') {
+			icnt++;
+		} else if (buffer[0] == 'P') {
+			pcnt++;
+		} else if (buffer[0] == 'B') {
+			bcnt++;
+		}
+		printf("%d I:%d P:%d B:%d\r",
+		       cnt, icnt, pcnt, bcnt);
 		fflush(stdout);
 		if (received <= 0)
 			break;
