@@ -10,7 +10,7 @@
 #include <getopt.h>
 
 #define SIZE_OF_MESSAGE (512 * 1024)
-#define SIZE_OF_I_FRAME SIZE_OF_MESSAGE
+#define SIZE_OF_I_FRAME (51 * 1024)
 #define SIZE_OF_P_FRAME (9 * 1024)
 #define SIZE_OF_B_FRAME (3 * 1024)
 
