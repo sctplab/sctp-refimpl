@@ -5731,8 +5731,10 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	uint32_t new_cum_tsn, gap;
 	unsigned int i, fwd_sz, cumack_set_flag, m_size;
+	uint32_t str_seq;
 	struct sctp_stream_in *strm;
 	struct sctp_tmit_chunk *chk, *at;
+	struct sctp_queued_to_read *ctl, *sv;
 
 	cumack_set_flag = 0;
 	asoc = &stcb->asoc;
@@ -5921,43 +5923,17 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			} else {
 				/*
 				 * Ok we have gone beyond the end of the
-				 * fwd-tsn's mark. Some checks...
+				 * fwd-tsn's mark. 
 				 */
-				if ((asoc->fragmented_delivery_inprogress) &&
-				    (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG)) {
-					uint32_t str_seq;
-					/*
-					 * Special case PD-API is up and
-					 * what we fwd-tsn' over includes
-					 * one that had the LAST_FRAG. We no
-					 * longer need to do the PD-API.
-					 */
-					asoc->fragmented_delivery_inprogress = 0;
-
-					str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
-					sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-							stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq, SCTP_SO_NOT_LOCKED);
-
-				}
 				break;
 			}
 			chk = at;
 		}
 	}
-	if (asoc->fragmented_delivery_inprogress) {
-		/*
-		 * Ok we removed some chunks in the PD-API queue that
-		 * were being delivered. So now we must turn off the flag.
-		 */
-		uint32_t str_seq;
-		str_seq = (asoc->str_of_pdapi << 16) | asoc->ssn_of_pdapi;
-		sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
-				stcb, SCTP_PARTIAL_DELIVERY_ABORTED, (void *)&str_seq, SCTP_SO_NOT_LOCKED);
-		asoc->fragmented_delivery_inprogress = 0;
-	}
-	/*************************************************************/
-	/* 3. Update the PR-stream re-ordering queues                */
-	/*************************************************************/
+	/*******************************************************/
+	/* 3. Update the PR-stream re-ordering queues and fix  */
+        /*    delivery issues as needed.                       */
+	/*******************************************************/
 	fwd_sz -= sizeof(*fwd);
 	if(m && fwd_sz) {
 		/* New method. */
@@ -5965,6 +5941,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		struct sctp_strseq *stseq, strseqbuf;
 		offset += sizeof(*fwd);
 
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 		num_str = fwd_sz / sizeof(struct sctp_strseq);
 		for (i = 0; i < num_str; i++) {
 			uint16_t st;
@@ -5980,12 +5957,47 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			stseq->stream = st;
 			st = ntohs(stseq->sequence);
 			stseq->sequence = st;
+
 			/* now process */
+
+			/*
+			 * Ok we now look for the stream/seq on the read queue 
+			 * where its not all delivered. If we find it we transmute the
+			 * read entry into a PDI_ABORTED.
+			 */
 			if (stseq->stream >= asoc->streamincnt) {
 				/* screwed up streams, stop!  */
 				break;
 			}
+			if ((asoc->str_of_pdapi == stseq->stream) &&
+			    (asoc->ssn_of_pdapi == stseq->sequence)) {
+				/* If this is the one we were partially delivering 
+				 * now then we no longer are. Note this will change
+				 * with the reassembly re-write.
+				 */
+				asoc->fragmented_delivery_inprogress = 0;
+			}
 			sctp_flush_reassm_for_str_seq(stcb, asoc, stseq->stream, stseq->sequence);
+			TAILQ_FOREACH(ctl, &stcb->sctp_ep->read_queue, next) {
+				if ((ctl->sinfo_stream == stseq->stream) &&
+				    (ctl->sinfo_ssn == stseq->sequence)) {
+					str_seq = (stseq->stream << 16) | stseq->sequence;
+					ctl->end_added = 1;
+					ctl->pdapi_aborted = 1;
+					sv = stcb->asoc.control_pdapi;
+					stcb->asoc.control_pdapi = ctl;
+					sctp_notify_partial_delivery_indication(stcb, 
+										SCTP_PARTIAL_DELIVERY_ABORTED, 
+										SCTP_HOLDS_LOCK, 
+										str_seq);
+					stcb->asoc.control_pdapi = sv;
+					break;
+				} else if ((ctl->sinfo_stream == stseq->stream) &&
+					   (compare_with_wrap(ctl->sinfo_ssn, stseq->sequence, MAX_SEQ))) {
+					/* We are past our victim SSN */
+					break;
+				}
+			}
 			strm = &asoc->strmin[stseq->stream];
 			if (compare_with_wrap(stseq->sequence,
 					      strm->last_sequence_delivered, MAX_SEQ)) {
@@ -5997,6 +6009,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
                         /*sa_ignore NO_NULL_CHK*/
 			sctp_kick_prsctp_reorder_queue(stcb, strm);
 		}
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
 	if (TAILQ_FIRST(&asoc->reasmqueue)) {
 		/* now lets kick out and check for more fragmented delivery */
