@@ -6,6 +6,7 @@
 #include <string.h>
 #include <stdio.h>
 #include <unistd.h>
+#include <time.h>
 
 #define PORT 30002
 #define SIZE_OF_MESSAGE (512 * 1024)
