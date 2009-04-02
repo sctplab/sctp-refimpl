@@ -18,10 +18,12 @@ handle_notification(char *buffer)
 	union sctp_notification *snp;
 	struct sctp_assoc_change *sac;
 	struct sctp_shutdown_event *sse;
-	char *str;
+	char *str, *timemark;
 	time_t now;
 
-	time(&now);
+	now = time(NULL);
+	timemark = localtime(&now);
+
 	snp = (union sctp_notification *)buffer;
 	switch(snp->sn_header.sn_type) {
 	case SCTP_ASSOC_CHANGE:
@@ -52,7 +54,7 @@ handle_notification(char *buffer)
 		
 		printf("SCTP_ASSOC_CHANGE: %s, assoc=0x%x - %s",
 		       str,
-		       (uint32_t)sac->sac_assoc_id, ctime(&now));
+		       (uint32_t)sac->sac_assoc_id, timemark);
 		break;
 	case SCTP_PEER_ADDR_CHANGE:
 		break;
@@ -74,7 +76,7 @@ handle_notification(char *buffer)
 	case SCTP_SHUTDOWN_EVENT:
                 sse = &snp->sn_shutdown_event;
 		printf("\nSCTP_SHUTDOWN_EVENT: assoc=0x%x - %s",
-		       (uint32_t)sse->sse_assoc_id, ctime(&now));
+		       (uint32_t)sse->sse_assoc_id, timemark);
 		break;
 	default:
 		break;
