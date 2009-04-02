@@ -66,6 +66,8 @@ handle_notification(char *buffer)
 		       (uint32_t)sac->sac_assoc_id, timemark);
 		if (up != down) {
 			printf("%d seconds\n", (down - up));
+		} else {
+			printf("Up and down are the same\n");
 		}
 		break;
 	case SCTP_PEER_ADDR_CHANGE:
@@ -87,11 +89,10 @@ handle_notification(char *buffer)
 
 	case SCTP_SHUTDOWN_EVENT:
                 sse = &snp->sn_shutdown_event;
+		down = now;
 		printf("\nSCTP_SHUTDOWN_EVENT: assoc=0x%x - %s",
 		       (uint32_t)sse->sse_assoc_id, timemark);
-		if (up != down) {
-			printf("%d seconds\n", (down - up));
-		}
+		printf("%d seconds\n", (down - up));
 		break;
 	default:
 		break;
