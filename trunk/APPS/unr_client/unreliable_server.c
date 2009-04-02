@@ -20,10 +20,11 @@ handle_notification(char *buffer)
 	struct sctp_shutdown_event *sse;
 	char *str, *timemark;
 	time_t now;
+	struct tm *tmm;
 
 	now = time(NULL);
-	timemark = localtime(&now);
-
+	tmm = localtime(&now);
+	timemark = asctime(tmm);
 	snp = (union sctp_notification *)buffer;
 	switch(snp->sn_header.sn_type) {
 	case SCTP_ASSOC_CHANGE:
