@@ -9,6 +9,78 @@
 
 #define PORT 30002
 #define SIZE_OF_MESSAGE (512 * 1024)
+int cnt=0;
+int pcnt=0, icnt=0, bcnt=0;
+
+void
+handle_notification(char *buffer)
+{
+	union sctp_notification *snp;
+	struct sctp_assoc_change *sac;
+	struct sctp_shutdown_event *sse;
+	char *str;
+	time_t now;
+
+	time(&now);
+	snp = (union sctp_notification *)buffer;
+	switch(snp->sn_header.sn_type) {
+	case SCTP_ASSOC_CHANGE:
+		sac = &snp->sn_assoc_change;
+		switch(sac->sac_state) {
+		case SCTP_COMM_UP:
+			str = "COMMUNICATION UP";
+			cnt = pcnt = bcnt = icnt = 0;
+			break;
+		case SCTP_COMM_LOST:
+			str = "COMMUNICATION LOST";
+			printf("\n");
+			break;
+		case SCTP_RESTART:
+		        str = "RESTART";
+			printf("\n");
+			break;
+		case SCTP_SHUTDOWN_COMP:
+			str = "SHUTDOWN COMPLETE";
+			printf("\n");
+			break;
+		case SCTP_CANT_STR_ASSOC:
+			str = "CANT START ASSOC";
+			break;
+		default:
+			str = "UNKNOWN";
+		} /* end switch(sac->sac_state) */
+		
+		printf("SCTP_ASSOC_CHANGE: %s, assoc=0x%x - %s",
+		       str,
+		       (uint32_t)sac->sac_assoc_id, ctime(&now));
+		break;
+	case SCTP_PEER_ADDR_CHANGE:
+		break;
+	case SCTP_REMOTE_ERROR:
+		break;
+	case SCTP_AUTHENTICATION_EVENT:
+		break;
+	case SCTP_SENDER_DRY_EVENT:
+		break;
+	case SCTP_STREAM_RESET_EVENT:
+		break;
+	case SCTP_SEND_FAILED:
+		break;
+	case SCTP_ADAPTION_INDICATION:
+		break;
+	case SCTP_PARTIAL_DELIVERY_EVENT:
+		break;
+
+	case SCTP_SHUTDOWN_EVENT:
+                sse = &snp->sn_shutdown_event;
+		printf("\nSCTP_SHUTDOWN_EVENT: assoc=0x%x - %s",
+		       (uint32_t)sse->sse_assoc_id, ctime(&now));
+		break;
+	default:
+		break;
+	} /* end switch(snp->sn_header.sn_type) */
+}
+
 
 int main() 
 {
@@ -18,12 +90,8 @@ int main()
 	int saddrlen;
 	int msg_flags=0;
 	int received;
-	int cnt=0;
-	int pcnt=0, icnt=0, bcnt=0;
-	
+	struct sctp_event_subscribe event;
 	struct sctp_sndrcvinfo sri;
-
-    	//Parameters to pass to the SCTP socket
     	struct sctp_initmsg initparams;
 
     	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
@@ -43,6 +111,12 @@ int main()
 
         if(listen(fd, 5)<0)
             	perror("listen");
+	memset(&event, 0, sizeof(event));
+	event.sctp_association_event = 1;
+	event.sctp_shutdown_event = 1;
+	if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+		perror("Can't do SET_EVENTS socket option!");
+	}
 	
 	bzero(&saddr_in, sizeof(struct sockaddr_in));
 	bzero(&sri, sizeof(struct sctp_sndrcvinfo));
@@ -56,6 +130,10 @@ int main()
 	                &sri, &msg_flags              // struct sctp_sndrcvinfo and flags received
 		       );
 		cnt++;
+		if (msg_flags & MSG_NOTIFICATION) {
+			handle_notification(buffer);
+			continue;
+		}
 		if (buffer[0] == 'I') {
 			icnt++;
 		} else if (buffer[0] == 'P') {
