@@ -20,7 +20,7 @@ int fd;
 int iframe_rel=0;
 int pframe_rel=0;
 int bframe_rel=0;
-
+int added_flags=0;
 struct sockaddr_in addr;
 char buffer[SIZE_OF_MESSAGE];
 int icount=0, bcount=0, pcount=0;
@@ -30,13 +30,13 @@ send_iframe()
 	int ret;
 	buffer[0] = 'I';
 	if ((ret = sctp_sendmsg(fd,
-			 (const void *)buffer, SIZE_OF_I_FRAME,
-			 (struct sockaddr *)&addr, sizeof(struct sockaddr_in),
-			 htonl(73),       /* PPID */
-			 SCTP_PR_SCTP_RTX, /* flags */
-			 1,                /* stream identifier */
-			 iframe_rel,                /* Max number of rtx */
-			 0                 /* context */
+				(const void *)buffer, SIZE_OF_I_FRAME,
+				(struct sockaddr *)&addr, sizeof(struct sockaddr_in),
+				htonl(73),       /* PPID */
+				(added_flags |SCTP_PR_SCTP_RTX), /* flags */
+				1,                /* stream identifier */
+				iframe_rel,                /* Max number of rtx */
+				0                 /* context */
 		     )) < 0) {
 		perror("sctp_sendmsg - I");
 	} else {
@@ -53,13 +53,13 @@ send_pframe()
 	int ret;
 	buffer[0] = 'P';
 	if ((ret = sctp_sendmsg(fd,
-			 (const void *)buffer, SIZE_OF_P_FRAME,
-			 (struct sockaddr *)&addr, sizeof(struct sockaddr_in),
-			 htonl(80),       /* PPID */
-			 SCTP_PR_SCTP_RTX, /* flags */
-			 1,                /* stream identifier */
-			 pframe_rel,                /* Max number of rtx */
-			 0                 /* context */
+				(const void *)buffer, SIZE_OF_P_FRAME,
+				(struct sockaddr *)&addr, sizeof(struct sockaddr_in),
+				htonl(80),       /* PPID */
+				(added_flags |SCTP_PR_SCTP_RTX), /* flags */
+				1,                /* stream identifier */
+				pframe_rel,                /* Max number of rtx */
+				0                 /* context */
 		     )) < 0) {
 		perror("sctp_sendmsg - P");
 	} else {
@@ -76,13 +76,13 @@ send_bframe()
 	int ret;
 	buffer[0] = 'B';
 	if ((ret = sctp_sendmsg(fd,
-			 (const void *)buffer, SIZE_OF_P_FRAME,
-			 (struct sockaddr *)&addr, sizeof(struct sockaddr_in),
-			 htonl(66),       /* PPID */
-			 SCTP_PR_SCTP_RTX, /* flags */
-			 1,                /* stream identifier */
-			 bframe_rel,                /* Max number of rtx */
-			 0                 /* context */
+				(const void *)buffer, SIZE_OF_P_FRAME,
+				(struct sockaddr *)&addr, sizeof(struct sockaddr_in),
+				htonl(66),       /* PPID */
+				(added_flags |SCTP_PR_SCTP_RTX), /* flags */
+				1,                /* stream identifier */
+				bframe_rel,                /* Max number of rtx */
+				0                 /* context */
 		     )) < 0) {
 		perror("sctp_sendmsg - B");
 	} else {
@@ -105,9 +105,12 @@ int main(int argc, char **argv)
 	char *toaddr = NULL;
 	int port = htons(DISCARD_PORT);
 
-	while((i= getopt(argc,argv,"P:I:B:b:h:p:m:?")) != EOF)
+	while((i= getopt(argc,argv,"P:I:B:b:h:p:m:s?")) != EOF)
 	{
 		switch(i) {
+		case 's':
+			added_flags = SCTP_SACK_IMMEDIATELY;
+			break;
 		case 'p':
 			port = htons(strtol(optarg, NULL, 0));
 			break;
