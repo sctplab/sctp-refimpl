@@ -3469,8 +3469,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				SCTP_TCB_UNLOCK(asoc);
 				continue;
 			}
-			if ((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
-			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
+			if (((SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_WAIT) ||
+			    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_COOKIE_ECHOED)) &&
+			    (asoc->asoc.total_output_queue_size == 0)) {
 				/* If we have data in queue, we don't want to just
 				 * free since the app may have done, send()/close
 				 * or connect/send/close. And it wants the data

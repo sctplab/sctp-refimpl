@@ -8057,7 +8057,7 @@ again_one_more_time:
 				if (chk->flags & CHUNK_FLAGS_FRAGMENT_OK) {
 					no_fragmentflg = 0;
 				}
-				if(chk->rec.chunk_id.can_take_data) 
+				if (chk->rec.chunk_id.can_take_data) 
 					chk->data = NULL;
 				/* Mark things to be removed, if needed */
 				if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
@@ -8213,7 +8213,7 @@ again_one_more_time:
 		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off)) &&
 		    (net->flight_size > max_rwnd_per_dest)) {
 			goto no_data_fill;
-		    }
+		}
 		/*********************/
 		/* Data transmission */
 		/*********************/
@@ -8359,7 +8359,7 @@ again_one_more_time:
 						r_mtu = 0;
 
 					to_out += chk->send_size;
-					if((to_out > mx_mtu) && no_fragmentflg) {
+					if ((to_out > mx_mtu) && no_fragmentflg) {
 #ifdef INVARIANTS
 						panic("Exceeding mtu of %d out size is %d", mx_mtu, to_out);
 #else

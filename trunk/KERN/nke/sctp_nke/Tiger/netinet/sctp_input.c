@@ -5594,11 +5594,14 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			/* there was a gap before this data was processed */
 			was_a_gap = 1;
 		}
+		stcb->asoc.send_sack = 1;
 		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
 			goto out_now;
 		}
+	} else if (fwd_tsn_seen) {
+		stcb->asoc.send_sack = 1;
 	}
 	/* trigger send of any chunks in queue... */
 trigger_send:
