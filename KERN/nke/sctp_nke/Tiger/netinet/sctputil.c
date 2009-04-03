@@ -4928,6 +4928,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 					chk->pr_sctp_on = 1;
 					TAILQ_INSERT_TAIL(&stcb->asoc.sent_queue, chk, sctp_next);
 					stcb->asoc.sent_queue_cnt++;
+					stcb->asoc.pr_sctp_cnt++;
 				} else {
 					chk->rec.data.rcv_flags |= SCTP_DATA_LAST_FRAG;
 				}
