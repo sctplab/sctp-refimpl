@@ -203,7 +203,7 @@ int main(int argc, char **argv)
 			break;
 	}
 	printf("\n");
-
+	
 	if (close(fd) < 0)
 		perror("close");
 

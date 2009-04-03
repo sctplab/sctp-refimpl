@@ -52,7 +52,7 @@ send_pframe()
 {
 	int ret;
 	buffer[0] = 'P';
-	if ((ret = sctp_sendmsg(fd,
+ 	if ((ret = sctp_sendmsg(fd,
 				(const void *)buffer, SIZE_OF_P_FRAME,
 				(struct sockaddr *)&addr, sizeof(struct sockaddr_in),
 				htonl(80),       /* PPID */
@@ -97,10 +97,15 @@ send_bframe()
 
 int main(int argc, char **argv) 
 {
-	unsigned int i, j, k;
+	unsigned int i, j, k, ret;
 	int num_messages=24;
 	struct sockaddr_in bindaddr[10];
+	struct sockaddr_in saddr_in;
+	struct sctp_sndrcvinfo sri;
+	int msg_flags;
+	socklen_t saddrlen;
 	char *baddr[10];
+	struct sctp_event_subscribe event;
 	int bndcnt=0;
 	char *toaddr = NULL;
 	int port = htons(DISCARD_PORT);
@@ -159,7 +164,6 @@ int main(int argc, char **argv)
     	if(setsockopt(fd, IPPROTO_SCTP, SCTP_NODELAY, &i, sizeof(int))<0) {
         	perror("SCTP_NODELAY");
 	}
-
 	if (bndcnt) {
 		/* prepare */
 		memset(bindaddr, 0, sizeof(bindaddr));
@@ -199,6 +203,57 @@ int main(int argc, char **argv)
 			}
 		}
 	}
+	/* Ok now we want to know when shutting down */
+	memset(&event, 0, sizeof(event));
+	event.sctp_association_event = 1;
+	event.sctp_shutdown_event = 1;
+	if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
+		perror("Can't do SET_EVENTS socket option!");
+	}
+
+	buffer[0] = 'E';
+again:
+	msg_flags = 0;
+	ret = sctp_sendmsg(fd,
+			   (const void *)buffer, 1,
+			   (struct sockaddr *)&addr, sizeof(struct sockaddr_in),
+			   0,       /* PPID */
+			   (SCTP_EOF|SCTP_PR_SCTP_RTX), /* flags */
+			   1,                /* stream identifier */
+			   0,                /* Max number of rtx */
+			   0                 /* context */
+		);
+	saddrlen = sizeof(saddr_in);
+	ret = sctp_recvmsg(fd,                // socket descriptor
+			   buffer,                        // message received
+			   SIZE_OF_MESSAGE,                             // bytes read
+			   (struct sockaddr *) &saddr_in,       // remote address
+			   (socklen_t *)&saddrlen,             // value-result parameter (remote address len)
+			   &sri, &msg_flags              // struct sctp_sndrcvinfo and flags received
+		);
+	if (msg_flags & MSG_NOTIFICATION) {
+		union sctp_notification *snp;
+		snp = (union sctp_notification *)buffer;
+		if (snp->sn_header.sn_type == SCTP_ASSOC_CHANGE) {
+			struct sctp_assoc_change *sac;
+			sac = &snp->sn_assoc_change;
+			if (sac->sac_state == SCTP_SHUTDOWN_COMP) {
+				goto done;
+			} else {
+				printf("assoc event was %d not shutdown\n", sac->sac_state);
+				goto again;
+			}
+		}else if (snp->sn_header.sn_type == SCTP_SHUTDOWN_EVENT) {
+			goto done;
+		} else {
+			printf("Got notification %d not shutdown event continue\n");
+			goto again;
+		}
+	} else {
+		printf("Got a non-notification message . ignore and re-read ret:%d\n", ret);
+		goto again;
+	}
+done:
 	if (close(fd) < 0)
 		perror("close");
 	printf("\n");
