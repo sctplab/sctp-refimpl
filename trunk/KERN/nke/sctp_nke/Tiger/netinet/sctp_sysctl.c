@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 188577 2009-02-13 14:43:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 190689 2009-04-04 11:43:32Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -583,7 +583,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.cwnd = net->cwnd;
 				xraddr.flight_size = net->flight_size;
 				xraddr.mtu = net->mtu;
-				xraddr.rtt = net->rtt;
+				/*				xraddr.rtt = net->rtt;  Not yet */
 				xraddr.start_time.tv_sec = (uint32_t)net->start_time.tv_sec;
 				xraddr.start_time.tv_usec = (uint32_t)net->start_time.tv_usec;
 				SCTP_INP_RUNLOCK(inp);
