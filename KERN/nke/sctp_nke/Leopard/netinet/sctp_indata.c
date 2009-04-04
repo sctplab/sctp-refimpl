@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 189790 2009-03-14 13:42:13Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 190689 2009-04-04 11:43:32Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6801,7 +6801,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 						 * fall through here and are
 						 * marked
 						 */
-						tp1->sent = SCTP_DATAGRAM_MARKED;
+						if (tp1->sent != SCTP_FORWARD_TSN_SKIP)
+							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
 						if (tp1->rec.data.chunk_was_revoked) {
 							/* deflate the cwnd */
 							tp1->whoTo->cwnd -= tp1->book_size;
@@ -6809,7 +6810,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 						}
 						/* EY - if all bit is set then this TSN is nr_marked */
 						if(all_bit){
-							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
+							if (tp1->sent != SCTP_FORWARD_TSN_SKIP)
+								tp1->sent = SCTP_DATAGRAM_NR_MARKED;
 							/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);*/
 							if (tp1->data) {
 								/* sa_ignore NO_NULL_CHK */
@@ -6910,7 +6912,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 				while(tp1){
 					if (tp1->rec.data.TSN_seq == j) {
 						if (tp1->sent != SCTP_DATAGRAM_UNSENT) {
-							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
+							if (tp1->sent != SCTP_FORWARD_TSN_SKIP)
+								tp1->sent = SCTP_DATAGRAM_NR_MARKED;
 							/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next); */
 							if (tp1->data) {
 								/* sa_ignore NO_NULL_CHK */
