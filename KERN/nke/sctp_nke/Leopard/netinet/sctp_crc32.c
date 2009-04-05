@@ -38,6 +38,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 189121 2009-02-27 20:54:45Z rr
 
 #include <sys/types.h>
 #include <sys/socket.h>
+#if defined(__APPLE__) && !defined(APPLE_LEOPARD)
+#include <sys/time.h>
+#endif
 #include <sys/socketvar.h>
 #include <sys/uio.h>
 #if defined(__FreeBSD__)
