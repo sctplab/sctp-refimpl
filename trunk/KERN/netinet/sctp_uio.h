@@ -1037,7 +1037,13 @@ struct xsctp_raddr {
 #if defined(__Windows__)
 	uint8_t padding;
 #endif
+#if defined(__APPLE__)
+	uint32_t rtt;
+#endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
+#if defined(__APPLE__)
+	uint32_t extra_padding[7];              /* future */
+#else
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
 	uint32_t extra_padding[8];              /* future */
@@ -1045,7 +1051,7 @@ struct xsctp_raddr {
 #else
 	uint32_t extra_padding[8];              /* future */
 #endif
-
+#endif
 };
 
 #define SCTP_MAX_LOGGING_SIZE 30000
