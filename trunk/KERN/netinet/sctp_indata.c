@@ -3673,6 +3673,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 SCTP_SO_NOT_LOCKED);
 					}
+					/* Make sure to flag we had a FR */
+					tp1->whoTo->net_ack++;
 					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
 				}
