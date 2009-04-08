@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 190689 2009-04-04 11:43:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 190843 2009-04-08 12:52:05Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3379,7 +3379,7 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 
 static void
 sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    u_long biggest_tsn_acked, u_long biggest_tsn_newly_acked, u_long this_sack_lowest_newack, int accum_moved)
+			   u_long biggest_tsn_acked, u_long biggest_tsn_newly_acked, u_long this_sack_lowest_newack, int accum_moved)
 {
 	struct sctp_tmit_chunk *tp1;
 	int strike_flag = 0;
@@ -3435,9 +3435,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
 				/* Is it expired? */
 				if (
-                                    /* TODO sctp_constants.h needs alternative time macros when
-                                     *  _KERNEL is undefined.
-                                     */
+					/* TODO sctp_constants.h needs alternative time macros when
+					 *  _KERNEL is undefined.
+					 */
 #ifndef __FreeBSD__
 					(timercmp(&now, &tp1->rec.data.timetodrop, >))
 #else
@@ -3454,19 +3454,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					continue;
 				}
 			}
-			if ((PR_SCTP_RTX_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
-				/* Has it been retransmitted tv_sec times? */
-				if (tp1->snd_count > tp1->rec.data.timetodrop.tv_sec) {
-					/* Yes, so drop it */
-					if (tp1->data != NULL) {
-						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
-										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
-										 SCTP_SO_NOT_LOCKED);
-					}
-					tp1 = TAILQ_NEXT(tp1, sctp_next);
-					continue;
-				}
-			}
+
 		}
 		if (compare_with_wrap(tp1->rec.data.TSN_seq,
 				      asoc->this_sack_highest_gap, MAX_TSN)) {
@@ -3675,6 +3663,22 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Increment the count to resend */
 			struct sctp_nets *alt;
 
+			if ((stcb->asoc.peer_supports_prsctp) &&
+			    (PR_SCTP_RTX_ENABLED(tp1->flags))) {
+				/* Has it been retransmitted tv_sec times? - we store the retran count there. */
+				if (tp1->snd_count > tp1->rec.data.timetodrop.tv_sec) {
+					/* Yes, so drop it */
+					if (tp1->data != NULL) {
+						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
+										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
+										 SCTP_SO_NOT_LOCKED);
+					}
+					/* Make sure to flag we had a FR */
+					tp1->whoTo->net_ack++;
+					tp1 = TAILQ_NEXT(tp1, sctp_next);
+					continue;
+				}
+			}
 			/* printf("OK, we are now ready to FR this guy\n"); */
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 				sctp_log_fr(tp1->rec.data.TSN_seq, tp1->snd_count,

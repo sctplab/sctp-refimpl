@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 190689 2009-04-04 11:43:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 190842 2009-04-08 12:49:36Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -972,7 +972,7 @@ struct xsctp_inpcb {
 #if defined(__Windows__)
 	uint16_t padding;
 #endif
-	uint32_t extra_padding[8]; /* future */
+	uint32_t extra_padding[32]; /* future */
 };
 
 struct xsctp_tcb {
@@ -1005,12 +1005,13 @@ struct xsctp_tcb {
 #if __FreeBSD_version >= 800000
 	uint32_t peers_rwnd;
 	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
-	uint32_t extra_padding[8];              /* future */
+	uint32_t extra_padding[32];              /* future */
+#else
 #endif
 #else
 	uint32_t peers_rwnd;
 	sctp_assoc_t assoc_id;                  /* sctpAssocEntry 1   */
-	uint32_t extra_padding[8];              /* future */
+	uint32_t extra_padding[32];              /* future */
 #endif
 };
 
@@ -1018,7 +1019,7 @@ struct xsctp_laddr {
 	union sctp_sockstore address;    /* sctpAssocLocalAddrEntry 1/2 */
 	uint32_t last;
 	struct sctp_timeval start_time;  /* sctpAssocLocalAddrEntry 3   */
-	uint32_t extra_padding[8];       /* future */
+	uint32_t extra_padding[32];       /* future */
 };
 
 struct xsctp_raddr {
@@ -1037,20 +1038,15 @@ struct xsctp_raddr {
 #if defined(__Windows__)
 	uint8_t padding;
 #endif
-#if defined(__APPLE__)
-	uint32_t rtt;
-#endif
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
-#if defined(__APPLE__)
-	uint32_t extra_padding[7];              /* future */
-#else
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
-	uint32_t extra_padding[8];              /* future */
+	uint32_t rtt;
+	uint32_t extra_padding[32];              /* future */
 #endif
 #else
-	uint32_t extra_padding[8];              /* future */
-#endif
+	uint32_t rtt;
+	uint32_t extra_padding[32];              /* future */
 #endif
 };
 
