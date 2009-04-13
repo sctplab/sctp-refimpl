@@ -3513,7 +3513,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    tp1->sent,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 			}
-			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
@@ -3575,7 +3575,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 							    tp1->sent,
 							    SCTP_FR_LOG_STRIKE_CHUNK);
 					}
-					if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+					if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 						tp1->sent++;
 					}
 					strike_flag = 1;
@@ -3605,7 +3605,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 									    tp1->sent,
 									    SCTP_FR_LOG_STRIKE_CHUNK);
 							}
-							if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+							if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 								tp1->sent++;
 							}
 						}
@@ -3632,7 +3632,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					    tp1->sent,
 					    SCTP_FR_LOG_STRIKE_CHUNK);
 			}
-			if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
 			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
@@ -3706,7 +3706,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
                                         /*sa_ignore NO_NULL_CHK*/
 					alt = sctp_find_alternate_net(stcb, alt, 1);
 				}
-				if( alt == NULL ) {
+				if (alt == NULL) {
 					alt = tp1->whoTo;
 				}
 				/*
@@ -3782,7 +3782,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					       (uintptr_t)tp1->whoTo, 
 					       tp1->rec.data.TSN_seq);
 			}
-			if(tp1->whoTo) {
+			if (tp1->whoTo) {
 				tp1->whoTo->net_ack++;
 				sctp_flight_size_decrease(tp1);
 			}
