@@ -517,6 +517,9 @@ sctp_init_ifns_for_vrf(int vrfid)
 		  /* non inet/inet6 skip */
 		  continue;
 		}
+		printf("SCTP_Looking at ifa:%p\n", ifa);
+		sctp_print_address(ifa->ifa_addr);
+
 		if (ifa->ifa_addr->sa_family == AF_INET6) {
 		  if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
 			/* skip unspecifed addresses */
@@ -539,14 +542,14 @@ sctp_init_ifns_for_vrf(int vrfid)
 		  ifa_flags = 0;
 		}
 		sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
-										(void *)ifn,
-										ifn->if_index, 
-										ifn->if_type,
-										ifn->if_xname,
-										(void *)ifa,
-										ifa->ifa_addr,
-										ifa_flags,
-										0);
+						(void *)ifn,
+						ifn->if_index, 
+						ifn->if_type,
+						ifn->if_xname,
+						(void *)ifa,
+						ifa->ifa_addr,
+						ifa_flags,
+						0);
 		if (sctp_ifa) {
 		  sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
 		}
@@ -585,9 +588,12 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
+	printf("SCTP_ADDR_CHANGED called with ifa:%p\n", ifa);
+	sctp_print_address(ifa->ifa_addr);
 #if defined(__Windows__)
 	/* On Windows, anything not built yet when sctp_addr_change at first. */
 #else
+
 	if (SCTP_BASE_VAR(first_time) == 0) {
 		/* Special test to see if my ::1 will showup with this */
 		SCTP_BASE_VAR(first_time) = 1;
