@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 190689 2009-04-04 11:43:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 191117 2009-04-15 20:34:19Z kmacy $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -147,6 +147,7 @@ struct sctp_asconf_iterator {
 
 struct sctp_net_route {
     sctp_rtentry_t *ro_rt;
+	void *ro_lle;
     union sctp_sockstore _l_addr;	/* remote peer addr */
     struct sctp_ifa *_s_addr;		/* our selected src addr */
 };
