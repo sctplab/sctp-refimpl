@@ -733,6 +733,21 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 /* stolen from /usr/include/sys/socket.h */
 #define CMSG_ALIGN(n)   _ALIGN(n)
 #elif defined(__Userspace_os_Darwin)
+#if !defined(__DARWIN_ALIGNBYTES)
+#define	__DARWIN_ALIGNBYTES	(sizeof(__darwin_size_t) - 1)
+#endif
+
+#if !defined(__DARWIN_ALIGN)
+#define	__DARWIN_ALIGN(p)	((__darwin_size_t)((char *)(uintptr_t)(p) + __DARWIN_ALIGNBYTES) &~ __DARWIN_ALIGNBYTES)
+#endif
+
+#if !defined(__DARWIN_ALIGNBYTES32)
+#define __DARWIN_ALIGNBYTES32     (sizeof(__uint32_t) - 1)
+#endif
+
+#if !defined(__DARWIN_ALIGN32)
+#define __DARWIN_ALIGN32(p)       ((__darwin_size_t)((char *)(uintptr_t)(p) + __DARWIN_ALIGNBYTES32) &~ __DARWIN_ALIGNBYTES32)
+#endif
 #define CMSG_ALIGN(n)   __DARWIN_ALIGN32(n)
 #define I_AM_HERE \
                 do { \
