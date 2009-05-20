@@ -146,10 +146,12 @@ struct sctp_asconf_iterator {
 };
 
 struct sctp_net_route {
-    sctp_rtentry_t *ro_rt;
+	sctp_rtentry_t *ro_rt;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	void *ro_lle;
-    union sctp_sockstore _l_addr;	/* remote peer addr */
-    struct sctp_ifa *_s_addr;		/* our selected src addr */
+#endif
+	union sctp_sockstore _l_addr;	/* remote peer addr */
+	struct sctp_ifa *_s_addr;	/* our selected src addr */
 };
 
 struct htcp {
