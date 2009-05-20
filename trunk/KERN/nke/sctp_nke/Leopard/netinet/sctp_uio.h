@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 190842 2009-04-08 12:49:36Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 191890 2009-05-07 16:42:45Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -780,6 +780,7 @@ struct sctp_timeval {
 };
 
 struct sctpstat {
+	struct sctp_timeval sctps_discontinuitytime; /* sctpStats 18 (TimeStamp) */
 	/* MIB according to RFC 3873 */
 	uint32_t  sctps_currestab;           /* sctpStats  1   (Gauge32) */
 	uint32_t  sctps_activeestab;         /* sctpStats  2 (Counter32) */
@@ -932,7 +933,7 @@ struct sctpstat {
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
 
-	struct sctp_timeval sctps_discontinuitytime; /* sctpStats 18 (TimeStamp) */
+	uint32_t  sctps_reserved[32];     /* Future ABI compat - remove int's from here when adding new */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)

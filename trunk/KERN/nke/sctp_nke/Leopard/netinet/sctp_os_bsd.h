@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 189371 2009-03-04 20:54:42Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 191845 2009-05-06 08:49:39Z zec $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -96,6 +96,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 189371 2009-03-04 20:54:42Z r
 #ifdef IPSEC
 #include <netipsec/ipsec.h>
 #include <netipsec/key.h>
+#include <netipsec/vipsec.h>
 #endif				/* IPSEC */
 
 #ifdef INET6

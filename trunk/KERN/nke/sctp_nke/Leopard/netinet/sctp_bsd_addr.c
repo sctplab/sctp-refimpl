@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 181464 2008-08-09 11:28:57Z des $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 191073 2009-04-14 19:20:27Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -353,149 +353,211 @@ sctp_is_vmware_interface(struct ifnet *ifn)
 }
 #endif
 
+#if defined (__Userspace__)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
-#if defined (__Userspace__)
-    /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
-     * This struct contains struct ifnet, which is also defined in
-     * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
-     */
-    int rc;
-    struct ifaddrs *ifa = NULL;
-    struct in6_ifaddr *ifa6;
-    struct sctp_ifa *sctp_ifa;
-    uint32_t ifa_flags;
+  /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
+   * This struct contains struct ifnet, which is also defined in
+   * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
+   */
+  int rc;
+  struct ifaddrs *ifa = NULL;
+  struct in6_ifaddr *ifa6;
+  struct sctp_ifa *sctp_ifa;
+  uint32_t ifa_flags;
 
-    rc = getifaddrs(&g_interfaces);
-    if(rc != 0) {
-        return;
-    }
+  rc = getifaddrs(&g_interfaces);
+  if(rc != 0) {
+	return;
+  }
     
-#else
+  for(ifa = g_interfaces; ifa; ifa = ifa->ifa_next) {
+	if(ifa->ifa_addr == NULL) {
+	  continue;
+	}
+	if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
+	  /* non inet/inet6 skip */
+	  continue;
+	}
+	if (ifa->ifa_addr->sa_family == AF_INET6) {
+	  /* skip IPv6 for now.  TODO find correct structs... */
+	  continue;
+	} else {
+	  if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+		continue;
+	  }
+	  /* ifa type (ifaddrs) differs for __Userspace__ and no if_type field... also,
+	   *  skipping IPv6 items for now...
+	   */
+	  /* TODO get the if_index (& mtu?)... */
+	  struct ifreq;
+	  int fd;
+                                
+	  ifa_flags = 0;
+	}
+	sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+									ifa,
+									if_nametoindex(ifa->ifa_name),
+									0,
+									ifa->ifa_name,
+									(void *)ifa,
+									ifa->ifa_addr,
+									ifa_flags,
+									0);
+	if (sctp_ifa) {
+	  sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+	}
+  }
+}
+#endif
 
-    
+#if defined (__APPLE__)
+static void
+sctp_init_ifns_for_vrf(int vrfid)
+{
+  /* Here we must apply ANY locks needed by the
+   * IFN we access and also make sure we lock
+   * any IFA that exists as we float through the
+   * list of IFA's
+   */
+  errno_t error;
+  ifnet_t *ifnetlist;
+  uint32_t i, count;
+  char name[SCTP_IFNAMSIZ];
+  struct ifnet *ifn;
+  struct ifaddr *ifa;
+  struct in6_ifaddr *ifa6;
+  struct sctp_ifa *sctp_ifa;
+  uint32_t ifa_flags;
+
+  ifnetlist = NULL;
+  count = 0;
+  error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
+  if (error != 0) {
+	printf("ifnet_list_get failed %d\n", error);
+	goto out;
+  }
+  for (i = 0; i < count; i++) {
+	ifn = ifnetlist[i];
+	if (SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces) && sctp_is_vmware_interface(ifn)) {
+	  continue;
+	}
+	TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+	  if(ifa->ifa_addr == NULL) {
+		continue;
+	  }
+	  if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
+		/* non inet/inet6 skip */
+		continue;
+	  }
+	  if (ifa->ifa_addr->sa_family == AF_INET6) {
+		if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+		  /* skip unspecifed addresses */
+		  continue;
+		}
+	  } else {
+		if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+		  continue;
+		}
+	  }
+	  if (sctp_is_desired_interface_type(ifa) == 0) {
+		/* non desired type */
+		continue;
+	  }
+
+	  if (ifa->ifa_addr->sa_family == AF_INET6) {
+		ifa6 = (struct in6_ifaddr *)ifa;
+		ifa_flags = ifa6->ia6_flags;
+	  } else {
+		ifa_flags = 0;
+	  }
+	  snprintf(name, SCTP_IFNAMSIZ, "%s%d", ifn->if_name, ifn->if_unit);
+	  sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+									  (void *)ifn,
+									  ifn->if_index, 
+									  ifn->if_type,
+									  name,
+									  (void *)ifa,
+									  ifa->ifa_addr,
+									  ifa_flags,
+									  0);
+	  if (sctp_ifa) {
+		sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+	  }
+	}
+  }
+ out:
+  if (ifnetlist != 0)
+	ifnet_list_free(ifnetlist);
+}
+#endif
+
+#if defined (__FreeBSD__)
+static void
+sctp_init_ifns_for_vrf(int vrfid)
+{
 	/* Here we must apply ANY locks needed by the
 	 * IFN we access and also make sure we lock
 	 * any IFA that exists as we float through the
 	 * list of IFA's
 	 */
-#if defined (__APPLE__)
-	errno_t error;
-	ifnet_t *ifnetlist;
-	uint32_t i, count;
-	char name[SCTP_IFNAMSIZ];
-#endif
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	struct in6_ifaddr *ifa6;
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
-
-#if defined (__APPLE__)
-	ifnetlist = NULL;
-	count = 0;
-	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
-	if (error != 0) {
-		printf("ifnet_list_get failed %d\n", error);
-		goto out;
-	}
-	for (i = 0; i < count; i++) {
-		ifn = ifnetlist[i];
-#else
 	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
-#endif
-#if defined(__APPLE__)
-		if (SCTP_BASE_SYSCTL(sctp_ignore_vmware_interfaces) && sctp_is_vmware_interface(ifn)) {
-			continue;
+	  IF_ADDR_LOCK(ifn);
+	  TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		if(ifa->ifa_addr == NULL) {
+		  continue;
 		}
-#endif
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-#endif
-#if defined(__Userspace__)
-                    for(ifa = g_interfaces; ifa; ifa = ifa->ifa_next) {
-#endif
+		if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
+		  /* non inet/inet6 skip */
+		  continue;
+		}
+		printf("SCTP_Looking at ifa:%p\n", ifa);
+		sctp_print_address(ifa->ifa_addr);
 
-			if(ifa->ifa_addr == NULL) {
-				continue;
-			}
-			if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
-				/* non inet/inet6 skip */
-				continue;
-			}
-			if (ifa->ifa_addr->sa_family == AF_INET6) {
-#if defined(__Userspace__)
-                            /* skip IPv6 for now.  TODO find correct structs... */
-                            continue;
-#else
-				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-					/* skip unspecifed addresses */
-					continue;
-				}
-#endif
-			} else {
-				if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
-					continue;
-				}
-#if defined(__Userspace__)
-    /* ifa type (ifaddrs) differs for __Userspace__ and no if_type field... also,
-     *  skipping IPv6 items for now...
-     */
-                                /* TODO get the if_index (& mtu?)... */
-                                struct ifreq;
-                                int fd;
-                                
-#else
-			}
-			if (sctp_is_desired_interface_type(ifa) == 0) {
-				/* non desired type */
-				continue;
-			}
+		if (ifa->ifa_addr->sa_family == AF_INET6) {
+		  if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+			/* skip unspecifed addresses */
+			continue;
+		  }
+		} else {
+		  if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+			continue;
+		  }
+		}
+		if (sctp_is_desired_interface_type(ifa) == 0) {
+		  /* non desired type */
+		  continue;
+		}
 
-			if (ifa->ifa_addr->sa_family == AF_INET6) {
-				ifa6 = (struct in6_ifaddr *)ifa;
-				ifa_flags = ifa6->ia6_flags;
-			} else {
-#endif
-				ifa_flags = 0;
-			}
-#if defined(__APPLE__)
-			snprintf(name, SCTP_IFNAMSIZ, "%s%d", ifn->if_name, ifn->if_unit);
-#endif
-			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
-#if !defined(__Userspace__)
-							(void *)ifn,
-							ifn->if_index, 
-							ifn->if_type,
-#if defined(__APPLE__)
-							name,
-#else
-							ifn->if_xname,
-#endif
-#elif defined(__Userspace__)
-                                                        ifa,
-                                                        if_nametoindex(ifa->ifa_name),
-                                                        0,
-                                                        ifa->ifa_name,
-#endif
-							(void *)ifa,
-							ifa->ifa_addr,
-							ifa_flags,
-							0);
-			if (sctp_ifa) {
-				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
-			} 
-  	}
-#if defined(__APPLE__)
-  }
-out:
-	if (ifnetlist != 0)
-		ifnet_list_free(ifnetlist);
-#elif !defined(__Userspace__)
-  }
-#endif
+		if (ifa->ifa_addr->sa_family == AF_INET6) {
+		  ifa6 = (struct in6_ifaddr *)ifa;
+		  ifa_flags = ifa6->ia6_flags;
+		} else {
+		  ifa_flags = 0;
+		}
+		sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+						(void *)ifn,
+						ifn->if_index, 
+						ifn->if_type,
+						ifn->if_xname,
+						(void *)ifa,
+						ifa->ifa_addr,
+						ifa_flags,
+						0);
+		if (sctp_ifa) {
+		  sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+		}
+	  }
+	  IF_ADDR_UNLOCK(ifn);	  
+	}
 }
-
+#endif
 
 void 
 sctp_init_vrf_list(int vrfid)
@@ -526,9 +588,12 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
+	printf("SCTP_ADDR_CHANGED called with ifa:%p\n", ifa);
+	sctp_print_address(ifa->ifa_addr);
 #if defined(__Windows__)
 	/* On Windows, anything not built yet when sctp_addr_change at first. */
 #else
+
 	if (SCTP_BASE_VAR(first_time) == 0) {
 		/* Special test to see if my ::1 will showup with this */
 		SCTP_BASE_VAR(first_time) = 1;
