@@ -31,10 +31,10 @@ int main() {
 	char buffer[SIZE_OF_MESSAGE];
 
 	sctp_init();
-	SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0;
-	SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;
+	SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable) = 0;
+	SCTP_BASE_SYSCTL(sctp_debug_on) = 0xffffffff;
 	memset((void *)buffer, 'A', SIZE_OF_MESSAGE);
-	
+
 	if ((sock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) == NULL) {
 		perror("userspace_socket");
 	}
@@ -65,7 +65,7 @@ int main() {
 		if (userspace_sctp_sendmsg(sock, (const void *)buffer, SIZE_OF_MESSAGE, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0) < 0) {
 			perror("userspace_sctp_sendmsg");
 		}
-	}	
+	}
 	userspace_close(sock);
 	sleep(10);
 	return(0);
