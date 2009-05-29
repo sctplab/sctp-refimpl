@@ -921,6 +921,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #endif
 	asoc->sb_send_resv = 0;
 	if (override_tag) {
+#if defined(__APPLE__)
 #ifdef MICHAELS_EXPERIMENT
 	        if (sctp_is_in_timewait(override_tag, stcb->sctp_ep->sctp_lport, stcb->rport)) {
 			/* It must be in the time-wait hash, we put
@@ -938,6 +939,9 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 #else
 		asoc->my_vtag = override_tag;
 #endif		
+#else
+		asoc->my_vtag = override_tag;
+#endif
 	} else {
 	  asoc->my_vtag = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport,  1);
 	}
