@@ -508,53 +508,51 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
 	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
-	  IF_ADDR_LOCK(ifn);
-	  TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
-		if(ifa->ifa_addr == NULL) {
-		  continue;
-		}
-		if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
-		  /* non inet/inet6 skip */
-		  continue;
-		}
-		printf("SCTP_Looking at ifa:%p\n", ifa);
-		sctp_print_address(ifa->ifa_addr);
+		IF_ADDR_LOCK(ifn);
+		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+			if (ifa->ifa_addr == NULL) {
+				continue;
+			}
+			if ((ifa->ifa_addr->sa_family != AF_INET) && (ifa->ifa_addr->sa_family != AF_INET6)) {
+				/* non inet/inet6 skip */
+				continue;
+			}
 
-		if (ifa->ifa_addr->sa_family == AF_INET6) {
-		  if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
-			/* skip unspecifed addresses */
-			continue;
-		  }
-		} else {
-		  if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
-			continue;
-		  }
-		}
-		if (sctp_is_desired_interface_type(ifa) == 0) {
-		  /* non desired type */
-		  continue;
-		}
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				if (IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+					/* skip unspecifed addresses */
+					continue;
+				}
+			} else {
+				if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+					continue;
+				}
+			}
+			if (sctp_is_desired_interface_type(ifa) == 0) {
+				/* non desired type */
+				continue;
+			}
 
-		if (ifa->ifa_addr->sa_family == AF_INET6) {
-		  ifa6 = (struct in6_ifaddr *)ifa;
-		  ifa_flags = ifa6->ia6_flags;
-		} else {
-		  ifa_flags = 0;
+			if (ifa->ifa_addr->sa_family == AF_INET6) {
+				ifa6 = (struct in6_ifaddr *)ifa;
+				ifa_flags = ifa6->ia6_flags;
+			} else {
+				ifa_flags = 0;
+			}
+			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+			                                (void *)ifn,
+			                                ifn->if_index, 
+			                                ifn->if_type,
+			                                ifn->if_xname,
+			                                (void *)ifa,
+			                                ifa->ifa_addr,
+			                                ifa_flags,
+			                                0);
+			if (sctp_ifa) {
+				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+			}
 		}
-		sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
-						(void *)ifn,
-						ifn->if_index, 
-						ifn->if_type,
-						ifn->if_xname,
-						(void *)ifa,
-						ifa->ifa_addr,
-						ifa_flags,
-						0);
-		if (sctp_ifa) {
-		  sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
-		}
-	  }
-	  IF_ADDR_UNLOCK(ifn);	  
+		IF_ADDR_UNLOCK(ifn);	  
 	}
 }
 #endif
@@ -588,8 +586,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
-	printf("SCTP_ADDR_CHANGED called with ifa:%p\n", ifa);
-	sctp_print_address(ifa->ifa_addr);
 #if defined(__Windows__)
 	/* On Windows, anything not built yet when sctp_addr_change at first. */
 #else
