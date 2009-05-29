@@ -1166,11 +1166,12 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->nr_mapping_array_size = SCTP_INITIAL_NR_MAPPING_ARRAY;
 	SCTP_MALLOC(asoc->nr_mapping_array, uint8_t *, asoc->nr_mapping_array_size,
 	    SCTP_M_MAP);
-	/*if (asoc->nr_mapping_array == NULL) {
+	if (asoc->nr_mapping_array == NULL) {
 		SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
+		SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 		SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
 		return (ENOMEM);
-	}*/
+	}
 	memset(asoc->nr_mapping_array, 0, asoc->nr_mapping_array_size);
 
 	/* Now the init of the other outqueues */

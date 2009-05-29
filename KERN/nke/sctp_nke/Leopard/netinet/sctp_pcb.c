@@ -4535,6 +4535,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 			asoc->mapping_array = NULL;
 		}
+		if (asoc->nr_mapping_array) {
+			SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
+			asoc->nr_mapping_array = NULL;
+		}
 		SCTP_DECR_ASOC_COUNT();
 		SCTP_TCB_LOCK_DESTROY(stcb);
 		SCTP_TCB_SEND_LOCK_DESTROY(stcb);
@@ -5306,6 +5310,10 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (asoc->mapping_array) {
 		SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 		asoc->mapping_array = NULL;
+	}
+	if (asoc->nr_mapping_array) {
+		SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
+		asoc->nr_mapping_array = NULL;
 	}
 	/* the stream outs */
 	if (asoc->strmout) {
