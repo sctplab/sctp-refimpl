@@ -4518,8 +4518,10 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
+#if defined(__APPLE__)
 #ifdef MICHAELS_EXPERIMENT
 	sctp_delete_from_timewait(stcb->asoc.my_vtag, inp->sctp_lport, stcb->rport);
+#endif
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 
@@ -6936,6 +6938,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 		}
 	}
 	SCTP_INP_INFO_RUNLOCK();
+#if defined(__APPLE__)
 #ifdef MICHAELS_EXPERIMENT
 	/*-
 	 * Not found, ok to use the tag, add it to the time wait hash
@@ -6950,7 +6953,7 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	       sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life, lport, rport));
 	SCTP_INP_INFO_WUNLOCK();
 #endif
-
+#endif
 	return (1);
 }
 
