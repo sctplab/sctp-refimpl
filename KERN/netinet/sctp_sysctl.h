@@ -496,7 +496,7 @@ struct sctp_sysctl {
 
 
 /* Vtag tiem wait bits */
-#define SCTPCTL_TIME_WAIT_DESCR	"Vtag time wait time 0 disables."
+#define SCTPCTL_TIME_WAIT_DESC	"Vtag time wait time 0 disables."
 #define SCTPCTL_TIME_WAIT_MIN	0
 #define SCTPCTL_TIME_WAIT_MAX	0xffffffff
 #define SCTPCTL_TIME_WAIT_DEFAULT	SCTP_TIME_WAIT
