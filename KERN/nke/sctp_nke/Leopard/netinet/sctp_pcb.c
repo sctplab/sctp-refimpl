@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 190689 2009-04-04 11:43:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 193090 2009-05-30 11:14:41Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4730,6 +4730,10 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 	struct timeval now;
 	int set, i;
 
+	if (time == 0) {
+		/* Its disabled */
+		return;
+	}
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	set = 0;
@@ -5091,7 +5095,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_TIME_WAIT, inp->sctp_lport, stcb->rport);
+	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_BASE_SYSCTL(sctp_vtag_time_wait), 
+				  inp->sctp_lport, stcb->rport);
 
 	/* Now restop the timers to be sure - 
 	 * this is paranoia at is finest! 

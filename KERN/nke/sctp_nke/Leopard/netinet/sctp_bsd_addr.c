@@ -589,7 +589,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 #if defined(__Windows__)
 	/* On Windows, anything not built yet when sctp_addr_change at first. */
 #else
-
 	if (SCTP_BASE_VAR(first_time) == 0) {
 		/* Special test to see if my ::1 will showup with this */
 		SCTP_BASE_VAR(first_time) = 1;
