@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 190689 2009-04-04 11:43:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 193090 2009-05-30 11:14:41Z rrs $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -110,6 +110,7 @@ struct sctp_sysctl {
 	uint32_t sctp_udp_tunneling_for_client_enable;
 	uint32_t sctp_udp_tunneling_port;
 	uint32_t sctp_enable_sack_immediately ;
+	uint32_t sctp_vtag_time_wait;
 #if defined(SCTP_DEBUG)
 	uint32_t sctp_debug_on;
 #endif
@@ -492,6 +493,13 @@ struct sctp_sysctl {
 #define SCTPCTL_NAT_FRIENDLY_INITS_MIN	0
 #define SCTPCTL_NAT_FRIENDLY_INITS_MAX	1
 #define SCTPCTL_NAT_FRIENDLY_INITS_DEFAULT	SCTPCTL_NAT_FRIENDLY_INITS_MIN
+
+
+/* Vtag tiem wait bits */
+#define SCTPCTL_TIME_WAIT_DESC	"Vtag time wait time 0 disables."
+#define SCTPCTL_TIME_WAIT_MIN	0
+#define SCTPCTL_TIME_WAIT_MAX	0xffffffff
+#define SCTPCTL_TIME_WAIT_DEFAULT	SCTP_TIME_WAIT
 
 
 #if defined(SCTP_DEBUG)
