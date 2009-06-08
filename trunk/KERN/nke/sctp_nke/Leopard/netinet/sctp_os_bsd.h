@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 191845 2009-05-06 08:49:39Z zec $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 193744 2009-06-08 19:57:35Z bz $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -40,7 +40,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 191845 2009-05-06 08:49:39Z z
 #include "opt_compat.h"
 #include "opt_inet6.h"
 #include "opt_inet.h"
-#include "opt_route.h"
 #include "opt_sctp.h"
 
 #include <sys/param.h>
