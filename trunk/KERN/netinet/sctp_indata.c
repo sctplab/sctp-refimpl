@@ -47,7 +47,25 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 191049 2009-04-14 07:50:29Z r
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_timer.h>
 
+#define SCTP_CALC_TSN_TO_GAP(gap, tsn, mapping_tsn) do { \
+					if ((compare_with_wrap(tsn, mapping_tsn, MAX_TSN)) || \
+                        (tsn == mapping_tsn)) { \
+						gap = tsn - mapping_tsn; \
+					} else { \
+						gap = (MAX_TSN - mapping_tsn) + tsn + 1; \
+					} \
+                  } while(0)
 
+#define SCTP_REVERSE_OUT_TSN_PRES(nr_gap, tsn, asoc) do { \
+                    if (asoc->mapping_array_base_tsn == asoc->nr_mapping_array_base_tsn) { \
+                       SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, nr_gap); \
+                    } else {\
+                       int lgap; \
+                       SCTP_CALC_TSN_TO_GAP(lgap, tsn, asoc->mapping_array_base_tsn); \
+                       SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, lgap); \
+                    } \
+                  } while(0)
+ 
 /*
  * NOTES: On the outbound side of things I need to check the sack timer to
  * see if I should generate a sack into the chunk queue (if I have data to
@@ -418,12 +436,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 			
 			nr_tsn = chk->rec.data.TSN_seq;
-			if ((compare_with_wrap(nr_tsn, asoc->nr_mapping_array_base_tsn, MAX_TSN)) ||
-			    (nr_tsn == asoc->nr_mapping_array_base_tsn)){
-				nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-			} else {
-				nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-			}
+			SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
 			if ((nr_gap >= (uint32_t)(asoc->nr_mapping_array_size << 3)) ||
 				(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))  ) {
 				/* EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
@@ -433,6 +446,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			else{	
 				SCTP_TCB_LOCK_ASSERT(stcb);			
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+				SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
 				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;
 			}
@@ -490,19 +504,16 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 						    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
 						/* EY -now something is delivered, calculate nr_gap and tag this tsn NR*/
 						if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
-							
-							if (nr_tsn >= asoc->nr_mapping_array_base_tsn) {
-								nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-							} else {
-								nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-							}
+						  SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
 							if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
 								(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
+							  printf("Impossible NR gap calculation?\n");
 								/* EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
 								/* EY The 2nd should never happen, because nr_mapping_array is always expanded when mapping_array is expanded*/			
 							} else{
 								SCTP_TCB_LOCK_ASSERT(stcb);			
 								SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+								SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
 								if(compare_with_wrap(nr_tsn,
 										     asoc->highest_tsn_inside_nr_map,
 										     MAX_TSN))
@@ -627,20 +638,17 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 		chk->rec.data.TSN_seq */
 		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
-		
-			if (nr_tsn >= asoc->nr_mapping_array_base_tsn) {
-				nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-			} else {
-				nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-			}
+		  SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
 			if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
 				(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
+			  printf("Impossible nr_tsn set 2?\n");
 				/*EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
 				/* EY The 2nd should never happen, because nr_mapping_array is always expanded when mapping_array is expanded*/
 			}
 			else{
 				SCTP_TCB_LOCK_ASSERT(stcb);
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+				SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
 				if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = nr_tsn;	
 			}
@@ -673,19 +681,16 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
-				
-					if (nr_tsn >= asoc->nr_mapping_array_base_tsn) {
-						nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-					} else {
-						nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-					}
+				  SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
 					if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
 						(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
+					  printf("Impossible nr TSN set 3?\n");
 						/*EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
 						/* EY The 2nd should never happen, because nr_mapping_array is always expanded when mapping_array is expanded*/	
 					}
 					else{
 						SCTP_TCB_LOCK_ASSERT(stcb);
+						SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
 						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
 								     MAX_TSN))
@@ -1533,11 +1538,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		return (0);
 	}
 	/* Calculate the number of TSN's between the base and this TSN */
-	if (tsn >= asoc->mapping_array_base_tsn) {
-		gap = tsn - asoc->mapping_array_base_tsn;
-	} else {
-		gap = (MAX_TSN - asoc->mapping_array_base_tsn) + tsn + 1;
-	}
+	SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
 	if (gap >= (SCTP_MAPPING_ARRAY << 3)) {
 		/* Can't hold the bit in the mapping at max array, toss it */
 		return (0);
@@ -1669,18 +1670,15 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(__APPLE__)
 		/* gap may have changed */
-		if (tsn >= asoc->mapping_array_base_tsn) {
-			gap = tsn - asoc->mapping_array_base_tsn;
-		} else {
-			gap = (MAX_TSN - asoc->mapping_array_base_tsn) + tsn + 1;
-		}
-		nr_gap = gap;	/* EY */
+		SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
+		nr_gap = gap;
 #endif
 		SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 		/* EY set this tsn present in  nr_sack's nr_mapping_array*/
 		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 			SCTP_TCB_LOCK_ASSERT(stcb);
 			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+			SCTP_REVERSE_OUT_TSN_PRES(gap, tsn, asoc);
 		}		
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 			/* we have a new high score */
@@ -1853,6 +1851,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* EY - not %100 sure about the lock thing */	
 			SCTP_TCB_LOCK_ASSERT(stcb);	
 			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+			SCTP_REVERSE_OUT_TSN_PRES(nr_gap, tsn, asoc);
 			if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN))
 				asoc->highest_tsn_inside_nr_map = tsn;
 		}
@@ -1916,6 +1915,7 @@ failed_express_del:
 				/* EY - not %100 sure about the lock thing */	
 				SCTP_TCB_LOCK_ASSERT(stcb);	
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+				SCTP_REVERSE_OUT_TSN_PRES(nr_gap, tsn, asoc);
 				if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = tsn;
 			}	
@@ -2153,6 +2153,7 @@ failed_express_del:
 				}	
 				SCTP_TCB_LOCK_ASSERT(stcb);
 				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+				SCTP_REVERSE_OUT_TSN_PRES(nr_gap, tsn, asoc);
 				if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN))
 					asoc->highest_tsn_inside_nr_map = tsn;
 			}	
@@ -2259,11 +2260,8 @@ finish_express_del:
 	SCTP_TCB_LOCK_ASSERT(stcb);
 #if defined(__APPLE__)
 	/* gap may have changed */
-	if (tsn >= asoc->mapping_array_base_tsn) {
-		gap = tsn - asoc->mapping_array_base_tsn;
-	} else {
-		gap = (MAX_TSN - asoc->mapping_array_base_tsn) + tsn + 1;
-	}
+	SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
+	nr_gap = gap;
 #endif
 	SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 
@@ -2271,6 +2269,7 @@ finish_express_del:
 	    asoc->peer_supports_nr_sack && 
 	    (SCTP_BASE_SYSCTL(sctp_do_drain) == 0)) {
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+		SCTP_REVERSE_OUT_TSN_PRES(nr_gap, tsn, asoc);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			asoc->highest_tsn_inside_nr_map = tsn;
 		}
@@ -5517,26 +5516,20 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 
-					if (nr_tsn >= asoc->nr_mapping_array_base_tsn) {
-						nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-					} else {
-						nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-					}
-					if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
-						(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
+				  SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
+				  if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
+					  (nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
 						/* EY These should never happen- explained before */
-					}
-
-					else{
-						SCTP_TCB_LOCK_ASSERT(stcb);
-						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
-						if(compare_with_wrap(nr_tsn,
-								     asoc->highest_tsn_inside_nr_map,
-								     MAX_TSN))
-							asoc->highest_tsn_inside_nr_map = nr_tsn;						
-					}
-			
-					if( !SCTP_IS_TSN_PRESENT(asoc->mapping_array, nr_gap))
+				  } else {
+					SCTP_TCB_LOCK_ASSERT(stcb);
+					SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+					SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
+					if(compare_with_wrap(nr_tsn,
+										 asoc->highest_tsn_inside_nr_map,
+										 MAX_TSN))
+					  asoc->highest_tsn_inside_nr_map = nr_tsn;						
+				  }
+				  if( !SCTP_IS_TSN_PRESENT(asoc->mapping_array, nr_gap))
 						/*printf("In sctp_kick_prsctp_reorder_queue(7): Something wrong, the TSN to be tagged"
 							"\nas NR is not even in the mapping_array, or map and nr_map are inconsistent");*/
 						/* EY - not %100 sure about the lock thing, don't think its required */	
@@ -5583,24 +5576,18 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
-
-					if (nr_tsn >= asoc->nr_mapping_array_base_tsn) {
-						nr_gap = nr_tsn - asoc->nr_mapping_array_base_tsn;
-					} else {
-						nr_gap = (MAX_TSN - asoc->nr_mapping_array_base_tsn) + nr_tsn + 1;
-					}
+				    SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
 					if ((nr_gap >= (SCTP_NR_MAPPING_ARRAY << 3)) ||
 						(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))) {
 						/* EY These should never happen, explained before */
 					} else {
 						SCTP_TCB_LOCK_ASSERT(stcb);
 						SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, nr_gap);
+						SCTP_REVERSE_OUT_TSN_PRES(nr_gap, nr_tsn, asoc);
 						if(compare_with_wrap(nr_tsn,asoc->highest_tsn_inside_nr_map,
 								     MAX_TSN))
 							asoc->highest_tsn_inside_nr_map = nr_tsn;										
 					}
-					
-			
 					if( !SCTP_IS_TSN_PRESENT(asoc->mapping_array, nr_gap))
 						/*printf("In sctp_kick_prsctp_reorder_queue(8): Something wrong, the TSN to be tagged"
 							"\nas NR is not even in the mapping_array, or map and nr_map are inconsistent");*/
@@ -5772,15 +5759,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * now we know the new TSN is more advanced, let's find the actual
 	 * gap
 	 */
-	if ((compare_with_wrap(new_cum_tsn, asoc->mapping_array_base_tsn,
-			       MAX_TSN)) ||
-	    (new_cum_tsn == asoc->mapping_array_base_tsn)) {
-		gap = new_cum_tsn - asoc->mapping_array_base_tsn;
-	} else {
-		/* try to prevent underflow here */
-		gap = new_cum_tsn + (MAX_TSN - asoc->mapping_array_base_tsn) + 1;
-	}
-
+	SCTP_CALC_TSN_TO_GAP(gap, new_cum_tsn, asoc->mapping_array_base_tsn);
 	if (gap >= m_size) {
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 			sctp_log_map(0, 0, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
@@ -5837,11 +5816,11 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	} else {
 		SCTP_TCB_LOCK_ASSERT(stcb);
 		for (i = 0; i <= gap; i++) {
-			SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
-			/* EY if drain is off then every gap-ack is an nr-gap-ack */
 			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack 
 								&& SCTP_BASE_SYSCTL(sctp_do_drain) == 0){
-				SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, i);
+			  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, i);
+			} else {
+			  SCTP_SET_TSN_PRESENT(asoc->mapping_array, i);
 			}
 		}
 		/*
