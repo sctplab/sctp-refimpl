@@ -4645,7 +4645,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				int abort_now = 0;
 				uint32_t a_rwnd, cum_ack;
 				uint16_t num_seg, num_nr_seg;
-				int nonce_sum_flag, all_bit;
+				int nonce_sum_flag;
 
 				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_nr_sack_chunk))) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on nr_sack chunk, too small\n");
@@ -4671,14 +4671,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				nr_sack = (struct sctp_nr_sack_chunk *)ch;
 				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
-				all_bit = ch->chunk_flags & SCTP_NR_SACK_ALL_BIT;
 				
 				cum_ack = ntohl(nr_sack->nr_sack.cum_tsn_ack);
 				num_seg = ntohs(nr_sack->nr_sack.num_gap_ack_blks);
-				/* EY -if All bit  is set, then there are as many gaps as nr_gaps */
-				if(all_bit){
-					num_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
-				}
 				num_nr_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
 				a_rwnd = (uint32_t) ntohl(nr_sack->nr_sack.a_rwnd);
 				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_NR_SACK process cum_ack:%x num_seg:%d a_rwnd:%d\n",
