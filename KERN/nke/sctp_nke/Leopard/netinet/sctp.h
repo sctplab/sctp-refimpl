@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 189790 2009-03-14 13:42:13Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 194355 2009-06-17 12:34:56Z rrs $");
 
 #endif
 #ifndef _NETINET_SCTP_H_
@@ -423,9 +423,6 @@ struct sctp_error_unrecognized_chunk {
 /* ECN Nonce: SACK Chunk Specific Flags */
 #define SCTP_SACK_NONCE_SUM        0x01
 
-/* EY nr_sack all bit - All bit is the 2nd LSB of nr_sack chunk flags*/
-/* if All bit is set in an nr-sack chunk, then all nr gap acks gap acks*/
-#define SCTP_NR_SACK_ALL_BIT	0x02
 /* CMT DAC algorithm SACK flag */
 #define SCTP_SACK_CMT_DAC          0x80
 
