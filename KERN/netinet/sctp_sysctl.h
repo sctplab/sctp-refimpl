@@ -109,13 +109,13 @@ struct sctp_sysctl {
 #endif
 	uint32_t sctp_udp_tunneling_for_client_enable;
 	uint32_t sctp_udp_tunneling_port;
-	uint32_t sctp_enable_sack_immediately ;
+	uint32_t sctp_enable_sack_immediately;
 	uint32_t sctp_vtag_time_wait;
 #if defined(SCTP_DEBUG)
 	uint32_t sctp_debug_on;
 #endif
 #if defined(__APPLE__)
-	uint32_t sctp_ignore_vmware_interfaces ;
+	uint32_t sctp_ignore_vmware_interfaces;
 	uint32_t sctp_main_timer;
 	uint32_t sctp_addr_watchdog_limit;
 	uint32_t sctp_vtag_watchdog_limit;
@@ -489,7 +489,7 @@ struct sctp_sysctl {
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT	SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN
 
 /* Enable sending of the SACK-IMMEDIATELY bit */
-#define SCTPCTL_NAT_FRIENDLY_INITS	"Enable sending of the nat-friendly SCTP option on INITs."
+#define SCTPCTL_NAT_FRIENDLY_INITS_DESC	"Enable sending of the nat-friendly SCTP option on INITs."
 #define SCTPCTL_NAT_FRIENDLY_INITS_MIN	0
 #define SCTPCTL_NAT_FRIENDLY_INITS_MAX	1
 #define SCTPCTL_NAT_FRIENDLY_INITS_DEFAULT	SCTPCTL_NAT_FRIENDLY_INITS_MIN
