@@ -3115,15 +3115,15 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 				  &max, &timeo);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (max != 8) {
-		return "Default not RFC 4960 compliant (max_attempts)";
+		RETURN_FAILED("max_attempts=%d instead of 8", max);
 	}
 	if (timeo != 60000) {
-		return "Default not RFC 4960 compliant (max_init_timeo)";
+		RETURN_FAILED("max_init_timeo=%d instead of 60000", timeo);
 	}
-	return(NULL);
+	RETURN_PASSED;
 }
 
 /*
@@ -3147,15 +3147,15 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 				  &max, &timeo);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (max != 8) {
-		return "Default not RFC 4960 compliant (max_attempts)";
+		RETURN_FAILED("max_attempts=%d instead of 8", max);
 	}
 	if (timeo != 60000) {
-		return "Default not RFC 4960 compliant (max_init_timeo)";
+		RETURN_FAILED("max_init_timeo=%d instead of 60000", timeo);
 	}
-	return(NULL);
+	RETURN_PASSED;
 }
 
 /*
