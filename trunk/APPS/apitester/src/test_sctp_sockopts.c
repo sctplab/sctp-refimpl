@@ -3103,7 +3103,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 DEFINE_APITEST(initmsg, gso_1_1_defaults)
 {
 	int fd, result;
-	uint32_t ostreams, istreams;
+	uint16_t ostreams, istreams;
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
@@ -3135,7 +3135,7 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 DEFINE_APITEST(initmsg, gso_1_M_defaults)
 {
 	int fd,result;
-	uint32_t ostreams, istreams;
+	uint16_t ostreams, istreams;
 	uint16_t max, timeo;
 
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
@@ -3167,7 +3167,7 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint32_t newval;
 
@@ -3180,13 +3180,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * ostreams[0];
 	result = sctp_set_im_ostream(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3219,7 +3219,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint32_t newval;
 
@@ -3232,13 +3232,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * istreams[0];
 	result = sctp_set_im_istream(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3270,7 +3270,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 DEFINE_APITEST(initmsg, gso_1_1_set_max)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint16_t newval;
 
@@ -3283,13 +3283,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * max[0];
 	result = sctp_set_im_maxattempt(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3321,7 +3321,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint16_t newval;
 
@@ -3334,13 +3334,13 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * max[0];
 	result = sctp_set_im_maxtimeo(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3373,7 +3373,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint32_t newval;
 
@@ -3386,13 +3386,13 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * ostreams[0];
 	result = sctp_set_im_ostream(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3425,7 +3425,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint32_t newval;
 
@@ -3438,13 +3438,13 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * istreams[0];
 	result = sctp_set_im_istream(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3476,7 +3476,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 DEFINE_APITEST(initmsg, gso_1_M_set_max)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint16_t newval;
 
@@ -3489,13 +3489,13 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 				  &max[0], &timeo[0]);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	newval = 2 * max[0];
 	result = sctp_set_im_maxattempt(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
@@ -3527,7 +3527,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 {
 	int fd, result;
-	uint32_t ostreams[2], istreams[2];
+	uint16_t ostreams[2], istreams[2];
 	uint16_t max[2], timeo[2];
 	uint16_t newval;
 
@@ -3546,7 +3546,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 	result = sctp_set_im_maxtimeo(fd, newval);
 	if(result < 0) {
 		close(fd);
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	result = sctp_get_initmsg(fd, &ostreams[1], &istreams[1],
 				  &max[1], &timeo[1]);
