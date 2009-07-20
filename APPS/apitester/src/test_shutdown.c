@@ -58,8 +58,8 @@ DEFINE_APITEST(shutdown, 1to1_not_connected)
 			RETURN_PASSED;
 		} else {
 			RETURN_FAILED("errno is %d instead of %d", errno, ENOTCONN);
-	}
-	else {
+		}
+	} else {
 		RETURN_FAILED("shutdown() was successful");
 	}
 }
