@@ -658,8 +658,8 @@ sctp_get_association_identifiers(int fd, sctp_assoc_t ids[], unsigned int n)
 
 int 
 sctp_get_initmsg(int fd, 
-		 uint32_t *ostreams,
-		 uint32_t *istreams,
+		 uint16_t *ostreams,
+		 uint16_t *istreams,
 		 uint16_t *maxattempt,
 		 uint16_t *max_init_timeo)
 
@@ -686,8 +686,8 @@ sctp_get_initmsg(int fd,
 
 int 
 sctp_set_initmsg(int fd, 
-		 uint32_t ostreams,
-		 uint32_t istreams,
+		 uint16_t ostreams,
+		 uint16_t istreams,
 		 uint16_t maxattempt,
 		 uint16_t max_init_timeo)
 
@@ -707,11 +707,11 @@ sctp_set_initmsg(int fd,
 
 	return result;
 }
-int sctp_set_im_ostream(int fd, uint32_t ostream)
+int sctp_set_im_ostream(int fd, uint16_t ostream)
 {
 	return (sctp_set_initmsg(fd, ostream, 0, 0, 0));
 }
-int sctp_set_im_istream(int fd, uint32_t istream)
+int sctp_set_im_istream(int fd, uint16_t istream)
 {
 	return (sctp_set_initmsg(fd, 0, istream, 0, 0));
 }
