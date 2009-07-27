@@ -5630,7 +5630,12 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 		chk = TAILQ_FIRST(&asoc->reasmqueue);
 		while (chk) {
 			at = TAILQ_NEXT(chk, sctp_next);
-			if (chk->rec.data.stream_number != stream) {
+			/* Do not toss if on a different stream or
+			 * marked for unordered delivery in which case
+			 * the stream sequence number has no meaning
+			 */
+			if ((chk->rec.data.stream_number != stream) ||
+			    (chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) != SCTP_DATA_UNORDERED)) {
 				chk = at;
 				continue;
 			}
@@ -5918,7 +5923,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
         /*    delivery issues as needed.                       */
 	/*******************************************************/
 	fwd_sz -= sizeof(*fwd);
-	if(m && fwd_sz) {
+	if (m && fwd_sz) {
 		/* New method. */
 		unsigned int num_str;
 		struct sctp_strseq *stseq, strseqbuf;
@@ -5932,7 +5937,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 								    sizeof(struct sctp_strseq),
 								    (uint8_t *)&strseqbuf);
 			offset += sizeof(struct sctp_strseq);
-			if(stseq == NULL) {
+			if (stseq == NULL) {
 				break;
 			}
 			/* Convert */
