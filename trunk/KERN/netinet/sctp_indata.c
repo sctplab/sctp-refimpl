@@ -5635,7 +5635,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 			 * the stream sequence number has no meaning.
 			 */
 			if ((chk->rec.data.stream_number != stream) ||
-			    ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) != SCTP_DATA_UNORDERED)) {
+			    ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) == SCTP_DATA_UNORDERED)) {
 				chk = at;
 				continue;
 			}
