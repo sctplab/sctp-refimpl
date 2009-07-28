@@ -389,7 +389,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			else
 				end = 0;
 			sctp_add_to_readq(stcb->sctp_ep,
-			    stcb, control, &stcb->sctp_socket->so_rcv, end, SCTP_SO_NOT_LOCKED);
+							  stcb, control, &stcb->sctp_socket->so_rcv, end,
+							  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 			cntDel++;
 		} else {
 			if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG)
@@ -501,7 +502,8 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 						nr_tsn = ctl->sinfo_tsn;
 						sctp_add_to_readq(stcb->sctp_ep, stcb,
 						    ctl,
-						    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+							&stcb->sctp_socket->so_rcv, 1,
+							SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 						/* EY -now something is delivered, calculate nr_gap and tag this tsn NR*/
 						if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 						  SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
@@ -633,8 +635,8 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		nr_tsn = control->sinfo_tsn;
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		    control,
-		    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
-			
+		    &stcb->sctp_socket->so_rcv, 1, 
+			SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 		/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 		chk->rec.data.TSN_seq */
 		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
@@ -677,7 +679,9 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				nr_tsn = control->sinfo_tsn;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 				    control,
-				    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+				    &stcb->sctp_socket->so_rcv, 1, 
+					SCTP_READ_LOCK_NOT_HELD,
+                    SCTP_SO_NOT_LOCKED);
 				/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
@@ -1831,7 +1835,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (control == NULL) {
 			goto failed_express_del;
 		}
-		sctp_add_to_readq(stcb->sctp_ep, stcb, control, &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+		sctp_add_to_readq(stcb->sctp_ep, stcb,
+						  control, &stcb->sctp_socket->so_rcv,
+						  1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 		
 		/* EY here I should check if this delivered tsn is out_of_order, if yes then update the nr_map*/
 		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
@@ -2133,7 +2139,7 @@ failed_express_del:
 			/* queue directly into socket buffer */
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			    control,
-			    &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+			    &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 				
 			/* EY It is added to the read queue in prev if block here I should check if this delivered 
 			tsn is out_of_order, if yes then update the nr_map*/
@@ -5511,7 +5517,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				nr_tsn = ctl->sinfo_tsn;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
-						  &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+						  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
 				/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
@@ -5572,7 +5578,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 				nr_tsn = ctl->sinfo_tsn;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
-						  &stcb->sctp_socket->so_rcv, 1, SCTP_SO_NOT_LOCKED);
+						  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
 				/* EY this is the chunk that should be tagged nr gapped calculate the gap and such then tag this TSN nr
 				chk->rec.data.TSN_seq */
 				if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
