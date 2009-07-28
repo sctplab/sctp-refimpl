@@ -117,7 +117,9 @@ struct sctp_sndrcvinfo {
 	uint16_t sinfo_stream;
 	uint16_t sinfo_ssn;
 	uint16_t sinfo_flags;
+#if defined(__FreeBSD__) && __FreeBSD_version < 800000
 	uint16_t sinfo_pr_policy;
+#endif
 	uint32_t sinfo_ppid;
 	uint32_t sinfo_context;
 	uint32_t sinfo_timetolive;
