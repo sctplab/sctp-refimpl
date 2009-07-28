@@ -41,6 +41,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 189790 2009-03-14 13:42:13Z rrs 
 
 #if defined(_KERNEL) || defined(__Userspace__)
 
+#define SCTP_READ_LOCK_HELD 1
+#define SCTP_READ_LOCK_NOT_HELD 0
 
 #ifdef SCTP_ASOCLOG_OF_TSNS 
 void sctp_print_out_track_log(struct sctp_tcb *stcb);
@@ -102,6 +104,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sctp_queued_to_read *control,
     struct sockbuf *sb,
     int end,
+    int inpread_locked,
     int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
