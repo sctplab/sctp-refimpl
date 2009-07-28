@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 193090 2009-05-30 11:14:41Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 195919 2009-07-28 15:07:41Z tuexen $");
 #endif
 
 #ifndef __sctp_sysctl_h__
