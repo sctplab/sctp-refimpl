@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 195699 2009-07-14 22:48:30Z rwatson $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196019 2009-08-01 19:26:27Z rwatson $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -67,9 +67,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 195699 2009-07-14 22:48:30Z r
 #include <sys/random.h>
 #include <sys/limits.h>
 #include <sys/queue.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
-#include <sys/vimage.h>
-#endif
 #include <machine/cpu.h>
 
 #include <net/if.h>
