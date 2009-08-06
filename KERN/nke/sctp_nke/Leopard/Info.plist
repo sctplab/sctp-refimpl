@@ -21,7 +21,7 @@
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>com.apple.kernel</key>
-		<string>9.7.0</string>
+		<string>9.8.0</string>
 	</dict>
 </dict>
 </plist>
