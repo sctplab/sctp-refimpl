@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 188067 2009-02-03 11:04:03Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 195918 2009-07-28 14:09:06Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1968,7 +1968,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb, control,
-	    &stcb->sctp_socket->so_rcv, 1, so_locked);
+	    &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD, so_locked);
 }
 
 
