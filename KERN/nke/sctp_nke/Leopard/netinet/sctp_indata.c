@@ -5980,10 +5980,11 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 					ctl->pdapi_aborted = 1;
 					sv = stcb->asoc.control_pdapi;
 					stcb->asoc.control_pdapi = ctl;
-					sctp_notify_partial_delivery_indication(stcb, 
-										SCTP_PARTIAL_DELIVERY_ABORTED, 
-										SCTP_HOLDS_LOCK, 
-										str_seq);
+					sctp_ulp_notify(SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION,
+					                stcb,
+					                SCTP_PARTIAL_DELIVERY_ABORTED,
+					                (void *)&str_seq,
+							SCTP_SO_NOT_LOCKED);
 					stcb->asoc.control_pdapi = sv;
 					break;
 				} else if ((ctl->sinfo_stream == stseq->stream) &&

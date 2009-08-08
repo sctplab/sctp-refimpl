@@ -3184,9 +3184,13 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 }
 
 /* This always must be called with the read-queue LOCKED in the INP */
-void
+static void
 sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
-					int nolock, uint32_t val)
+					uint32_t val, int so_locked
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+                             SCTP_UNUSED
+#endif
+                                        )
 {
 	struct mbuf *m_notify;
 	struct sctp_pdapi_event *pdapi;
@@ -3228,9 +3232,6 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 	control->tail_mbuf = m_notify;
 	control->held_length = 0;
 	control->length = 0;
-	if(nolock == 0) {
-		SCTP_INP_READ_LOCK(stcb->sctp_ep);
-	}
 	sb = &stcb->sctp_socket->so_rcv;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SB_LOGGING_ENABLE) {
 		sctp_sblog(sb, control->do_not_ref_stcb?NULL:stcb, SCTP_LOG_SBALLOC, SCTP_BUF_LEN(m_notify));
@@ -3247,12 +3248,30 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 		/* we really should not see this case */
 		TAILQ_INSERT_TAIL(&stcb->sctp_ep->read_queue, control, next);
 	}
-	if(nolock == 0) {
-		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
-	}
 	if (stcb->sctp_ep && stcb->sctp_socket) {
 		/* This should always be the case */
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		struct socket *so;
+
+		so = SCTP_INP_SO(stcb->sctp_ep);
+		if (!so_locked) {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			SCTP_SOCKET_LOCK(so, 1);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+				SCTP_SOCKET_UNLOCK(so, 1);
+				return;
+			}
+		}
+#endif
 		sctp_sorwakeup(stcb->sctp_ep, stcb->sctp_socket);
+#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+		if (!so_locked) {
+			SCTP_SOCKET_UNLOCK(so, 1);
+		}
+#endif
 	}
 }
 
@@ -3589,18 +3608,18 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		    (struct sctp_tmit_chunk *)data, so_locked);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
-	{
-		uint32_t val;
-		val = *((uint32_t *)data);
+		{
+			uint32_t val;
+			val = *((uint32_t *)data);
 
-		sctp_notify_partial_delivery_indication(stcb, error, 0, val);
-	}
+			sctp_notify_partial_delivery_indication(stcb, error, val, so_locked);
 		break;
+		}
 	case SCTP_NOTIFY_STRDATA_ERR:
 		break;
 	case SCTP_NOTIFY_ASSOC_ABORTED:
 		if ((stcb) && (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
-			       ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))){
+			       ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))) {
 			sctp_notify_assoc_change(SCTP_CANT_STR_ASSOC, stcb, error, NULL, so_locked);
 		} else {
 			sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, NULL, so_locked);
@@ -3638,11 +3657,9 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 	case SCTP_NOTIFY_STR_RESET_FAILED_OUT:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_OUTBOUND_STR | SCTP_STRRESET_FAILED));
 		break;
-
 	case SCTP_NOTIFY_STR_RESET_FAILED_IN:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data), (SCTP_STRRESET_INBOUND_STR | SCTP_STRRESET_FAILED));
 		break;
-
 	case SCTP_NOTIFY_ASCONF_ADD_IP:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_ADDED, data,
 		    error);
@@ -3777,12 +3794,12 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 			sp->net = NULL;
 			/* Free the chunk */
 			sctp_free_a_strmoq(stcb, sp);
-            /*sa_ignore FREED_MEMORY*/
+			/*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
 
-	if(holds_lock == 0) {
+	if (holds_lock == 0) {
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
 }
@@ -4471,7 +4488,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_queued_to_read *control,
     struct sockbuf *sb,
-	int end,
+    int end,
     int inp_read_lock_held,			  
     int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
@@ -4486,7 +4503,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	 */
 	struct mbuf *m, *prev=NULL;
 
-	if(inp == NULL) {
+	if (inp == NULL) {
 		/* Gak, TSNH!! */
 #ifdef INVARIANTS
 		panic("Gak, inp NULL on add_to_readq");
@@ -4501,7 +4518,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 #endif
 	if (inp_read_lock_held == 0)
-	  SCTP_INP_READ_LOCK(inp);
+		SCTP_INP_READ_LOCK(inp);
 	if (!(control->spec_flags & M_NOTIFICATION)) {
 		atomic_add_int(&inp->total_recvs, 1);
 		if (!control->do_not_ref_stcb) {
@@ -4551,7 +4568,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
 	if (inp_read_lock_held == 0)
-	  SCTP_INP_READ_UNLOCK(inp);
+		SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
 			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
