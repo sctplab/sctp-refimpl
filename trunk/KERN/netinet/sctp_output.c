@@ -5962,64 +5962,60 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 }
 
 static void 
-sctp_set_prsctp_policy(struct sctp_tcb *stcb,
-		       struct sctp_stream_queue_pending *sp)
+sctp_set_prsctp_policy(struct sctp_stream_queue_pending *sp)
 {
 	sp->pr_sctp_on = 0;
-	if (stcb->asoc.peer_supports_prsctp) {
+	/*
+	 * We assume that the user wants PR_SCTP_TTL if the user
+	 * provides a positive lifetime but does not specify any
+	 * PR_SCTP policy. This is a BAD assumption and causes
+	 * problems at least with the U-Vancovers MPI folks. I will
+	 * change this to be no policy means NO PR-SCTP.
+	 */
+	if (PR_SCTP_ENABLED(sp->sinfo_flags)) {
+		sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
+		sp->pr_sctp_on = 1;
+	} else {
+		return;
+	}
+	switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
+	case CHUNK_FLAGS_PR_SCTP_BUF:
 		/*
-		 * We assume that the user wants PR_SCTP_TTL if the user
-		 * provides a positive lifetime but does not specify any
-		 * PR_SCTP policy. This is a BAD assumption and causes
-		 * problems at least with the U-Vancovers MPI folks. I will
-		 * change this to be no policy means NO PR-SCTP.
+		 * Time to live is a priority stored in tv_sec when
+		 * doing the buffer drop thing.
 		 */
-		if (PR_SCTP_ENABLED(sp->sinfo_flags)) {
-			sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
-			sp->pr_sctp_on = 1;
-		} else{
-			return;
-		}
-		switch (PR_SCTP_POLICY(sp->sinfo_flags)) {
-		case CHUNK_FLAGS_PR_SCTP_BUF:
-			/*
-			 * Time to live is a priority stored in tv_sec when
-			 * doing the buffer drop thing.
-			 */
-			sp->ts.tv_sec = sp->timetolive;
-			sp->ts.tv_usec = 0;
-			break;
-		case CHUNK_FLAGS_PR_SCTP_TTL:
-		{
-			struct timeval tv;
-			(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
-			tv.tv_sec = sp->timetolive / 1000;
-			tv.tv_usec = (sp->timetolive * 1000) % 1000000;
-                        /* TODO sctp_constants.h needs alternative time macros when
-                         *  _KERNEL is undefined.
-                         */
+		sp->ts.tv_sec = sp->timetolive;
+		sp->ts.tv_usec = 0;
+		break;
+	case CHUNK_FLAGS_PR_SCTP_TTL:
+	{
+		struct timeval tv;
+		(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
+		tv.tv_sec = sp->timetolive / 1000;
+		tv.tv_usec = (sp->timetolive * 1000) % 1000000;
+		/* TODO sctp_constants.h needs alternative time macros when
+		 *  _KERNEL is undefined.
+		 */
 #ifndef __FreeBSD__
-			timeradd(&sp->ts, &tv,
-				 &sp->ts);
+		timeradd(&sp->ts, &tv, &sp->ts);
 #else
-			timevaladd(&sp->ts, &tv);
+		timevaladd(&sp->ts, &tv);
 #endif
-		}
-			break;
-		case CHUNK_FLAGS_PR_SCTP_RTX:
-			/*
-			 * Time to live is a the number or retransmissions
-			 * stored in tv_sec.
-			 */
-			sp->ts.tv_sec = sp->timetolive;
-			sp->ts.tv_usec = 0;
-			break;
-		default:
-			SCTPDBG(SCTP_DEBUG_USRREQ1,
-				"Unknown PR_SCTP policy %u.\n",
-				PR_SCTP_POLICY(sp->sinfo_flags));
-			break;
-		}
+	}
+		break;
+	case CHUNK_FLAGS_PR_SCTP_RTX:
+		/*
+		 * Time to live is a the number or retransmissions
+		 * stored in tv_sec.
+		 */
+		sp->ts.tv_sec = sp->timetolive;
+		sp->ts.tv_usec = 0;
+		break;
+	default:
+		SCTPDBG(SCTP_DEBUG_USRREQ1,
+			"Unknown PR_SCTP policy %u.\n",
+			PR_SCTP_POLICY(sp->sinfo_flags));
+		break;
 	}
 }
 
@@ -6090,7 +6086,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sp->tail_mbuf = NULL;
 	sp->length = 0;
 	at = m;
-	sctp_set_prsctp_policy(stcb, sp);
+	sctp_set_prsctp_policy(sp);
 	/* We could in theory (for sendall) sifa the length
 	 * in, but we would still have to hunt through the
 	 * chain since we need to setup the tail_mbuf 
@@ -7298,7 +7294,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 	}
 	/* We only re-set the policy if it is on */
 	if (sp->pr_sctp_on) {
-		sctp_set_prsctp_policy(stcb, sp);
+		sctp_set_prsctp_policy(sp);
 		asoc->pr_sctp_cnt++;
 		chk->pr_sctp_on = 1;
 	} else {
@@ -12707,7 +12703,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		sctp_free_a_strmoq(stcb, sp);
 		sp = NULL;
 	} else {
-		if(sp->sinfo_flags & SCTP_ADDR_OVER) {
+		if (sp->sinfo_flags & SCTP_ADDR_OVER) {
 			sp->net = net;
 			sp->addr_over = 1;
 		} else {
@@ -12715,7 +12711,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 			sp->addr_over = 0;
 		}
 		atomic_add_int(&sp->net->ref_count, 1);
-		sctp_set_prsctp_policy(stcb, sp);
+		sctp_set_prsctp_policy(sp);
 	}
 out_now:
 	return (sp);
