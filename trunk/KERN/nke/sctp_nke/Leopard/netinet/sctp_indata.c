@@ -4971,7 +4971,7 @@ skip_segments:
 		}
 		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
-		if(tp1->pr_sctp_on) {
+		if (tp1->pr_sctp_on) {
 			if(asoc->pr_sctp_cnt != 0) 
 				asoc->pr_sctp_cnt--;
 		}
@@ -4990,7 +4990,7 @@ skip_segments:
                         /*sa_ignore NO_NULL_CHK*/
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
-			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
+			if (asoc->peer_supports_prsctp && PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				asoc->sent_queue_cnt_removeable--;
 			}
 		}
@@ -7451,7 +7451,7 @@ skip_segments:
 			/* sa_ignore NO_NULL_CHK */
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
-			if (PR_SCTP_BUF_ENABLED(tp1->flags)) {
+			if (asoc->peer_supports_prsctp && PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				asoc->sent_queue_cnt_removeable--;
 			}
 		}
