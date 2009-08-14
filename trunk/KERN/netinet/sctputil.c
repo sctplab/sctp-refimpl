@@ -3019,19 +3019,19 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	ssf->ssf_info.sinfo_assoc_id = sctp_get_associd(stcb);
 	ssf->ssf_assoc_id = sctp_get_associd(stcb);
 
+	if (chk->data) {
+		/*
+		 * trim off the sctp chunk header(it should
+		 * be there)
+		 */
+		if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
+			m_adj(chk->data, sizeof(struct sctp_data_chunk));
+			sctp_mbuf_crush(chk->data);
+			chk->send_size -= sizeof(struct sctp_data_chunk);
+		}
+	}
 	SCTP_BUF_NEXT(m_notify) = chk->data;
 	SCTP_BUF_LEN(m_notify) = sizeof(struct sctp_send_failed);
-	if (chk->data) {
-	  /*
-	   * trim off the sctp chunk header(it should
-	   * be there)
-	   */
-	  if (chk->send_size >= sizeof(struct sctp_data_chunk)) {
-		m_adj(chk->data, sizeof(struct sctp_data_chunk));
-		sctp_mbuf_crush(chk->data);
-		chk->send_size -= sizeof(struct sctp_data_chunk);
-	  }
-	}
 	/* Steal off the mbuf */
 	chk->data = NULL;
 	/*
@@ -3045,8 +3045,8 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	}
 	/* append to socket */
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
-	    0, 0, 0, 0, 0, 0,
-	    m_notify);
+	                                 0, 0, 0, 0, 0, 0,
+	                                 m_notify);
 	if (control == NULL) {
 		/* no memory */
 		sctp_m_freem(m_notify);
@@ -3054,10 +3054,10 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	}
 	control->spec_flags = M_NOTIFICATION;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
-					  control,
-					  &stcb->sctp_socket->so_rcv, 1,
-					  SCTP_READ_LOCK_NOT_HELD,
-					  so_locked);
+	                  control,
+	                  &stcb->sctp_socket->so_rcv, 1,
+	                  SCTP_READ_LOCK_NOT_HELD,
+	                  so_locked);
 }
 
 
@@ -3728,13 +3728,13 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
-	if((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	   (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	   (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		return;
 	}
 	/* now through all the gunk freeing chunks */
-	if(holds_lock == 0) {
+	if (holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
 	/* sent queue SHOULD be empty */
@@ -3747,11 +3747,13 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 				sctp_free_bufspace(stcb, asoc, chk, 1);
 				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
 						SCTP_NOTIFY_DATAGRAM_SENT, chk, so_locked);
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
+				if (chk->data) {
+					sctp_m_freem(chk->data);
+					chk->data = NULL;
+				}
 			}
 			sctp_free_a_chunk(stcb, chk);
-            /*sa_ignore FREED_MEMORY*/
+			/*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -3765,11 +3767,13 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, int holds_lock, int so_locked
 				sctp_free_bufspace(stcb, asoc, chk, 1);
 				sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, 
 						SCTP_NOTIFY_DATAGRAM_UNSENT, chk, so_locked);
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
+				if (chk->data) {
+					sctp_m_freem(chk->data);
+					chk->data = NULL;
+				}
 			}
 			sctp_free_a_chunk(stcb, chk);
-            /*sa_ignore FREED_MEMORY*/
+			/*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -4531,7 +4535,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	while (m) {
 		if (SCTP_BUF_LEN(m) == 0) {
 			/* Skip mbufs with NO length */
-			if(prev == NULL) {
+			if (prev == NULL) {
 				/* First one */
 				control->data = sctp_m_free(m);
 				m = control->data;
@@ -4559,8 +4563,8 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		control->tail_mbuf = prev;
 	} else {
 		/* Everything got collapsed out?? */
-	    if (inp_read_lock_held == 0)
-		  SCTP_INP_READ_UNLOCK(inp);
+		if (inp_read_lock_held == 0)
+			SCTP_INP_READ_UNLOCK(inp);
 		return;
 	}
 	if (end) {
