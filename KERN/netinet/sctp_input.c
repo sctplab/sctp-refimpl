@@ -298,8 +298,10 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 						sctp_free_bufspace(stcb, asoc, chk, 1);
 						sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb, 
 								SCTP_NOTIFY_DATAGRAM_UNSENT, chk, SCTP_SO_NOT_LOCKED);
-						sctp_m_freem(chk->data);
-						chk->data = NULL;
+						if (chk->data) {
+							sctp_m_freem(chk->data);
+							chk->data = NULL;
+						}
 					}
 					sctp_free_a_chunk(stcb, chk);
 					/*sa_ignore FREED_MEMORY*/
@@ -772,7 +774,7 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 #if defined(SCTP_PANIC_ON_ABORT)
 	printf("stcb:%p state:%d rport:%d net:%p\n",
 	       stcb, stcb->asoc.state, stcb->rport, net);
-	if(!(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
+	if (!(stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		panic("Received an ABORT");
 	} else {
 		printf("No panic its in state %x closed\n", stcb->asoc.state);
