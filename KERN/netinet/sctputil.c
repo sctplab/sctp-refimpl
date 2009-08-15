@@ -5468,7 +5468,7 @@ sctp_sorecvmsg(struct socket *so,
 						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ECONNRESET);
 						error = ECONNRESET;
 						/* You get this once if you are active open side */
-						if(!(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+						if (!(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 							/* Remove flag if on the active open side */
 							inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_ABORTED;
 						}
