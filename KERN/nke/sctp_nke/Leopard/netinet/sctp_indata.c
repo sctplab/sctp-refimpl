@@ -1530,7 +1530,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 		sctp_log_map(tsn, asoc->cumulative_tsn, asoc->highest_tsn_inside_map, SCTP_MAP_TSN_ENTERS);
 	}
-	if(stcb == NULL) {
+	if (stcb == NULL) {
 		return (0);
 	}
 	SCTP_LTRACE_CHK(stcb->sctp_ep, stcb, ch->ch.chunk_type, tsn);
@@ -1693,13 +1693,13 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* we have a new high score */
 			asoc->highest_tsn_inside_map = tsn;			
 			/* EY nr_sack version of the above*/
-			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack)
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack)
 				asoc->highest_tsn_inside_nr_map = tsn;			
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 				sctp_log_map(0, 2, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 			}
 		}
-		if(tsn == (asoc->cumulative_tsn+1)) {
+		if (tsn == (asoc->cumulative_tsn+1)) {
 			/* Update cum-ack */
 			asoc->cumulative_tsn = tsn;
 		}
@@ -1791,7 +1791,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		dmbuf = *m;
 		/* lop off the top part */
 		m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
-		if(SCTP_BUF_NEXT(dmbuf) == NULL) {
+		if (SCTP_BUF_NEXT(dmbuf) == NULL) {
 			l_len = SCTP_BUF_LEN(dmbuf);
 		} else {
 			/* need to count up the size hopefully
@@ -1845,9 +1845,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						  1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 		
 		/* EY here I should check if this delivered tsn is out_of_order, if yes then update the nr_map*/
-		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+		if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 			/* EY check if the mapping_array and nr_mapping array are consistent */
-			if(asoc->mapping_array_base_tsn != asoc->nr_mapping_array_base_tsn)
+			if (asoc->mapping_array_base_tsn != asoc->nr_mapping_array_base_tsn)
 				/*printf("EY-IN sctp_process_a_data_chunk(5): Something is wrong the map base tsn"
 				"\nEY-and nr_map base tsn should be equal.");*/
 				/* EY debugging block */
@@ -1890,31 +1890,31 @@ failed_express_del:
 	    (asoc->ssn_of_pdapi == strmseq)
 		) {
 		control = stcb->asoc.control_pdapi;
-		if((chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
+		if ((chunk_flags & SCTP_DATA_FIRST_FRAG) == SCTP_DATA_FIRST_FRAG) {
 			/* Can't be another first? */
 			goto failed_pdapi_express_del;
 		}
-		if(tsn == (control->sinfo_tsn + 1)) {
+		if (tsn == (control->sinfo_tsn + 1)) {
 			/* Yep, we can add it on */
 			int end = 0;
 			uint32_t cumack;
-			if(chunk_flags & SCTP_DATA_LAST_FRAG) {
+			if (chunk_flags & SCTP_DATA_LAST_FRAG) {
 				end = 1;
 			}
 			cumack = asoc->cumulative_tsn;
-			if((cumack+1) == tsn) 
+			if ((cumack+1) == tsn) 
 				cumack = tsn;
 
-			if(sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
-						tsn,
-						&stcb->sctp_socket->so_rcv)) {
+			if (sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end, 
+			                         tsn,
+			                         &stcb->sctp_socket->so_rcv)) {
 				SCTP_PRINTF("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
 			
 			/* EY It is appended to the read queue in prev if block here I should check if this delivered 
 			tsn is out_of_order, if yes then update the nr_map*/
-			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
 				/* EY debugging block*/
 				{
 				/*printf("\nEY-Calculating an nr_gap!!\nEY-mapping_array_size = %d nr_mapping_array_size = %d"
@@ -1939,7 +1939,7 @@ failed_express_del:
 			asoc->last_flags_delivered = chunk_flags;
 			asoc->last_strm_seq_delivered = strmseq;
 			asoc->last_strm_no_delivered = strmno;
-			if(end) {
+			if (end) {
 				/* clean up the flags and such */
 				asoc->fragmented_delivery_inprogress = 0;
 				if ((chunk_flags & SCTP_DATA_UNORDERED) == 0) {
@@ -2417,13 +2417,13 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	else
 		memcpy(aux_array, asoc->mapping_array, 64);
 	/* EY do the same for nr_mapping_array*/	
-	if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+	if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack) {
 	
-		if(asoc->nr_mapping_array_size != asoc->mapping_array_size){
+		if (asoc->nr_mapping_array_size != asoc->mapping_array_size) {
 			/*printf("\nEY-IN sack_check method: \nEY-"
 			"The size of map and nr_map are inconsitent")*/;
 		}
-		if(asoc->nr_mapping_array_base_tsn != asoc->mapping_array_base_tsn){
+		if (asoc->nr_mapping_array_base_tsn != asoc->mapping_array_base_tsn) {
 			/*printf("\nEY-IN sack_check method VERY CRUCIAL error: \nEY-"
 			"The base tsns of map and nr_map are inconsitent")*/;
 		}
@@ -2486,7 +2486,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		/* base becomes one ahead of the cum-ack */
 		asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		
-		if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack){
+		if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack) {
 
 			if (clr > asoc->nr_mapping_array_size)
 				clr = asoc->nr_mapping_array_size;
@@ -2603,7 +2603,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			}
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
 			/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
+			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
 				sctp_send_nr_sack(stcb);
 			else
 				sctp_send_sack(stcb);
