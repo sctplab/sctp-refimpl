@@ -823,7 +823,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
 	uint16_t nxt_todel;
-	uint32_t tsize;
+	uint32_t tsize, pd_point;
 
  doit_again:
 	chk = TAILQ_FIRST(&asoc->reasmqueue);
@@ -843,8 +843,13 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * Yep the first one is here and its ok to deliver
 			 * but should we?
 			 */
-			if ((sctp_is_all_msg_on_reasm(asoc, &tsize) ||
-			    (tsize >= stcb->sctp_ep->partial_delivery_point))) {
+			if (stcb->sctp_socket) {
+				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
+				               stcb->sctp_ep->partial_delivery_point);
+			} else {
+				pd_point = stcb->sctp_ep->partial_delivery_point;
+			}
+			if (sctp_is_all_msg_on_reasm(asoc, &tsize) || (tsize >= pd_point)) {
 
 				/*
 				 * Yes, we setup to start reception, by
@@ -869,7 +874,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		 * with the got doit_again
 		 */
 		sctp_service_reassembly(stcb, asoc);
-		if(asoc->fragmented_delivery_inprogress == 0) {
+		if (asoc->fragmented_delivery_inprogress == 0) {
 			/* finished our Fragmented delivery, could be
 			 * more waiting?
 			 */
@@ -2673,7 +2678,7 @@ void
 sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-	uint32_t tsize;
+	uint32_t tsize, pd_point;
 	uint16_t nxt_todel;
 
 	if (asoc->fragmented_delivery_inprogress) {
@@ -2709,8 +2714,13 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		 * be here or 1/4 the socket buffer max or nothing on the
 		 * delivery queue and something can be delivered.
 		 */
-		if ((sctp_is_all_msg_on_reasm(asoc, &tsize) ||
-		    (tsize >= stcb->sctp_ep->partial_delivery_point ))) {
+		if (stcb->sctp_socket) {
+			pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
+				       stcb->sctp_ep->partial_delivery_point);
+		} else {
+			pd_point = stcb->sctp_ep->partial_delivery_point;
+		}
+		if (sctp_is_all_msg_on_reasm(asoc, &tsize) || (tsize >= pd_point)) {
 			asoc->fragmented_delivery_inprogress = 1;
 			asoc->tsn_last_delivered = chk->rec.data.TSN_seq - 1;
 			asoc->str_of_pdapi = chk->rec.data.stream_number;
@@ -2718,7 +2728,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			asoc->pdapi_ppid = chk->rec.data.payloadtype;
 			asoc->fragment_flags = chk->rec.data.rcv_flags;
 			sctp_service_reassembly(stcb, asoc);
-			if(asoc->fragmented_delivery_inprogress == 0) {
+			if (asoc->fragmented_delivery_inprogress == 0) {
 				goto doit_again;
 			}
 		}
