@@ -393,8 +393,8 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	sctp_assoc_t sinfo_assoc_id;	/* our assoc id */
 	/* Non sinfo stuff */
 	uint32_t length;	/* length of data */
-    uint32_t held_length;	/* length held in sb */
-    struct sctp_nets *whoFrom;	/* where it came from */
+	uint32_t held_length;	/* length held in sb */
+	struct sctp_nets *whoFrom;	/* where it came from */
 	struct mbuf *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
 	struct mbuf *tail_mbuf;	/* used for multi-part data */
