@@ -5298,7 +5298,7 @@ sctp_sorecvmsg(struct socket *so,
 	int slen = 0;
 	uint32_t held_length = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
-	int sockbuf_lock=0;
+	int sockbuf_lock = 0;
 #endif
 	if (uio == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
@@ -5307,7 +5307,7 @@ sctp_sorecvmsg(struct socket *so,
 
 	if (msg_flags) {
 		in_flags = *msg_flags;
-		if(in_flags & MSG_PEEK) 
+		if (in_flags & MSG_PEEK) 
 			SCTP_STAT_INCR(sctps_read_peeks);
 	} else {
 		in_flags = 0;
@@ -5413,9 +5413,9 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if ((so->so_rcv.sb_cc <= held_length) && block_allowed) {
 		/* we need to wait for data */
-		if ( (so->so_rcv.sb_cc == 0) && 
-		     ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-		      (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) {
+		if ((so->so_rcv.sb_cc == 0) && 
+		    ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+		     (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL))) {
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
 				/* For active open side clear flags for re-use 
 				 * passive open is blocked by connect.
@@ -5493,7 +5493,7 @@ sctp_sorecvmsg(struct socket *so,
 		}
 		goto out;
 	}
-	if(hold_sblock == 1) {
+	if (hold_sblock == 1) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
 		hold_sblock = 0;
 	}
@@ -5511,7 +5511,7 @@ sctp_sorecvmsg(struct socket *so,
 		 * the appender did the increment but as not
 		 * yet did the tailq insert onto the read_queue
 		 */
-		if(hold_rlock == 0) {
+		if (hold_rlock == 0) {
 			SCTP_INP_READ_LOCK(inp);
 			hold_rlock = 1;
 		}
@@ -5559,15 +5559,15 @@ sctp_sorecvmsg(struct socket *so,
 			sctp_free_remote_addr(control->whoFrom);
 			sctp_free_a_readq(stcb, control);
 		}
-		if(hold_rlock) {
+		if (hold_rlock) {
 			hold_rlock = 0;
 			SCTP_INP_READ_UNLOCK(inp);
 		}
 		goto restart;
 	}
 	if (control->length == 0) {
-		if((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
-		   (filling_sinfo)) {
+		if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE)) &&
+		    (filling_sinfo)) {
 			/* find a more suitable one then this */
 			ctl = TAILQ_NEXT(control, next);
 			while (ctl) {
@@ -5618,7 +5618,7 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	/* Clear the held length since there is something to read */
 	control->held_length = 0;
-	if(hold_rlock) {
+	if (hold_rlock) {
 		SCTP_INP_READ_UNLOCK(inp);
 		hold_rlock = 0;
 	}
@@ -5723,7 +5723,7 @@ sctp_sorecvmsg(struct socket *so,
 		 * there.
 		 */
 		sinfo->sinfo_flags &= 0x00ff;
-		if((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED) {
+		if ((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED) {
 			sinfo->sinfo_flags |= SCTP_UNORDERED;
 		}
 	}
@@ -5990,7 +5990,7 @@ sctp_sorecvmsg(struct socket *so,
 					control->held_length = 0;
 					wakeup_read_socket = 1;
 				}
-				if(control->aux_data) {
+				if (control->aux_data) {
 					sctp_m_free (control->aux_data);
 					control->aux_data = NULL;
 				}
@@ -6103,7 +6103,7 @@ sctp_sorecvmsg(struct socket *so,
 		}
 		if (control->length == 0) {
 			/* still nothing here */
-			if(control->end_added == 1) {
+			if (control->end_added == 1) {
 				/* he aborted, or is done i.e.did a shutdown */
 				out_flags |= MSG_EOR;
 				if (control->pdapi_aborted) {
@@ -6273,7 +6273,7 @@ sctp_sorecvmsg(struct socket *so,
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
-		if(stcb) {
+		if (stcb) {
 			sctp_misc_ints(SCTP_SORECV_DONE,
 				       freed_so_far,
 				       ((uio) ? (slen-uio->uio_resid) : slen), 
@@ -6300,7 +6300,7 @@ struct mbuf *
 sctp_m_free(struct mbuf *m)
 {
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if(SCTP_BUF_IS_EXTENDED(m)) {
+		if (SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IFREE);
 		}
 	}
@@ -6325,7 +6325,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 	struct sctp_laddr *wi;
 
 	ifa = sctp_find_ifa_by_addr(sa, vrf_id, 0);
-	if(ifa == NULL) {
+	if (ifa == NULL) {
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTPUTIL, EADDRNOTAVAIL);
 		return (EADDRNOTAVAIL);
 	}
