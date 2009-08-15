@@ -312,7 +312,6 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 		if (asoc->strmout) {
 			for (i = newcnt; i < asoc->pre_open_streams; i++) {
 				outs = &asoc->strmout[i];
-				printf("send_queue empty=%d.\n", TAILQ_EMPTY(&asoc->send_queue));
 				sp = TAILQ_FIRST(&outs->outqueue);
 				while (sp) {
 					TAILQ_REMOVE(&outs->outqueue, sp, next);
