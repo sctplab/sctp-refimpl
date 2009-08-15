@@ -5300,6 +5300,7 @@ sctp_sorecvmsg(struct socket *so,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	int sockbuf_lock = 0;
 #endif
+
 	if (uio == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
@@ -5559,6 +5560,35 @@ sctp_sorecvmsg(struct socket *so,
 			sctp_free_remote_addr(control->whoFrom);
 			sctp_free_a_readq(stcb, control);
 		}
+		if (hold_rlock) {
+			hold_rlock = 0;
+			SCTP_INP_READ_UNLOCK(inp);
+		}
+		goto restart;
+	}
+	if ((control->length == 0) &&
+	    (control->end_added == 1)) {
+		/* Do we also need to check for (control->pdapi_aborted == 1)? */
+		if (hold_rlock == 0) {
+			hold_rlock = 1;
+			SCTP_INP_READ_LOCK(inp);
+		}
+		TAILQ_REMOVE(&inp->read_queue, control, next);
+		if (control->data) {
+#ifdef INVARIANTS
+			panic("control->data not null but control->length == 0");
+#else
+			SCTP_PRINTF("Strange, data left in the control buffer. Cleaning up.\n");
+			sctp_m_freem(control->data);
+			control->data = NULL;
+#endif
+		}
+		if (control->aux_data) {
+			sctp_m_free (control->aux_data);
+			control->aux_data = NULL;
+		}
+		sctp_free_remote_addr(control->whoFrom);
+		sctp_free_a_readq(stcb, control);
 		if (hold_rlock) {
 			hold_rlock = 0;
 			SCTP_INP_READ_UNLOCK(inp);
