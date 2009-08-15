@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196019 2009-08-01 19:26:27Z rwatson $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196229 2009-08-14 22:43:25Z zec $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -85,6 +85,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196019 2009-08-01 19:26:27Z r
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
+
+#ifdef VIMAGE
+#error "SCTP is not yet compatible with VIMAGE."
+#endif
 
 #ifdef IPSEC
 #include <netipsec/ipsec.h>
