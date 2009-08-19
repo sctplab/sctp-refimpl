@@ -2391,6 +2391,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	struct sctp_association *asoc;
 	int at;
+	uint8_t comb_byte;
 	int last_all_ones=0;
 	int slide_from, slide_end, lgap, distance;
 	
@@ -2418,7 +2419,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		memcpy(aux_array, asoc->mapping_array, 64);
 	/* EY do the same for nr_mapping_array*/	
 	if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && asoc->peer_supports_nr_sack) {
-	
 		if (asoc->nr_mapping_array_size != asoc->mapping_array_size) {
 			/*printf("\nEY-IN sack_check method: \nEY-"
 			"The size of map and nr_map are inconsitent")*/;
@@ -2440,13 +2440,16 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	at = 0;
 	for (slide_from = 0; slide_from < stcb->asoc.mapping_array_size; slide_from++) {
-
-		if (asoc->mapping_array[slide_from] == 0xff) {
+		/* We must combine the renegable and non-renegable arrays here to form a unified
+ 		 * view of what is acked right now (since they are kept separate
+	 	 */
+		comb_byte = asoc->mapping_array[slide_from] | asoc->nr_mapping_array[slide_from];
+		if (comb_byte == 0xff) {
 			at += 8;
 			last_all_ones = 1;
 		} else {
 			/* there is a 0 bit */
-			at += sctp_map_lookup_tab[asoc->mapping_array[slide_from]];
+			at += sctp_map_lookup_tab[comb_byte];
 			last_all_ones = 0;
 			break;
 		}
@@ -6531,9 +6534,9 @@ again:
 /* EY! nr_sack version of sctp_handle_segments, nr-gapped TSNs get removed from RtxQ in this method*/
 static void
 sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_nr_sack_chunk *ch, uint32_t last_tsn, uint32_t * biggest_tsn_acked,
-    uint32_t * biggest_newly_acked_tsn, uint32_t * this_sack_lowest_newack,
-    uint32_t num_seg, uint32_t num_nr_seg, int *ecn_seg_sums)
+							 struct sctp_nr_sack_chunk *ch, uint32_t last_tsn, uint32_t * biggest_tsn_acked,
+							 uint32_t * biggest_newly_acked_tsn, uint32_t * this_sack_lowest_newack,
+							 uint32_t num_seg, uint32_t num_nr_seg, int *ecn_seg_sums)
 {
   /************************************************/
   /* process fragments and update sendqueue        */
