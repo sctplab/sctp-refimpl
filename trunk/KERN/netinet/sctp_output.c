@@ -12981,7 +12981,8 @@ sctp_lower_sosend(struct socket *so,
 			error = ENOTCONN;
 			goto out_unlocked;
 		}
-		hold_tcblock = 0;
+		SCTP_TCB_LOCK(stcb);
+		hold_tcblock = 1;
 		SCTP_INP_RUNLOCK(inp);
 		if (addr) {
 			/* Must locate the net structure if addr given */
@@ -13397,7 +13398,7 @@ sctp_lower_sosend(struct socket *so,
 			error = EINVAL;
 			goto out;
 		}
-		if(hold_tcblock) {
+		if (hold_tcblock) {
 			SCTP_TCB_UNLOCK(stcb);
 			hold_tcblock = 0;
 		}
