@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 196260 2009-08-15 21:10:52Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 196364 2009-08-18 19:58:49Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -13398,7 +13398,7 @@ sctp_lower_sosend(struct socket *so,
 			error = EINVAL;
 			goto out;
 		}
-		if(hold_tcblock) {
+		if (hold_tcblock) {
 			SCTP_TCB_UNLOCK(stcb);
 			hold_tcblock = 0;
 		}
