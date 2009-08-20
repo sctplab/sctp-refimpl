@@ -3032,9 +3032,13 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	return (0);
 }
 
-int
+static int
 sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1, uint32_t last_tsn, 
-			   uint16_t frag_strt, uint16_t frag_end, int nr_sacking)
+			   uint16_t frag_strt, uint16_t frag_end, int nr_sacking, 
+			   int *num_frs, 
+			   uint32_t *biggest_newly_acked_tsn, 
+			   uint32_t  *this_sack_lowest_newack,
+			   int *ecn_seg_sums)
 {
 	struct sctp_tmit_chunk *tp1;
 	unsigned int theTSN;
@@ -3049,7 +3053,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 		theTSN = j + last_tsn;
 		while (tp1) {
 			if (tp1->rec.data.doing_fast_retransmit)
-				num_frs++;
+				(*num_frs) += 1;
 
 			/*-
 			 * CMT: CUCv2 algorithm. For each TSN being
@@ -3222,7 +3226,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 						/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next); */
 						if (tp1->data) {
 							/* sa_ignore NO_NULL_CHK */
-							sctp_free_bufspace(stcb, asoc, tp1, 1);
+							sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 							sctp_m_freem(tp1->data);
 						}
 				
@@ -3262,7 +3266,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	struct sctp_sack *sack;
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
-	int i, j;
+	int i;
 	int num_frs = 0;
 
 	uint16_t frag_strt, frag_end, primary_flag_set;
@@ -3330,7 +3334,9 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 0);
+		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 
+		                           0, &num_frs, biggest_newly_acked_tsn, 
+					   this_sack_lowest_newack, ecn_seg_sums);
 		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 								  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
 		*offset += sizeof(block);
@@ -6577,9 +6583,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_nr_gap_ack_block *nr_frag, nr_block;
 	struct sctp_tmit_chunk *tp1;
-	uint32_t i, j;
+	uint32_t i;
 	int wake_him=0;
-	uint32_t theTSN;
 	int num_frs = 0;
 
 	uint16_t frag_strt, frag_end, primary_flag_set;
@@ -6651,7 +6656,9 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 0);
+		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 
+                                           0, &num_frs, biggest_newly_acked_tsn, 
+					   this_sack_lowest_newack, ecn_seg_sums);
 		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 								  sizeof(struct sctp_gap_ack_block), (uint8_t *) & block);
 		*offset += sizeof(block);
@@ -6724,7 +6731,11 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 			}
 			last_nr_frag_high = nr_frag_end + last_tsn;
 		}
-		wake_him = sctp_process_segment_range(stcb, &tp1, last_tsn, nr_frag_strt, nr_frag_end, 1);
+		num_frs=0;
+		wake_him = sctp_process_segment_range(stcb, &tp1, last_tsn, 
+		                                      nr_frag_strt, nr_frag_end, 1, 
+                                                      &num_frs, biggest_newly_acked_tsn, 
+					              this_sack_lowest_newack, ecn_seg_sums);
 
 		nr_frag = (struct sctp_nr_gap_ack_block *)sctp_m_getptr(m, *offset,
 									sizeof(struct sctp_nr_gap_ack_block), 
