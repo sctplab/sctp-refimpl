@@ -286,11 +286,11 @@ static uint32_t
 sctp_is_desired_interface_type(struct ifaddr *ifa)
 {
 #if defined (__Userspace__)
-    /* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
-     * This struct contains struct ifnet, which is also defined in
-     * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
-     */
-    return (1); /* __Userspace__ Is this what we want for ms1? */
+	/* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
+	 * This struct contains struct ifnet, which is also defined in
+	 * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
+	 */
+	return (1); /* __Userspace__ Is this what we want for ms1? */
 #else
         int result;
  
@@ -316,6 +316,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_LOOP:
 	case IFT_SLIP:
 	case IFT_GIF:
+	case IFT_L2VLAN:	
 #if !defined(__APPLE__)
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
