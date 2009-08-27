@@ -316,6 +316,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_LOOP:
 	case IFT_SLIP:
 	case IFT_GIF:
+	case IFT_L2VLAN:	
 #if !defined(__APPLE__)
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
@@ -333,7 +334,6 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_ATM:
 	case IFT_IEEE80211:
 	case IFT_TUNNEL:
-	case IFT_L2VLAN;
 	case IFT_IEEE1394:
 #endif
                 result = 1;
