@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id
+ * $Id: aw.c,v 1.4 2009-08-28 19:08:45 tuexen Exp $
  */
 
 #include <sys/types.h>
