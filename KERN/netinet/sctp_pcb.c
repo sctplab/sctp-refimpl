@@ -4324,34 +4324,35 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 static uint32_t 
 sctp_aloc_a_assoc_id(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
-  uint32_t id;
-  struct sctpasochead *head;
-  struct sctp_tcb *lstcb;
-  
-  SCTP_INP_WLOCK(inp); 
+	uint32_t id;
+	struct sctpasochead *head;
+	struct sctp_tcb *lstcb;
+
+	SCTP_INP_WLOCK(inp);
  try_again:
-  if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
-    /* TSNH */
-    return (0);
-  }
-  /* We don't allow assoc id to be 0, this
-   * is needed otherwise if the id were to wrap
-   * we would have issues with some socket options.
-   */
-  if (inp->sctp_associd_counter == 0) {
+	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+		/* TSNH */
+		SCTP_INP_WUNLOCK(inp);
+		return (0);
+	}
+	/* We don't allow assoc id to be 0, this
+	 * is needed otherwise if the id were to wrap
+	 * we would have issues with some socket options.
+	 */
+	if (inp->sctp_associd_counter == 0) {
+		inp->sctp_associd_counter++;
+	}
+	id = inp->sctp_associd_counter;
 	inp->sctp_associd_counter++;
-  }
-  id = inp->sctp_associd_counter;
-  inp->sctp_associd_counter++;
-  lstcb = sctp_findasoc_ep_asocid_locked(inp, (sctp_assoc_t)id, 0);
-  if (lstcb) {
-    goto try_again;
-  }
-  head = &inp->sctp_asocidhash[SCTP_PCBHASH_ASOC(id, inp->hashasocidmark)];
-  LIST_INSERT_HEAD(head, stcb, sctp_tcbasocidhash);
-  stcb->asoc.in_asocid_hash = 1;
-  SCTP_INP_WUNLOCK(inp);
-  return id;
+	lstcb = sctp_findasoc_ep_asocid_locked(inp, (sctp_assoc_t)id, 0);
+	if (lstcb) {
+		goto try_again;
+	}
+	head = &inp->sctp_asocidhash[SCTP_PCBHASH_ASOC(id, inp->hashasocidmark)];
+	LIST_INSERT_HEAD(head, stcb, sctp_tcbasocidhash);
+	stcb->asoc.in_asocid_hash = 1;
+	SCTP_INP_WUNLOCK(inp);
+	return id;
 }
 
 /*
