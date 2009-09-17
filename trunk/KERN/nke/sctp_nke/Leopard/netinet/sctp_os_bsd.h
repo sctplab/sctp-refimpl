@@ -86,8 +86,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196229 2009-08-14 22:43:25Z z
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
-#ifdef VIMAGE
-#error "SCTP is not yet compatible with VIMAGE."
+#if defined(__FreeBSD__) && __FreeBSD_version >= 80056
+#include <net/vnet.h>
 #endif
 
 #ifdef IPSEC
@@ -153,28 +153,31 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define SCTP_CTR6 CTR6
 #endif
 
-#define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
-#define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
-#define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
-#define SCTP_BASE_VAR(__m) system_base_info.__m
-
 /*
  * Macros to expand out globals defined by various modules
  * to either a real global or a virtualized instance of one,
  * depending on whether VIMAGE is defined.
  */
-/* first define modules that supply us information */
-#define MOD_NET net
-#define MOD_INET inet
-#define MOD_INET6 inet6
-#define MOD_IPSEC ipsec
-
 /* then define the macro(s) that hook into the vimage macros */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-#define MODULE_GLOBAL(__MODULE, __SYMBOL) V_ ## __SYMBOL
+#define MODULE_GLOBAL(__SYMBOL) V_ ## __SYMBOL
 #else
-#define MODULE_GLOBAL(__MODULE, __SYMBOL) (__SYMBOL)
+#define MODULE_GLOBAL(__SYMBOL) (__SYMBOL)
+#endif
+
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+#define V_system_base_info VNET_NAME(system_base_info)
+#define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
+#define SCTP_BASE_STATS V_system_base_info.sctpstat
+#define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) V_system_base_info.sctpsysctl.__m
+#define SCTP_BASE_VAR(__m) V_system_base_info.__m
+#else
+#define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
+#define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
+#define SCTP_BASE_VAR(__m) system_base_info.__m
 #endif
 
 /*
