@@ -86,8 +86,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196229 2009-08-14 22:43:25Z z
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
-#ifdef VIMAGE
-#error "SCTP is not yet compatible with VIMAGE."
+#if defined(__FreeBSD__) && __FreeBSD_version >= 80056
+#include <net/vnet.h>
 #endif
 
 #ifdef IPSEC
