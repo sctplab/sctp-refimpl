@@ -62,7 +62,6 @@ VNET_DEFINE(struct sctp_base_info, system_base_info);
 struct sctp_base_info system_base_info;
 #endif
 
-
 #if defined(__Userspace__)
 struct ifaddrs *g_interfaces;
 #endif
