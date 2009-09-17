@@ -643,7 +643,7 @@ struct sctp_tcb {
  * the real definition.
  */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-VNET_DECLARE(struct sctp_base_info, system_base_info)
+VNET_DECLARE(struct sctp_base_info, system_base_info) ;
 #else
 extern struct sctp_base_info system_base_info;
 #endif
