@@ -55,7 +55,13 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 196260 2009-08-15 21:10:52Z tuex
 #define APPLE_FILE_NO 4
 #endif
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+VNET_DEFINE(struct sctp_base_info, system_base_info);
+#define V_system_base_info VNET_NAME(system_base_info)
+#else
 struct sctp_base_info system_base_info;
+#endif
+
 
 #if defined(__Userspace__)
 struct ifaddrs *g_interfaces;

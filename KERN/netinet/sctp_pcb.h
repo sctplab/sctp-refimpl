@@ -642,7 +642,11 @@ struct sctp_tcb {
  * goes with the base info. sctp_pcb.c has
  * the real definition.
  */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+VNET_DECLARE(struct sctp_base_info, system_base_info)
+#else
 extern struct sctp_base_info system_base_info;
+#endif
 
 #ifdef INET6
 int SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b);
