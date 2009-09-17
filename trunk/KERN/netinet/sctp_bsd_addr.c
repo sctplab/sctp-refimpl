@@ -259,7 +259,7 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 	struct in6_ifaddr *ifa6;
 	ifa6 = (struct in6_ifaddr *)ifa->ifa;
 	ifa->flags = ifa6->ia6_flags;
-	if (!MODULE_GLOBAL(MOD_INET6, ip6_use_deprecated)) {
+	if (!MODULE_GLOBAL(ip6_use_deprecated)) {
 		if (ifa->flags &
 		    IN6_IFF_DEPRECATED) {
 			ifa->localifa_flags |= SCTP_ADDR_IFA_UNUSEABLE;
@@ -508,7 +508,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct in6_ifaddr *ifa6;
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
-	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_list) {
 		IF_ADDR_LOCK(ifn);
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			if (ifa->ifa_addr == NULL) {
@@ -673,7 +673,7 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #else
-	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(MOD_NET, ifnet), if_list) {
+	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_list) {
 #endif
 		if (!(*pred)(ifn)) {
 			continue;
