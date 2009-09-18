@@ -169,8 +169,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #define V_system_base_info VNET(system_base_info)
 #define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS V_system_base_info.sctpstat
+#define SCTP_BASE_STATS_SYSCTL VNET_NAME(system_base_info.sctpstat)
 #define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
-#define SCTP_BASE_SYSCTL(__m) V_system_base_info.sctpsysctl.__m
+#define SCTP_BASE_SYSCTL(__m) VNET_NAME(system_base_info.sctpsysctl.__m)
 #define SCTP_BASE_VAR(__m) V_system_base_info.__m
 #else
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
