@@ -56,6 +56,7 @@ struct sctp_timer {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	void *vnet;
 #endif
+
 	/* for sanity checking */
 	void *self;
 	uint32_t ticks;
