@@ -670,7 +670,6 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 	IFNET_RUNLOCK();
 }
 #endif
-
 #if defined (__APPLE__)
 void
 sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
