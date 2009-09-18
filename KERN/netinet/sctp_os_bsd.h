@@ -166,7 +166,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-#define V_system_base_info VNET_NAME(system_base_info)
+#define V_system_base_info VNET(system_base_info)
 #define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS V_system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
