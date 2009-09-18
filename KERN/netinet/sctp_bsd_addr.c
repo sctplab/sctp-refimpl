@@ -136,6 +136,9 @@ sctp_iterator_thread(void *v)
 
 	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+	CURVNET_SET((struct vnet *)v);
+#endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	SCTP_BASE_INFO(iterator_running) = 0;
 	while (1) {
@@ -178,6 +181,9 @@ sctp_iterator_thread(void *v)
 #endif /* !__Windows__ */
 		sctp_iterator_worker();
 	}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+	CURVNET_RESTORE();
+#endif
 #if defined(__Windows__)
 	PsTerminateSystemThread(STATUS_SUCCESS);
 #endif
@@ -193,7 +199,11 @@ sctp_startup_iterator(void)
 #else
 	ret = kproc_create(sctp_iterator_thread,
 #endif
+#if __FreeBSD_version >= 800000
+			   (void *)curvnet,
+#else
 			   (void *)NULL,
+#endif
 			   &SCTP_BASE_INFO(thread_proc),
 			   RFPROC,
 			   SCTP_KTHREAD_PAGES, 
