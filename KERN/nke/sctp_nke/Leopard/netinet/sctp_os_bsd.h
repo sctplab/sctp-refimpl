@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 196229 2009-08-14 22:43:25Z zec $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197288 2009-09-17 15:11:12Z rrs $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -160,17 +160,18 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
  */
 /* then define the macro(s) that hook into the vimage macros */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-#define MODULE_GLOBAL(__SYMBOL) V_ ## __SYMBOL
+#define MODULE_GLOBAL(__SYMBOL) V_##__SYMBOL
 #else
 #define MODULE_GLOBAL(__SYMBOL) (__SYMBOL)
 #endif
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-#define V_system_base_info VNET_NAME(system_base_info)
+#define V_system_base_info VNET(system_base_info)
 #define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS V_system_base_info.sctpstat
+#define SCTP_BASE_STATS_SYSCTL VNET_NAME(system_base_info.sctpstat)
 #define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
-#define SCTP_BASE_SYSCTL(__m) V_system_base_info.sctpsysctl.__m
+#define SCTP_BASE_SYSCTL(__m) VNET_NAME(system_base_info.sctpsysctl.__m)
 #define SCTP_BASE_VAR(__m) V_system_base_info.__m
 #else
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m

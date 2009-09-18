@@ -53,6 +53,9 @@ struct sctp_timer {
 	void *ep;
 	void *tcb;
 	void *net;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+	void *vnet;
+#endif
 
 	/* for sanity checking */
 	void *self;
