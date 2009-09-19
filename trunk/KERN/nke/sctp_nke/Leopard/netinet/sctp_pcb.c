@@ -7173,22 +7173,35 @@ sctp_drain()
 	 * is LOW on MBUF's and needs help. This is where reneging will
 	 * occur. We really hope this does NOT happen!
 	 */
-	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb;
 
-	SCTP_INP_INFO_RLOCK();
-	LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
-		/* For each endpoint */
-		SCTP_INP_RLOCK(inp);
-		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-			/* For each association */
-			SCTP_TCB_LOCK(stcb);
-			sctp_drain_mbufs(inp, stcb);
-			SCTP_TCB_UNLOCK(stcb);
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+	VNET_ITERATOR_DECL(vnet_iter);
+
+	VNET_LIST_RLOCK_NOSLEEP();
+	VNET_FOREACH(vnet_iter) {
+		CURVNET_SET(vnet_iter);
+#endif
+		struct sctp_inpcb *inp;
+		struct sctp_tcb *stcb;
+
+		SCTP_INP_INFO_RLOCK();
+		LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
+			/* For each endpoint */
+			SCTP_INP_RLOCK(inp);
+			LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+				/* For each association */
+				SCTP_TCB_LOCK(stcb);
+				sctp_drain_mbufs(inp, stcb);
+				SCTP_TCB_UNLOCK(stcb);
+			}
+			SCTP_INP_RUNLOCK(inp);
 		}
-		SCTP_INP_RUNLOCK(inp);
+		SCTP_INP_INFO_RUNLOCK();
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+		CURVNET_RESTORE();
 	}
-	SCTP_INP_INFO_RUNLOCK();
+	VNET_LIST_RUNLOCK_NOSLEEP();
+#endif
 }
 
 /*
