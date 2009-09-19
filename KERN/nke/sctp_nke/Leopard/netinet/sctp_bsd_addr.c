@@ -517,9 +517,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
 
-#if 0
 	IFNET_RLOCK();
-#endif
 	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_list) {
 		IF_ADDR_LOCK(ifn);
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
@@ -567,9 +565,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 		}
 		IF_ADDR_UNLOCK(ifn);
 	}
-#if 0
 	IFNET_RUNLOCK();
-#endif
 }
 #endif
 
@@ -672,9 +668,7 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 
-#if 0
 	IFNET_RLOCK();
-#endif
 	TAILQ_FOREACH(ifn, &MODULE_GLOBAL(ifnet), if_list) {
 		if (!(*pred)(ifn)) {
 			continue;
@@ -683,9 +677,7 @@ sctp_add_or_del_interfaces(int (*pred)(struct ifnet *), int add)
 			sctp_addr_change(ifa, add ? RTM_ADD : RTM_DELETE);
 		}
 	}
-#if 0
 	IFNET_RUNLOCK();
-#endif
 }
 #endif
 #if defined (__APPLE__)
