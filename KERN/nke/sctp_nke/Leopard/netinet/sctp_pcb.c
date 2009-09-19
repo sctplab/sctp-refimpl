@@ -7006,10 +7006,6 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 
 	/* We look for anything larger than the cum-ack + 1 */
 
-	SCTP_STAT_INCR(sctps_protocol_drain_calls);
-	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
-		return;
-	}
 	asoc = &stcb->asoc;
 	if (asoc->cumulative_tsn == asoc->highest_tsn_inside_map) {
 		/* none we can reneg on. */
@@ -7173,10 +7169,15 @@ sctp_drain()
 	 * is LOW on MBUF's and needs help. This is where reneging will
 	 * occur. We really hope this does NOT happen!
 	 */
-
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	VNET_ITERATOR_DECL(vnet_iter);
+#endif
 
+	SCTP_STAT_INCR(sctps_protocol_drain_calls);
+	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
+		return;
+	}
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	VNET_LIST_RLOCK_NOSLEEP();
 	VNET_FOREACH(vnet_iter) {
 		CURVNET_SET(vnet_iter);
