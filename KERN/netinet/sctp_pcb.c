@@ -7186,7 +7186,6 @@ sctp_drain()
 		struct sctp_tcb *stcb;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
-	
 		SCTP_STAT_INCR(sctps_protocol_drain_calls);
 		if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
 #ifdef VIMAGE
