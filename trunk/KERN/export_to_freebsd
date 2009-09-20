@@ -8,7 +8,7 @@ if test $1 -eq "800000"
 then
     ver=800056
     echo "using ver:$ver"
-    prepare_script="freebsd_prepare8"
+    prepare_script="freebsd_prepare"
 fi
 if test $1 -ne "800000"
 then
