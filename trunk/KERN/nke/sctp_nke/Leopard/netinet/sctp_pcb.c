@@ -55,7 +55,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 197327 2009-09-19 14:18:42Z tuex
 #define APPLE_FILE_NO 4
 #endif
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 VNET_DEFINE(struct sctp_base_info, system_base_info);
 #else
 struct sctp_base_info system_base_info;
@@ -7169,15 +7169,15 @@ sctp_drain()
 	 * is LOW on MBUF's and needs help. This is where reneging will
 	 * occur. We really hope this does NOT happen!
 	 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	VNET_ITERATOR_DECL(vnet_iter);
-#endif
-
+#else
 	SCTP_STAT_INCR(sctps_protocol_drain_calls);
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
 		return;
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	VNET_LIST_RLOCK_NOSLEEP();
 	VNET_FOREACH(vnet_iter) {
 		CURVNET_SET(vnet_iter);
@@ -7185,6 +7185,16 @@ sctp_drain()
 		struct sctp_inpcb *inp;
 		struct sctp_tcb *stcb;
 
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+		SCTP_STAT_INCR(sctps_protocol_drain_calls);
+		if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
+#ifdef VIMAGE
+			continue;
+#else
+			return;
+#endif			
+		}
+#endif
 		SCTP_INP_INFO_RLOCK();
 		LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 			/* For each endpoint */
@@ -7198,7 +7208,7 @@ sctp_drain()
 			SCTP_INP_RUNLOCK(inp);
 		}
 		SCTP_INP_INFO_RUNLOCK();
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 	}
 	VNET_LIST_RUNLOCK_NOSLEEP();

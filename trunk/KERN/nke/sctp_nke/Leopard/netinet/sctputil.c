@@ -1469,7 +1469,7 @@ sctp_timeout_handler(void *t)
 	inp = (struct sctp_inpcb *)tmr->ep;
 	stcb = (struct sctp_tcb *)tmr->tcb;
 	net = (struct sctp_nets *)tmr->net;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	CURVNET_SET((struct vnet *)tmr->vnet);
 #endif
 	did_output = 1;
@@ -1485,7 +1485,7 @@ sctp_timeout_handler(void *t)
 		 * SCTP_PRINTF("Stale SCTP timer fired (%p), ignoring...\n",
 		 * tmr);
 		 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 #endif
 		return;
@@ -1496,14 +1496,14 @@ sctp_timeout_handler(void *t)
 		 * SCTP_PRINTF("SCTP timer fired with invalid type: 0x%x\n",
 		 * tmr->type);
 		 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 #endif
 		return;
 	}
 	tmr->stopped_from = 0xa002;
 	if ((tmr->type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL)) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 #endif
 		return;
@@ -1529,7 +1529,7 @@ sctp_timeout_handler(void *t)
 		     (tmr->type != SCTP_TIMER_TYPE_ASOCKILL))
 			) {
 			SCTP_INP_DECR_REF(inp);
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 			CURVNET_RESTORE();
 #endif
 			return;
@@ -1543,7 +1543,7 @@ sctp_timeout_handler(void *t)
 			if (inp) {
 				SCTP_INP_DECR_REF(inp);
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 			CURVNET_RESTORE();
 #endif
 			return;
@@ -1558,7 +1558,7 @@ sctp_timeout_handler(void *t)
 		if (stcb) {
 			atomic_add_int(&stcb->asoc.refcnt, -1);
 		}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 #endif
 		return;
@@ -1575,7 +1575,7 @@ sctp_timeout_handler(void *t)
 			if (inp) {
 				SCTP_INP_DECR_REF(inp);
 			}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 			CURVNET_RESTORE();
 #endif
 			return;
@@ -1955,7 +1955,7 @@ out_decr:
 out_no_decr:
 	SCTPDBG(SCTP_DEBUG_TIMER1, "Timer now complete (type %d)\n",
 			  type);
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	CURVNET_RESTORE();
 #endif
 }
