@@ -642,7 +642,7 @@ struct sctp_tcb {
  * goes with the base info. sctp_pcb.c has
  * the real definition.
  */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 VNET_DECLARE(struct sctp_base_info, system_base_info) ;
 #else
 extern struct sctp_base_info system_base_info;
