@@ -41,7 +41,15 @@ __FBSDID("$FreeBSD$");
 #ifdef USE_MD5
 #include <crypto/md5.h>
 #else
+#ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
+#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
+#include <libkern/crypto/sha1.h>
+#else
+#include <crypto/sha1.h>
+#endif
+#endif
 #endif				/* USE_MD5 */
 #include <netinet/sctp_hashdriver.h>
 
@@ -63,7 +71,7 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 	md5_ctxt context;
 
 #else
-	struct sha1_context context;
+	SHA1_CTX context;
 
 #endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
@@ -84,7 +92,7 @@ sctp_hash_digest(char *key, int key_len, char *text, int text_len,
 		key = tk;
 		key_len = 16;
 #else
-		struct sha1_context tctx;
+		SHA1_CTX tctx;
 
 		SHA1_Init(&tctx);
 		SHA1_Update(&tctx, (unsigned char *)key, key_len);
@@ -158,7 +166,7 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 	md5_ctxt context;
 
 #else
-	struct sha1_context context;
+	SHA1_CTX context;
 
 #endif				/* USE_MD5 */
 	/* inner padding - key XORd with ipad */
@@ -179,7 +187,7 @@ sctp_hash_digest_m(char *key, int key_len, struct mbuf *m, int offset,
 		key = tk;
 		key_len = 16;
 #else
-		struct sha1_context tctx;
+		SHA1_CTX tctx;
 
 		SHA1_Init(&tctx);
 		SHA1_Update(&tctx, (unsigned char *)key, key_len);

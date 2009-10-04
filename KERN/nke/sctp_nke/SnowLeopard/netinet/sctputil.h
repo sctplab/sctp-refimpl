@@ -323,7 +323,7 @@ do { \
 	} \
 } while (0)
 
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || defined(__APPLE__)
 /* new functions to start/stop udp tunneling */
 void sctp_over_udp_stop(void);
 int sctp_over_udp_start(void);

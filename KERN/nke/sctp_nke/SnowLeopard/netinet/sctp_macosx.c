@@ -63,6 +63,7 @@
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
+#include <sys/systm.h>
 #include <net/route.h>
 #include <netinet/ip.h>
 #include <net/if_dl.h>
@@ -76,8 +77,8 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
+#include <netinet/sctp_bsd_addr.h>
 #include <net/kpi_interface.h>
-
 #define APPLE_FILE_NO 5
 
 /* sctp_peeloff() support via socket option */
@@ -89,8 +90,13 @@ extern struct fileops socketops;
 
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #if defined(APPLE_LEOPARD)
 #define CONFIG_MACF_SOCKET_SUBSET 1
+#endif
+#if defined(APPLE_SNOWLEOPARD)
+#define CONFIG_MACF 1
+#endif
 #include <sys/namei.h>
 #include <sys/vnode_internal.h>
 #if CONFIG_MACF_SOCKET_SUBSET
@@ -127,7 +133,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int fd = uap->s;
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	/* workaround sonewconn() issue where qlimits are checked.
 	   i.e. sonewconn() can only be done on listening sockets */
 	int old_qlimit;
@@ -143,7 +149,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		error = EBADF;
 		goto out;
 	}
-#if defined(APPLE_LEOPARD) && CONFIG_MACF_SOCKET_SUBSET
+#if (defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)) && CONFIG_MACF_SOCKET_SUBSET
 	if ((error = mac_socket_check_accept(kauth_cred_get(), head)) != 0)
 		goto out;
 #endif /* MAC_SOCKET_SUBSET */
@@ -156,7 +162,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
 
 	fflag = fp->f_flag;
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	error = falloc(p, &fp, &newfd, vfs_context_current());
 #else
 	proc_fdlock(p);
@@ -170,29 +176,29 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		 * have a chance at it.
 		 */
 		/* SCTP will NOT put the connection back onto queue */
-#if !defined(APPLE_LEOPARD)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD)
 		proc_fdunlock(p);
 #endif
 		socket_lock(head, 0);
 		goto out;
 	}
-#if !defined(APPLE_LEOPARD)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD)
 	*fdflags(p, newfd) &= ~UF_RESERVED;
 #endif
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
 
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	old_qlimit = head->so_qlimit;	/* work around sonewconn() needing listen */
 	head->so_qlimit = 1;
 #endif
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	head->so_qlimit = old_qlimit;
 #endif
 	if (so == NULL) {
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		goto release_fd;
 #else
 		goto out;
@@ -200,7 +206,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 	socket_unlock(head, 0);
 
-#if defined(APPLE_LEOPARD) && CONFIG_MACF_SOCKET_SUBSET
+#if (defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)) && CONFIG_MACF_SOCKET_SUBSET
 	/*
 	 * Pass the pre-accepted socket to the MAC framework. This is
 	 * cheaper than allocating a file descriptor for the socket,
@@ -221,7 +227,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
-#if !defined(APPLE_LEOPARD)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD)
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
 #endif
@@ -232,7 +238,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         so->so_head = NULL;
 	socket_unlock(so, 1);
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 release_fd:
 	proc_fdlock(p);
 	procfdtbl_releasefd(p, newfd, NULL);
@@ -249,8 +255,13 @@ out:
 /* socket lock pr_xxx functions */
 #if defined(__APPLE__)
 /* Tiger only */
+#if defined(APPLE_SNOWLEOPARD)
+int
+sctp_lock(struct socket *so, int refcount, void *debug)
+#else
 int
 sctp_lock(struct socket *so, int refcount, int lr)
+#endif
 {
 	if (so->so_pcb) {
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
@@ -270,7 +281,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 		     ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
-#if defined(__ppc__)
+#if !defined(APPLE_SNOWLEOPARD) && defined(__ppc__)
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller1 = lr;
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller2 = refcount;
 #endif
@@ -278,14 +289,19 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	return (0);
 }
 
+#if defined(APPLE_SNOWLEOPARD)
+int
+sctp_unlock(struct socket *so, int refcount, void *debug)
+#else
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
+#endif
 {
 	if (so->so_pcb) {	
 		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
 			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
 			     ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
-#if defined(__ppc__)
+#if !defined(APPLE_SNOWLEOPARD) && defined(__ppc__)
 		((struct sctp_inpcb *)so->so_pcb)->unlock_caller1 = lr;
 		((struct sctp_inpcb *)so->so_pcb)->unlock_caller2 = refcount;
 #endif
