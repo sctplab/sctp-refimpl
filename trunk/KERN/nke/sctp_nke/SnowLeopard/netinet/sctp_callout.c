@@ -58,14 +58,12 @@ sctp_os_timer_init(sctp_os_timer_t *c)
 
 void
 sctp_os_timer_start(sctp_os_timer_t *c, int to_ticks, void (*ftn) (void *),
-		    void *arg) {
-	int s;
-
+		    void *arg)
+{
 	/* paranoia */
 	if ((c == NULL) || (ftn == NULL))
 	    return;
 
-	s = splhigh();
 	SCTP_TIMERQ_LOCK();
 	/* check to see if we're rescheduling a timer */
 	if (c->c_flags & SCTP_CALLOUT_PENDING) {
@@ -94,15 +92,11 @@ sctp_os_timer_start(sctp_os_timer_t *c, int to_ticks, void (*ftn) (void *),
 	c->c_time = ticks + to_ticks;
 	TAILQ_INSERT_TAIL(&SCTP_BASE_INFO(callqueue), c, tqe);
 	SCTP_TIMERQ_UNLOCK();
-	splx(s);
 }
 
 int
 sctp_os_timer_stop(sctp_os_timer_t *c)
 {
-	int s;
-
-	s = splhigh();
 	SCTP_TIMERQ_LOCK();
 	/*
 	 * Don't attempt to delete a callout that's not on the queue.
@@ -110,7 +104,6 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 	if (!(c->c_flags & SCTP_CALLOUT_PENDING)) {
 		c->c_flags &= ~SCTP_CALLOUT_ACTIVE;
 		SCTP_TIMERQ_UNLOCK();
-		splx(s);
 		return (0);
 	}
 	c->c_flags &= ~(SCTP_CALLOUT_ACTIVE | SCTP_CALLOUT_PENDING);
@@ -119,7 +112,6 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
 	}
 	TAILQ_REMOVE(&SCTP_BASE_INFO(callqueue), c, tqe);
 	SCTP_TIMERQ_UNLOCK();
-	splx(s);
 	return (1);
 }
 
@@ -130,14 +122,12 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
  */
 #endif
 void
-sctp_fasttim(void)
+sctp_fasttim(void *arg)
 {
-	int s;
 	sctp_os_timer_t *c;
 	void (*c_func)(void *);
 	void *c_arg;
 
-	s = splhigh();
 #if defined(__APPLE__)
 	/* update our tick count */
 	ticks += SCTP_BASE_VAR(sctp_main_timer_ticks);
@@ -153,11 +143,9 @@ sctp_fasttim(void)
 			c_arg = c->c_arg;
 			c->c_flags &= ~SCTP_CALLOUT_PENDING;
 			sctp_os_timer_current = c;
-			splx(s);
 			SCTP_TIMERQ_UNLOCK();
 			c_func(c_arg);
 			SCTP_TIMERQ_LOCK();
-			s = splhigh();
 			sctp_os_timer_current = NULL;
 			c = sctp_os_timer_next;
 		} else {
@@ -171,5 +159,4 @@ sctp_fasttim(void)
 	/* restart the main timer */
 	sctp_start_main_timer();
 #endif
-	splx(s);
 }

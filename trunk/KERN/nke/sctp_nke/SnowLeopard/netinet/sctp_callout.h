@@ -76,6 +76,6 @@ int sctp_os_timer_stop(sctp_os_timer_t *);
 #define	SCTP_OS_TIMER_ACTIVE(tmr) ((tmr)->c_flags & SCTP_CALLOUT_ACTIVE)
 #define	SCTP_OS_TIMER_DEACTIVATE(tmr) ((tmr)->c_flags &= ~SCTP_CALLOUT_ACTIVE)
 
-void sctp_fasttim(void);
+void sctp_fasttim(void *);
 
 #endif

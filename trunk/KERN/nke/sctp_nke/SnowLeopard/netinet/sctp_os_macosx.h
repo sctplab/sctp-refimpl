@@ -34,6 +34,7 @@
  * includes
  */
 #include <sys/param.h>
+#include <kern/thread.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -46,7 +47,9 @@
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
 #if defined(__APPLE__)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <sys/proc_internal.h>
+#endif
 #include <sys/uio_internal.h>
 #endif
 #include <sys/random.h>
@@ -79,6 +82,7 @@
 #include <netinet6/ip6protosw.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
+#include <netinet6/in6_pcb.h>
 #endif /* INET6 */
 
 #ifdef IPSEC
@@ -270,6 +274,7 @@ extern struct fileops socketops;
  */
 typedef struct vm_zone *sctp_zone_t;
 extern zone_t kalloc_zone(vm_size_t);	/* XXX */
+#include <kern/zalloc.h>
 
 /* SCTP_ZONE_INIT: initialize the zone */
 #define SCTP_ZONE_INIT(zone, name, size, number) \
@@ -277,16 +282,16 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 
 /* SCTP_ZONE_GET: allocate element from the zone */
 #define SCTP_ZONE_GET(zone, type) \
-	(type *)zalloc(zone);
+	(type *)zalloc((zone_t)zone);
 
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
-	zfree(zone, element);
+	zfree((zone_t)zone, element);
 
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
 #define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #define SCTP_M_COPYM m_copym
 #else
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
@@ -436,7 +441,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
@@ -481,7 +486,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <libkern/crypto/sha1.h>
 #else
 #include <crypto/sha1.h>
@@ -496,7 +501,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #include <crypto/sha2/sha2.h>
 #endif
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <libkern/crypto/md5.h>
 #else
 #include <sys/md5.h>
@@ -541,9 +546,13 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #endif
 /* additional protosw entries for Mac OS X 10.4 */
 #if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+int sctp_lock(struct socket *so, int refcount, void *debug);
+int sctp_unlock(struct socket *so, int refcount, void *debug);
+#else
 int sctp_lock(struct socket *so, int refcount, int lr);
 int sctp_unlock(struct socket *so, int refcount, int lr);
-
+#endif
 #ifdef _KERN_LOCKS_H_
 lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
 #else

@@ -5347,8 +5347,11 @@ sctp_sorecvmsg(struct socket *so,
 	} else {
 		in_flags = 0;
 	}
+#if defined(APPLE_SNOWLEOPARD)
+	slen = uio_resid(uio);
+#else
 	slen = uio->uio_resid;
-
+#endif
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -5378,16 +5381,26 @@ sctp_sorecvmsg(struct socket *so,
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
+#if defined(APPLE_SNOWLEOPARD)
+		sctp_misc_ints(SCTP_SORECV_ENTER,
+			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio_resid(uio));
+#else
 		sctp_misc_ints(SCTP_SORECV_ENTER,
 			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 	}
 #if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #endif
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
+#if defined(APPLE_SNOWLEOPARD)
+		sctp_misc_ints(SCTP_SORECV_ENTERPL,
+			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio_resid(uio));
+#else
 		sctp_misc_ints(SCTP_SORECV_ENTERPL,
 			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 	}
 
 #if defined(__APPLE__)
@@ -5883,7 +5896,11 @@ sctp_sorecvmsg(struct socket *so,
 		m = control->data;
 		while (m) {
 			/* Move out all we can */
+#if defined(APPLE_SNOWLEOPARD)
+			cp_len = (int)uio_resid(uio);
+#else
 			cp_len = (int)uio->uio_resid;
+#endif
 			my_len = (int)SCTP_BUF_LEN(m);
 			if (cp_len > my_len) {
 				/* not enough in this buf */
@@ -6008,7 +6025,11 @@ sctp_sorecvmsg(struct socket *so,
 					copied_so_far += cp_len;
 				}
 			}
+#if defined(APPLE_SNOWLEOPARD)
+			if ((out_flags & MSG_EOR) || (uio_resid(uio) == 0)) {
+#else
 			if ((out_flags & MSG_EOR) || (uio->uio_resid == 0)) {
+#endif
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -6088,7 +6109,11 @@ sctp_sorecvmsg(struct socket *so,
 		if (out_flags & MSG_EOR) {
 			goto release;
 		}
+#if defined(APPLE_SNOWLEOPARD)
+		if ((uio_resid(uio) == 0) ||
+#else
 		if ((uio->uio_resid == 0) ||
+#endif
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
 			goto release;
@@ -6228,7 +6253,11 @@ sctp_sorecvmsg(struct socket *so,
 		if (control->spec_flags & M_NOTIFICATION) {
 			out_flags |= MSG_NOTIFICATION;
 		}
+#if defined(APPLE_SNOWLEOPARD)
+		/*uio->uio_resid = control->length; FIXME SNOWLEOPARD*/
+#else
 		uio->uio_resid = control->length;
+#endif
 		*mp = control->data;
 		m = control->data;
 		while (m) {
@@ -6340,13 +6369,21 @@ sctp_sorecvmsg(struct socket *so,
 		if (stcb) {
 			sctp_misc_ints(SCTP_SORECV_DONE,
 				       freed_so_far,
+#if defined(APPLE_SNOWLEOPARD)
+				       ((uio) ? (slen-uio_resid(uio)) : slen), 
+#else
 				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
 				       stcb->asoc.my_rwnd,
 				       so->so_rcv.sb_cc);
 		} else {
 			sctp_misc_ints(SCTP_SORECV_DONE,
 				       freed_so_far,
+#if defined(APPLE_SNOWLEOPARD)
+				       ((uio) ? (slen-uio_resid(uio)) : slen), 
+#else
 				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
 				       0,
 				       so->so_rcv.sb_cc);
 		}
@@ -7294,154 +7331,154 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 static void
 sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 {
-  struct ip *iph;
-  struct mbuf *sp, *last;
-  struct udphdr *uhdr;
-  uint16_t port=0, len;
-  int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
+	struct ip *iph;
+	struct mbuf *sp, *last;
+	struct udphdr *uhdr;
+	uint16_t port=0, len;
+	int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
 
-  /* Split out the mbuf chain. Leave the
-   * IP header in m, place the
-   * rest in the sp.
-   */
-  if ((m->m_flags & M_PKTHDR) == 0) {
-	/* Can't handle one that is not a pkt hdr */
-	goto out;
-  }
-  /* pull the src port */
-  iph = mtod(m, struct ip *);
-  uhdr = (struct udphdr *)((caddr_t)iph + off);
-
-  port = uhdr->uh_sport;
-  sp = m_split(m, off, M_DONTWAIT);
-  if (sp == NULL) {
-	/* Gak, drop packet, we can't do a split */
-	goto out;
-  }
-  if (sp->m_pkthdr.len < header_size) {
-	/* Gak, packet can't have an SCTP header in it - to small */
-	m_freem(sp);
-	goto out;
-  }
-  /* ok now pull up the UDP header and SCTP header together */
-  sp = m_pullup(sp, header_size);
-  if (sp == NULL) {
-	/* Gak pullup failed */
-	goto out;
-  }
-  /* trim out the UDP header */
-  m_adj(sp, sizeof(struct udphdr));
-
-  /* Now reconstruct the mbuf chain */
-  /* 1) find last one */
-  last = m;
-  while (last->m_next != NULL) {
-	last = last->m_next;
-  }
-  last->m_next = sp;
-  m->m_pkthdr.len += sp->m_pkthdr.len;
-  last = m;
-  while (last != NULL) {
-	last = last->m_next;
-  }
-  /* Now its ready for sctp_input or sctp6_input */
-  iph = mtod(m, struct ip *);
-  switch (iph->ip_v) {
-  case IPVERSION:
-	{
-	  /* its IPv4 */
-	    len = SCTP_GET_IPV4_LENGTH(iph);
-		len -= sizeof(struct udphdr);
-        SCTP_GET_IPV4_LENGTH(iph) = len;
-	    sctp_input_with_port(m, off, port);
-  	    break;
+	/* Split out the mbuf chain. Leave the
+	 * IP header in m, place the
+	 * rest in the sp.
+	 */
+	if ((m->m_flags & M_PKTHDR) == 0) {
+		/* Can't handle one that is not a pkt hdr */
+		goto out;
 	}
+	/* pull the src port */
+	iph = mtod(m, struct ip *);
+	uhdr = (struct udphdr *)((caddr_t)iph + off);
+
+	port = uhdr->uh_sport;
+	sp = m_split(m, off, M_DONTWAIT);
+	if (sp == NULL) {
+		/* Gak, drop packet, we can't do a split */
+		goto out;
+	}
+	if (sp->m_pkthdr.len < header_size) {
+		/* Gak, packet can't have an SCTP header in it - to small */
+		m_freem(sp);
+		goto out;
+	}
+	/* ok now pull up the UDP header and SCTP header together */
+	sp = m_pullup(sp, header_size);
+	if (sp == NULL) {
+		/* Gak pullup failed */
+		goto out;
+	}
+	/* trim out the UDP header */
+	m_adj(sp, sizeof(struct udphdr));
+
+	/* Now reconstruct the mbuf chain */
+	/* 1) find last one */
+	last = m;
+	while (last->m_next != NULL) {
+		last = last->m_next;
+	}
+	last->m_next = sp;
+	m->m_pkthdr.len += sp->m_pkthdr.len;
+	last = m;
+	while (last != NULL) {
+		last = last->m_next;
+	}
+	/* Now its ready for sctp_input or sctp6_input */
+	iph = mtod(m, struct ip *);
+	switch (iph->ip_v) {
+		case IPVERSION:
+		{
+			/* its IPv4 */
+			len = SCTP_GET_IPV4_LENGTH(iph);
+			len -= sizeof(struct udphdr);
+			SCTP_GET_IPV4_LENGTH(iph) = len;
+			sctp_input_with_port(m, off, port);
+			break;
+		}
 #ifdef INET6
-  case IPV6_VERSION >> 4:
-	{
-		/* its IPv6 - NOT supported */
-		goto out;	  
-		break;
-
-	}
+		case IPV6_VERSION >> 4:
+		{
+			/* its IPv6 - NOT supported */
+			goto out;	  
+			break;
+		}
 #endif
-  default:
-	{
-	  m_freem(m);
-	  break;
+		default:
+		{
+			m_freem(m);
+			break;
+		}
 	}
-  }
-  return;
+	return;
  out:
-  m_freem(m);
+	m_freem(m);
 }
 #endif
 
 void sctp_over_udp_stop(void)
 {
-     struct socket *sop;
- 	 /*
-	  * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
-	  */
-     if (SCTP_BASE_INFO(udp_tun_socket) == NULL) {
-	   /* Nothing to do */
-	   return;
-	 }
-	 sop = SCTP_BASE_INFO(udp_tun_socket);
-	 soclose(sop);
-	 SCTP_BASE_INFO(udp_tun_socket) = NULL;
+	struct socket *sop;
+	/*
+	 * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
+	 */
+	if (SCTP_BASE_INFO(udp_tun_socket) == NULL) {
+		/* Nothing to do */
+		return;
+	}
+	sop = SCTP_BASE_INFO(udp_tun_socket);
+	soclose(sop);
+	SCTP_BASE_INFO(udp_tun_socket) = NULL;
 }
+
 int sctp_over_udp_start(void)
 {
 #if __FreeBSD_version >= 800044
-     uint16_t port;
-	 int ret;
-	 struct sockaddr_in sin;
-	 struct socket *sop=NULL;
-	 struct thread *th;
-	 struct ucred *cred;
- 	 /*
-	  * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
-	  */
-	 port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
-	 if (port == 0) {
-	   /* Must have a port set */
-	   return(EINVAL);
-	 }
-	 if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
-	   /* Already running -- must stop first */
-	   return(EALREADY);
-	 }
-	 th = curthread;
-	 cred = th->td_ucred;
-	 if ((ret = socreate(PF_INET, &sop,
-				  SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
-	   return (ret);
-	 }
-	 SCTP_BASE_INFO(udp_tun_socket) = sop;
- 	 /* call the special UDP hook */
-	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
-	 if (ret) {
-	   goto exit_stage_left;
-	 }
-	 /* Ok we have a socket, bind it to the port*/
-	 memset(&sin, 0, sizeof(sin));
-	 sin.sin_len = sizeof(sin);
-	 sin.sin_family = AF_INET;
-	 sin.sin_port = htons(port);
-	 ret = sobind(sop, (struct sockaddr *)&sin, th);
-	 if (ret) {
-	   /* Close up we cant get the port */
-	 exit_stage_left:
-	   sctp_over_udp_stop();
-	   return (ret);
-	 }
-	 /* Ok we should now get UDP packets directly to our input routine
-	  * sctp_recv_upd_tunneled_packet().
-	  */
-	 return (0);
+	uint16_t port;
+	int ret;
+	struct sockaddr_in sin;
+	struct socket *sop=NULL;
+	struct thread *th;
+	struct ucred *cred;
+	/*
+	 * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
+	 */
+	port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
+	if (port == 0) {
+		/* Must have a port set */
+		return(EINVAL);
+	}
+	if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
+		/* Already running -- must stop first */
+		return(EALREADY);
+	}
+	th = curthread;
+	cred = th->td_ucred;
+	if ((ret = socreate(PF_INET, &sop,
+	                    SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
+		return (ret);
+	}
+	SCTP_BASE_INFO(udp_tun_socket) = sop;
+	/* call the special UDP hook */
+	ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
+	if (ret) {
+		goto exit_stage_left;
+	}
+	/* Ok we have a socket, bind it to the port*/
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_len = sizeof(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+	ret = sobind(sop, (struct sockaddr *)&sin, th);
+	if (ret) {
+		/* Close up we cant get the port */
+		exit_stage_left:
+		sctp_over_udp_stop();
+		return (ret);
+	}
+	/* Ok we should now get UDP packets directly to our input routine
+	 * sctp_recv_upd_tunneled_packet().
+	 */
+	return (0);
 #else
-	 return (1);
+	return (1);
 #endif	 
 }
 #endif
