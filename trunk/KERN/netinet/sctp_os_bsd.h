@@ -173,6 +173,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #else
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STATS_SYSCTL system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
 #define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
 #define SCTP_BASE_VAR(__m) system_base_info.__m
