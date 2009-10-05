@@ -7361,8 +7361,6 @@ sctp_select_a_stream(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	if (strq == NULL) {
 		strq = asoc->last_out_stream = TAILQ_FIRST(&asoc->out_wheel);
 	}
-	/* Save off the last stream */
-	asoc->last_out_stream = strq;
 	return(strq);
 
 }
@@ -7440,7 +7438,9 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		bail = 0;
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, 
 						       &giveup, eeor_mode, &bail);
-		asoc->last_out_stream = strq;
+		if (moved_how_much)
+		  asoc->last_out_stream = strq;
+		
 		if (locked) {
 			asoc->locked_on_sending = strq;
 			if ((moved_how_much == 0) || (giveup) || bail)
