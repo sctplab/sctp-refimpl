@@ -73,9 +73,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197326 2009-09-19 14:02:16Z t
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/route.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
-#include <net/vnet.h>
-#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -86,7 +83,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197326 2009-09-19 14:02:16Z t
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 80056
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
 #include <net/vnet.h>
 #endif
 
