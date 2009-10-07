@@ -5787,26 +5787,7 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
 		/* already on wheel */
 		goto outof_here;
 	}
-	stre = TAILQ_FIRST(&asoc->out_wheel);
-	if (stre == NULL) {
-		/* only one on wheel */
-		TAILQ_INSERT_HEAD(&asoc->out_wheel, strq, next_spoke);
-		goto outof_here;
-	}
-	for (; stre; stre = strn) {
-		strn = TAILQ_NEXT(stre, next_spoke);
-		if (stre->stream_no > strq->stream_no) {
-			TAILQ_INSERT_BEFORE(stre, strq, next_spoke);
-			goto outof_here;
-		} else if (stre->stream_no == strq->stream_no) {
-			/* huh, should not happen */
-			goto outof_here;
-		} else if (strn == NULL) {
-			/* next one is null */
-			TAILQ_INSERT_AFTER(&asoc->out_wheel, stre, strq,
-			    next_spoke);
-		}
-	}
+	TAILQ_INSERT_TAIL(&asoc->out_wheel, strq, next_spoke);
  outof_here:
 	if(holds_lock == 0) {
 		SCTP_TCB_SEND_UNLOCK(stcb);
