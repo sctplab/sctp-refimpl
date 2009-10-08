@@ -5777,8 +5777,6 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_stream_out *strq, int holds_lock)
 {
-	struct sctp_stream_out *stre, *strn;
-
 	if(holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
