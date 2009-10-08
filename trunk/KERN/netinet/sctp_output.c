@@ -3653,7 +3653,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sctp_free_ifa(_lsrc);
 			} else {
 				ip->ip_src = over_addr->sin.sin_addr;
-				SCTP_RTALLOC((&ro->ro_rt), vrf_id);
+				SCTP_RTALLOC(ro, vrf_id);
 			}
 		}
 		if (port) {
@@ -4035,20 +4035,21 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				return (EINVAL);
 			  }
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
-		    if (over_addr == NULL) {
-			    struct sctp_ifa *_lsrc;
+			if (over_addr == NULL) {
+				struct sctp_ifa *_lsrc;
+
 				_lsrc = sctp_source_address_selection(inp, stcb, ro,
-													  net,
-													  out_of_asoc_ok,
-													  vrf_id);
+				                                      net,
+				                                      out_of_asoc_ok,
+				                                      vrf_id);
 				if (_lsrc == NULL) {
-				  goto no_route;
+					goto no_route;
 				}
 				lsa6->sin6_addr = _lsrc->address.sin6.sin6_addr;
 				sctp_free_ifa(_lsrc);
-		    } else {
-			    lsa6->sin6_addr = over_addr->sin6.sin6_addr;
-				SCTP_RTALLOC((&ro->ro_rt), vrf_id);
+			} else {
+				lsa6->sin6_addr = over_addr->sin6.sin6_addr;
+				SCTP_RTALLOC(ro, vrf_id);
 			}
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifdef SCTP_KAME
