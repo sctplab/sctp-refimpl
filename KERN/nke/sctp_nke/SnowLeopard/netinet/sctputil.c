@@ -6254,7 +6254,7 @@ sctp_sorecvmsg(struct socket *so,
 			out_flags |= MSG_NOTIFICATION;
 		}
 #if defined(APPLE_SNOWLEOPARD)
-		/*uio->uio_resid = control->length; FIXME SNOWLEOPARD*/
+		uio_setresid(uio, control->length);
 #else
 		uio->uio_resid = control->length;
 #endif
