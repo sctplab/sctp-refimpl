@@ -4247,7 +4247,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if !defined(__Panda__) && !defined(__Userspace__)
 			else if (ifp) {
 #if defined(__APPLE__)
-#if !defined(APPLE_LEOPARD)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #endif			  
 #elif defined(__Windows__)
@@ -6545,7 +6545,15 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	ca->sndrcv.sinfo_flags &= ~SCTP_SENDALL;
 	/* get length and mbuf chain */
 	if (uio) {
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		ca->sndlen = uio_resid(uio);
+#else
 		ca->sndlen = uio->uio_resid;
+#endif
+#else
+		ca->sndlen = uio->uio_resid;
+#endif
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 0);
 #endif
@@ -12460,7 +12468,15 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 	int left, cancpy, willcpy;
 	struct mbuf *m,*prev, *head;
 
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+        left = min(uio_resid(uio), max_send_len);
+#else
         left = min(uio->uio_resid, max_send_len);
+#endif
+#else
+        left = min(uio->uio_resid, max_send_len);
+#endif
 	/* Always get a header just in case */
 	head = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
 	if (head == NULL) {
@@ -12647,8 +12663,24 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+	sp->length = min(uio_resid(uio), max_send_len);
+#else
 	sp->length = min(uio->uio_resid, max_send_len);
+#endif
+#else
+	sp->length = min(uio->uio_resid, max_send_len);
+#endif
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+	if ((sp->length == (uint32_t)uio_resid(uio)) &&
+#else
 	if ((sp->length == (uint32_t)uio->uio_resid) &&
+#endif
+#else
+	if ((sp->length == (uint32_t)uio->uio_resid) &&
+#endif
 	    ((user_marks_eor == 0) || 
 	     (srcv->sinfo_flags & SCTP_EOF) ||
 	     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))) {
@@ -12863,11 +12895,27 @@ sctp_lower_sosend(struct socket *so,
 	user_marks_eor = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	atomic_add_int(&inp->total_sends, 1);
 	if (uio) {
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		if (uio_resid(uio) < 0) {
+#else
 		if (uio->uio_resid < 0) {
+#endif
+#else
+		if (uio->uio_resid < 0) {
+#endif
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 			return (EINVAL);
 		}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		sndlen = uio_resid(uio);
+#else
 		sndlen = uio->uio_resid;
+#endif
+#else
+		sndlen = uio->uio_resid;
+#endif
 	} else {
 		top = SCTP_HEADER_TO_CHAIN(i_pak);
 #ifdef __Panda__        
@@ -13615,10 +13663,18 @@ skip_preblock:
 		struct sctp_stream_queue_pending *sp;
 		struct sctp_stream_out *strm;
 		uint32_t sndout, initial_out;
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		initial_out = uio_resid(uio);
+#else
 		initial_out = uio->uio_resid;
+#endif
+#else
+		initial_out = uio->uio_resid;
+#endif
 
 		SCTP_TCB_SEND_LOCK(stcb);
-		if ((asoc->stream_locked) &&  
+		if ((asoc->stream_locked) &&
 		    (asoc->stream_locked_on  != srcv->sinfo_stream)) {
 			SCTP_TCB_SEND_UNLOCK(stcb);
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
@@ -13683,7 +13739,15 @@ skip_preblock:
 
 			}
 		}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		while (uio_resid(uio) > 0) {
+#else
 		while (uio->uio_resid > 0) {
+#endif
+#else
+		while (uio->uio_resid > 0) {
+#endif
 			/* How much room do we have? */
 			struct mbuf *new_tail, *mm;
 
@@ -13694,7 +13758,15 @@ skip_preblock:
 
 			if ((max_len > SCTP_BASE_SYSCTL(sctp_add_more_threshold)) ||
 			    (max_len && (SCTP_SB_LIMIT_SND(so) < SCTP_BASE_SYSCTL(sctp_add_more_threshold))) ||
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+			    (uio_resid(uio) && (uio_resid(uio) <= (int)max_len))) {
+#else
 			    (uio->uio_resid && (uio->uio_resid <= (int)max_len))) {
+#endif
+#else
+			    (uio->uio_resid && (uio->uio_resid <= (int)max_len))) {
+#endif
 				sndout = 0;
 				new_tail = NULL;
 				if (hold_tcblock) {
@@ -13742,8 +13814,16 @@ skip_preblock:
 				len += sndout;
 
 				/* Did we reach EOR? */
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+				if ((uio_resid(uio) == 0) &&
+#else
 				if ((uio->uio_resid == 0) &&
-				    ((user_marks_eor == 0) || 
+#endif
+#else
+				if ((uio->uio_resid == 0) &&
+#endif
+				    ((user_marks_eor == 0) ||
 				     (srcv->sinfo_flags & SCTP_EOF) ||
 				     (user_marks_eor && (srcv->sinfo_flags & SCTP_EOR)))) {
 					sp->msg_is_complete = 1;
@@ -13752,7 +13832,15 @@ skip_preblock:
 				}
 				SCTP_TCB_SEND_UNLOCK(stcb);
 			}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+			if (uio_resid(uio) == 0) {
+#else
 			if (uio->uio_resid == 0) {
+#endif
+#else
+			if (uio->uio_resid == 0) {
+#endif
 				/* got it all? */
 				continue;
 			}
@@ -13894,8 +13982,18 @@ skip_preblock:
 			if (SCTP_SB_LIMIT_SND(so) <= (stcb->asoc.total_output_queue_size + 
 						      min(SCTP_BASE_SYSCTL(sctp_add_more_threshold), SCTP_SB_LIMIT_SND(so)))) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+						       so, asoc, uio_resid(uio));
+#else
 					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 						       so, asoc, uio->uio_resid);
+#endif
+#else
+					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
+						       so, asoc, uio->uio_resid);
+#endif
 				}
 				be.error = 0;
 #if !defined(__Panda__) && !defined(__Windows__)
@@ -13949,7 +14047,15 @@ skip_preblock:
 			asoc->stream_locked = 0;
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		if (uio_resid(uio) == 0) {
+#else
 		if (uio->uio_resid == 0) {
+#endif
+#else
+		if (uio->uio_resid == 0) {
+#endif
 			got_all_of_the_send = 1;
 		}
 	} else if (top) {

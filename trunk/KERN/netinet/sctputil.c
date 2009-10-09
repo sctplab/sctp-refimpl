@@ -5347,8 +5347,15 @@ sctp_sorecvmsg(struct socket *so,
 	} else {
 		in_flags = 0;
 	}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+	slen = uio_resid(uio);
+#else
 	slen = uio->uio_resid;
-
+#endif
+#else
+	slen = uio->uio_resid;
+#endif
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -5378,16 +5385,36 @@ sctp_sorecvmsg(struct socket *so,
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		sctp_misc_ints(SCTP_SORECV_ENTER,
+			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio_resid(uio));
+#else
 		sctp_misc_ints(SCTP_SORECV_ENTER,
 			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
+#else
+		sctp_misc_ints(SCTP_SORECV_ENTER,
+			       rwnd_req, in_eeor_mode, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 	}
 #if (defined(__FreeBSD__) && __FreeBSD_version < 700000) || defined(__Userspace__)
 	SOCKBUF_LOCK(&so->so_rcv);
 	hold_sblock = 1;
 #endif
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		sctp_misc_ints(SCTP_SORECV_ENTERPL,
+			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio_resid(uio));
+#else
 		sctp_misc_ints(SCTP_SORECV_ENTERPL,
 			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
+#else
+		sctp_misc_ints(SCTP_SORECV_ENTERPL,
+			       rwnd_req, block_allowed, so->so_rcv.sb_cc, uio->uio_resid);
+#endif
 	}
 
 #if defined(__APPLE__)
@@ -5883,7 +5910,15 @@ sctp_sorecvmsg(struct socket *so,
 		m = control->data;
 		while (m) {
 			/* Move out all we can */
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+			cp_len = (int)uio_resid(uio);
+#else
 			cp_len = (int)uio->uio_resid;
+#endif
+#else
+			cp_len = (int)uio->uio_resid;
+#endif
 			my_len = (int)SCTP_BUF_LEN(m);
 			if (cp_len > my_len) {
 				/* not enough in this buf */
@@ -6008,7 +6043,15 @@ sctp_sorecvmsg(struct socket *so,
 					copied_so_far += cp_len;
 				}
 			}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+			if ((out_flags & MSG_EOR) || (uio_resid(uio) == 0)) {
+#else
 			if ((out_flags & MSG_EOR) || (uio->uio_resid == 0)) {
+#endif
+#else
+			if ((out_flags & MSG_EOR) || (uio->uio_resid == 0)) {
+#endif
 				break;
 			}
 			if (((stcb) && (in_flags & MSG_PEEK) == 0) &&
@@ -6088,7 +6131,15 @@ sctp_sorecvmsg(struct socket *so,
 		if (out_flags & MSG_EOR) {
 			goto release;
 		}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		if ((uio_resid(uio) == 0) ||
+#else
 		if ((uio->uio_resid == 0) ||
+#endif
+#else
+		if ((uio->uio_resid == 0) ||
+#endif
 		    ((in_eeor_mode) && (copied_so_far >= max(so->so_rcv.sb_lowat, 1)))
 			) {
 			goto release;
@@ -6228,7 +6279,15 @@ sctp_sorecvmsg(struct socket *so,
 		if (control->spec_flags & M_NOTIFICATION) {
 			out_flags |= MSG_NOTIFICATION;
 		}
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+		uio_setresid(uio, control->length);
+#else
 		uio->uio_resid = control->length;
+#endif
+#else
+		uio->uio_resid = control->length;
+#endif
 		*mp = control->data;
 		m = control->data;
 		while (m) {
@@ -6340,13 +6399,29 @@ sctp_sorecvmsg(struct socket *so,
 		if (stcb) {
 			sctp_misc_ints(SCTP_SORECV_DONE,
 				       freed_so_far,
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+				       ((uio) ? (slen-uio_resid(uio)) : slen), 
+#else
 				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
+#else
+				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
 				       stcb->asoc.my_rwnd,
 				       so->so_rcv.sb_cc);
 		} else {
 			sctp_misc_ints(SCTP_SORECV_DONE,
 				       freed_so_far,
+#if defined(__APPLE__)
+#if defined(APPLE_SNOWLEOPARD)
+				       ((uio) ? (slen-uio_resid(uio)) : slen), 
+#else
 				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
+#else
+				       ((uio) ? (slen-uio->uio_resid) : slen), 
+#endif
 				       0,
 				       so->so_rcv.sb_cc);
 		}
