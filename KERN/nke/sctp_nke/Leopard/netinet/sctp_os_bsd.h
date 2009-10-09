@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197326 2009-09-19 14:02:16Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197914 2009-10-09 19:30:23Z tuexen $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -73,9 +73,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197326 2009-09-19 14:02:16Z t
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/route.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800044
-#include <net/vnet.h>
-#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -86,7 +83,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197326 2009-09-19 14:02:16Z t
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 80056
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
 #include <net/vnet.h>
 #endif
 
@@ -176,6 +173,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #else
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
+#define SCTP_BASE_STATS_SYSCTL system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
 #define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
 #define SCTP_BASE_VAR(__m) system_base_info.__m
