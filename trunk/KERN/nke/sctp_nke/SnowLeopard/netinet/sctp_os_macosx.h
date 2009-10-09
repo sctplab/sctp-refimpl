@@ -264,7 +264,9 @@ extern struct fileops socketops;
  */
 typedef struct vm_zone *sctp_zone_t;
 extern zone_t kalloc_zone(vm_size_t);	/* XXX */
+#if defined(APPLE_SNOWLEOPARD)
 #include <kern/zalloc.h>
+#endif
 
 /* SCTP_ZONE_INIT: initialize the zone */
 #define SCTP_ZONE_INIT(zone, name, size, number) \
