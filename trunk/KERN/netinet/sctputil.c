@@ -5356,6 +5356,7 @@ sctp_sorecvmsg(struct socket *so,
 #else
 	slen = uio->uio_resid;
 #endif
+
 	/* Pull in and set up our int flags */
 	if (in_flags & MSG_OOB) {
 		/* Out of band's NOT supported */
@@ -7437,6 +7438,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 			/* its IPv6 - NOT supported */
 			goto out;
 			break;
+
 		}
 #endif
 		default:
@@ -7465,7 +7467,6 @@ void sctp_over_udp_stop(void)
 	soclose(sop);
 	SCTP_BASE_INFO(udp_tun_socket) = NULL;
 }
-
 int sctp_over_udp_start(void)
 {
 #if __FreeBSD_version >= 800044
