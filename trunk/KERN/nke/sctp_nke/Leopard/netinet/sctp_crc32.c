@@ -38,7 +38,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 191891 2009-05-07 16:43:49Z rr
 
 #include <netinet/sctp_os.h>
 #if defined(__APPLE__)
-#if !defined(APPLE_LEOPARD)
+#if !defined(APPLE_LEOPARD) &&!defined(APPLE_SNOWLEOPARD)
 #include <sys/time.h>
 #endif
 #endif
@@ -46,7 +46,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 191891 2009-05-07 16:43:49Z rr
 #include <netinet/sctp_crc32.h>
 #include <netinet/sctp_pcb.h>
 
-#if !defined(__FreeBSD8__)
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#else
 /**
  *
  * Routine Description:
