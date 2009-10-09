@@ -153,6 +153,9 @@ struct sctp_net_route {
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 	void *ro_lle;
 #endif
+#if defined(APPLE_SNOWLEOPARD)
+	uint32_t ro_flags;
+#endif
 	union sctp_sockstore _l_addr;	/* remote peer addr */
 	struct sctp_ifa *_s_addr;	/* our selected src addr */
 };
