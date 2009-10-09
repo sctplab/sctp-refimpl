@@ -40,6 +40,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 197326 2009-09-19 14:02:16Z t
 #include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
+#if defined(__APPLE__)
+#include <netinet/sctp_bsd_addr.h>
+#endif
 
 /*
  * sysctl tunable variables
