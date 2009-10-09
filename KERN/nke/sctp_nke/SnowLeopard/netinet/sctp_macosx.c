@@ -377,12 +377,12 @@ sctp_start_main_timer(void) {
 	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) <= 1000/hz)
 		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
 	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
-	timeout(sctp_fasttim, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
+	timeout(sctp_timeout, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
 }
 
 void
 sctp_stop_main_timer(void) {
-	untimeout(sctp_fasttim, NULL);
+	untimeout(sctp_timeout, NULL);
 }
 
 
