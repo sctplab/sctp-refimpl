@@ -34,7 +34,6 @@
  * includes
  */
 #include <sys/param.h>
-#include <kern/thread.h>
 #include <sys/systm.h>
 #include <sys/malloc.h>
 #include <sys/mbuf.h>
@@ -46,12 +45,10 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#if defined(__APPLE__)
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <sys/proc_internal.h>
 #endif
 #include <sys/uio_internal.h>
-#endif
 #include <sys/random.h>
 /*#include <sys/queue.h>*/
 #include <sys/appleapiopts.h>
@@ -248,17 +245,10 @@ extern struct fileops socketops;
 /*
  * general memory allocation
  */
-#if defined(__APPLE__)
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_WAITOK); \
     } while (0)
-#else
-#define SCTP_MALLOC(var, type, size, name) \
-    do { \
-	MALLOC(var, type, size, name, M_NOWAIT); \
-    } while (0)
-#endif
 
 #define SCTP_FREE(var, type)	FREE(var, M_PCB)
 
@@ -301,7 +291,6 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
  * timers
  */
 #include <netinet/sctp_callout.h>
-#if defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 extern lck_rw_t *sctp_calloutq_mtx;
 #else
@@ -311,7 +300,6 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_TIMERQ_UNLOCK()	lck_rw_unlock_exclusive(sctp_calloutq_mtx)
 #define SCTP_TIMERQ_LOCK_INIT()	sctp_calloutq_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_TIMERQ_LOCK_DESTROY() lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP)
-#endif
 
 /* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
@@ -544,8 +532,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 	} \
 }
 #endif
-/* additional protosw entries for Mac OS X 10.4 */
-#if defined(__APPLE__)
+
 #if defined(APPLE_SNOWLEOPARD)
 int sctp_lock(struct socket *so, int refcount, void *debug);
 int sctp_unlock(struct socket *so, int refcount, void *debug);
@@ -560,7 +547,6 @@ void *sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
 void sctp_lock_assert(struct socket *so);
 void sctp_unlock_assert(struct socket *so);
-#endif /* __APPLE__ */
 
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
