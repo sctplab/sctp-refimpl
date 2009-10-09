@@ -3620,7 +3620,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sctp_free_ifa(net->ro._s_addr);
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
-				if(ro->ro_rt) {
+				if (ro->ro_rt) {
 					RTFREE(ro->ro_rt);
 					ro->ro_rt = NULL;
 				}
@@ -5778,7 +5778,7 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
     struct sctp_association *asoc,
     struct sctp_stream_out *strq, int holds_lock)
 {
-	if(holds_lock == 0) {
+	if (holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
 	if ((strq->next_spoke.tqe_next) ||
@@ -7419,8 +7419,8 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		moved_how_much = sctp_move_to_outqueue(stcb, net, strq, goal_mtu, frag_point, &locked, 
 						       &giveup, eeor_mode, &bail);
 		if (moved_how_much)
-		  asoc->last_out_stream = strq;
-		
+			asoc->last_out_stream = strq;
+
 		if (locked) {
 			asoc->locked_on_sending = strq;
 			if ((moved_how_much == 0) || (giveup) || bail)
