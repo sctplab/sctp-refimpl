@@ -45,10 +45,10 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#if defined(__APPLE__)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <sys/proc_internal.h>
-#include <sys/uio_internal.h>
 #endif
+#include <sys/uio_internal.h>
 #include <sys/random.h>
 /*#include <sys/queue.h>*/
 #include <sys/appleapiopts.h>
@@ -79,6 +79,7 @@
 #include <netinet6/ip6protosw.h>
 #include <netinet6/nd6.h>
 #include <netinet6/scope6_var.h>
+#include <netinet6/in6_pcb.h>
 #endif /* INET6 */
 
 #ifdef IPSEC
@@ -244,17 +245,10 @@ extern struct fileops socketops;
 /*
  * general memory allocation
  */
-#if defined(__APPLE__)
 #define SCTP_MALLOC(var, type, size, name) \
     do { \
 	MALLOC(var, type, size, M_PCB, M_WAITOK); \
     } while (0)
-#else
-#define SCTP_MALLOC(var, type, size, name) \
-    do { \
-	MALLOC(var, type, size, name, M_NOWAIT); \
-    } while (0)
-#endif
 
 #define SCTP_FREE(var, type)	FREE(var, M_PCB)
 
@@ -270,6 +264,7 @@ extern struct fileops socketops;
  */
 typedef struct vm_zone *sctp_zone_t;
 extern zone_t kalloc_zone(vm_size_t);	/* XXX */
+#include <kern/zalloc.h>
 
 /* SCTP_ZONE_INIT: initialize the zone */
 #define SCTP_ZONE_INIT(zone, name, size, number) \
@@ -277,16 +272,16 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 
 /* SCTP_ZONE_GET: allocate element from the zone */
 #define SCTP_ZONE_GET(zone, type) \
-	(type *)zalloc(zone);
+	(type *)zalloc((zone_t)zone);
 
 /* SCTP_ZONE_FREE: free element from the zone */
 #define SCTP_ZONE_FREE(zone, element) \
-	zfree(zone, element);
+	zfree((zone_t)zone, element);
 
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
 #define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #define SCTP_M_COPYM m_copym
 #else
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
@@ -296,7 +291,6 @@ struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
  * timers
  */
 #include <netinet/sctp_callout.h>
-#if defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 extern lck_rw_t *sctp_calloutq_mtx;
 #else
@@ -306,7 +300,6 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_TIMERQ_UNLOCK()	lck_rw_unlock_exclusive(sctp_calloutq_mtx)
 #define SCTP_TIMERQ_LOCK_INIT()	sctp_calloutq_mtx = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_TIMERQ_LOCK_DESTROY() lck_rw_free(sctp_calloutq_mtx, SCTP_MTX_GRP)
-#endif
 
 /* Mbuf manipulation and access macros  */
 #define SCTP_BUF_LEN(m) (m->m_len)
@@ -436,7 +429,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = 0; \
@@ -481,7 +474,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <libkern/crypto/sha1.h>
 #else
 #include <crypto/sha1.h>
@@ -496,7 +489,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #include <crypto/sha2/sha2.h>
 #endif
 
-#if defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #include <libkern/crypto/md5.h>
 #else
 #include <sys/md5.h>
@@ -539,11 +532,14 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 	} \
 }
 #endif
-/* additional protosw entries for Mac OS X 10.4 */
-#if defined(__APPLE__)
+
+#if defined(APPLE_SNOWLEOPARD)
+int sctp_lock(struct socket *so, int refcount, void *debug);
+int sctp_unlock(struct socket *so, int refcount, void *debug);
+#else
 int sctp_lock(struct socket *so, int refcount, int lr);
 int sctp_unlock(struct socket *so, int refcount, int lr);
-
+#endif
 #ifdef _KERN_LOCKS_H_
 lck_mtx_t *sctp_getlock(struct socket *so, int locktype);
 #else
@@ -551,7 +547,6 @@ void *sctp_getlock(struct socket *so, int locktype);
 #endif /* _KERN_LOCKS_H_ */
 void sctp_lock_assert(struct socket *so);
 void sctp_unlock_assert(struct socket *so);
-#endif /* __APPLE__ */
 
 /* emulate the BSD 'ticks' clock */
 extern int ticks;
