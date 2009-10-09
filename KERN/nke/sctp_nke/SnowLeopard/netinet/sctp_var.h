@@ -377,8 +377,10 @@ int sctp_disconnect(struct socket *so);
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
 void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
+#if defined(__APPLE__)
 #if defined(INET6)
 int sctp6_input_with_port __P((struct mbuf **, int *, uint16_t));
+#endif
 #endif
 void sctp_input __P((struct mbuf *, int));
 void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));

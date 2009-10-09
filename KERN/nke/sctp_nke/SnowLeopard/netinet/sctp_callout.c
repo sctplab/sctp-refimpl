@@ -122,7 +122,7 @@ sctp_os_timer_stop(sctp_os_timer_t *c)
  */
 #endif
 void
-sctp_fasttim(void *arg)
+sctp_timeout(void *arg)
 {
 	sctp_os_timer_t *c;
 	void (*c_func)(void *);
