@@ -7397,7 +7397,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 		case IPV6_VERSION >> 4:
 		{
 			/* its IPv6 - NOT supported */
-			goto out;	  
+			goto out;
 			break;
 		}
 #endif
@@ -7479,6 +7479,6 @@ int sctp_over_udp_start(void)
 	return (0);
 #else
 	return (1);
-#endif	 
+#endif
 }
 #endif
