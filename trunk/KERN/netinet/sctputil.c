@@ -7294,154 +7294,154 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 static void
 sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 {
-  struct ip *iph;
-  struct mbuf *sp, *last;
-  struct udphdr *uhdr;
-  uint16_t port=0, len;
-  int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
+	struct ip *iph;
+	struct mbuf *sp, *last;
+	struct udphdr *uhdr;
+	uint16_t port=0, len;
+	int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
 
-  /* Split out the mbuf chain. Leave the
-   * IP header in m, place the
-   * rest in the sp.
-   */
-  if ((m->m_flags & M_PKTHDR) == 0) {
-	/* Can't handle one that is not a pkt hdr */
-	goto out;
-  }
-  /* pull the src port */
-  iph = mtod(m, struct ip *);
-  uhdr = (struct udphdr *)((caddr_t)iph + off);
-
-  port = uhdr->uh_sport;
-  sp = m_split(m, off, M_DONTWAIT);
-  if (sp == NULL) {
-	/* Gak, drop packet, we can't do a split */
-	goto out;
-  }
-  if (sp->m_pkthdr.len < header_size) {
-	/* Gak, packet can't have an SCTP header in it - to small */
-	m_freem(sp);
-	goto out;
-  }
-  /* ok now pull up the UDP header and SCTP header together */
-  sp = m_pullup(sp, header_size);
-  if (sp == NULL) {
-	/* Gak pullup failed */
-	goto out;
-  }
-  /* trim out the UDP header */
-  m_adj(sp, sizeof(struct udphdr));
-
-  /* Now reconstruct the mbuf chain */
-  /* 1) find last one */
-  last = m;
-  while (last->m_next != NULL) {
-	last = last->m_next;
-  }
-  last->m_next = sp;
-  m->m_pkthdr.len += sp->m_pkthdr.len;
-  last = m;
-  while (last != NULL) {
-	last = last->m_next;
-  }
-  /* Now its ready for sctp_input or sctp6_input */
-  iph = mtod(m, struct ip *);
-  switch (iph->ip_v) {
-  case IPVERSION:
-	{
-	  /* its IPv4 */
-	    len = SCTP_GET_IPV4_LENGTH(iph);
-		len -= sizeof(struct udphdr);
-        SCTP_GET_IPV4_LENGTH(iph) = len;
-	    sctp_input_with_port(m, off, port);
-  	    break;
+	/* Split out the mbuf chain. Leave the
+	 * IP header in m, place the
+	 * rest in the sp.
+	 */
+	if ((m->m_flags & M_PKTHDR) == 0) {
+		/* Can't handle one that is not a pkt hdr */
+		goto out;
 	}
+	/* pull the src port */
+	iph = mtod(m, struct ip *);
+	uhdr = (struct udphdr *)((caddr_t)iph + off);
+
+	port = uhdr->uh_sport;
+	sp = m_split(m, off, M_DONTWAIT);
+	if (sp == NULL) {
+		/* Gak, drop packet, we can't do a split */
+		goto out;
+	}
+	if (sp->m_pkthdr.len < header_size) {
+		/* Gak, packet can't have an SCTP header in it - to small */
+		m_freem(sp);
+		goto out;
+	}
+	/* ok now pull up the UDP header and SCTP header together */
+	sp = m_pullup(sp, header_size);
+	if (sp == NULL) {
+		/* Gak pullup failed */
+		goto out;
+	}
+	/* trim out the UDP header */
+	m_adj(sp, sizeof(struct udphdr));
+
+	/* Now reconstruct the mbuf chain */
+	/* 1) find last one */
+	last = m;
+	while (last->m_next != NULL) {
+		last = last->m_next;
+	}
+	last->m_next = sp;
+	m->m_pkthdr.len += sp->m_pkthdr.len;
+	last = m;
+	while (last != NULL) {
+		last = last->m_next;
+	}
+	/* Now its ready for sctp_input or sctp6_input */
+	iph = mtod(m, struct ip *);
+	switch (iph->ip_v) {
+		case IPVERSION:
+		{
+			/* its IPv4 */
+			len = SCTP_GET_IPV4_LENGTH(iph);
+			len -= sizeof(struct udphdr);
+			SCTP_GET_IPV4_LENGTH(iph) = len;
+			sctp_input_with_port(m, off, port);
+			break;
+		}
 #ifdef INET6
-  case IPV6_VERSION >> 4:
-	{
-		/* its IPv6 - NOT supported */
-		goto out;	  
-		break;
-
-	}
+		case IPV6_VERSION >> 4:
+		{
+			/* its IPv6 - NOT supported */
+			goto out;
+			break;
+		}
 #endif
-  default:
-	{
-	  m_freem(m);
-	  break;
+		default:
+		{
+			m_freem(m);
+			break;
+		}
 	}
-  }
-  return;
+	return;
  out:
-  m_freem(m);
+	m_freem(m);
 }
 #endif
 
 void sctp_over_udp_stop(void)
 {
-     struct socket *sop;
- 	 /*
-	  * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
-	  */
-     if (SCTP_BASE_INFO(udp_tun_socket) == NULL) {
-	   /* Nothing to do */
-	   return;
-	 }
-	 sop = SCTP_BASE_INFO(udp_tun_socket);
-	 soclose(sop);
-	 SCTP_BASE_INFO(udp_tun_socket) = NULL;
+	struct socket *sop;
+	/*
+	 * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
+	 */
+	if (SCTP_BASE_INFO(udp_tun_socket) == NULL) {
+		/* Nothing to do */
+		return;
+	}
+	sop = SCTP_BASE_INFO(udp_tun_socket);
+	soclose(sop);
+	SCTP_BASE_INFO(udp_tun_socket) = NULL;
 }
+
 int sctp_over_udp_start(void)
 {
 #if __FreeBSD_version >= 800044
-     uint16_t port;
-	 int ret;
-	 struct sockaddr_in sin;
-	 struct socket *sop=NULL;
-	 struct thread *th;
-	 struct ucred *cred;
- 	 /*
-	  * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
-	  */
-	 port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
-	 if (port == 0) {
-	   /* Must have a port set */
-	   return(EINVAL);
-	 }
-	 if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
-	   /* Already running -- must stop first */
-	   return(EALREADY);
-	 }
-	 th = curthread;
-	 cred = th->td_ucred;
-	 if ((ret = socreate(PF_INET, &sop,
-				  SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
-	   return (ret);
-	 }
-	 SCTP_BASE_INFO(udp_tun_socket) = sop;
- 	 /* call the special UDP hook */
-	 ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
-	 if (ret) {
-	   goto exit_stage_left;
-	 }
-	 /* Ok we have a socket, bind it to the port*/
-	 memset(&sin, 0, sizeof(sin));
-	 sin.sin_len = sizeof(sin);
-	 sin.sin_family = AF_INET;
-	 sin.sin_port = htons(port);
-	 ret = sobind(sop, (struct sockaddr *)&sin, th);
-	 if (ret) {
-	   /* Close up we cant get the port */
-	 exit_stage_left:
-	   sctp_over_udp_stop();
-	   return (ret);
-	 }
-	 /* Ok we should now get UDP packets directly to our input routine
-	  * sctp_recv_upd_tunneled_packet().
-	  */
-	 return (0);
+	uint16_t port;
+	int ret;
+	struct sockaddr_in sin;
+	struct socket *sop=NULL;
+	struct thread *th;
+	struct ucred *cred;
+	/*
+	 * This function assumes sysctl caller holds sctp_sysctl_info_lock() for writting!
+	 */
+	port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
+	if (port == 0) {
+		/* Must have a port set */
+		return(EINVAL);
+	}
+	if (SCTP_BASE_INFO(udp_tun_socket) != NULL) {
+		/* Already running -- must stop first */
+		return(EALREADY);
+	}
+	th = curthread;
+	cred = th->td_ucred;
+	if ((ret = socreate(PF_INET, &sop,
+	                    SOCK_DGRAM, IPPROTO_UDP, cred, th))) {
+		return (ret);
+	}
+	SCTP_BASE_INFO(udp_tun_socket) = sop;
+	/* call the special UDP hook */
+	ret =  udp_set_kernel_tunneling(sop, sctp_recv_udp_tunneled_packet);	 
+	if (ret) {
+		goto exit_stage_left;
+	}
+	/* Ok we have a socket, bind it to the port*/
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_len = sizeof(sin);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+	ret = sobind(sop, (struct sockaddr *)&sin, th);
+	if (ret) {
+		/* Close up we cant get the port */
+		exit_stage_left:
+		sctp_over_udp_stop();
+		return (ret);
+	}
+	/* Ok we should now get UDP packets directly to our input routine
+	 * sctp_recv_upd_tunneled_packet().
+	 */
+	return (0);
 #else
-	 return (1);
-#endif	 
+	return (1);
+#endif
 }
 #endif
