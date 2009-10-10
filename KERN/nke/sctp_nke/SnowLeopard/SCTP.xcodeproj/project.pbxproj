@@ -26,7 +26,6 @@
 		50BAFF261073C8950005425A /* sctp_output.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE59107390EC0005425A /* sctp_output.c */; };
 		50BAFF271073C8950005425A /* sctp_pcb.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE5B107390EC0005425A /* sctp_pcb.c */; };
 		50BAFF281073C8950005425A /* sctp_peeloff.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE5D107390EC0005425A /* sctp_peeloff.c */; };
-		50BAFF291073C8950005425A /* sctp_sha1.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE5F107390EC0005425A /* sctp_sha1.c */; };
 		50BAFF2A1073C8950005425A /* sctp_sysctl.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE62107390EC0005425A /* sctp_sysctl.c */; };
 		50BAFF2B1073C8950005425A /* sctp_timer.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE64107390EC0005425A /* sctp_timer.c */; };
 		50C2D1631077EF950088259C /* SCTP.c in Sources */ = {isa = PBXBuildFile; fileRef = 50C2D1621077EF950088259C /* SCTP.c */; };
@@ -63,8 +62,6 @@
 		50BAFE5C107390EC0005425A /* sctp_pcb.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_pcb.h; path = netinet/sctp_pcb.h; sourceTree = "<group>"; };
 		50BAFE5D107390EC0005425A /* sctp_peeloff.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_peeloff.c; path = netinet/sctp_peeloff.c; sourceTree = "<group>"; };
 		50BAFE5E107390EC0005425A /* sctp_peeloff.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_peeloff.h; path = netinet/sctp_peeloff.h; sourceTree = "<group>"; };
-		50BAFE5F107390EC0005425A /* sctp_sha1.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_sha1.c; path = netinet/sctp_sha1.c; sourceTree = "<group>"; };
-		50BAFE60107390EC0005425A /* sctp_sha1.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_sha1.h; path = netinet/sctp_sha1.h; sourceTree = "<group>"; };
 		50BAFE61107390EC0005425A /* sctp_structs.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_structs.h; path = netinet/sctp_structs.h; sourceTree = "<group>"; };
 		50BAFE62107390EC0005425A /* sctp_sysctl.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_sysctl.c; path = netinet/sctp_sysctl.c; sourceTree = "<group>"; };
 		50BAFE63107390EC0005425A /* sctp_sysctl.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_sysctl.h; path = netinet/sctp_sysctl.h; sourceTree = "<group>"; };
@@ -217,8 +214,6 @@
 				50BAFE5C107390EC0005425A /* sctp_pcb.h */,
 				50BAFE5D107390EC0005425A /* sctp_peeloff.c */,
 				50BAFE5E107390EC0005425A /* sctp_peeloff.h */,
-				50BAFE5F107390EC0005425A /* sctp_sha1.c */,
-				50BAFE60107390EC0005425A /* sctp_sha1.h */,
 				50BAFE61107390EC0005425A /* sctp_structs.h */,
 				50BAFE62107390EC0005425A /* sctp_sysctl.c */,
 				50BAFE63107390EC0005425A /* sctp_sysctl.h */,
@@ -391,7 +386,6 @@
 				50BAFF261073C8950005425A /* sctp_output.c in Sources */,
 				50BAFF271073C8950005425A /* sctp_pcb.c in Sources */,
 				50BAFF281073C8950005425A /* sctp_peeloff.c in Sources */,
-				50BAFF291073C8950005425A /* sctp_sha1.c in Sources */,
 				50BAFF2A1073C8950005425A /* sctp_sysctl.c in Sources */,
 				50BAFF2B1073C8950005425A /* sctp_timer.c in Sources */,
 				50C2D1631077EF950088259C /* SCTP.c in Sources */,
