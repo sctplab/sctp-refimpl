@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197914 2009-10-09 19:30:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197929 2009-10-10 13:59:18Z tuexen $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -73,6 +73,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197914 2009-10-09 19:30:23Z t
 #include <net/if_types.h>
 #include <net/if_var.h>
 #include <net/route.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+#include <net/vnet.h>
+#endif
 
 #include <netinet/in.h>
 #include <netinet/in_systm.h>
@@ -82,10 +85,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197914 2009-10-09 19:30:23Z t
 #include <netinet/ip_var.h>
 #include <netinet/ip_icmp.h>
 #include <netinet/icmp_var.h>
-
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800056
-#include <net/vnet.h>
-#endif
 
 #ifdef IPSEC
 #include <netipsec/ipsec.h>
