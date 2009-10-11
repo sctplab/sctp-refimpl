@@ -6173,7 +6173,6 @@ sctp_pcb_finish(void)
 	SCTP_IP_PKTLOG_DESTROY();
  
 #endif
-	SCTP_IPI_ITERATOR_WQ_DESTROY();
 	SCTP_IPI_ADDR_DESTROY();
 #if defined(__APPLE__)
 	SCTP_IPI_COUNT_DESTROY();
