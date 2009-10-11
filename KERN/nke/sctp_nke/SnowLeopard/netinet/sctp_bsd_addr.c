@@ -149,13 +149,14 @@ sctp_iterator_thread(void *v)
 #elif defined(__APPLE__)
 		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
 #endif
-	 	       0, "waiting_for_work", 0);
+		       0, "waiting_for_work", 0);
 		if (SCTP_BASE_INFO(threads_must_exit)) {
+			SCTP_IPI_ITERATOR_WQ_DESTROY();
 #if defined(__FreeBSD__) && __FreeBSD_version < 730000
-		  kthread_exit(0);
+			kthread_exit(0);
 #else
-		  kthread_exit();
-#endif			       
+			kthread_exit();
+#endif
 		}
 #elif defined(__Userspace__)
                 /* TODO msleep alternative */
