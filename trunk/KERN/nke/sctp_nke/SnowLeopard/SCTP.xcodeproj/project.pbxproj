@@ -157,6 +157,7 @@
 			isa = PBXGroup;
 			children = (
 				50C2D1621077EF950088259C /* SCTP.c */,
+				50BAFEA7107391A00005425A /* sctp_sys_calls.c */,
 				50C2D0AC1077B7130088259C /* kern */,
 				50BAFF0810739A080005425A /* sys */,
 				50BAFE9E1073913B0005425A /* netinet6 */,
@@ -183,7 +184,6 @@
 				50C2D0C91077B8130088259C /* ip_var.h */,
 				50C2D0CA1077B8130088259C /* ip6.h */,
 				50BAFEE3107393F80005425A /* in.h */,
-				50BAFEA7107391A00005425A /* sctp_sys_calls.c */,
 				50BAFE42107390EC0005425A /* sctp_asconf.c */,
 				50BAFE43107390EC0005425A /* sctp_asconf.h */,
 				50BAFE44107390EC0005425A /* sctp_auth.c */,
@@ -262,6 +262,7 @@
 				50C2D0951077B6D20088259C /* resourcevar.h */,
 				50C2D0961077B6D20088259C /* signal.h */,
 				50C2D0971077B6D20088259C /* signalvar.h */,
+				50BAFF0B10739A1D0005425A /* socket.h */,
 				50C2D0D31077BA890088259C /* socketvar.h */,
 				50C2D1A310789C180088259C /* systm.h */,
 				50C2D0981077B6D20088259C /* ttychars.h */,
@@ -273,7 +274,6 @@
 				50C2D09E1077B6D20088259C /* vmmeter.h */,
 				50C2D09F1077B6D20088259C /* vnode_internal.h */,
 				50C2D0A01077B6D20088259C /* vnode.h */,
-				50BAFF0B10739A1D0005425A /* socket.h */,
 			);
 			name = sys;
 			sourceTree = "<group>";
@@ -414,9 +414,10 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = YES;
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
+				GCC_PREPROCESSOR_DEFINITIONS = HAVE_SCTP_PEELOFF_SOCKOPT;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INSTALL_PATH = /usr/local/lib;
-				ONLY_ACTIVE_ARCH = YES;
+				ONLY_ACTIVE_ARCH = NO;
 				PRODUCT_NAME = sctp;
 			};
 			name = Debug;
@@ -492,8 +493,10 @@
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
 				MODULE_VERSION = 6.0.0;
+				ONLY_ACTIVE_ARCH = NO;
 				PREBINDING = NO;
 				PRODUCT_NAME = SCTP;
+				VALID_ARCHS = "i386 x86_64";
 				WRAPPER_EXTENSION = kext;
 			};
 			name = Debug;
