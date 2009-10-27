@@ -44,7 +44,7 @@
 #include <netinet/sctp_cc_functions.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 179783 2008-06-14 07:58:05Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 198522 2009-10-27 18:17:07Z tuexen $");
 #endif
 void 
 sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
@@ -346,7 +346,7 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	int old_cwnd = net->cwnd;
 
-	net->ssthresh = max(net->cwnd / 2, 2 * net->mtu);
+	net->ssthresh = max(net->cwnd / 2, 4 * net->mtu);
 	net->cwnd = net->mtu;
 	net->partial_bytes_acked = 0;
 
