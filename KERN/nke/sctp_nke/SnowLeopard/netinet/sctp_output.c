@@ -7397,19 +7397,19 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		 * skipping this check, we will send one
 		 * data packet towards the requested net.
 		 */
-		if(sp == NULL) {
+		if (sp == NULL) {
 			break;
 		}
 		if ((sp->net != net) && (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0)){
 			/* none for this network */
-			if(locked) {
+			if (locked) {
 				break;
 			} else {
 				strq = sctp_select_a_stream(stcb, asoc);
-				if(strq == NULL)
+				if (strq == NULL)
 					/* none left */
 					break;
-				if(strqn == strq) {
+				if (strqn == strq) {
 					/* I have circled */
 					break;
 				}
@@ -7431,24 +7431,24 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 		} else {
 			asoc->locked_on_sending = NULL;
 			strqt = sctp_select_a_stream(stcb, asoc);
-			if(TAILQ_FIRST(&strq->outqueue) == NULL) {
-				if(strq == strqn) {
+			if (TAILQ_FIRST(&strq->outqueue) == NULL) {
+				if (strq == strqn) {
 					/* Must move start to next one */
 					strqn = TAILQ_NEXT(asoc->last_out_stream, next_spoke);
-					if(strqn == NULL) {
+					if (strqn == NULL) {
 						strqn = TAILQ_FIRST(&asoc->out_wheel);
-						if(strqn == NULL) {
+						if (strqn == NULL) {
 							break;
 						}
 					}
 				}
 				sctp_remove_from_wheel(stcb, asoc, strq, 0);
 			}
-			if((giveup) || bail) {
+			if ((giveup) || bail) {
 				break;
 			}
 			strq = strqt;
-			if(strq == NULL) {
+			if (strq == NULL) {
 				break;
 			}
 		}
@@ -7459,7 +7459,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 	if (bail)
 		*quit_now = 1;
 
-	if(total_moved == 0) {
+	if (total_moved == 0) {
 		if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) &&
 		    (net == stcb->asoc.primary_destination)) {
 			/* ran dry for primary network net */
