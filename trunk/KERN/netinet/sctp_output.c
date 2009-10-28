@@ -5775,8 +5775,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 void
 sctp_insert_on_wheel(struct sctp_tcb *stcb,
-    struct sctp_association *asoc,
-    struct sctp_stream_out *strq, int holds_lock)
+                     struct sctp_association *asoc,
+                     struct sctp_stream_out *strq, int holds_lock)
 {
 	if (holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
@@ -5788,7 +5788,7 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
 	}
 	TAILQ_INSERT_TAIL(&asoc->out_wheel, strq, next_spoke);
  outof_here:
-	if(holds_lock == 0) {
+	if (holds_lock == 0) {
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
 
@@ -5796,24 +5796,24 @@ sctp_insert_on_wheel(struct sctp_tcb *stcb,
 
 void
 sctp_remove_from_wheel(struct sctp_tcb *stcb,
-					   struct sctp_association *asoc,
-					   struct sctp_stream_out *strq,
-					   int holds_lock)
+                       struct sctp_association *asoc,
+                       struct sctp_stream_out *strq,
+                       int holds_lock)
 {
 	/* take off and then setup so we know it is not on the wheel */
-    if (holds_lock == 0)
-	  SCTP_TCB_SEND_LOCK(stcb);
+	if (holds_lock == 0)
+		SCTP_TCB_SEND_LOCK(stcb);
 	if (TAILQ_FIRST(&strq->outqueue)) {
 		/* more was added */
-	    if (holds_lock == 0)
-		  SCTP_TCB_SEND_UNLOCK(stcb);
+		if (holds_lock == 0)
+			SCTP_TCB_SEND_UNLOCK(stcb);
 		return;
 	}
 	TAILQ_REMOVE(&asoc->out_wheel, strq, next_spoke);
 	strq->next_spoke.tqe_next = NULL;
 	strq->next_spoke.tqe_prev = NULL;
-    if (holds_lock == 0)
-	  SCTP_TCB_SEND_UNLOCK(stcb);
+	if (holds_lock == 0)
+		SCTP_TCB_SEND_UNLOCK(stcb);
 }
 
 static void
