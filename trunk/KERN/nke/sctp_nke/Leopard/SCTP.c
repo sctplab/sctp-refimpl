@@ -45,6 +45,7 @@
 #include <netinet6/sctp6_var.h>
 #endif
 #include <netinet/sctp.h>
+#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
 
@@ -53,6 +54,7 @@ extern struct pr_usrreqs udp_usrreqs;
 extern struct pr_usrreqs udp6_usrreqs;
 #endif
 extern struct inpcbinfo udbinfo;
+#endif
 
 SYSCTL_DECL(_net_inet);
 #ifdef INET6
@@ -162,6 +164,7 @@ struct protosw *old_pr4;
 struct protosw *old_pr6;
 #endif
 
+#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
 static int
 soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
 {
@@ -170,6 +173,7 @@ soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct
 	}
 	return soreceive(so, psa, uio, mp0, controlp, flagsp);
 }
+#endif
 
 kern_return_t 
 SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
@@ -414,12 +418,14 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_addr_watchdog_limit);
 	sysctl_register_oid(&sysctl__net_inet_sctp_vtag_watchdog_limit);
 
+#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;
 #ifdef INET6
 	udp6_usrreqs.pru_soreceive = soreceive_fix;
 #endif
 	lck_rw_done(udbinfo.mtx);
+#endif
 	printf("SCTP NKE: NKE loaded.\n");
 	return KERN_SUCCESS;
 }
@@ -450,13 +456,14 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 		return KERN_FAILURE;
 	}
 
+#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive;
 #ifdef INET6
 	udp6_usrreqs.pru_soreceive = soreceive;
 #endif
 	lck_rw_done(udbinfo.mtx);
-
+#endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
 #if defined(SCTP_APPLE_AUTO_ASCONF)
