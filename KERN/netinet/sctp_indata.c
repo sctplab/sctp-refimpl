@@ -438,8 +438,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			
 			nr_tsn = chk->rec.data.TSN_seq;
 			SCTP_CALC_TSN_TO_GAP(nr_gap, nr_tsn, asoc->nr_mapping_array_base_tsn);
-			if ((nr_gap >= (uint32_t)(asoc->nr_mapping_array_size << 3)) ||
-				(nr_gap >= (uint32_t) (asoc->nr_mapping_array_size << 3))  ) {
+			if ((nr_gap >= (uint32_t)(asoc->nr_mapping_array_size << 3))) {
 				/* EY The 1st should never happen, as in process_a_data_chunk method this check should be done */
 				/* EY The 2nd should never happen, because nr_mapping_array is always expanded when mapping_array is expanded*/				
 				printf("Impossible nr_gap ack range failed\n");
