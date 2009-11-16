@@ -140,7 +140,7 @@ MALLOC_DECLARE(SCTP_M_MVRF);
 MALLOC_DECLARE(SCTP_M_ITER);
 MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
-#if defined(SCTP_LOCAL_TRACE_BUF) 
+#if defined(SCTP_LOCAL_TRACE_BUF)
 
 #define SCTP_GET_CYCLECOUNT get_cyclecount()
 #define SCTP_CTR6 sctp_log_trace
@@ -297,10 +297,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
 /* SCTP_ZONE_INIT: initialize the zone */
 typedef struct uma_zone *sctp_zone_t;
-#define UMA_ZFLAG_FULL	0x0020
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
 	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
-		UMA_ZFLAG_FULL); \
+		0); \
 	uma_zone_set_max(zone, number); \
 }
 
