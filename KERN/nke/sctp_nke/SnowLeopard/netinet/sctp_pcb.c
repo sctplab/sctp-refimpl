@@ -6068,25 +6068,20 @@ sctp_pcb_finish(void)
 	struct sctp_ifa *ifa;
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block, *prev_twait_block;
+	struct sctp_laddr *wi;
+	struct sctp_iterator *it;
 	int i;
 
-#if defined(__Userspace__)
-        SCTP_TIMERQ_LOCK_DESTROY();
-        SCTP_ZONE_DESTROY(zone_mbuf);
-        SCTP_ZONE_DESTROY(zone_clust);
-        SCTP_ZONE_DESTROY(zone_ext_refcnt);
-#elif defined(__APPLE__) || defined(__Windows__) 
-	/* FIXME MT */
-#if defined(__APPLE__)
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+	SCTP_BASE_INFO(threads_must_exit) = 1;
+#if defined(__APPLE__)
 	/* free the iterator worker thread */
 	if (SCTP_BASE_INFO(thread_proc) != THREAD_NULL) {
 		thread_terminate(SCTP_BASE_INFO(thread_proc));
 		SCTP_BASE_INFO(thread_proc) = THREAD_NULL;
 	}
 #endif
-#elif defined(__Windows__)
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+#if defined(__Windows__)
 	if (SCTP_BASE_INFO(iterator_thread_obj) != NULL) {
 		KIRQL oldIrql;
 		NTSTATUS status = STATUS_SUCCESS;
@@ -6103,42 +6098,50 @@ sctp_pcb_finish(void)
 		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 	}
 #endif
-#elif defined(__FreeBSD__)
-	SCTP_BASE_INFO(threads_must_exit) = 1;
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+#if defined(__FreeBSD__)
 	/* Wake the thread up so it will exit now */
 	sctp_wakeup_iterator();
 #endif
+
 #endif
-#endif   /* end __Userspace__*/
+	SCTP_OS_TIMER_STOP(&SCTP_BASE_INFO(addr_wq_timer.timer));
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	while ((wi = LIST_FIRST(&SCTP_BASE_INFO(addr_wq))) != NULL) {
+		LIST_REMOVE(wi, sctp_nxt_addr);
+		SCTP_DECR_LADDR_COUNT();
+		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_laddr), wi);
+	}
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	while ((it = TAILQ_FIRST(&SCTP_BASE_INFO(iteratorhead))) != NULL) {
+		if (it->function_atend != NULL) {
+			(*it->function_atend) (it->pointer, it->val);
+		}
+		TAILQ_REMOVE(&SCTP_BASE_INFO(iteratorhead), it, sctp_nxt_itr);
+		SCTP_FREE(it, SCTP_M_ITER);
+	}
+
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
 	 * is destroyed first).
 	 */
 	vrf_bucket = &SCTP_BASE_INFO(sctp_vrfhash)[(SCTP_DEFAULT_VRFID & SCTP_BASE_INFO(hashvrfmark))];
-	vrf = LIST_FIRST(vrf_bucket);
-	while (vrf) {
-		ifn = LIST_FIRST(&vrf->ifnlist);
-		while (ifn) {
-			ifa = LIST_FIRST(&ifn->ifalist);
-			while (ifa) {
+	while ((vrf = LIST_FIRST(vrf_bucket)) != NULL) {
+		while ((ifn = LIST_FIRST(&vrf->ifnlist)) != NULL) {
+			while ((ifa = LIST_FIRST(&ifn->ifalist)) != NULL) {
 				/* free the ifa */
 				LIST_REMOVE(ifa, next_bucket);
 				LIST_REMOVE(ifa, next_ifa);
 				SCTP_FREE(ifa, SCTP_M_IFA);
-				ifa = LIST_FIRST(&ifn->ifalist);
 			}
 			/* free the ifn */
 			LIST_REMOVE(ifn, next_bucket);
 			LIST_REMOVE(ifn, next_ifn);
 			SCTP_FREE(ifn, SCTP_M_IFN);
-			ifn = LIST_FIRST(&vrf->ifnlist);
 		}
 		SCTP_HASH_FREE(vrf->vrf_addr_hash, vrf->vrf_addr_hashmark);
 		/* free the vrf */
 		LIST_REMOVE(vrf, next_vrf);
 		SCTP_FREE(vrf, SCTP_M_VRF);
-		vrf = LIST_FIRST(vrf_bucket);
 	}
 	/* free the vrf hashes */
 	SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_vrfhash), SCTP_BASE_INFO(hashvrfmark));
@@ -6171,7 +6174,6 @@ sctp_pcb_finish(void)
 #endif
 #ifdef SCTP_PACKET_LOGGING
 	SCTP_IP_PKTLOG_DESTROY();
- 
 #endif
 	SCTP_IPI_ADDR_DESTROY();
 #if defined(__APPLE__)
@@ -6182,12 +6184,18 @@ sctp_pcb_finish(void)
 #if !defined(__Userspace__)
 	SCTP_INP_INFO_LOCK_DESTROY();
 #endif
+
 #if defined(__APPLE__)
 	lck_grp_attr_free(SCTP_BASE_INFO(mtx_grp_attr));
 	lck_grp_free(SCTP_BASE_INFO(mtx_grp));
 	lck_attr_free(SCTP_BASE_INFO(mtx_attr));
 #endif
-
+#if defined(__Userspace__)
+        SCTP_TIMERQ_LOCK_DESTROY();
+        SCTP_ZONE_DESTROY(zone_mbuf);
+        SCTP_ZONE_DESTROY(zone_clust);
+        SCTP_ZONE_DESTROY(zone_ext_refcnt);
+#endif
 #if defined(__Windows__) || defined(__FreeBSD__) || defined(__Userspace__)
 	SCTP_ZONE_DESTROY(SCTP_BASE_INFO(ipi_zone_ep));
 	SCTP_ZONE_DESTROY(SCTP_BASE_INFO(ipi_zone_asoc));
@@ -7293,6 +7301,6 @@ sctp_initiate_iterator(inp_func inpf,
 	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it,
 			 NULL, NULL);
 #endif
-    /* sa_ignore MEMLEAK {memory is put on the tailq for the iterator} */
+	/* sa_ignore MEMLEAK {memory is put on the tailq for the iterator} */
 	return (0);
 }
