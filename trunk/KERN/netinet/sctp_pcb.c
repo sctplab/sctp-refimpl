@@ -6174,7 +6174,6 @@ sctp_pcb_finish(void)
 #endif
 #ifdef SCTP_PACKET_LOGGING
 	SCTP_IP_PKTLOG_DESTROY();
- 
 #endif
 	SCTP_IPI_ADDR_DESTROY();
 #if defined(__APPLE__)
@@ -6185,6 +6184,7 @@ sctp_pcb_finish(void)
 #if !defined(__Userspace__)
 	SCTP_INP_INFO_LOCK_DESTROY();
 #endif
+
 #if defined(__APPLE__)
 	lck_grp_attr_free(SCTP_BASE_INFO(mtx_grp_attr));
 	lck_grp_free(SCTP_BASE_INFO(mtx_grp));
