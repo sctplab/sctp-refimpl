@@ -94,7 +94,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 189790 2009-03-14 13:42:13
 #define SCTP_AUDIT_SIZE 256
 
 #ifdef __FreeBSD__
+/* temporary disabled since it does not work with VNET. */
+#if 0
 #define SCTP_USE_THREAD_BASED_ITERATOR 1
+#endif
 #endif
 
 #define SCTP_KTRHEAD_NAME "sctp_iterator"

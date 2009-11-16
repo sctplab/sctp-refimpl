@@ -186,7 +186,7 @@ struct sctp_epinfo {
 	struct inpcbhead inplisthead;
 #endif
 	struct sctpiterators iteratorhead;
-    int threads_must_exit;
+	int threads_must_exit;
 	/* ep zone info */
 	sctp_zone_t ipi_zone_ep;
 	sctp_zone_t ipi_zone_asoc;
