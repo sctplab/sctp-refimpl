@@ -105,8 +105,6 @@ extern struct fileops socketops;
 #define _KERNEL
 #endif
 
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
-
 #if defined(SCTP_LOCAL_TRACE_BUF) 
 #define SCTP_CTR6 sctp_log_trace
 #else
