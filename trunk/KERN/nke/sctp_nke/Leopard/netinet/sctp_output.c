@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 199374 2009-11-17 13:36:21Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 199459 2009-11-17 23:03:38Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6053,10 +6053,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sp->strseq = 0;
 	if(sp->sinfo_flags & SCTP_ADDR_OVER) {
 		sp->net = net;
-		sp->addr_over = 1;
 	} else {
 		sp->net = stcb->asoc.primary_destination;
-		sp->addr_over = 0;
 	}
 	atomic_add_int(&sp->net->ref_count, 1);
 	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
@@ -7214,7 +7212,6 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	chk->rec.data.timetodrop = sp->ts;
 	chk->flags = sp->act_flags;
-	chk->addr_over = sp->addr_over;
 
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
@@ -12713,10 +12710,8 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	} else {
 		if (sp->sinfo_flags & SCTP_ADDR_OVER) {
 			sp->net = net;
-			sp->addr_over = 1;
 		} else {
 			sp->net = asoc->primary_destination;
-			sp->addr_over = 0;
 		}
 		atomic_add_int(&sp->net->ref_count, 1);
 		sctp_set_prsctp_policy(sp);
