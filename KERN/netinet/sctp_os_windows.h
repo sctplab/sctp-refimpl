@@ -82,7 +82,6 @@ struct proc {
 #define SCTP_UNUSED
 
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #if defined(SCTP_DEBUG)
 extern uint32_t *sctp_debug_on;

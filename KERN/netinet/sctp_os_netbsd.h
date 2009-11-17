@@ -107,9 +107,6 @@
 #define SCTP_BASE_STATS system_base_info.sctpstat
 #define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elm
 
-
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
-
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
 
