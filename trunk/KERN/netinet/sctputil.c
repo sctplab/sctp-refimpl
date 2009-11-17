@@ -4986,7 +4986,6 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 					chk->rec.data.payloadtype = sp->ppid;
 					chk->rec.data.context = sp->context;
 					chk->flags = sp->act_flags;
-					chk->addr_over = sp->addr_over;
 					chk->whoTo = sp->net;
 					atomic_add_int(&chk->whoTo->ref_count, 1);
 #if defined(__FreeBSD__) || defined(__Panda__)
