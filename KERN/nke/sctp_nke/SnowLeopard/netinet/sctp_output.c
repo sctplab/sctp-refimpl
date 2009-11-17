@@ -9591,7 +9591,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	}
 #endif
 	asoc = &stcb->asoc;
-	if(from_where == SCTP_OUTPUT_FROM_USR_SEND) {
+	if (from_where == SCTP_OUTPUT_FROM_USR_SEND) {
 		if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY)) {
 			nagle_on = 0;
 		} else {
@@ -9604,6 +9604,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 
 	if ((un_sent <= 0) &&
 	    (TAILQ_EMPTY(&asoc->control_send_queue)) &&
+	    (TAILQ_EMPTY(&asoc->asconf_send_queue)) &&
 	    (asoc->sent_queue_retran_cnt == 0)){
 		/* Nothing to do unless there is something to be sent left */
 		return;
