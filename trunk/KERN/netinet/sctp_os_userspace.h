@@ -209,7 +209,6 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #if !defined(__Userspace_os_Darwin)
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 #endif
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #if defined(SCTP_DEBUG)
 #include <netinet/sctp_constants.h>
