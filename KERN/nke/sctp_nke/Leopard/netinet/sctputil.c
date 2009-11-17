@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 199369 2009-11-17 13:05:51Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 199459 2009-11-17 23:03:38Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4986,7 +4986,6 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 					chk->rec.data.payloadtype = sp->ppid;
 					chk->rec.data.context = sp->context;
 					chk->flags = sp->act_flags;
-					chk->addr_over = sp->addr_over;
 					chk->whoTo = sp->net;
 					atomic_add_int(&chk->whoTo->ref_count, 1);
 #if defined(__FreeBSD__) || defined(__Panda__)
