@@ -716,7 +716,7 @@ sctp_vtag_watchdog()
 		expired_cnt = 0;
 		inuse_cnt = 0;
 		other_cnt = 0;
-		if (!SCTP_LIST_EMPTY(chain)) {
+		if (!LIST_EMPTY(chain)) {
 			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 				for (j = 0; j < SCTP_NUMBER_IN_VTAG_BLOCK; j++) {
 					if ((twait_block->vtag_block[j].v_tag == 0) &&
