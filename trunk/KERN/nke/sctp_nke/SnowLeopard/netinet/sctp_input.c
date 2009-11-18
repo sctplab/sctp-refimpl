@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 197288 2009-09-17 15:11:12Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 199477 2009-11-18 12:17:06Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -828,6 +828,9 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		return;
 	} else {
 		sctp_update_acked(stcb, cp, net, abort_flag);
+		if (*abort_flag) {
+			return;
+		}
 	}
 	if (asoc->control_pdapi) {
 		/* With a normal shutdown 
