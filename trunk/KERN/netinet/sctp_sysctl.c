@@ -1332,7 +1332,7 @@ void sysctl_setup_sctp(void)
 
 #ifdef SCTP_DEBUG
 	sysctl_add_oid(&sysctl_oid_top, "debug", CTLTYPE_INT|CTLFLAG_RW,
-	    &SCTP_BASE_SYSCTL(sctp_debug_on), sizeof(SCTP_BASE_SYSCTL(sctp_debug_on)),
+	    &SCTP_BASE_SYSCTL(sctp_debug_on), sizeof(SCTP_BASE_SYSCTL(sctp_debug_on)), NULL,
 	    SCTPCTL_DEBUG_DESC);
 #endif /* SCTP_DEBUG */
 
