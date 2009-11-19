@@ -1920,53 +1920,53 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 static int
 sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 {
-  struct sctp_nets *net;
-  /* Simple question, the ports match, does the tcb own the to address? */
-  if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
-    /* of course */
-    return (1);
-  }
-  /* have to look at all bound addresses */
-  TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-    if (net->ro._l_addr.sa.sa_family != to->sa_family) {
-      /* not the same family, can't be a match */
-      continue;
-    }
-    switch (to->sa_family) {
-    case AF_INET:
-      {
-	struct sockaddr_in *sin, *rsin;
-	sin = (struct sockaddr_in *)&net->ro._l_addr;
-	rsin = (struct sockaddr_in *)to;
-	if (sin->sin_addr.s_addr ==
-	    rsin->sin_addr.s_addr) {
-	  /* found it */
-	  return (1);
+	struct sctp_nets *net;
+	/* Simple question, the ports match, does the tcb own the to address? */
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL)) {
+		/* of course */
+		return (1);
 	}
-	break;
-      }
+	/* have to look at all bound addresses */
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		if (net->ro._l_addr.sa.sa_family != to->sa_family) {
+			/* not the same family, can't be a match */
+			continue;
+		}
+		switch (to->sa_family) {
+		case AF_INET:
+		{
+			struct sockaddr_in *sin, *rsin;
+			sin = (struct sockaddr_in *)&net->ro._l_addr;
+			rsin = (struct sockaddr_in *)to;
+			if (sin->sin_addr.s_addr ==
+			    rsin->sin_addr.s_addr) {
+				/* found it */
+				return (1);
+			}
+			break;
+		}
 #ifdef INET6
-    case AF_INET6:
-      {
-	struct sockaddr_in6 *sin6, *rsin6;
+		case AF_INET6:
+		{
+			struct sockaddr_in6 *sin6, *rsin6;
 
-	sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
-	rsin6 = (struct sockaddr_in6 *)to;
-	if (SCTP6_ARE_ADDR_EQUAL(sin6,
-				 rsin6)) {
-	  /* Update the endpoint pointer */
-	  return (1);
-	}
-	break;
-      }
+			sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
+			rsin6 = (struct sockaddr_in6 *)to;
+			if (SCTP6_ARE_ADDR_EQUAL(sin6,
+			                         rsin6)) {
+				/* Update the endpoint pointer */
+				return (1);
+			}
+			break;
+		}
 #endif
-    default:
-      /* TSNH */
-      break;
-    }
-  }
-  /* Nope, do not have the address ;-( */
-  return (0);
+		default:
+			/* TSNH */
+			break;
+		}
+	}
+	/* Nope, do not have the address ;-( */
+	return (0);
 }
 
 static struct sctp_tcb *
@@ -2022,20 +2022,20 @@ sctp_findassoc_by_vtag(struct sockaddr *from, struct sockaddr *to, uint32_t vtag
 				continue;
 			}
 			if (remote_tag) {
-			  /* If we have both vtags thats all we match on */
-			  if (stcb->asoc.peer_vtag == remote_tag) {
-			    /* If both tags match we consider it conclusive
-			     * and check NO source/destination addresses
-			     */
-			    goto conclusive;
-			  }
+				/* If we have both vtags thats all we match on */
+				if (stcb->asoc.peer_vtag == remote_tag) {
+					/* If both tags match we consider it conclusive
+					 * and check NO source/destination addresses
+					 */
+					goto conclusive;
+				}
 			}
 			if (skip_src_check) {
 			conclusive:
 			        if (from) {
-				  net = sctp_findnet(stcb, from);
+					net = sctp_findnet(stcb, from);
 				} else {
-				  *netp = NULL;	/* unknown */
+					*netp = NULL;	/* unknown */
 				}
 				if (inp_p)
 					*inp_p = stcb->sctp_ep;
@@ -2193,8 +2193,8 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 	}
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
-	      retval = sctp_findassoc_by_vtag(from, to,  ntohl(sh->v_tag),
-					      inp_p, netp, sh->src_port, sh->dest_port, 0, vrf_id, 0);
+		retval = sctp_findassoc_by_vtag(from, to,  ntohl(sh->v_tag),
+		                                inp_p, netp, sh->src_port, sh->dest_port, 0, vrf_id, 0);
 		if (retval) {
 			return (retval);
 		}
