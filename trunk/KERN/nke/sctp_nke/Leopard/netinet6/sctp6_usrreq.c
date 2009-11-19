@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 188067 2009-02-03 11:04:03Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 197288 2009-09-17 15:11:12Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -243,12 +243,20 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
-#else 
+#endif
+#if defined(__APPLE__)
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet of length %d received on %s%d with csum_flags 0x%x.\n",
 		m->m_pkthdr.len,
 		m->m_pkthdr.rcvif->if_name,
 		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
+#endif
+#if defined(__Windows__)
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
+		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
