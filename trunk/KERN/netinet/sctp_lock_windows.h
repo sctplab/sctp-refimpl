@@ -68,6 +68,11 @@
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
  * the SCTP_BASE_INFO() list's we will do a SCTP_INP_INFO_WLOCK().
  */
+ 
+#ifdef SCTP_LOCK_LOGGING
+#include <netinet/sctputil.h>
+#endif
+ 
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;
 extern LARGE_INTEGER zero_timeout;

@@ -225,11 +225,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 #define HASH_WAITOK 0x00000002
 
 #define SCTP_HASH_INIT(size, hashmark) sctp_hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
-#if 0 /* XXX */
-#define SCTP_HASH_FREE(table, hashmark) hashdestroy(table, M_PCB, hashmark)
-#else
-#define SCTP_HASH_FREE(table, hashmark)
-#endif
+#define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
 #define SCTP_M_COPYM	m_copym
 
@@ -381,6 +377,20 @@ typedef struct rtentry	sctp_rtentry_t;
 /* This is re-pulse ourselves for sendbuf */  
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
+
+VOID AioCsqRemoveIrp(IN PIO_CSQ, IN PIRP);
+PIRP AioCsqPeekNextIrp(IN PIO_CSQ, IN PIRP, IN PVOID);
+
+__drv_raisesIRQL(DISPATCH_LEVEL)
+__drv_savesIRQLGlobal(KIRQL, OriginalIrql[cpuid])
+VOID AioCsqAcquireLock(IN PIO_CSQ, IN PKIRQL);
+
+__drv_restoresIRQLGlobal(KIRQL, OriginalIrql[cpuid])
+VOID AioCsqReleaseLock(IN PIO_CSQ, IN KIRQL);
+
+VOID AioCsqCompleteCanceledIrp(IN PIO_CSQ, IN PIRP);
+
+VOID AioCsqInsertIrp(IN PIO_CSQ, IN PIRP);
 
 /*
  * IP output routines
