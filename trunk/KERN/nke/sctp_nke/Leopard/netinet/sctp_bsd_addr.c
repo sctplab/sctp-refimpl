@@ -130,11 +130,8 @@ static void
 sctp_iterator_thread(void *v)
 {
 #if defined(__Windows__)
-	KIRQL oldIrql;
 	NTSTATUS status = STATUS_SUCCESS;
 	PVOID events[2];
-
-	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	CURVNET_SET((struct vnet *)v);
@@ -162,7 +159,6 @@ sctp_iterator_thread(void *v)
                 /* TODO msleep alternative */
 #else
 		SCTP_IPI_ITERATOR_WQ_UNLOCK();
-		KeLowerIrql(oldIrql);
 
 		events[0] = &SCTP_BASE_INFO(iterator_wakeup[0]);
 		events[1] = &SCTP_BASE_INFO(iterator_wakeup[1]);
@@ -177,7 +173,6 @@ sctp_iterator_thread(void *v)
 		if (status == STATUS_WAIT_1) {
 			break;
 		}
-		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
 		SCTP_IPI_ITERATOR_WQ_LOCK();
 #endif /* !__Windows__ */
 		sctp_iterator_worker();
@@ -503,7 +498,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 }
 #endif
 
-#if defined (__FreeBSD__)
+#if defined (__FreeBSD__) || defined(__Windows__)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {

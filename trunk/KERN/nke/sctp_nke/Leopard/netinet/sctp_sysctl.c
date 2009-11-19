@@ -187,11 +187,7 @@ number_of_addresses(struct sctp_inpcb *inp)
 }
 
 static int
-#if !defined(__Windows__)
 copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sysctl_req *req)
-#else
-copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct sysctl_req *req, KIRQL oldIrql)
-#endif
 {
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
@@ -307,13 +303,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 				memcpy((void *)&xladdr.address, (const void *)&sctp_ifa->address, sizeof(union sctp_sockstore));
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-				KeLowerIrql(oldIrql);
-#endif
 				error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-#if defined(__Windows__)
-				KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 				if (error) {
 					return (error);
 				} else {
@@ -333,13 +323,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 			xladdr.start_time.tv_usec = (uint32_t)laddr->start_time.tv_usec;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-			KeLowerIrql(oldIrql);
-#endif
 			error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-#if defined(__Windows__)
-			KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 			if (error) {
 				return (error);
 			} else {
@@ -352,13 +336,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 	xladdr.last = 1;
 	SCTP_INP_RUNLOCK(inp);
 	SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-	KeLowerIrql(oldIrql);
-#endif
 	error = SYSCTL_OUT(req, &xladdr, sizeof(struct xsctp_laddr));
-#if defined(__Windows__)
-	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 
 	if (error) {
 		return (error);
@@ -391,18 +369,12 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	struct xsctp_inpcb xinpcb;
 	struct xsctp_tcb xstcb;
 	struct xsctp_raddr xraddr;
-#if defined(__Windows__)
-	KIRQL oldIrql;
-#endif
 
 	number_of_endpoints = 0;
 	number_of_local_addresses = 0;
 	number_of_associations = 0;
 	number_of_remote_addresses = 0;
 
-#if defined(__Windows__)
-	KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 	SCTP_INP_INFO_RLOCK();
 #if !defined(__Windows__)
 	if (req->oldptr == USER_ADDR_NULL) {
@@ -433,7 +405,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		req->oldidx = (n + n/8);
 #else
 		req->dataidx = (n + n/8);
-		KeLowerIrql(oldIrql);
 #endif
 		return 0;
 	}
@@ -444,9 +415,6 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	if (req->new_data != NULL) {
 #endif
 		SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-		KeLowerIrql(oldIrql);
-#endif
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_SYSCTL, EPERM);
 		return EPERM;
 	}
@@ -472,32 +440,16 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-		KeLowerIrql(oldIrql);
-#endif
 		error = SYSCTL_OUT(req, &xinpcb, sizeof(struct xsctp_inpcb));
-#if defined(__Windows__)
-		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 		if (error) {
 			SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-			KeLowerIrql(oldIrql);
-#endif
 			return error;
 		}
 		SCTP_INP_INFO_RLOCK();
 		SCTP_INP_RLOCK(inp);
-#if !defined(__Windows__)
 		error = copy_out_local_addresses(inp, NULL, req);
-#else
-		error = copy_out_local_addresses(inp, NULL, req, oldIrql);
-#endif
 		if (error) {
 			SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-			KeLowerIrql(oldIrql);
-#endif
 			return error;
 		}
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
@@ -544,33 +496,17 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xstcb.refcnt = stcb->asoc.refcnt;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-			KeLowerIrql(oldIrql);
-#endif
 			error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
-#if defined(__Windows__)
-			KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 			if (error) {
 				SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-				KeLowerIrql(oldIrql);
-#endif
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 				return error;
 			}
 			SCTP_INP_INFO_RLOCK();
 			SCTP_INP_RLOCK(inp);
-#if !defined(__Windows__)
 			error = copy_out_local_addresses(inp, stcb, req);
-#else
-			error = copy_out_local_addresses(inp, stcb, req, oldIrql);
-#endif
 			if (error) {
 				SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-				KeLowerIrql(oldIrql);
-#endif
 				atomic_subtract_int(&stcb->asoc.refcnt, 1);
 				return error;
 			}
@@ -598,18 +534,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.start_time.tv_usec = (uint32_t)net->start_time.tv_usec;
 				SCTP_INP_RUNLOCK(inp);
 				SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-				KeLowerIrql(oldIrql);
-#endif
 				error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
-#if defined(__Windows__)
-				KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 				if (error) {
 					SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-					KeLowerIrql(oldIrql);
-#endif
 					atomic_subtract_int(&stcb->asoc.refcnt, 1);
 					return error;
 				}
@@ -621,18 +548,9 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 			xraddr.last = 1;
 			SCTP_INP_RUNLOCK(inp);
 			SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-			KeLowerIrql(oldIrql);
-#endif
 			error = SYSCTL_OUT(req, &xraddr, sizeof(struct xsctp_raddr));
-#if defined(__Windows__)
-			KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 			if (error) {
 				SCTP_INP_DECR_REF(inp);
-#if defined(__Windows__)
-				KeLowerIrql(oldIrql);
-#endif
 				return error;
 			}
 			SCTP_INP_INFO_RLOCK();
@@ -641,24 +559,15 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		SCTP_INP_DECR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
 		SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-		KeLowerIrql(oldIrql);
-#endif
 		memset((void *)&xstcb, 0, sizeof(struct xsctp_tcb));
 		xstcb.last = 1;
 		error = SYSCTL_OUT(req, &xstcb, sizeof(struct xsctp_tcb));
 		if (error) {
 			return error;
 		}
-#if defined(__Windows__)
-		KeRaiseIrql(DISPATCH_LEVEL, &oldIrql);
-#endif
 		SCTP_INP_INFO_RLOCK();
 	}
 	SCTP_INP_INFO_RUNLOCK();
-#if defined(__Windows__)
-	KeLowerIrql(oldIrql);
-#endif
 
 	memset((void *)&xinpcb, 0, sizeof(struct xsctp_inpcb));
 	xinpcb.last = 1;
@@ -686,10 +595,6 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 {
 	int error;
 	uint32_t old_sctp_udp_tunneling_port;
-#if defined(__Windows__)
-	KIRQL oldIrql;
-	oldIrql = KeRaiseIrqlToDpcLevel();
-#endif
 
 	SCTP_INP_INFO_RLOCK();
 	old_sctp_udp_tunneling_port = SCTP_BASE_SYSCTL(sctp_udp_tunneling_port);
@@ -717,9 +622,6 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 		SCTP_INP_INFO_WUNLOCK();
 	}
  out:
-#if defined(__Windows__)
-	KeLowerIrql(oldIrql);
-#endif
 	return (error);
 }
 
