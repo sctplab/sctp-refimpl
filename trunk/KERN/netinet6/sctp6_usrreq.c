@@ -243,7 +243,16 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
-#else 
+#endif
+#if defined(__APPLE__)
+	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
+		"sctp_input(): Packet of length %d received on %s%d with csum_flags 0x%x.\n",
+		m->m_pkthdr.len,
+		m->m_pkthdr.rcvif->if_name,
+		m->m_pkthdr.rcvif->if_unit,
+		m->m_pkthdr.csum_flags);
+#endif
+#if defined(__Windows__)
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
 		m->m_pkthdr.len,
