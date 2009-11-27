@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199371 2009-11-17 13:09:50Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19Z tuexen $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -101,7 +101,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199371 2009-11-17 13:09:50
 #endif
 
 #define SCTP_KTRHEAD_NAME "sctp_iterator"
-#define SCTP_KTHREAD_PAGES 2
+#define SCTP_KTHREAD_PAGES 0
 
 
 /* If you support Multi-VRF how big to
