@@ -232,7 +232,7 @@ sctp_startup_iterator(void)
 				      NULL,
 				      sctp_iterator_thread,
 				      NULL);
-	if (status == STATUS_SUCCESS) {
+	if (NT_SUCCESS(status)) {
 		ObReferenceObjectByHandle(iterator_thread_handle,
 					  THREAD_ALL_ACCESS,
 					  NULL,
