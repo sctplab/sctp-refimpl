@@ -403,7 +403,7 @@ NTSTATUS IPOutput(IN struct mbuf *, IN struct route *);
 { \
 	NTSTATUS status; \
 	status = IPOutput(o_pak, ro); \
-	if (status == STATUS_SUCCESS || status == STATUS_PENDING) { \
+	if (NT_SUCCESS(status)) { \
 		result = 0; \
 	} else { \
 		result = EINVAL; \
@@ -415,7 +415,7 @@ NTSTATUS IP6Output(IN struct mbuf *, IN struct route *);
 { \
 	NTSTATUS status; \
 	status = IP6Output(o_pak, (struct route *)ro); \
-	if (status == STATUS_SUCCESS || status == STATUS_PENDING) { \
+	if (NT_SUCCESS(status)) { \
 		result = 0; \
 	} else { \
 		result = EINVAL; \

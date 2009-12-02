@@ -617,6 +617,7 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 			}
 		}
 #else
+		SCTP_INP_INFO_WLOCK();
 		sctp_over_udp_restart();
 #endif
 		SCTP_INP_INFO_WUNLOCK();
