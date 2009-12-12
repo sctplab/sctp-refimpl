@@ -4065,23 +4065,23 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	uint32_t old_rwnd;
 	int win_probe_recovery = 0;
 	int win_probe_recovered = 0;
-	int j, done_once=0;
+	int j, done_once = 0;
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
-			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
+		               rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	stcb->asoc.cumack_log[stcb->asoc.cumack_log_at] = cumack;
 	stcb->asoc.cumack_log_at++;
-	if(stcb->asoc.cumack_log_at > SCTP_TSN_LOG_SIZE) {
+	if (stcb->asoc.cumack_log_at > SCTP_TSN_LOG_SIZE) {
 		stcb->asoc.cumack_log_at = 0;
 	}
 #endif
 	asoc = &stcb->asoc;
 	old_rwnd = asoc->peers_rwnd;
-	if(compare_with_wrap(asoc->last_acked_seq, cumack, MAX_TSN)) {
+	if (compare_with_wrap(asoc->last_acked_seq, cumack, MAX_TSN)) {
 		/* old ack */
 		return;
 	} else if (asoc->last_acked_seq == cumack) {
@@ -4092,7 +4092,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			/* SWS sender side engages */
 			asoc->peers_rwnd = 0;
 		}
-		if(asoc->peers_rwnd > old_rwnd) {
+		if (asoc->peers_rwnd > old_rwnd) {
 			goto again;
 		}
 		return;
@@ -4104,14 +4104,18 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		net->net_ack = 0;
 		net->net_ack2 = 0;
 
-		/* CMT: Reset CUC and Fast recovery algo variables before SACK processing */
+		/*
+		 * CMT: Reset CUC and Fast recovery algo variables before
+		 * SACK processing
+		 */
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 		uint32_t send_s;
+
 		if (!TAILQ_EMPTY(&asoc->sent_queue)) {
-			tp1 = TAILQ_LAST(&asoc->sent_queue, 
+			tp1 = TAILQ_LAST(&asoc->sent_queue,
 					 sctpchunk_listhead);
 			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
@@ -4121,6 +4125,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		    compare_with_wrap(cumack, send_s, MAX_TSN)) {
 #ifndef INVARIANTS
 			struct mbuf *oper;
+
 #endif
 #ifdef INVARIANTS
 			panic("Impossible sack 1");
@@ -4139,15 +4144,14 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				ph->param_type = htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
 				ph->param_length = htons(SCTP_BUF_LEN(oper));
 				ippp = (uint32_t *) (ph + 1);
-				*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_25);
+				*ippp = htonl(SCTP_FROM_SCTP_INDATA + SCTP_LOC_25);
 			}
-			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_25;
+			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_25;
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper, SCTP_SO_NOT_LOCKED);
 			return;
 #endif
 		}
 	}
-
 	asoc->this_sack_highest_gap = cumack;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 		sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
@@ -4157,7 +4161,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			       __LINE__);
 	}
 	stcb->asoc.overall_error_count = 0;
-	if (compare_with_wrap(cumack, asoc->last_acked_seq,  MAX_TSN)) {
+	if (compare_with_wrap(cumack, asoc->last_acked_seq, MAX_TSN)) {
 		/* process the new consecutive TSN first */
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);
 		while (tp1) {
@@ -4179,20 +4183,18 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					 * now no-longer in flight. Higher
 					 * values may occur during marking
 					 */
-					if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+					if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
-							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA, 
+							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA,
 								       tp1->whoTo->flight_size,
-								       tp1->book_size, 
-								       (uintptr_t)tp1->whoTo, 
+								       tp1->book_size,
+								       (uintptr_t)tp1->whoTo,
 								       tp1->rec.data.TSN_seq);
 						}
-
 						sctp_flight_size_decrease(tp1);
-                                                /*sa_ignore NO_NULL_CHK*/
+						/* sa_ignore NO_NULL_CHK */
 						sctp_total_flight_decrease(stcb, tp1);
 					}
-
 					tp1->whoTo->net_ack += tp1->send_size;
 					if (tp1->snd_count < 2) {
 						/*
@@ -4205,7 +4207,10 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						/* update RTO too? */
 						if (tp1->do_rtt) {
 							tp1->whoTo->RTO =
-                                                                /*sa_ignore NO_NULL_CHK*/
+								/*
+								 * sa_ignore
+								 * NO_NULL_CHK
+								 */
 								sctp_calculate_rto(stcb,
 										   asoc, tp1->whoTo,
 										   &tp1->sent_rcv_time,
@@ -4228,9 +4233,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					tp1->whoTo->new_pseudo_cumack = 1;
 					tp1->whoTo->find_pseudo_cumack = 1;
 					tp1->whoTo->find_rtx_pseudo_cumack = 1;
-                                        
-					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE){
-                                                /*sa_ignore NO_NULL_CHK*/
+
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
+						/* sa_ignore NO_NULL_CHK */
 						sctp_log_cwnd(stcb, tp1->whoTo, tp1->rec.data.TSN_seq, SCTP_CWND_LOG_FROM_SACK);
 					}
 				}
@@ -4245,7 +4250,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				tp1->sent = SCTP_DATAGRAM_ACKED;
 				TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
 				if (tp1->data) {
-                                        /*sa_ignore NO_NULL_CHK*/
+					/* sa_ignore NO_NULL_CHK */
 					sctp_free_bufspace(stcb, asoc, tp1, 1);
 					sctp_m_freem(tp1->data);
 				}
@@ -4266,16 +4271,16 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			}
 		}
 
-	}	
-        /*sa_ignore NO_NULL_CHK*/
+	}
+	/* sa_ignore NO_NULL_CHK */
 	if (stcb->sctp_socket) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 		struct socket *so;
-#endif
 
+#endif
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_WAKE_LOGGING_ENABLE) {
-                        /*sa_ignore NO_NULL_CHK*/
+			/* sa_ignore NO_NULL_CHK */
 			sctp_wakeup_log(stcb, cumack, 1, SCTP_WAKESND_FROM_SACK);
 		}
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4315,7 +4320,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 		asoc->total_flight = 0;
 		asoc->total_flight_count = 0;
-	} 
+	}
 	/* ECN Nonce updates */
 	if (asoc->ecn_nonce_allowed) {
 		if (asoc->nonce_sum_check) {
@@ -4347,10 +4352,10 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			if (compare_with_wrap(asoc->last_acked_seq, asoc->nonce_resync_tsn, MAX_TSN)) {
 				asoc->nonce_sum_check = 1;
 				/*
-				 * now we must calculate what the base is.
+				 * Now we must calculate what the base is.
 				 * We do this based on two things, we know
 				 * the total's for all the segments
-				 * gap-acked in the SACK (none), 
+				 * gap-acked in the SACK (none).
 				 * We also know the SACK's
 				 * nonce sum, its in nonce_sum_flag. So we
 				 * can build a truth table to back-calculate
@@ -4373,7 +4378,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		/* SWS sender side engages */
 		asoc->peers_rwnd = 0;
 	}
-	if(asoc->peers_rwnd > old_rwnd) {
+	if (asoc->peers_rwnd > old_rwnd) {
 		win_probe_recovery = 1;
 	}
 	/* Now assure a timer where data is queued at */
@@ -4382,24 +4387,28 @@ again:
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		int to_ticks;
 		if (win_probe_recovery && (net->window_probe)) {
-			win_probe_recovered=1;
-			/* Find first chunk that was used with window probe and clear the sent */
-			/*sa_ignore FREED_MEMORY*/
+			win_probe_recovered = 1;
+			/*
+			 * Find first chunk that was used with window probe
+			 * and clear the sent
+			 */
+			/* sa_ignore FREED_MEMORY */
 			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
-				if(tp1->window_probe) {
+				if (tp1->window_probe) {
+					/* move back to data send queue */
 					sctp_window_probe_recovery(stcb, asoc, net, tp1);
 					break;
 				}
 			}
 		}
 		if (net->RTO == 0) {
-			to_ticks  = MSEC_TO_TICKS(stcb->asoc.initial_rto);
+			to_ticks = MSEC_TO_TICKS(stcb->asoc.initial_rto);
 		} else {
 			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
-		if(net->flight_size) {
+		if (net->flight_size) {
 			j++;
-			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
+			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
 						  sctp_timeout_handler, &net->rxt_timer);
 			if (net->window_probe) {
 				net->window_probe = 0;
@@ -4408,26 +4417,26 @@ again:
 			if (net->window_probe) {
 				/* In window probes we must assure a timer is still running there */
 				net->window_probe = 0;
-				if(!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
-					SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks, 
-							    sctp_timeout_handler, &net->rxt_timer);
+				if (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+					SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
+					                    sctp_timeout_handler, &net->rxt_timer);
 				}
-			}else if(SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+			} else if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-						stcb, net,
-						SCTP_FROM_SCTP_INDATA+SCTP_LOC_22);
+				                stcb, net,
+				                SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
 			}
 			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_23);
+					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
 				}
 			}
 		}
 	}
-	if ((j == 0) && 
-	    (!TAILQ_EMPTY(&asoc->sent_queue)) && 
+	if ((j == 0) &&
+	    (!TAILQ_EMPTY(&asoc->sent_queue)) &&
 	    (asoc->sent_queue_retran_cnt == 0) &&
 	    (win_probe_recovered == 0) &&
 	    (done_once == 0)) {
@@ -4436,15 +4445,13 @@ again:
 		 */
 		if (sctp_fs_audit(asoc)) {
 			TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-				if (net->flight_size) {
-					net->flight_size = 0;
-				}
+				net->flight_size = 0;
 			}
 			asoc->total_flight = 0;
 			asoc->total_flight_count = 0;
 			asoc->sent_queue_retran_cnt = 0;
-			TAILQ_FOREACH(tp1,&asoc->sent_queue, sctp_next) {
-				if(tp1->sent < SCTP_DATAGRAM_RESEND) {
+			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
+				if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 					sctp_flight_size_increase(tp1);
 					sctp_total_flight_increase(stcb, tp1);
 				} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
@@ -4461,10 +4468,10 @@ again:
 	if (TAILQ_EMPTY(&asoc->send_queue) && TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left on sendqueue.. consider done */
 		/* clean up */
-		if((asoc->stream_queue_cnt == 1) &&
-		   ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
-		    (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED)) &&
-		   (asoc->locked_on_sending)
+		if ((asoc->stream_queue_cnt == 1) &&
+		    ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) ||
+		     (asoc->state & SCTP_STATE_SHUTDOWN_RECEIVED)) &&
+		    (asoc->locked_on_sending)
 			) {
 			struct sctp_stream_queue_pending *sp;
 			/* I may be in a state where we got
@@ -4473,7 +4480,7 @@ again:
 			 * user did not indicate EOR in this case. The
 			 * sp will be cleaned during free of the asoc.
 			 */
-			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue), 
+			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue),
 					sctp_streamhead);
 			if ((sp) && (sp->length == 0)) {
 				/* Let cleanup code purge it */
@@ -4483,14 +4490,15 @@ again:
 					asoc->state |= SCTP_STATE_PARTIAL_MSG_LEFT;
 					asoc->locked_on_sending = NULL;
 					asoc->stream_queue_cnt--;
-				} 
+				}
 			}
 		}
 		if ((asoc->state & SCTP_STATE_SHUTDOWN_PENDING) &&
-		    (asoc->stream_queue_cnt == 0)){
-			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
+		    (asoc->stream_queue_cnt == 0)) {
+			if (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				/* Need to abort here */
 				struct mbuf *oper;
+
 			abort_out_now:
 				*abort_now = 1;
 				/* XXX */
@@ -4506,9 +4514,9 @@ again:
 					ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
 					ph->param_length = htons(SCTP_BUF_LEN(oper));
 					ippp = (uint32_t *) (ph + 1);
-					*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_24);
+					*ippp = htonl(SCTP_FROM_SCTP_INDATA + SCTP_LOC_24);
 				}
-				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_24;
+				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_24;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_RESPONSE_TO_USER_REQ, oper, SCTP_SO_NOT_LOCKED);
 			} else {
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
@@ -4526,8 +4534,8 @@ again:
 						 stcb->sctp_ep, stcb, asoc->primary_destination);
 			}
 		} else if ((SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED) &&
-			   (asoc->stream_queue_cnt == 0)){
-			if(asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
+			   (asoc->stream_queue_cnt == 0)) {
+			if (asoc->state & SCTP_STATE_PARTIAL_MSG_LEFT) {
 				goto abort_out_now;
 			}
 			SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -4594,7 +4602,6 @@ again:
 			       stcb->asoc.total_flight,
 			       stcb->asoc.total_output_queue_size);
 	}
-
 }
 
 void
@@ -6078,7 +6085,7 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
-			       rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
+		               rwnd, stcb->asoc.last_acked_seq, stcb->asoc.peers_rwnd);
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 #ifdef SCTP_ASOCLOG_OF_TSNS
@@ -6106,6 +6113,7 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 		return;
 	}
+
 	/* First setup for CC stuff */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		net->prev_cwnd = net->cwnd;
@@ -6196,7 +6204,7 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 							sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_CA,
 								       tp1->whoTo->flight_size,
 								       tp1->book_size,
-								       (uintptr_t) tp1->whoTo,
+								       (uintptr_t)tp1->whoTo,
 								       tp1->rec.data.TSN_seq);
 						}
 						sctp_flight_size_decrease(tp1);
@@ -6286,7 +6294,6 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		struct socket *so;
 
 #endif
-
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_WAKE_LOGGING_ENABLE) {
 			/* sa_ignore NO_NULL_CHK */
@@ -6330,10 +6337,6 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		asoc->total_flight = 0;
 		asoc->total_flight_count = 0;
 	}
-	/* Fix up the a-p-a-p for future PR-SCTP sends */
-	if (compare_with_wrap(cumack, asoc->advanced_peer_ack_point, MAX_TSN)) {
-		asoc->advanced_peer_ack_point = cumack;
-	}
 	/* ECN Nonce updates */
 	if (asoc->ecn_nonce_allowed) {
 		if (asoc->nonce_sum_check) {
@@ -6365,23 +6368,25 @@ sctp_express_handle_nr_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			if (compare_with_wrap(asoc->last_acked_seq, asoc->nonce_resync_tsn, MAX_TSN)) {
 				asoc->nonce_sum_check = 1;
 				/*
-				 * now we must calculate what the base is.
+				 * Now we must calculate what the base is.
 				 * We do this based on two things, we know
 				 * the total's for all the segments
-				 * gap-acked in the SACK (none), We also
-				 * know the SACK's nonce sum, its in
-				 * nonce_sum_flag. So we can build a truth
-				 * table to back-calculate the new value of
+				 * gap-acked in the SACK (none).
+				 * We also know the SACK's
+				 * nonce sum, its in nonce_sum_flag. So we
+				 * can build a truth table to back-calculate
+				 * the new value of
 				 * asoc->nonce_sum_expect_base:
 				 * 
-				 * SACK-flag-Value         Seg-Sums Base 0 0 0
-				 * 1                    0 1 0 1 1 1
-				 * 1 0
+				 * SACK-flag-Value         Seg-Sums Base 0
+				 * 0 0 1                    0 1 0
+				 * 1 1 1                    1 0
 				 */
 				asoc->nonce_sum_expect_base = (0 ^ nonce_sum_flag) & SCTP_SACK_NONCE_SUM;
 			}
 		}
 	}
+
 	/* RWND update */
 	asoc->peers_rwnd = sctp_sbspace_sub(rwnd,
 					    (uint32_t) (asoc->total_flight + (asoc->sent_queue_cnt * SCTP_BASE_SYSCTL(sctp_peer_chunk_oh))));
@@ -6418,7 +6423,6 @@ again:
 			to_ticks = MSEC_TO_TICKS(net->RTO);
 		}
 		if (net->flight_size) {
-
 			j++;
 			(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
 						  sctp_timeout_handler, &net->rxt_timer);
@@ -6427,20 +6431,22 @@ again:
 			}
 		} else {
 			if (net->window_probe) {
-				/* In window probes we must assure a timer is still running there */		      
+				/* In window probes we must assure a timer is still running there */
 				net->window_probe = 0;
-				(void)SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
-							  sctp_timeout_handler, &net->rxt_timer);
+				if (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
+					SCTP_OS_TIMER_START(&net->rxt_timer.timer, to_ticks,
+					                    sctp_timeout_handler, &net->rxt_timer);
+				}
 			} else if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-						stcb, net,
-						SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
+				                stcb, net,
+				                SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
 			}
 			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
 					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
 					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
+					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
 				}
 			}
 		}
@@ -6484,12 +6490,11 @@ again:
 		    (asoc->locked_on_sending)
 			) {
 			struct sctp_stream_queue_pending *sp;
-
-			/*
-			 * I may be in a state where we got all across.. but
-			 * cannot write more due to a shutdown... we abort
-			 * since the user did not indicate EOR in this case.
-			 * The sp will be cleaned during free of the asoc.
+			/* I may be in a state where we got
+			 * all across.. but cannot write more due
+			 * to a shutdown... we abort since the
+			 * user did not indicate EOR in this case. The
+			 * sp will be cleaned during free of the asoc.
 			 */
 			sp = TAILQ_LAST(&((asoc->locked_on_sending)->outqueue),
 					sctp_streamhead);
@@ -6557,6 +6562,53 @@ again:
 
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
+		}
+	}
+	/*********************************************/
+	/* Here we perform PR-SCTP procedures        */
+	/* (section 4.2)                             */
+	/*********************************************/
+	/* C1. update advancedPeerAckPoint */
+	if (compare_with_wrap(cumack, asoc->advanced_peer_ack_point, MAX_TSN)) {
+		asoc->advanced_peer_ack_point = cumack;
+	}
+	/* PR-Sctp issues need to be addressed too */
+	if ((asoc->peer_supports_prsctp) && (asoc->pr_sctp_cnt > 0)) {
+		struct sctp_tmit_chunk *lchk;
+		uint32_t old_adv_peer_ack_point;
+		
+		old_adv_peer_ack_point = asoc->advanced_peer_ack_point;
+		lchk = sctp_try_advance_peer_ack_point(stcb, asoc);
+		/* C3. See if we need to send a Fwd-TSN */
+		if (compare_with_wrap(asoc->advanced_peer_ack_point, cumack,
+				      MAX_TSN)) {
+			/*
+			 * ISSUE with ECN, see FWD-TSN processing for notes
+			 * on issues that will occur when the ECN NONCE
+			 * stuff is put into SCTP for cross checking.
+			 */
+			if (compare_with_wrap(asoc->advanced_peer_ack_point, old_adv_peer_ack_point,
+					      MAX_TSN)) {
+				send_forward_tsn(stcb, asoc);
+				/*
+				 * ECN Nonce: Disable Nonce Sum check when FWD TSN
+				 * is sent and store resync tsn
+				 */
+				asoc->nonce_sum_check = 0;
+				asoc->nonce_resync_tsn = asoc->advanced_peer_ack_point;
+			} else if (lchk) {
+				/* try to FR fwd-tsn's that get lost too */
+				lchk->rec.data.fwd_tsn_cnt++;
+				if (lchk->rec.data.fwd_tsn_cnt > 3) {
+					send_forward_tsn(stcb, asoc);
+					lchk->rec.data.fwd_tsn_cnt = 0;
+				}
+			}
+		}
+		if (lchk) {
+			/* Assure a timer is up */
+			sctp_timer_start(SCTP_TIMER_TYPE_SEND,
+					 stcb->sctp_ep, stcb, lchk->whoTo);
 		}
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_RWND_LOGGING_ENABLE) {
