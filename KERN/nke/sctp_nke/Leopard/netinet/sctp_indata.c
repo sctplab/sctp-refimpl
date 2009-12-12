@@ -2961,10 +2961,10 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 }
 
 static int
-sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1, uint32_t last_tsn, 
-			   uint16_t frag_strt, uint16_t frag_end, int nr_sacking, 
-			   int *num_frs, 
-			   uint32_t *biggest_newly_acked_tsn, 
+sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1, uint32_t last_tsn,
+			   uint16_t frag_strt, uint16_t frag_end, int nr_sacking,
+			   int *num_frs,
+			   uint32_t *biggest_newly_acked_tsn,
 			   uint32_t  *this_sack_lowest_newack,
 			   int *ecn_seg_sums)
 {
