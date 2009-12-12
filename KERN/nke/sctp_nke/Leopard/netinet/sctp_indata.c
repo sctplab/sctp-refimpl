@@ -7439,7 +7439,7 @@ done_with_it:
 	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac) && (cmt_dac_flag == 0)) {
 		this_sack_lowest_newack = cum_ack;
 	}
-	if (num_seg > 0) {
+	if ((num_seg > 0) || (num_nr_seg > 0)) {
 		sctp_strike_gap_ack_chunks(stcb, asoc, biggest_tsn_acked,
 		                           biggest_tsn_newly_acked, this_sack_lowest_newack, accum_moved);
 	}
