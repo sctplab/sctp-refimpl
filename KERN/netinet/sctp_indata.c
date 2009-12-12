@@ -6113,7 +6113,8 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 	}
 	tp1 = NULL;
 	last_frag_high = 0;
-	for (i = 0; i < num_seg; i++) {
+	/* EY- ! fixattempt  process all gaps at ones, if nr-gap remove it from the rtxq */
+	for (i = 0; i < num_seg + num_nr_seg; i++) {
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
 		/* some sanity checks on the fargment offsets */
@@ -6157,9 +6158,17 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
-                                           0, &num_frs, biggest_newly_acked_tsn,
-		                           this_sack_lowest_newack, ecn_seg_sums);
+		/* EY-fixattempt if we are on nr-gap do the removal otherwise no removal */
+		if (i >= num_seg)
+			sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+			                           1, &num_frs, biggest_newly_acked_tsn,
+		                                   this_sack_lowest_newack, ecn_seg_sums);
+		else
+			sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+			                           0, &num_frs, biggest_newly_acked_tsn,
+			                           this_sack_lowest_newack, ecn_seg_sums);
+
+
 		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *)&block);
 		*offset += sizeof(block);
@@ -6174,6 +6183,7 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 				    *biggest_newly_acked_tsn,
 				    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
 	}
+#if 0
 	nr_frag = (struct sctp_nr_gap_ack_block *)sctp_m_getptr(m, *offset,
 	                                                        sizeof(struct sctp_nr_gap_ack_block), (uint8_t *)&nr_block);
 	*offset += sizeof(nr_block);
@@ -6246,6 +6256,7 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 			break;
 		}
 	}
+#endif
 	/* EY- wake up the socket if things have been removed from the sent queue */
 	if ((wake_him) && (stcb->sctp_socket)) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
