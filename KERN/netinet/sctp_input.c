@@ -4712,8 +4712,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * with no missing segments to go
 					 * this way too.
 					 */
-					sctp_express_handle_nr_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag,
-					                            &abort_now);
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag,
+					                         &abort_now);
 				} else {
 					if (netp && *netp)
 						sctp_handle_nr_sack(m, *offset,
