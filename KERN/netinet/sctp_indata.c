@@ -6680,7 +6680,7 @@ sctp_handle_nr_sack(struct mbuf *m, int offset,
 	}
 	
 	
-	if (num_seg > 0) {
+	if (num_seg > 0 || num_nr_seg > 0) {
 
 		/*
 		 * CMT: SFR algo (and HTNA) - this_sack_highest_newack has
