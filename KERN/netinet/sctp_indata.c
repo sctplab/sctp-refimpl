@@ -3270,17 +3270,9 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	int i;
 	int num_frs = 0;
 
-	uint16_t frag_strt, frag_end, primary_flag_set;
+	uint16_t frag_strt, frag_end;
 	u_long last_frag_high;
 
-	/*
-	 * @@@ JRI : TODO: This flag is not used anywhere .. remove?
-	 */
-	if (asoc->primary_destination->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
-		primary_flag_set = 1;
-	} else {
-		primary_flag_set = 0;
-	}
 	sack = &ch->sack;
 
 	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
@@ -6088,20 +6080,12 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 	int wake_him=0;
 	int num_frs = 0;
 
-	uint16_t frag_strt, frag_end, primary_flag_set;
+	uint16_t frag_strt, frag_end;
 	uint16_t nr_frag_strt, nr_frag_end;
 	
 	uint32_t last_frag_high;
 	uint32_t last_nr_frag_high;
 
-	/*
-	 * @@@ JRI : TODO: This flag is not used anywhere .. remove?
-	 */
-	if (asoc->primary_destination->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
-		primary_flag_set = 1;
-	} else {
-		primary_flag_set = 0;
-	}
 	nr_sack = &ch->nr_sack;
 
 	/* EY! - I will process nr_gaps similarly,by going to this position again if All bit is set*/
