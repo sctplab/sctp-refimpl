@@ -3264,36 +3264,31 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	/************************************************/
 	/* process fragments and update sendqueue        */
 	/************************************************/
-	struct sctp_sack *sack;
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
 	int i;
 	int num_frs = 0;
-
 	uint16_t frag_strt, frag_end;
 	u_long last_frag_high;
 
-	sack = &ch->sack;
-
-	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-			     sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-	*offset += sizeof(block);
-	if(frag == NULL) {
-		return;
-	}
 	tp1 = NULL;
 	last_frag_high = 0;
 	for (i = 0; i < num_seg; i++) {
+		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
+		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
+		*offset += sizeof(struct sctp_gap_ack_block);
+		if (frag == NULL) {
+			return;
+		}
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
 		/* some sanity checks on the fragment offsets */
 		if (frag_strt > frag_end) {
 			/* this one is malformed, skip */
-			frag++;
 			continue;
 		}
 		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-				      MAX_TSN))
+		                      MAX_TSN))
 			*biggest_tsn_acked = frag_end + last_tsn;
 
 		/* mark acked dgs and find out the highestTSN being acked */
@@ -3327,21 +3322,15 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 
-		                           0, &num_frs, biggest_newly_acked_tsn, 
-					   this_sack_lowest_newack, ecn_seg_sums);
-		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-								  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-		*offset += sizeof(block);
-		if(frag == NULL) {
-			break;
-		}
+		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+		                           0, &num_frs, biggest_newly_acked_tsn,
+		                           this_sack_lowest_newack, ecn_seg_sums);
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		if (num_frs) 
+		if (num_frs)
 			sctp_log_fr(*biggest_tsn_acked,
-				    *biggest_newly_acked_tsn, 
-				    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
+			            *biggest_newly_acked_tsn,
+			            last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
 	}
 }
 
