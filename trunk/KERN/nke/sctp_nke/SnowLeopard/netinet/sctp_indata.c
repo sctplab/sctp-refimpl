@@ -6074,17 +6074,22 @@ sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb,
 	/************************************************/
 	struct sctp_nr_sack *nr_sack;
 	struct sctp_gap_ack_block *frag, block;
+#if 0
 	struct sctp_nr_gap_ack_block *nr_frag, nr_block;
+#endif
 	struct sctp_tmit_chunk *tp1;
 	uint32_t i;
 	int wake_him=0;
 	int num_frs = 0;
 
 	uint16_t frag_strt, frag_end;
+#if 0
 	uint16_t nr_frag_strt, nr_frag_end;
-	
+#endif
 	uint32_t last_frag_high;
+#if 0
 	uint32_t last_nr_frag_high;
+#endif
 
 	nr_sack = &ch->nr_sack;
 
