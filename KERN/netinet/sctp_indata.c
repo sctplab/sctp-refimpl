@@ -6905,7 +6905,7 @@ done_with_it:
 		}
 		asoc->saw_sack_with_frags = 0;
 	}
-	if (num_seg || num_nr_seg)
+	if (num_seg)
 		asoc->saw_sack_with_frags = 1;
 	else
 		asoc->saw_sack_with_frags = 0;
@@ -6913,14 +6913,7 @@ done_with_it:
 	/* EY! - not sure about if there should be an IF*/
 	if (num_nr_seg)
 		sctp_check_for_nr_revoked(stcb, asoc, cum_ack, biggest_tsn_acked);
-	else if (asoc->saw_sack_with_nr_frags){
-		/* EY!- TODO: all previously nr_gapped chunks have been reneged abort the association */
-		asoc->saw_sack_with_nr_frags = 0;
-	}
-	if (num_nr_seg)
-		asoc->saw_sack_with_nr_frags = 1;
-	else
-		asoc->saw_sack_with_nr_frags = 0;
+
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, accum_moved, reneged_all, will_exit_fast_recovery);
 
