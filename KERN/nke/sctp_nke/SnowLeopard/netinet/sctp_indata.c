@@ -3255,51 +3255,46 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 }
 
 
-static void
+static int
 sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-		     struct sctp_sack_chunk *ch, uint32_t last_tsn, uint32_t *biggest_tsn_acked,
+		     uint32_t last_tsn, uint32_t *biggest_tsn_acked,
 		     uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-		     int num_seg, int *ecn_seg_sums)
+		     int num_seg, int num_nr_seg, int *ecn_seg_sums)
 {
-	/************************************************/
-	/* process fragments and update sendqueue        */
-	/************************************************/
-	struct sctp_sack *sack;
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
 	int i;
 	int num_frs = 0;
-
+	int chunk_freed;
+	int non_revocable;
 	uint16_t frag_strt, frag_end;
-	u_long last_frag_high;
+	uint32_t last_frag_high;
 
-	sack = &ch->sack;
-
-	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-			     sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-	*offset += sizeof(block);
-	if(frag == NULL) {
-		return;
-	}
 	tp1 = NULL;
 	last_frag_high = 0;
-	for (i = 0; i < num_seg; i++) {
+	chunk_freed = 0;
+
+	for (i = 0; i < (num_seg + num_nr_seg); i++) {
+		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
+		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
+		*offset += sizeof(block);
+		if (frag == NULL) {
+			return (chunk_freed);
+		}
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
 		/* some sanity checks on the fragment offsets */
 		if (frag_strt > frag_end) {
 			/* this one is malformed, skip */
-			frag++;
 			continue;
 		}
 		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-				      MAX_TSN))
+		                      MAX_TSN))
 			*biggest_tsn_acked = frag_end + last_tsn;
 
 		/* mark acked dgs and find out the highestTSN being acked */
 		if (tp1 == NULL) {
 			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-
 			/* save the locations of the last frags */
 			last_frag_high = frag_end + last_tsn;
 		} else {
@@ -3327,22 +3322,24 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 
-		                           0, &num_frs, biggest_newly_acked_tsn, 
-					   this_sack_lowest_newack, ecn_seg_sums);
-		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-								  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-		*offset += sizeof(block);
-		if(frag == NULL) {
-			break;
+		if (i < num_seg) {
+			non_revocable = 0;
+		} else {
+			non_revocable = 1;
+		}
+		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
+		                               this_sack_lowest_newack, ecn_seg_sums)) {
+			chunk_freed = 1;
 		}
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		if (num_frs) 
+		if (num_frs)
 			sctp_log_fr(*biggest_tsn_acked,
-				    *biggest_newly_acked_tsn, 
-				    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
+			            *biggest_newly_acked_tsn,
+			            last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
 	}
+	return (chunk_freed);
 }
 
 static void
@@ -4962,9 +4959,9 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		 * handling NEWLY ACKED chunks. this_sack_lowest_newack is
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
-		sctp_handle_segments(m, &offset, stcb, asoc, ch, last_tsn,
-				     &biggest_tsn_acked, &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-				     num_seg, &ecn_seg_sums);
+		sctp_handle_segments(m, &offset, stcb, asoc, last_tsn, &biggest_tsn_acked,
+				     &biggest_tsn_newly_acked, &this_sack_lowest_newack,
+				     num_seg, 0, &ecn_seg_sums);
 
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 			/*
@@ -6062,225 +6059,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 }
 
-/* EY! nr_sack version of sctp_handle_segments, nr-gapped TSNs get removed from RtxQ in this method*/
-static void
-sctp_handle_nr_sack_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-                             struct sctp_nr_sack_chunk *ch, uint32_t last_tsn, uint32_t *biggest_tsn_acked,
-                             uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-                             uint32_t num_seg, uint32_t num_nr_seg, int *ecn_seg_sums)
-{
-	/************************************************/
-	/* process fragments and update sendqueue        */
-	/************************************************/
-	struct sctp_nr_sack *nr_sack;
-	struct sctp_gap_ack_block *frag, block;
-#if 0
-	struct sctp_nr_gap_ack_block *nr_frag, nr_block;
-#endif
-	struct sctp_tmit_chunk *tp1;
-	uint32_t i;
-	int wake_him=0;
-	int num_frs = 0;
-
-	uint16_t frag_strt, frag_end;
-#if 0
-	uint16_t nr_frag_strt, nr_frag_end;
-#endif
-	uint32_t last_frag_high;
-#if 0
-	uint32_t last_nr_frag_high;
-#endif
-
-	nr_sack = &ch->nr_sack;
-
-	/* EY! - I will process nr_gaps similarly,by going to this position again if All bit is set*/
-	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-	                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *)&block);
-	*offset += sizeof(block);
-	if (frag == NULL) {
-		return;
-	}
-	tp1 = NULL;
-	last_frag_high = 0;
-	/* EY- ! fixattempt  process all gaps at ones, if nr-gap remove it from the rtxq */
-	for (i = 0; i < num_seg + num_nr_seg; i++) {
-		frag_strt = ntohs(frag->start);
-		frag_end = ntohs(frag->end);
-		/* some sanity checks on the fargment offsets */
-		if (frag_strt > frag_end) {
-			/* this one is malformed, skip */
-			frag++;
-			continue;
-		}
-		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-				      MAX_TSN))
-			*biggest_tsn_acked = frag_end + last_tsn;
-
-		/* mark acked dgs and find out the highestTSN being acked */
-		if (tp1 == NULL) {
-			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-
-			/* save the locations of the last frags */
-			last_frag_high = frag_end + last_tsn;
-		} else {
-			/*
-			 * now lets see if we need to reset the queue due to
-			 * a out-of-order SACK fragment
-			 */
-			if (compare_with_wrap(frag_strt + last_tsn,
-					      last_frag_high, MAX_TSN)) {
-				/*
-				 * if the new frag starts after the last TSN
-				 * frag covered, we are ok and this one is
-				 * beyond the last one
-				 */
-				;
-			} else {
-				/*
-				 * ok, they have reset us, so we need to
-				 * reset the queue this will cause extra
-				 * hunting but hey, they chose the
-				 * performance hit when they failed to order
-				 * there gaps..
-				 */
-				tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			}
-			last_frag_high = frag_end + last_tsn;
-		}
-		/* EY-fixattempt if we are on nr-gap do the removal otherwise no removal */
-		if (i >= num_seg)
-			sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
-			                           1, &num_frs, biggest_newly_acked_tsn,
-		                                   this_sack_lowest_newack, ecn_seg_sums);
-		else
-			sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
-			                           0, &num_frs, biggest_newly_acked_tsn,
-			                           this_sack_lowest_newack, ecn_seg_sums);
-
-
-		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *)&block);
-		*offset += sizeof(block);
-		if (frag == NULL) {
-			break;
-		}
-	}
-
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		if (num_frs)
-			sctp_log_fr(*biggest_tsn_acked,
-				    *biggest_newly_acked_tsn,
-				    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
-	}
-#if 0
-	nr_frag = (struct sctp_nr_gap_ack_block *)sctp_m_getptr(m, *offset,
-	                                                        sizeof(struct sctp_nr_gap_ack_block), (uint8_t *)&nr_block);
-	*offset += sizeof(nr_block);
-	
-	
-
-	if (nr_frag == NULL) {
-		return;
-	}
-	
-	tp1 = NULL;
-	last_nr_frag_high = 0;
-	/* Reset to beginning for the nr_sack section */
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-
-	for (i = 0; i < num_nr_seg; i++) {
-
-		nr_frag_strt = ntohs(nr_frag->start);
-		nr_frag_end = ntohs(nr_frag->end);
-
-		/* some sanity checks on the nr fargment offsets */
-		if (nr_frag_strt > nr_frag_end) {
-			/* this one is malformed, skip */
-			nr_frag++;
-			continue;
-		}
-
-		/* mark acked dgs and find out the highestTSN being acked */
-		if (tp1 == NULL) {
-			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-
-			/* save the locations of the last frags */
-			last_nr_frag_high = nr_frag_end + last_tsn;
-		} else {
-			/*
-			 * now lets see if we need to reset the queue due to
-			 * a out-of-order SACK fragment
-			 */
-			if (compare_with_wrap(nr_frag_strt + last_tsn,
-					      last_nr_frag_high, MAX_TSN)) {
-				/*
-				 * if the new frag starts after the last TSN
-				 * frag covered, we are ok and this one is
-				 * beyond the last one
-				 */
-				;
-			} else {
-				/*
-				 * ok, they have reset us, so we need to
-				 * reset the queue this will cause extra
-				 * hunting but hey, they chose the
-				 * performance hit when they failed to order
-				 * there gaps..
-				 */
-				tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			}
-			last_nr_frag_high = nr_frag_end + last_tsn;
-		}
-		num_frs=0;
-		wake_him = sctp_process_segment_range(stcb, &tp1, last_tsn, 
-		                                      nr_frag_strt, nr_frag_end, 1, 
-                                                      &num_frs, biggest_newly_acked_tsn, 
-					              this_sack_lowest_newack, ecn_seg_sums);
-
-		nr_frag = (struct sctp_nr_gap_ack_block *)sctp_m_getptr(m, *offset,
-									sizeof(struct sctp_nr_gap_ack_block), 
-									(uint8_t *) & nr_block);
-		*offset += sizeof(nr_block);
-		if (nr_frag == NULL) {
-			break;
-		}
-	}
-#endif
-	/* EY- wake up the socket if things have been removed from the sent queue */
-	if ((wake_him) && (stcb->sctp_socket)) {
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-		struct socket *so;
-
-#endif
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_snd);
-		/*if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_WAKE_LOGGING_ENABLE) {
-		 *	sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_WAKESND_FROM_SACK);}
-		 */
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-		so = SCTP_INP_SO(stcb->sctp_ep);
-		atomic_add_int(&stcb->asoc.refcnt, 1);
-		SCTP_TCB_UNLOCK(stcb);
-		SCTP_SOCKET_LOCK(so, 1);
-		SCTP_TCB_LOCK(stcb);
-		atomic_subtract_int(&stcb->asoc.refcnt, 1);
-		if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
-			/* assoc was freed while we were unlocked */
-			SCTP_SOCKET_UNLOCK(so, 1);
-			return;
-		}
-#endif
-		sctp_sowwakeup_locked(stcb->sctp_ep, stcb->sctp_socket);
-#if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-		SCTP_SOCKET_UNLOCK(so, 1);
-#endif
-	} /*else {
-	   *if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_WAKE_LOGGING_ENABLE) {
-	   *sctp_wakeup_log(stcb, cum_ack, wake_him, SCTP_NOWAKE_FROM_SACK);
-	   *}
-	   *}
-	   */
-}
-
 /* EY- nr_sack */
 /* Identifies the non-renegable tsns that are revoked*/
 static void
@@ -6699,11 +6477,11 @@ sctp_handle_nr_sack(struct mbuf *m, int offset,
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
 
-		sctp_handle_nr_sack_segments(m, &offset, stcb, asoc, ch, last_tsn,
-					     &biggest_tsn_acked, &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-					     num_seg, num_nr_seg, &ecn_seg_sums);
-	
-		
+		if (sctp_handle_segments(m, &offset, stcb, asoc, last_tsn, &biggest_tsn_acked,
+		                         &biggest_tsn_newly_acked, &this_sack_lowest_newack,
+		                         num_seg, num_nr_seg, &ecn_seg_sums)) {
+			wake_him++;
+		}
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 			/*
 			 * validate the biggest_tsn_acked in the gap acks if
