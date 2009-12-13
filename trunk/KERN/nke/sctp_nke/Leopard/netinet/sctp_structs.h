@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 199459 2009-11-17 23:03:38Z 
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 199459 2009-11-17 23:03:38Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -1050,8 +1050,6 @@ struct sctp_association {
 	uint8_t delayed_connection;
 	uint8_t ifp_had_enobuf;
 	uint8_t saw_sack_with_frags;
-	/* EY */
-	uint8_t saw_sack_with_nr_frags;
 	uint8_t in_asocid_hash;
 	uint8_t assoc_up_sent;
 	uint8_t adaptation_needed;
