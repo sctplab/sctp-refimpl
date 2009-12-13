@@ -3179,51 +3179,46 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 }
 
 
-static void
+static int
 sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-		     struct sctp_sack_chunk *ch, uint32_t last_tsn, uint32_t *biggest_tsn_acked,
+		     uint32_t last_tsn, uint32_t *biggest_tsn_acked,
 		     uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-		     int num_seg, int *ecn_seg_sums)
+		     int num_seg, int num_nr_seg, int *ecn_seg_sums)
 {
-	/************************************************/
-	/* process fragments and update sendqueue        */
-	/************************************************/
-	struct sctp_sack *sack;
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
 	int i;
 	int num_frs = 0;
-
+	int chunk_freed;
+	int non_revocable;
 	uint16_t frag_strt, frag_end;
-	u_long last_frag_high;
+	uint32_t last_frag_high;
 
-	sack = &ch->sack;
-
-	frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-			     sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-	*offset += sizeof(block);
-	if(frag == NULL) {
-		return;
-	}
 	tp1 = NULL;
 	last_frag_high = 0;
-	for (i = 0; i < num_seg; i++) {
+	chunk_freed = 0;
+
+	for (i = 0; i < (num_seg + num_nr_seg); i++) {
+		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
+		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
+		*offset += sizeof(block);
+		if (frag == NULL) {
+			return (chunk_freed);
+		}
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
 		/* some sanity checks on the fragment offsets */
 		if (frag_strt > frag_end) {
 			/* this one is malformed, skip */
-			frag++;
 			continue;
 		}
 		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-				      MAX_TSN))
+		                      MAX_TSN))
 			*biggest_tsn_acked = frag_end + last_tsn;
 
 		/* mark acked dgs and find out the highestTSN being acked */
 		if (tp1 == NULL) {
 			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-
 			/* save the locations of the last frags */
 			last_frag_high = frag_end + last_tsn;
 		} else {
@@ -3251,22 +3246,24 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			}
 			last_frag_high = frag_end + last_tsn;
 		}
-		sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end, 
-		                           0, &num_frs, biggest_newly_acked_tsn, 
-					   this_sack_lowest_newack, ecn_seg_sums);
-		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
-								  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
-		*offset += sizeof(block);
-		if(frag == NULL) {
-			break;
+		if (i < num_seg) {
+			non_revocable = 0;
+		} else {
+			non_revocable = 1;
+		}
+		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
+		                               this_sack_lowest_newack, ecn_seg_sums)) {
+			chunk_freed = 1;
 		}
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		if (num_frs) 
+		if (num_frs)
 			sctp_log_fr(*biggest_tsn_acked,
-				    *biggest_newly_acked_tsn, 
-				    last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
+			            *biggest_newly_acked_tsn,
+			            last_tsn, SCTP_FR_LOG_BIGGEST_TSNS);
 	}
+	return (chunk_freed);
 }
 
 static void
@@ -4886,9 +4883,9 @@ sctp_handle_sack(struct mbuf *m, int offset,
 		 * handling NEWLY ACKED chunks. this_sack_lowest_newack is
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
-		sctp_handle_segments(m, &offset, stcb, asoc, ch, last_tsn,
-				     &biggest_tsn_acked, &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-				     num_seg, &ecn_seg_sums);
+		sctp_handle_segments(m, &offset, stcb, asoc, last_tsn, &biggest_tsn_acked,
+				     &biggest_tsn_newly_acked, &this_sack_lowest_newack,
+				     num_seg, 0, &ecn_seg_sums);
 
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 			/*
@@ -6577,11 +6574,11 @@ sctp_handle_nr_sack(struct mbuf *m, int offset,
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
 
-		sctp_handle_nr_sack_segments(m, &offset, stcb, asoc, ch, last_tsn,
-					     &biggest_tsn_acked, &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-					     num_seg, num_nr_seg, &ecn_seg_sums);
-	
-		
+		if (sctp_handle_segments(m, &offset, stcb, asoc, last_tsn, &biggest_tsn_acked,
+		                         &biggest_tsn_newly_acked, &this_sack_lowest_newack,
+		                         num_seg, num_nr_seg, &ecn_seg_sums)) {
+			wake_him++;
+		}
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 			/*
 			 * validate the biggest_tsn_acked in the gap acks if
