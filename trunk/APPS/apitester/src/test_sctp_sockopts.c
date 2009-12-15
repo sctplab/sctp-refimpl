@@ -4173,6 +4173,7 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
@@ -4265,6 +4266,7 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
@@ -4417,6 +4419,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
@@ -4567,6 +4570,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
@@ -4701,6 +4705,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 	result = sctp_get_primary(fds[0], ids[0],  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
@@ -11793,7 +11798,7 @@ DEFINE_APITEST(authkey, sso_def_1_1)
 		return (strerror(errno));
 	}
 	/* overwrite the default key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -11822,7 +11827,7 @@ DEFINE_APITEST(authkey, sso_def_1_M)
 		return (strerror(errno));
 	}
 	/* overwrite the default key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -11850,7 +11855,7 @@ DEFINE_APITEST(authkey, sso_new_1_1)
 		return (strerror(errno));
 	}
 	/* add a new key id */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -11878,7 +11883,7 @@ DEFINE_APITEST(authkey, sso_new_1_M)
 		return (strerror(errno));
 	}
 	/* add a new key id */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -12042,7 +12047,7 @@ DEFINE_APITEST(authkey, sso_a_def_1_1)
 		return (strerror(errno));
 	}
 	/* overwrite the default key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0;
 	result = sctp_set_auth_key(fds[1], 0, keyid, keylen,
 				   (uint8_t *)keytext);
@@ -12083,7 +12088,7 @@ DEFINE_APITEST(authkey, sso_a_def_1_M)
 		return (strerror(errno));
 	}
 	/* overwrite the default key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0;
 	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen,
 				   (uint8_t *)keytext);
@@ -12120,7 +12125,7 @@ DEFINE_APITEST(authkey, sso_a_new_1_1)
 		return (strerror(errno));
 	}
 	/* add a new key id */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[1], 0, keyid, keylen,
 				   (uint8_t *)keytext);
@@ -12160,7 +12165,7 @@ DEFINE_APITEST(authkey, sso_a_new_1_M)
 		return (strerror(errno));
 	}
 	/* add a new key id */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[0], ids[0], keyid, keylen,
 				   (uint8_t *)keytext);
@@ -12432,7 +12437,7 @@ DEFINE_APITEST(actkey, sso_new_1_1)
 	if (fd < 0) {
 		return (strerror(errno));
 	}
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -12471,7 +12476,7 @@ DEFINE_APITEST(actkey, sso_new_1_M)
 	if (fd < 0) {
 		return (strerror(errno));
 	}
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -12594,7 +12599,7 @@ DEFINE_APITEST(actkey, sso_inhnew_1_1)
 		return (strerror(errno));
 	}
 	/* add a new key to the ep */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -12649,7 +12654,7 @@ DEFINE_APITEST(actkey, sso_inhnew_1_M)
 		return (strerror(errno));
 	}
 	/* add a new key to the ep */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 0xFFFF;
 	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
 				   (uint8_t *)keytext);
@@ -12709,7 +12714,7 @@ DEFINE_APITEST(actkey, sso_achg_1_1)
 		return "was unable to get default active key";
 	}
 	/* add a new key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 1;
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
@@ -12792,7 +12797,7 @@ DEFINE_APITEST(actkey, sso_achg_1_M)
 		return "was unable to geet default active key";
 	}
 	/* add a new key */
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	keyid = 1;
 	result = sctp_set_auth_key(fds[0], 0, keyid, keylen,
 				   (uint8_t *)keytext);
@@ -13074,7 +13079,7 @@ DEFINE_APITEST(delkey, sso_new_1_1)
 	}
 	/* add a new key */
 	keyid = 1;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -13116,7 +13121,7 @@ DEFINE_APITEST(delkey, sso_new_1_M)
 	}
 	/* add a new key */
 	keyid = 1;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -13157,7 +13162,7 @@ DEFINE_APITEST(delkey, sso_newact_1_1)
 	}
 	/* add and activate a new key */
 	keyid = 0xFFFF;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -13197,7 +13202,7 @@ DEFINE_APITEST(delkey, sso_newact_1_M)
 	}
 	/* add and activate a new key */
 	keyid = 1;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -13239,7 +13244,7 @@ DEFINE_APITEST(delkey, sso_zero_1_1)
 	}
 	/* add and activate a new key */
 	keyid = 1;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);
@@ -13289,7 +13294,7 @@ DEFINE_APITEST(delkey, sso_zero_1_M)
 	}
 	/* add and activate a new key */
 	keyid = 1;
-	keylen = sizeof(keytext);
+	keylen = sizeof(*keytext);
 	result = sctp_set_auth_key(fd, 0, keyid, keylen, (uint8_t *)keytext);
 	if (result < 0) {
 		close(fd);

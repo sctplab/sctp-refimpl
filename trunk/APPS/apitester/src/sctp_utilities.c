@@ -1341,7 +1341,7 @@ int sctp_get_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
 	struct sctp_authkey *akey;
 	int result;
 
-	len = sizeof(akey) + *keylen;
+	len = sizeof(*akey) + *keylen;
 	akey = (struct sctp_authkey *)alloca(len);
 	if (akey == NULL) {
 		printf("could not get memory for akey\n");
