@@ -4232,7 +4232,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			ch = (struct sctp_chunkhdr *)sctp_m_getptr(m, *offset,
 								   sizeof(struct sctp_chunkhdr), chunk_buf);
 		}
-		if(ch == NULL) {
+		if (ch == NULL) {
 			/* Help */
 			*offset = length;
 			if (locked_tcb) {
@@ -4514,7 +4514,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			if(netp) {
+			if (netp) {
 				sctp_handle_init(m, iphlen, *offset, sh,
 						 (struct sctp_init_chunk *)ch, inp, 
 						 stcb, *netp, &abort_no_unlock, vrf_id, port);
