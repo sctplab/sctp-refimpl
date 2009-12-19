@@ -10355,7 +10355,6 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	struct sctp_nr_sack_chunk *nr_sack;
 	
 	struct sctp_gap_ack_block *gap_descriptor;
-	struct sctp_nr_gap_ack_block *nr_gap_descriptor;
 	
 	struct sack_track *selector;
 	struct sack_track *nr_selector;
@@ -10616,8 +10615,6 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	}
 	
 	/*---------------------------------------------------------filling the nr_gap_ack blocks----------------------------------------------------*/
-	
-	nr_gap_descriptor = (struct sctp_nr_gap_ack_block *)gap_descriptor;
 
 	/* EY - there will be gaps + nr_gaps if draining is possible */	
 	if ((SCTP_BASE_SYSCTL(sctp_do_drain) ) && (limit_reached == 0)) {
@@ -10654,7 +10651,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 					* merge.
 					*/
 					num_nr_gap_blocks--;
-					nr_gap_descriptor--;
+					gap_descriptor--;
 				}
 				if (nr_selector->num_entries == 0)
 					mergeable = 0;
@@ -10672,12 +10669,12 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 							* side
 							*/
 							mergeable = 0;
-							nr_gap_descriptor->start = htons((nr_selector->gaps[j].start + offset));
+							gap_descriptor->start = htons((nr_selector->gaps[j].start + offset));
 						}
-						nr_gap_descriptor->end = htons((nr_selector->gaps[j].end + offset));
+						gap_descriptor->end = htons((nr_selector->gaps[j].end + offset));
 						num_nr_gap_blocks++;
-						nr_gap_descriptor++;
-						if (((caddr_t)nr_gap_descriptor + sizeof(struct sctp_nr_gap_ack_block)) > limit) {
+						gap_descriptor++;
+						if (((caddr_t)gap_descriptor + sizeof(struct sctp_gap_ack_block)) > limit) {
 							/* no more room */
 							limit_reached = 1;
 							break;
@@ -10700,7 +10697,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	
 	/* now we must add any dups we are going to report. */
 	if ((limit_reached == 0) && (asoc->numduptsns)) {
-		dup = (uint32_t *) nr_gap_descriptor;
+		dup = (uint32_t *) gap_descriptor;
 		for (i = 0; i < asoc->numduptsns; i++) {
 			*dup = htonl(asoc->dup_tsns[i]);
 			dup++;
@@ -10721,10 +10718,9 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 		num_gap_blocks = 0;
 	}
 	
-	a_chk->send_size = (sizeof(struct sctp_nr_sack_chunk) +
-	    (num_gap_blocks * sizeof(struct sctp_gap_ack_block)) +
-		(num_nr_gap_blocks * sizeof(struct sctp_nr_gap_ack_block)) +
-	    (num_dups * sizeof(int32_t)));
+	a_chk->send_size = sizeof(struct sctp_nr_sack_chunk) +
+	                   (num_gap_blocks + num_nr_gap_blocks) * sizeof(struct sctp_gap_ack_block) +
+	                   num_dups * sizeof(int32_t);
 
 	SCTP_BUF_LEN(a_chk->data) = a_chk->send_size;
 	nr_sack->nr_sack.num_gap_ack_blks = htons(num_gap_blocks);
