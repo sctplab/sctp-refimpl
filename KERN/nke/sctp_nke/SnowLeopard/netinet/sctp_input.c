@@ -4600,13 +4600,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				int offset_seg, offset_dup;
 				int nonce_sum_flag;
 
-				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_sack_chunk))) {
+				if (stcb == NULL) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "No stcb when processing SACK chunk\n");
+					break;
+				}
+				if (chk_length < sizeof(struct sctp_sack_chunk)) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on SACK chunk, too small\n");
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
+					break;
 				}
 				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 					/*-
@@ -4626,12 +4626,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				if (sizeof(struct sctp_sack_chunk) +
 				    num_seg * sizeof(struct sctp_gap_ack_block) +
 				    num_dup * sizeof(uint32_t) != chk_length) {
-					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size of sack chunk\n");
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size of SACK chunk\n");
+					break;
 				}
 				offset_seg = *offset + sizeof(struct sctp_sack_chunk);
 				offset_dup = offset_seg + num_seg * sizeof(struct sctp_gap_ack_block);
@@ -4684,14 +4680,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				int offset_seg, offset_dup;
 				int nonce_sum_flag;
 
-				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_nr_sack_chunk))) {
-					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on nr_sack chunk, too small\n");
-			ignore_nr_sack:
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
+				if (stcb == NULL) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "No stcb when processing NR-SACK chunk\n");
+					break;
+				}
+				if (chk_length < sizeof(struct sctp_nr_sack_chunk)) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on NR-SACK chunk, too small\n");
+					break;
 				}
 				/* EY nr_sacks have not been negotiated but the peer end sent an nr_sack, silently discard the chunk */
 				if (!(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) &&
@@ -4705,7 +4700,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * attention to a sack sent in to us since
 					 * we don't care anymore.
 					 */
-					goto ignore_nr_sack;
+					break;
 				}
 				nr_sack = (struct sctp_nr_sack_chunk *)ch;
 				flags = ch->chunk_flags;
@@ -4720,11 +4715,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    (num_seg + num_nr_seg) * sizeof(struct sctp_gap_ack_block) +
 				    num_dup * sizeof(uint32_t) != chk_length) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size of NR_SACK chunk\n");
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
+					break;
 				}
 				offset_seg = *offset + sizeof(struct sctp_nr_sack_chunk);
 				offset_dup = offset_seg + num_seg * sizeof(struct sctp_gap_ack_block);
