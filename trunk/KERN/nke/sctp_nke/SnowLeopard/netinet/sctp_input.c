@@ -4680,6 +4680,11 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				int offset_seg, offset_dup;
 				int nonce_sum_flag;
 
+				/* EY nr_sacks have not been negotiated but the peer end sent an nr_sack, silently discard the chunk */
+				if (!(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) &&
+				      stcb->asoc.peer_supports_nr_sack)) {
+					goto unknown_chunk;
+				}
 				if (stcb == NULL) {
 					SCTPDBG(SCTP_DEBUG_INDATA1, "No stcb when processing NR-SACK chunk\n");
 					break;
@@ -4688,12 +4693,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on NR-SACK chunk, too small\n");
 					break;
 				}
-				/* EY nr_sacks have not been negotiated but the peer end sent an nr_sack, silently discard the chunk */
-				if (!(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) &&
-				      stcb->asoc.peer_supports_nr_sack)) {
-					goto unknown_chunk;
-				}
-				
 				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 					/*-
 					 * If we have sent a shutdown-ack, we will pay no
@@ -4820,7 +4819,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			if(netp && *netp){
+			if (netp && *netp){
 				int abort_flag = 0;
 
 				sctp_handle_shutdown((struct sctp_shutdown_chunk *)ch,
