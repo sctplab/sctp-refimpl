@@ -6023,7 +6023,7 @@ sctp_pcb_init()
 
 	/* Init the TIMEWAIT list */
 	for (i = 0; i < SCTP_STACK_VTAG_HASH_SIZE; i++) {
-		LIST_INIT(&SCTP_BASE_INFO(vtag_timewait[i]));
+		LIST_INIT(&SCTP_BASE_INFO(vtag_timewait)[i]);
 	}
 
 #if defined(SCTP_USE_THREAD_BASED_ITERATOR)
@@ -6913,34 +6913,34 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 	    SCTP_BASE_INFO(hashasocmark))];
 	if (head == NULL) {
 		/* invalid vtag */
-	  goto skip_vtag_check;
+		goto skip_vtag_check;
 	}
 	LIST_FOREACH(stcb, head, sctp_asocs) {
-	  /* We choose not to lock anything here. TCB's can't be
-	   * removed since we have the read lock, so they can't
-	   * be freed on us, same thing for the INP. I may
-	   * be wrong with this assumption, but we will go
-	   * with it for now :-)
-	   */
-	  if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
-	    continue;
-	  }
-	  if (stcb->asoc.my_vtag == tag) {
-	    /* candidate */
-	    if (stcb->rport != rport) {
-	      continue;
-	    }
-	    if (stcb->sctp_ep->sctp_lport != lport) {
-	      continue;
-	    }
-	    /* Its a used tag set */
-	    SCTP_INP_INFO_WUNLOCK();
-	    return (0);
-	  }
+		/* We choose not to lock anything here. TCB's can't be
+		 * removed since we have the read lock, so they can't
+		 * be freed on us, same thing for the INP. I may
+		 * be wrong with this assumption, but we will go
+		 * with it for now :-)
+		 */
+		if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			continue;
+		}
+		if (stcb->asoc.my_vtag == tag) {
+			/* candidate */
+			if (stcb->rport != rport) {
+				continue;
+			}
+			if (stcb->sctp_ep->sctp_lport != lport) {
+				continue;
+			}
+			/* Its a used tag set */
+			SCTP_INP_INFO_WUNLOCK();
+			return (0);
+		}
 	}
  skip_vtag_check:
 
-	chain = &SCTP_BASE_INFO(vtag_timewait[(tag % SCTP_STACK_VTAG_HASH_SIZE))];
+	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* Now what about timed wait ? */
 	if (!LIST_EMPTY(chain)) {
 		/*
