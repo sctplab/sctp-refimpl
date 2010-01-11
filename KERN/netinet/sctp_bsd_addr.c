@@ -370,7 +370,6 @@ sctp_init_ifns_for_vrf(int vrfid)
    */
 	int rc;
 	struct ifaddrs *ifa = NULL;
-	struct in6_ifaddr *ifa6;
 	struct sctp_ifa *sctp_ifa;
 	uint32_t ifa_flags;
 
