@@ -39,7 +39,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 185694 2008-12-06 13:19:54Z rrs
 
 /* digest lengths */
 #define SCTP_AUTH_DIGEST_LEN_SHA1	20
-#define SCTP_AUTH_DIGEST_LEN_MD5	16
 #define SCTP_AUTH_DIGEST_LEN_SHA224	28
 #define SCTP_AUTH_DIGEST_LEN_SHA256	32
 #define SCTP_AUTH_DIGEST_LEN_SHA384	48
@@ -54,7 +53,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 185694 2008-12-06 13:19:54Z rrs
 /* union of all supported HMAC algorithm contexts */
 typedef union sctp_hash_context {
 	SHA1_CTX sha1;
-	MD5_CTX md5;
 #ifdef HAVE_SHA2
 	SHA256_CTX sha256;
 	SHA384_CTX sha384;
