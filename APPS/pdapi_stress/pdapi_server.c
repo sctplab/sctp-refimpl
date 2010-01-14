@@ -471,7 +471,7 @@ main(int argc, char **argv)
 	event.sctp_shutdown_event = 1;
 	event.sctp_partial_delivery_event = 1;
 	event.sctp_adaptation_layer_event = 0;
-	event.sctp_stream_reset_events = 0;
+	event.sctp_stream_reset_event = 0;
 
 	if (setsockopt(fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {
 		printf("Can't do SET_EVENTS socket option! err:%d\n", errno);

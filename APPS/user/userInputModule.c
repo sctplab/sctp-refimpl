@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.112 2009-03-23 00:23:42 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.113 2010-01-14 19:59:05 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -4791,7 +4791,7 @@ cmd_getevents(char *argv[], int argc)
 	 (event.sctp_authentication_event ? "Will" : "Will NOT"));
 
   printf("Stream Reset events %s be received\n",
-	 (event.sctp_stream_reset_events ? "Will" : "Will NOT"));
+	 (event.sctp_stream_reset_event ? "Will" : "Will NOT"));
 #endif
   return(0);
 }
@@ -5788,16 +5788,16 @@ static int cmd_addkey(char *argv[], int argc) {
     strncpy((char *)key->sca_key, argv[1], keylen);
     /* use the optional assoc id, if given */
     if (argc == 3)
-	key->sca_assoc_id = (uint32_t)strtoul(argv[2], NULL, 0);
+	  key->sca_assoc_id = (uint32_t)strtoul(argv[2], NULL, 0);
     else
-	key->sca_assoc_id = get_assoc_id();
+	  key->sca_assoc_id = get_assoc_id();
 
     if (setsockopt(adap->fd, IPPROTO_SCTP, SCTP_AUTH_KEY, optval,
 		   sizeof(*key) + keylen) != 0) {
-	printf("Can't add key id %u, errno %d\n", key->sca_keynumber, errno);
-	return (-1);
+	  printf("Can't add key id %u, errno %d\n", key->sca_keynumber, errno);
+	  return (-1);
     } else {
-	printf("Added key id %u: %s\n", key->sca_keynumber, argv[1]);
+	  printf("Added key id %u: %s\n", key->sca_keynumber, argv[1]);
     }
 #else
     printf("Not supported on this OS\n");
