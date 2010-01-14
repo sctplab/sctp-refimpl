@@ -73,7 +73,7 @@ struct sctp_event_subscribe {
 	uint8_t sctp_adaptation_layer_event;
 	uint8_t sctp_authentication_event;
 	uint8_t sctp_sender_dry_event;
-	uint8_t sctp_stream_reset_events;
+	uint8_t sctp_stream_reset_event;
 };
 
 /* ancillary data types */
@@ -437,9 +437,9 @@ union sctp_notification {
 #define SCTP_ADAPTION_INDICATION	0x0006
 #define SCTP_PARTIAL_DELIVERY_EVENT	0x0007
 #define SCTP_AUTHENTICATION_EVENT	0x0008
-#define SCTP_STREAM_RESET_EVENT		0x0009
-#define SCTP_SENDER_DRY_EVENT           0x000a
-
+#define SCTP_STREAM_RESET_EVENT		      0x0009
+#define SCTP_SENDER_DRY_EVENT             0x000a
+#define SCTP__NOTIFICATIONS_STOPPED_EVENT 0x000b /* we dont send this*/
 /*
  * socket option structs
  */

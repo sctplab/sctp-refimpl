@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.37 2009-03-23 00:41:19 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.38 2010-01-14 19:59:05 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -794,7 +794,7 @@ create_SCTP_adaptor(distributor *o,uint16_t port, int model, int rwnd , int swnd
 #if defined(__BSD_SCTP_STACK__)
 	event.sctp_authentication_event = 1;
 	event.sctp_sender_dry_event = 1;
-	event.sctp_stream_reset_events = 1;
+	event.sctp_stream_reset_event = 1;
 #endif
 
 	if (setsockopt(r->fd, IPPROTO_SCTP, SCTP_EVENTS, &event, sizeof(event)) != 0) {

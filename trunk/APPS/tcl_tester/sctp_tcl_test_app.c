@@ -488,7 +488,7 @@ setup_a_socket()
 	events.sctp_address_event = 1;
 	events.sctp_shutdown_event = 1;
 	events.sctp_adaptation_layer_event = 1;
-	events.sctp_stream_reset_events = 1;
+	events.sctp_stream_reset_event = 1;
 	siz = sizeof(events);
 	if(setsockopt(sd, IPPROTO_SCTP, SCTP_EVENTS, &events, siz) != 0) {
 		printf("Can't set SCTP_EVENTS to on error:%d - exiting\n", errno);
