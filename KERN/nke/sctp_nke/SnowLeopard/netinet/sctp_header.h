@@ -294,7 +294,6 @@ struct sctp_nr_sack {
 	uint16_t num_dup_tsns;	/* number of duplicate TSNs */
 	uint16_t reserved;	/* not currently used*/
 	/* struct sctp_gap_ack_block's follow */
-	/* struct sctp_gap_ack_block's follow */
 	/* uint32_t duplicate_tsn's follow */
 }         SCTP_PACKED;
 
