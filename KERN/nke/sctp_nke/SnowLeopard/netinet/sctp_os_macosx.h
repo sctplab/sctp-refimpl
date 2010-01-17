@@ -489,17 +489,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #include <crypto/sha2/sha2.h>
 #endif
 
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
-#include <libkern/crypto/md5.h>
-#else
-#include <sys/md5.h>
-#endif
-/* map standard crypto API names */
-#define MD5_Init	MD5Init
-#define MD5_Update	MD5Update
-#define MD5_Final	MD5Final
-
-
 /*
  * Other MacOS specific
  */

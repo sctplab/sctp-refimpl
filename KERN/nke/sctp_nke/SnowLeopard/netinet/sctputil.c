@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 199459 2009-11-17 23:03:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 202521 2010-01-17 19:40:21Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4575,7 +4575,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 				m = SCTP_BUF_NEXT(prev);
 			}
 			if (m == NULL) {
-				control->tail_mbuf = prev;;
+				control->tail_mbuf = prev;
 			}
 			continue;
 		}

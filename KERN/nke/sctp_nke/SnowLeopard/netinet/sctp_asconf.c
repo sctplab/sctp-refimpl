@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 199372 2009-11-17 13:11:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 201758 2010-01-07 21:01:37Z mbr $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -2271,7 +2271,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			if (stcb->asoc.ipv4_local_scope == 0 &&
 			    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
-				continue;;
+				continue;
 			}
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
 			    SCTP_IPV6_V6ONLY(inp6)) {

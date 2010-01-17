@@ -212,8 +212,8 @@ extern void sctp_initialize_auth_params(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb);
 
 /* test functions */
+#ifdef SCTP_HMAC_TEST
 extern void sctp_test_hmac_sha1(void);
-extern void sctp_test_hmac_md5(void);
 extern void sctp_test_authkey(void);
-
+#endif
 #endif /* __SCTP_AUTH_H__ */
