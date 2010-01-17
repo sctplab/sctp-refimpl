@@ -61,6 +61,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 202449 2010-01-16 20:04:17Z tuex
 
 typedef uint32_t sctp_assoc_t;
 
+/* Compatibility to previous define's */
+#define sctp_stream_reset_events sctp_stream_reset_event
+
 /* On/Off setup for subscription to events */
 struct sctp_event_subscribe {
 	uint8_t sctp_data_io_event;
