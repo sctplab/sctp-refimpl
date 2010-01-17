@@ -694,12 +694,12 @@ sctp_attach(struct socket *so, int proto, struct proc *p)
 			sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
 					SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		} else {
-		  flags = inp->sctp_flags;
-		  if ((flags &  SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
-			goto try_again;
-		  } else {
-			SCTP_INP_WUNLOCK(inp);
-		  }
+			flags = inp->sctp_flags;
+			if ((flags &  SCTP_PCB_FLAGS_SOCKET_GONE) == 0) {
+				goto try_again;
+			} else {
+				SCTP_INP_WUNLOCK(inp);
+			}
 		}
 		return error;
 	}
