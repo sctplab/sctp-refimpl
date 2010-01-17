@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -284,8 +284,12 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_SCALE_FOR_ADDR	2
 
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_AUTO_ASCONF)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_AUTO_ASCONF)
 #define SCTP_DEFAULT_AUTO_ASCONF        0
+#else
+#define SCTP_DEFAULT_AUTO_ASCONF	1
+#endif
 #else
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
@@ -294,15 +298,23 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_DEFAULT_MULTIPLE_ASCONFS	0
 
 /* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_MOBILITY_BASE)
 #define SCTP_DEFAULT_MOBILITY_BASE      0
+#else
+#define SCTP_DEFAULT_MOBILITY_BASE	1
+#endif
 #else
 #define SCTP_DEFAULT_MOBILITY_BASE	0
 #endif
 
 /* default MOBILITY_FASTHANDOFF mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 #define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
+#else
+#define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	1
+#endif
 #else
 #define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
 #endif
