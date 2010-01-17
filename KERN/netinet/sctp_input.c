@@ -4595,16 +4595,18 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				struct sctp_sack_chunk *sack;
 				int abort_now = 0;
 				uint32_t a_rwnd, cum_ack;
-				uint16_t num_seg;
+				uint16_t num_seg, num_dup;
+				uint8_t flags;
+				int offset_seg, offset_dup;
 				int nonce_sum_flag;
 
-				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_sack_chunk))) {
-					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on sack chunk, too small\n");
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
+				if (stcb == NULL) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "No stcb when processing SACK chunk\n");
+					break;
+				}
+				if (chk_length < sizeof(struct sctp_sack_chunk)) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on SACK chunk, too small\n");
+					break;
 				}
 				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 					/*-
@@ -4615,10 +4617,20 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
  					break;
 				} 
 				sack = (struct sctp_sack_chunk *)ch;
-				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
+				flags = ch->chunk_flags;
+				nonce_sum_flag = flags & SCTP_SACK_NONCE_SUM;
 				cum_ack = ntohl(sack->sack.cum_tsn_ack);
 				num_seg = ntohs(sack->sack.num_gap_ack_blks);
+				num_dup = ntohs(sack->sack.num_dup_tsns);
 				a_rwnd = (uint32_t) ntohl(sack->sack.a_rwnd);
+				if (sizeof(struct sctp_sack_chunk) +
+				    num_seg * sizeof(struct sctp_gap_ack_block) +
+				    num_dup * sizeof(uint32_t) != chk_length) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size of SACK chunk\n");
+					break;
+				}
+				offset_seg = *offset + sizeof(struct sctp_sack_chunk);
+				offset_dup = offset_seg + num_seg * sizeof(struct sctp_gap_ack_block);
 				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SACK process cum_ack:%x num_seg:%d a_rwnd:%d\n",
 				        cum_ack, num_seg, a_rwnd);
 				stcb->asoc.seen_a_sack_this_pkt = 1;
@@ -4638,8 +4650,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					                         &abort_now);
 				} else {
 					if (netp && *netp)
-						sctp_handle_sack(m, *offset,
-						                 sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+						sctp_handle_sack(m, offset_seg, offset_dup,
+						                 stcb, *netp,
+								 num_seg, 0, num_dup, &abort_now, flags,
+								 cum_ack, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
@@ -4661,39 +4675,49 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				struct sctp_nr_sack_chunk *nr_sack;
 				int abort_now = 0;
 				uint32_t a_rwnd, cum_ack;
-				uint16_t num_seg, num_nr_seg;
+				uint16_t num_seg, num_nr_seg, num_dup;
+				uint8_t flags;
+				int offset_seg, offset_dup;
 				int nonce_sum_flag;
 
-				if ((stcb == NULL) || (chk_length < sizeof(struct sctp_nr_sack_chunk))) {
-					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on nr_sack chunk, too small\n");
-			ignore_nr_sack:
-					*offset = length;
-					if (locked_tcb) {
-						SCTP_TCB_UNLOCK(locked_tcb);
-					}
-					return (NULL);
-				}
 				/* EY nr_sacks have not been negotiated but the peer end sent an nr_sack, silently discard the chunk */
 				if (!(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) &&
 				      stcb->asoc.peer_supports_nr_sack)) {
 					goto unknown_chunk;
 				}
-				
+				if (stcb == NULL) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "No stcb when processing NR-SACK chunk\n");
+					break;
+				}
+				if (chk_length < sizeof(struct sctp_nr_sack_chunk)) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size on NR-SACK chunk, too small\n");
+					break;
+				}
 				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_SHUTDOWN_ACK_SENT) {
 					/*-
 					 * If we have sent a shutdown-ack, we will pay no
 					 * attention to a sack sent in to us since
 					 * we don't care anymore.
 					 */
-					goto ignore_nr_sack;
+					break;
 				}
 				nr_sack = (struct sctp_nr_sack_chunk *)ch;
-				nonce_sum_flag = ch->chunk_flags & SCTP_SACK_NONCE_SUM;
+				flags = ch->chunk_flags;
+				nonce_sum_flag = flags & SCTP_SACK_NONCE_SUM;
 				
 				cum_ack = ntohl(nr_sack->nr_sack.cum_tsn_ack);
 				num_seg = ntohs(nr_sack->nr_sack.num_gap_ack_blks);
 				num_nr_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
+				num_dup = ntohs(nr_sack->nr_sack.num_dup_tsns);
 				a_rwnd = (uint32_t) ntohl(nr_sack->nr_sack.a_rwnd);
+				if (sizeof(struct sctp_nr_sack_chunk) +
+				    (num_seg + num_nr_seg) * sizeof(struct sctp_gap_ack_block) +
+				    num_dup * sizeof(uint32_t) != chk_length) {
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Bad size of NR_SACK chunk\n");
+					break;
+				}
+				offset_seg = *offset + sizeof(struct sctp_nr_sack_chunk);
+				offset_dup = offset_seg + num_seg * sizeof(struct sctp_gap_ack_block);
 				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_NR_SACK process cum_ack:%x num_seg:%d a_rwnd:%d\n",
 				        cum_ack, num_seg, a_rwnd);
 				stcb->asoc.seen_a_sack_this_pkt = 1;
@@ -4716,8 +4740,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					                         &abort_now);
 				} else {
 					if (netp && *netp)
-						sctp_handle_nr_sack(m, *offset,
-						                    nr_sack, stcb, *netp, &abort_now, chk_length, a_rwnd);
+						sctp_handle_sack(m, offset_seg, offset_dup,
+						                 stcb, *netp,
+						                 num_seg, num_nr_seg, num_dup, &abort_now, flags,
+						                 cum_ack, a_rwnd);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
@@ -4793,7 +4819,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				return (NULL);
 			}
-			if(netp && *netp){
+			if (netp && *netp){
 				int abort_flag = 0;
 
 				sctp_handle_shutdown((struct sctp_shutdown_chunk *)ch,
@@ -4977,7 +5003,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				return (NULL);
 			}
-			if(stcb) {
+			if (stcb) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_THRESHOLD_LOGGING) {
 					sctp_misc_ints(SCTP_THRESHOLD_CLEAR,
 						       stcb->asoc.overall_error_count,
