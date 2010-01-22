@@ -141,7 +141,7 @@ struct sctp_asconf_addrv4_param {	/* an ASCONF address (v4) parameter */
 
 struct sctp_supported_chunk_types_param {
 	struct sctp_paramhdr ph;/* type = 0x8008  len = x */
-	uint8_t chunk_types[0];
+	uint8_t chunk_types[];
 } SCTP_PACKED ;
 
 
@@ -221,7 +221,7 @@ struct sctp_state_cookie {	/* this is our definition... */
 struct sctp_missing_nat_state {
 	uint16_t cause;
 	uint16_t length;
-        uint8_t data[0];
+        uint8_t data[];
 } SCTP_PACKED ;
 
 
@@ -453,7 +453,7 @@ struct sctp_pktdrop_chunk {
 	uint32_t current_onq;
 	uint16_t trunc_len;
 	uint16_t reserved;
-	uint8_t data[0];
+	uint8_t data[];
 } SCTP_PACKED ;
 
 /**********STREAM RESET STUFF ******************/
@@ -463,13 +463,13 @@ struct sctp_stream_reset_out_request {
 	uint32_t request_seq;	/* monotonically increasing seq no */
 	uint32_t response_seq;	/* if a response, the resp seq no */
 	uint32_t send_reset_at_tsn;	/* last TSN I assigned outbound */
-	uint16_t list_of_streams[0];	/* if not all list of streams */
+	uint16_t list_of_streams[];	/* if not all list of streams */
 } SCTP_PACKED ;
 
 struct sctp_stream_reset_in_request {
 	struct sctp_paramhdr ph;
 	uint32_t request_seq;
-	uint16_t list_of_streams[0];	/* if not all list of streams */
+	uint16_t list_of_streams[];	/* if not all list of streams */
 } SCTP_PACKED ;
 
 
@@ -547,24 +547,24 @@ struct sctp_stream_reset_resp_tsn {
 #define SCTP_RANDOM_MAX_SIZE 256
 struct sctp_auth_random {
 	struct sctp_paramhdr ph;/* type = 0x8002 */
-	uint8_t random_data[0];
+	uint8_t random_data[];
 } SCTP_PACKED ;
 
 struct sctp_auth_chunk_list {
 	struct sctp_paramhdr ph;/* type = 0x8003 */
-	uint8_t chunk_types[0];
+	uint8_t chunk_types[];
 } SCTP_PACKED ;
 
 struct sctp_auth_hmac_algo {
 	struct sctp_paramhdr ph;/* type = 0x8004 */
-	uint16_t hmac_ids[0];
+	uint16_t hmac_ids[];
 } SCTP_PACKED ;
 
 struct sctp_auth_chunk {
 	struct sctp_chunkhdr ch;
 	uint16_t shared_key_id;
 	uint16_t hmac_id;
-	uint8_t hmac[0];
+	uint8_t hmac[];
 } SCTP_PACKED ;
 
 struct sctp_auth_invalid_hmac {
