@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 202782 2010-01-22 07:53:41Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 203847 2010-02-13 21:38:15Z tuexen $");
 #endif
 
 #ifndef __sctp_header_h__
@@ -67,7 +67,8 @@ struct sctp_ipv6addr_param {
 struct sctp_cookie_perserve_param {
 	struct sctp_paramhdr ph;/* type=SCTP_COOKIE_PRESERVE, len=8 */
 	uint32_t time;		/* time in ms to extend cookie */
-};
+} SCTP_PACKED;
+
 #define SCTP_ARRAY_MIN_LEN 1
 /* Host Name Address */
 struct sctp_host_name_param {
@@ -295,12 +296,12 @@ struct sctp_nr_sack {
 	uint16_t reserved;	/* not currently used*/
 	/* struct sctp_gap_ack_block's follow */
 	/* uint32_t duplicate_tsn's follow */
-}         SCTP_PACKED;
+} SCTP_PACKED;
 
 struct sctp_nr_sack_chunk {
 	struct sctp_chunkhdr ch;
 	struct sctp_nr_sack nr_sack;
-}               SCTP_PACKED;
+} SCTP_PACKED;
 
 
 /* Heartbeat Request (HEARTBEAT) */
@@ -497,7 +498,7 @@ struct sctp_stream_reset_add_strm {
   uint32_t request_seq;
   uint16_t number_of_streams;
   uint16_t reserved;
-};
+} SCTP_PACKED;
 
 #define SCTP_STREAM_RESET_NOTHING   0x00000000	/* Nothing for me to do */
 #define SCTP_STREAM_RESET_PERFORMED 0x00000001	/* Did it */
