@@ -9,7 +9,7 @@ fi
 
 # this is going to be ran from within the build directory
 exportUserspace=${PWD}
-umemPrefix=${exportUserspace}/umem-1.0-prefix
+umemPrefix=${exportUserspace}/umem-1.0.1-prefix
 
 # if already built, we can exit gracefully...
 if test -e $umemPrefix/include/umem.h -a -e $umemPrefix/lib/libumem.a
@@ -20,24 +20,24 @@ fi
 
 # we need to build umem.  where is the source?
        
-# assume we are in KERN/userspace/build and need ../umem-1.0
+# assume we are in KERN/userspace/build and need ../umem-1.0.1
 umemSrcPath=${PWD}/..
-if test ! -d $umemSrcPath/umem-1.0
+if test ! -d $umemSrcPath/umem-1.0.1
     then
 # someone other than us may be building this with their own unique
 #  directory structure, but they need to tell us stuff...
-    echo "Which directory contains the umem source code directory umem-1.0?"
+    echo "Which directory contains the umem source code directory umem-1.0.1?"
     read umemPath
-    if test ! -d $umemSrcPath/umem-1.0
+    if test ! -d $umemSrcPath/umem-1.0.1
         then
-        echo "Sorry I cannot see $umemSrcPath/umem-1.0"
+        echo "Sorry I cannot see $umemSrcPath/umem-1.0.1"
         exit 1
     fi
 fi
 
-# ok we found umem-1.0
-echo "Building umem-1.0..."
-cd $umemSrcPath/umem-1.0
+# ok we found umem-1.0.1
+echo "Building umem-1.0.1..."
+cd $umemSrcPath/umem-1.0.1
 autoconf
 ./configure --prefix=$umemPrefix
 make
