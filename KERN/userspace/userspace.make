@@ -1,6 +1,6 @@
 CC = gcc
 OSTYPE = $(shell uname)
-UMEMMAKE = $(shell ls 2> /dev/null ../umem-1.0/Makefile)
+UMEMMAKE = $(shell ls 2> /dev/null ../umem-1.0.1/Makefile)
 ATOMICMAKE = $(shell ls 2> /dev/null ../libatomic_ops-1.1/Makefile)
 CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall 
 # this breaks powerPC builds -march=i486 
@@ -73,12 +73,12 @@ clean-obj:
 	rm -rf *.o *.a
 
 clean-umem:
-	rm -rf umem-1.0-prefix
+	rm -rf umem-1.0.1-prefix
 	rm -f user_lib/libumem*
 	rm -f user_include/umem.h user_include/sys/vmem.h
-ifeq ($(UMEMMAKE),../umem-1.0/Makefile)
-	(cd ../umem-1.0 && make distclean)
-	rm -rf ../umem-1.0/autom4te.cache ../umem-1.0/configure
+ifeq ($(UMEMMAKE),../umem-1.0.1/Makefile)
+	(cd ../umem-1.0.1 && make distclean)
+	rm -rf ../umem-1.0.1/autom4te.cache ../umem-1.0/configure
 endif
 
 clean-atomic:

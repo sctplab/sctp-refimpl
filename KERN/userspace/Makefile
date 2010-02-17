@@ -11,7 +11,7 @@ clean:
 	(cd build && ls -1 | grep -v CVS | xargs rm -rf)
 
 destroy: clean
-	(cd umem-1.0 && make distclean)
-	(cd umem-1.0 && rm -rf autom4te.cache)
+	(cd umem-1.0.1 && make distclean)
+	(cd umem-1.0.1 && rm -rf autom4te.cache)
 #	(cd ../../libatomic_ops-1.2 && make distclean)
 #	(cd ../../libatomic_ops-1.1 && make distclean)
