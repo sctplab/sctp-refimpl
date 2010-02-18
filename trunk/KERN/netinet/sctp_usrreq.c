@@ -5024,9 +5024,13 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 #if defined(__FreeBSD__) || defined(__Windows__)
-		so->so_state &= ~(SS_ISDISCONNECTING|SBS_CANTRCVMORE|SBS_CANTSENDMORE);
+		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
+		so->so_snd.sb_state &= ~SBS_CANTSENDMORE;
+		so->so_state &= ~SS_ISDISCONNECTING;
 #else
-		so->so_state &= ~(SS_ISDISCONNECTING|SS_CANTRCVMORE|SS_CANTSENDMORE);
+		so->so_state &= ~(SS_ISDISCONNECTING |
+		                  SS_CANTRCVMORE |
+		                  SS_CANTSENDMORE);
 #endif
 		soisconnecting(so);
 	}
