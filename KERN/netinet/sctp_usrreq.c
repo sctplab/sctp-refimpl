@@ -1220,7 +1220,9 @@ sctp_shutdown(struct socket *so)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
 		/* Restore the flags that the soshutdown took away. */
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 502115) || defined(__Windows__)
+		SOCKBUF_LOCK(&so->so_rcv);
 		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
+		SOCKBUF_UNLOCK(&so->so_rcv);
 #else
 		so->so_state &= ~SS_CANTRCVMORE;
 #endif
@@ -5024,9 +5026,15 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
 #if defined(__FreeBSD__) || defined(__Windows__)
-		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
+		SOCKBUF_LOCK(&so->so_rcv);
+  		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
+		SOCKBUF_UNLOCK(&so->so_rcv);
+		SOCKBUF_LOCK(&so->so_snd);
 		so->so_snd.sb_state &= ~SBS_CANTSENDMORE;
-		so->so_state &= ~SS_ISDISCONNECTING;
+		SOCKBUF_UNLOCK(&so->so_snd);
+		SOCK_LOCK(so);
+ 		so->so_state &= ~SS_ISDISCONNECTING;
+		SOCK_UNLOCK(so);
 #else
 		so->so_state &= ~(SS_ISDISCONNECTING |
 		                  SS_CANTRCVMORE |
