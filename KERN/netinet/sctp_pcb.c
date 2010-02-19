@@ -3027,9 +3027,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					/* unlock info */
 					if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
 					    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
-					  /* Ok, must be one-2-one and allowing port re-use */
-					  port_reuse_active = 1;
-					  goto continue_anyway;
+						/* Ok, must be one-2-one and allowing port re-use */
+						port_reuse_active = 1;
+						goto continue_anyway;
 					}
 					SCTP_INP_DECR_REF(inp);
 					SCTP_INP_INFO_WUNLOCK();
@@ -3053,9 +3053,9 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				/* unlock info */
 				if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
 				    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
-				  /* Ok, must be one-2-one and allowing port re-use */
-				  port_reuse_active = 1;
-				  goto continue_anyway;
+					/* Ok, must be one-2-one and allowing port re-use */
+					port_reuse_active = 1;
+					goto continue_anyway;
 				}
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_INFO_WUNLOCK();
@@ -3073,13 +3073,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				/* Sorry someone already has this one bound */
 				if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PORTREUSE)) &&
 				    (sctp_is_feature_on(inp_tmp, SCTP_PCB_FLAGS_PORTREUSE))) {
-				  port_reuse_active = 1;
+					port_reuse_active = 1;
 				} else {
-				  SCTP_INP_DECR_REF(inp);
-				  SCTP_INP_WUNLOCK(inp);
-				  SCTP_INP_INFO_WUNLOCK();
-				  SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
-				  return (EADDRINUSE);
+					SCTP_INP_DECR_REF(inp);
+					SCTP_INP_WUNLOCK(inp);
+					SCTP_INP_INFO_WUNLOCK();
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EADDRINUSE);
+					return (EADDRINUSE);
 				}
 			}
 		}
