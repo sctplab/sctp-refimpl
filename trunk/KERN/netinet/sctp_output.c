@@ -10806,7 +10806,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
 void
 sctp_send_shutdown_complete(struct sctp_tcb *stcb,
                             struct sctp_nets *net,
-                            int reflect_tag)
+                            int reflect_vtag)
 {
 	/* formulate and SEND a SHUTDOWN-COMPLETE */
 	struct mbuf *m_shutdown_comp;
@@ -10819,7 +10819,7 @@ sctp_send_shutdown_complete(struct sctp_tcb *stcb,
 		/* no mbuf's */
 		return;
 	}
-	if (reflect_tag) {
+	if (reflect_vtag) {
 		flags = SCTP_HAD_NO_TCB;
 		vtag = stcb->asoc.my_vtag;
 	} else {
