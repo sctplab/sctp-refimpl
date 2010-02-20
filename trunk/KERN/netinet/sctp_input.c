@@ -925,8 +925,8 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 
 	asoc = &stcb->asoc;
 	/* process according to association state */
-	if ((SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_WAIT) &&
-	    (SCTP_GET_STATE(asoc) != SCTP_STATE_COOKIE_ECHOED)) {
+	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_WAIT) ||
+	    (SCTP_GET_STATE(asoc) == SCTP_STATE_COOKIE_ECHOED)) {
 		/* unexpected SHUTDOWN-ACK... do OOTB handling... */
 		sctp_send_shutdown_complete(stcb, net, 1);
 		SCTP_TCB_UNLOCK(stcb);
