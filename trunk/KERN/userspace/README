@@ -2,7 +2,17 @@ The umem slab allocator used here is released under the CDDL v1.0 license.
 
 --------------
 
-In order to build, on Linux and Mac OS X:
+--- Feb 24, 2010 ---
+
+All you should have to do now is :
+make
+
+And to destroy everything:
+make destroy
+
+---
+
+In the old system, in order to build, on Linux and Mac OS X:
 make
 
 On FreeBSD:
