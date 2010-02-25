@@ -1,9 +1,17 @@
 CC = gcc
 OSTYPE = $(shell uname)
+ARCHTYPE = $(shell uname -p | sed 's/386/486/')
 UMEMMAKE = $(shell ls 2> /dev/null ../umem-1.0.1/Makefile)
 ATOMICMAKE = $(shell ls 2> /dev/null ../libatomic_ops-1.1/Makefile)
-CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall 
-# this breaks powerPC builds -march=i486 
+
+# FreeBSD needs -march for gcc atomics, but that breaks 64bit x86 Darwin
+ifeq ($(OSTYPE),FreeBSD)
+CFLAGS  = -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall -march=$(ARCHTYPE)
+else
+CFLAGS  = -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -Wall 
+endif
+# this breaks powerPC builds -march=i486
+
 CPPFLAGS = -I.  -I./user_include
 DEFS = 
 INCLUDES = 
@@ -78,7 +86,7 @@ clean-umem:
 	rm -f user_include/umem.h user_include/sys/vmem.h
 ifeq ($(UMEMMAKE),../umem-1.0.1/Makefile)
 	(cd ../umem-1.0.1 && make distclean)
-	rm -rf ../umem-1.0.1/autom4te.cache ../umem-1.0/configure
+	rm -rf ../umem-1.0.1/autom4te.cache ../umem-1.0.1/configure
 endif
 
 clean-atomic:
