@@ -1055,6 +1055,7 @@ userspace_sctp_sendmbuf(struct socket *so,
     error = sctp_lower_sosend(so, to, NULL/*uio*/,
                               (struct mbuf *)mbufdata, (struct mbuf *)NULL,
                               uflags, use_rcvinfo, sinfo);
+	sctp_m_freem(mbufdata);  /* I.R. */
 sendmsg_return:
     /* TODO: Needs a condition for non-blocking when error is EWOULDBLOCK */
     if (0 == error)
@@ -2158,7 +2159,7 @@ int
 userspace_getsockopt(struct socket *so, int level, int option_name,
                      void *option_value, socklen_t option_len)
 {
-	return (sctp_getopt(so, option_name, option_value, &option_len, NULL));
+	return (sctp_getopt(so, option_name, option_value, (size_t*)&option_len, NULL));
 }
 
 #if 1 /* using iovec to sendmsg */
@@ -2170,6 +2171,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
 	const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
 	struct iovec send_iovec[MAXLEN_MBUF_CHAIN];
 	struct mbuf *m;
+	struct mbuf *m_orig;
 	int iovcnt;
 	int send_len;
 	int len;
@@ -2188,6 +2190,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
 	send_count = 0;
 
 	m = SCTP_HEADER_TO_CHAIN(o_pak);
+	m_orig = m;
 
 	len = sizeof(struct ip);
 	if (SCTP_BUF_LEN(m) < len) {
@@ -2272,6 +2275,7 @@ void sctp_userspace_ip_output(int *result, struct mbuf *o_pak,
 			*result = errno;
 		}
 	}
+	sctp_m_freem(m_orig);
 }
 
 #else  /* old version of sctp_userspace_ip_output that makes a copy using pack_send_buffer */
