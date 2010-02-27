@@ -25,3 +25,10 @@ make destroy
 Once this is complete, the build/user_lib directory will contain the necessary
 libraries to build userspace applications.  For an example of how to build a
 userspace application, see the file userspace_app.make .
+
+
+NOTES
+----------
+
+On FreeBSD, if the slab allocator is giving your problems, try to
+up the sysctl -w vm.max_proc_mmap value.

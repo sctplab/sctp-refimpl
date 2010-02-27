@@ -26,12 +26,12 @@ then
     v4=`uname -p | sed 's/386/486/'`
 if [ "$v1" = "FreeBSD" ];
 then
-    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DUSERMODE -Wall -march=$v4" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
+    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DSCTP_USERMODE -Wall -march=$v4" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
 else
-    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DUSERMODE -Wall" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
+    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DSCTP_USERMODE -Wall" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
 fi
 else
-    make BUILD=bserver CFLAGS="-g  -UUSERMODE  -Wall" CPPFLAGS="-I/usr/include" LDFLAGS="" LIBS="-lsctp" -f hmakefile
+    make BUILD=bserver CFLAGS="-g  -USCTP_USERMODE  -Wall" CPPFLAGS="-I/usr/include" LDFLAGS="" LIBS="-lsctp" -f hmakefile
 fi
 
 

@@ -12,7 +12,7 @@
 #include <assert.h>
 #include <sys/time.h>
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
 #include <netinet/sctp_os.h>
 #include <pthread.h>
 #include <netinet/in_systm.h>
@@ -44,19 +44,11 @@ struct dp{
 #define DATAPOINTS (int)ceil(log(MAX_MSG_SIZE)/log(2))+1
 
 int loop = 100;
-#if defined(__Userspace_os_FreeBSD)
-int window_size = 12;
-#else
 int window_size = 64;
-#endif
 int skip = 10;
 
 int loop_large = 20;
-#if defined(__Userspace_os_FreeBSD)
-int window_size_large = 12;
-#else
 int window_size_large = 64;
-#endif
 int skip_large = 2;
 
 int large_message_size = 8192;
@@ -67,7 +59,7 @@ char r_buf1[MYBUFSIZE];
 
 
 /* Prototypes*/
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
 extern void sctp_init(void);
 extern void sctp_finish(void);
 
@@ -135,7 +127,7 @@ int main(int argc, char **argv) {
 	exit(1);
     }
     
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     uint32_t optval=1;
     struct socket *psock = NULL;
     strcpy(mode, "Userspace");
@@ -170,7 +162,7 @@ int main(int argc, char **argv) {
     strcat(filename,".txt");
 
     
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     sctp_init(); 
     SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
     
@@ -194,7 +186,7 @@ int main(int argc, char **argv) {
     dest->sin_len = sizeof(struct sockaddr);
 #endif
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     /* call userspace_connect which eventually calls sctp_send_initiate */
     if( userspace_connect(psock, (struct sockaddr *) dest, sizeof(struct sockaddr_in)) == -1 ) {
         printf("userspace_connect failed.  exiting...\n");
@@ -272,7 +264,7 @@ int main(int argc, char **argv) {
             }
             
             for(j = 0; j < window_size; j++) {
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
                 if((retval = userspace_sctp_sendmsg(psock /* struct socket *so */,
                                                     s_buf /* const void *data */,
                                                     size /* size_t len */,
@@ -301,7 +293,7 @@ int main(int argc, char **argv) {
             }
 
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
             if ((n = userspace_sctp_recvmsg(psock, r_buf, 4, (struct sockaddr *) &cli, &s, &sri, &msg_flags)) <=0 )
                 {
                     printf(".....userspace_sctp_recvmsg returned n=%d errno=%d\n", n, errno);
@@ -337,7 +329,7 @@ int main(int argc, char **argv) {
     
     printf("Client closing socket...errno=%d\n", errno);
     free(dest);
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     userspace_close(psock);
 #else
     close(sock_fd);
@@ -354,7 +346,7 @@ int main(int argc, char **argv) {
     fclose(file);
 
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     sctp_finish();
     //    pthread_exit(NULL);
 #endif
