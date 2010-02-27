@@ -10,7 +10,7 @@
 #include <errno.h>
 #include <sys/time.h>
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
 #include <netinet/sctp_os.h>
 #include <pthread.h>
 #include <netinet/in_systm.h>
@@ -32,19 +32,11 @@
 
 
 int loop = 100;
-#if defined(__Userspace_os_FreeBSD)
-int window_size = 12;
-#else
 int window_size = 64;
-#endif
 int skip = 10;
 
 int loop_large = 20;
-#if defined(__Userspace_os_FreeBSD)
-int window_size_large = 12;
-#else
 int window_size_large = 64;
-#endif
 int skip_large = 2;
 
 int large_message_size = 8192;
@@ -55,7 +47,7 @@ char r_buf1[MYBUFSIZE];
 
 
 /* Prototypes*/
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
 extern void sctp_init(void);
 
 extern int userspace_bind(struct socket *so, struct sockaddr *name, int namelen);
@@ -108,7 +100,7 @@ int main(int argc, char **argv)
 	exit(1);
     }
     
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     uint32_t optval=1;
     struct socket *psock = NULL;
     struct socket *conn_sock = NULL;
@@ -133,7 +125,7 @@ int main(int argc, char **argv)
                   align_size * align_size);
 
 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     sctp_init();
     SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
 
@@ -157,7 +149,7 @@ int main(int argc, char **argv)
     src.sin_len = sizeof(struct sockaddr);
 #endif
 
-#if defined(USERMODE)    
+#if defined(SCTP_USERMODE)    
     if(userspace_bind(psock, (struct sockaddr *)&src, sizeof(src)) == -1) {
         printf("userspace_bind failed.  exiting...\n");
         exit(1);
@@ -249,7 +241,7 @@ int main(int argc, char **argv)
                 ncounter = 0;
                 do{
                 
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
                     if ((n = userspace_sctp_recvmsg(conn_sock, (void *)r_buf, size, (struct sockaddr *) &cli, &s, &sri, &msg_flags)) <=0 )
                         {
                             printf("userspace_sctp_recvmsg returned n=%d errno=%d\n", n, errno);
@@ -272,7 +264,7 @@ int main(int argc, char **argv)
                 
             }
 
-#if defined(USERMODE)         
+#if defined(SCTP_USERMODE)         
             if ((retval = userspace_sctp_sendmsg(conn_sock /* struct socket *so */,
                                                  s_buf /* const void *data */,
                                                  4     /*sizeof(buf)*/ /* size_t len */,
@@ -306,7 +298,7 @@ int main(int argc, char **argv)
 
     
     printf("Server closing both sockets...errno=%d\n", errno);
-#if defined(USERMODE)
+#if defined(SCTP_USERMODE)
     userspace_close(conn_sock); 
     userspace_close(psock); 
     //    pthread_exit(NULL);

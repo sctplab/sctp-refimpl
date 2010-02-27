@@ -7,7 +7,5 @@
  */
 #define SCTP_PROCESS_LEVEL_LOCKS 1
 
-#if defined(__Userspace_os_FreeBSD)
-/* our FreeBSD machines are typically configured to have the CRC32c disabled */
-#define SCTP_WITH_NO_CSUM 1
-#endif
+/* uncomment the below in order to make the CRC32c disabled */
+//#define SCTP_WITH_NO_CSUM 1
