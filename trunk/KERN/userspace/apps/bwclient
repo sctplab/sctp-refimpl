@@ -5,20 +5,23 @@
 
 if [ $# -ne 3 ];
 then
-    echo "Usage: $0 dest-ip dest-port mode(enter k for SCTP kernel stack and u for SCTP userpace stack"
+    echo "Usage: $0 dest-ip dest-port mode(enter k for SCTP kernel stack, u for SCTP userpace stack with libumem, or m for SCTP userspace stack with malloc)"
     exit 1
 fi
 
-if  [ "$3" != "k"  -a  "$3" != "u" ]; 
+if  [ "$3" != "k"  -a  "$3" != "u" -a "$3" != "m" ]; 
 then
-    echo "For mode: enter k for SCTP kernel stack and u for SCTP userpace stack"
+    echo "For mode: enter k for SCTP kernel stack, u for SCTP userpace stack with libumem, or m for SCTP userspace stack with malloc"
     exit 1
 fi
 
 make clean -f hmakefile
 
 # Build application according to user specified parameters
-if [ "$3" = "u" ];
+if [ "$3" = "m" ];
+then
+    gcc -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_Linux -DSCTP_SIMPLE_ALLOCATOR -DSCTP_USERMODE -Wall  -I.  -I../build -o osubw_sctpclient osubw_sctpclient.c -L../build -luserspace -lm -lcrypto -pthread
+elif [ "$3" = "u" ];
 then
     v1=`uname`
     v2="-D__Userspace_os_"

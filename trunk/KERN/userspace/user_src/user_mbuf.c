@@ -9,7 +9,10 @@
 /* #include <sys/param.h> This defines MSIZE 256 */
 #include <assert.h>
 #include <sys/queue.h>
+#if !defined(SCTP_SIMPLE_ALLOCATOR)
 #include "user_include/umem.h"
+//#include "user_include/umem_impl.h"
+#endif
 #include "user_include/user_mbuf.h"
 #include "user_include/user_environment.h"
 #include "user_include/user_atomic.h"
@@ -23,9 +26,9 @@ int	max_protohdr = KIPC_MAX_PROTOHDR; /* Size of largest protocol layer header. 
 /*
  * Zones from which we allocate.
  */
-umem_zone_t	zone_mbuf;
-umem_zone_t	zone_clust;
-umem_zone_t	zone_ext_refcnt;
+sctp_zone_t	zone_mbuf;
+sctp_zone_t	zone_clust;
+sctp_zone_t	zone_ext_refcnt;
 
 /*__Userspace__
  * constructor callback_data 
@@ -58,6 +61,264 @@ static void	mb_dtor_mbuf(void *,  void *);
 static void	mb_dtor_clust(void *, void *);
 
 
+/***************** Functions taken from user_mbuf.h *************/
+
+/* __Userspace__  Setter function for mbuf_mb_args */
+static void set_mbuf_mb_args(int flags, short type) {
+	mbuf_mb_args.flags = flags;
+	mbuf_mb_args.type = type;
+}
+#if USING_MBUF_CONSTRUCTOR
+/* __Userspace__  Setter function for clust_mb_args */
+static void set_clust_mb_args(struct mbuf * mb) {
+	clust_mb_args.parent_mbuf = mb;
+}
+#endif
+
+static int mbuf_constructor_dup(struct mbuf *m, int pkthdr, short type)
+{
+	int flags = pkthdr;
+	if (type == MT_NOINIT)
+		return (0);
+	
+	m->m_next = NULL;
+	m->m_nextpkt = NULL;
+	m->m_len = 0;
+	m->m_flags = flags;
+	m->m_type = type;
+	if (flags & M_PKTHDR) {
+		m->m_data = m->m_pktdat;
+		m->m_pkthdr.rcvif = NULL;
+		m->m_pkthdr.len = 0;
+		m->m_pkthdr.header = NULL;
+		m->m_pkthdr.csum_flags = 0;
+		m->m_pkthdr.csum_data = 0;
+		m->m_pkthdr.tso_segsz = 0;
+		m->m_pkthdr.ether_vtag = 0;
+		SLIST_INIT(&m->m_pkthdr.tags);
+	} else
+		m->m_data = m->m_dat;
+	
+	return (0);
+}
+
+/* __Userspace__ */
+struct mbuf *
+m_get(int how, short type)
+{
+	struct mbuf *mret;
+	/* The following setter function is not yet being enclosed within
+	 * #if USING_MBUF_CONSTRUCTOR - #endif, until I have thoroughly tested
+	 * mb_dtor_mbuf. See comment there
+	 */
+	set_mbuf_mb_args(0, type);
+	
+	/* Mbuf master zone, zone_mbuf, has already been 
+	 * created in mbuf_init() */
+	mret = SCTP_ZONE_GET(zone_mbuf, struct mbuf);
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	mb_ctor_mbuf(mret, &mbuf_mb_args, 0);
+#endif
+	/*mret =  ((struct mbuf *)umem_cache_alloc(zone_mbuf, UMEM_DEFAULT));*/
+	
+	/* There are cases when an object available in the current CPU's
+	 * loaded magazine and in those cases the object's constructor is not applied.
+	 * If that is the case, then we are duplicating constructor initialization here,
+	 * so that the mbuf is properly constructed before returning it.
+	 */
+	if (mret) {
+#if USING_MBUF_CONSTRUCTOR
+		if (! (mret->m_type == type) ) {
+			mbuf_constructor_dup(mret, 0, type);
+		}
+#else            
+		mbuf_constructor_dup(mret, 0, type);
+#endif
+		
+	}
+	return mret;
+}
+
+
+/* __Userspace__ */
+struct mbuf *
+m_gethdr(int how, short type)
+{
+	struct mbuf *mret;
+	/* The following setter function is not yet being enclosed within
+	 * #if USING_MBUF_CONSTRUCTOR - #endif, until I have thoroughly tested
+	 * mb_dtor_mbuf. See comment there
+	 */
+	set_mbuf_mb_args(M_PKTHDR, type);
+	
+	mret = SCTP_ZONE_GET(zone_mbuf, struct mbuf);
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	mb_ctor_mbuf(mret, &mbuf_mb_args, 0);
+#endif
+	/*mret = ((struct mbuf *)umem_cache_alloc(zone_mbuf, UMEM_DEFAULT));*/
+	/* There are cases when an object available in the current CPU's
+	 * loaded magazine and in those cases the object's constructor is not applied.
+	 * If that is the case, then we are duplicating constructor initialization here,
+	 * so that the mbuf is properly constructed before returning it.
+	 */
+	if (mret) {
+#if USING_MBUF_CONSTRUCTOR
+		if (! ((mret->m_flags & M_PKTHDR) && (mret->m_type == type)) ) {
+			mbuf_constructor_dup(mret, M_PKTHDR, type);
+		}
+#else
+		mbuf_constructor_dup(mret, M_PKTHDR, type);
+#endif
+	}
+	return mret;
+}
+
+/* __Userspace__ */
+struct mbuf *
+m_free(struct mbuf *m)
+{
+	
+	struct mbuf *n = m->m_next;
+	
+	if (m->m_flags & M_EXT)
+		mb_free_ext(m);
+	else if ((m->m_flags & M_NOFREE) == 0) {
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+		mb_dtor_mbuf(m, &mbuf_mb_args);
+#endif
+		SCTP_ZONE_FREE(zone_mbuf, m);
+	}
+		/*umem_cache_free(zone_mbuf, m);*/
+	return (n);
+}
+
+
+static int clust_constructor_dup(caddr_t m_clust, struct mbuf* m)
+{
+	u_int *refcnt;
+	int type, size;
+	sctp_zone_t zone;
+	
+	/* Assigning cluster of MCLBYTES. TODO: Add jumbo frame functionality */
+	type = EXT_CLUSTER;
+	zone = zone_clust;
+	size = MCLBYTES;
+	
+	refcnt = SCTP_ZONE_GET(zone_ext_refcnt, u_int);
+	/*refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);*/
+	if (refcnt == NULL) {
+		printf("calling reap in %s\n", __func__);
+#if !defined(SCTP_SIMPLE_ALLOCATOR)
+		umem_reap();
+#endif
+		refcnt = SCTP_ZONE_GET(zone_ext_refcnt, u_int);
+		/*refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);*/
+		assert(refcnt != NULL);
+	}
+	*refcnt = 1;
+	if (m != NULL) {
+		m->m_ext.ext_buf = (caddr_t)m_clust;
+		m->m_data = m->m_ext.ext_buf;
+		m->m_flags |= M_EXT;
+		m->m_ext.ext_free = NULL;
+		m->m_ext.ext_args = NULL;
+		m->m_ext.ext_size = size; 
+		m->m_ext.ext_type = type;
+		m->m_ext.ref_cnt = refcnt;
+	}
+	
+	return (0);
+}
+
+
+
+/* __Userspace__ */
+void
+m_clget(struct mbuf *m, int how)
+{
+	caddr_t mclust_ret;
+	if (m->m_flags & M_EXT)
+		printf("%s: %p mbuf already has cluster\n", __func__, m);
+	m->m_ext.ext_buf = (char *)NULL;
+#if USING_MBUF_CONSTRUCTOR
+	set_clust_mb_args(m);
+#endif
+	mclust_ret = SCTP_ZONE_GET(zone_clust, char);
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	mb_ctor_clust(mclust_ret, &clust_mb_args, 0);
+#endif
+	/*mclust_ret = umem_cache_alloc(zone_clust, UMEM_DEFAULT);*/
+	/* 
+	 On a cluster allocation failure, call umem_reap() and retry.
+	 */
+	
+	if ((mclust_ret == NULL)) {
+		printf("calling reap in %s\n", __func__);
+
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+		mclust_ret = SCTP_ZONE_GET(zone_clust, char);
+		mb_ctor_clust(mclust_ret, &clust_mb_args, 0);
+#else
+		umem_reap();
+		mclust_ret = SCTP_ZONE_GET(zone_clust, char);
+#endif
+		/*mclust_ret = umem_cache_alloc(zone_clust, UMEM_DEFAULT);*/
+		if(NULL == mclust_ret)
+		{
+			printf("Memory allocation failure in %s\n", __func__);
+			exit(1);
+		}
+	}
+	
+#if USING_MBUF_CONSTRUCTOR
+	if ((m->m_ext.ext_buf == NULL)) {
+		clust_constructor_dup(mclust_ret, m);
+	}
+#else
+	clust_constructor_dup(mclust_ret, m);
+#endif
+}
+
+/*
+ * Unlink a tag from the list of tags associated with an mbuf.
+ */
+static __inline void
+m_tag_unlink(struct mbuf *m, struct m_tag *t)
+{
+	
+	SLIST_REMOVE(&m->m_pkthdr.tags, t, m_tag, m_tag_link);
+}
+
+/*
+ * Reclaim resources associated with a tag.
+ */
+static __inline void
+m_tag_free(struct m_tag *t)
+{
+	
+	(*t->m_tag_free)(t);
+}
+
+/*
+ * Set up the contents of a tag.  Note that this does not fill in the free
+ * method; the caller is expected to do that.
+ *
+ * XXX probably should be called m_tag_init, but that was already taken.
+ */
+static __inline void
+m_tag_setup(struct m_tag *t, u_int32_t cookie, int type, int len)
+{
+	
+	t->m_tag_id = type;
+	t->m_tag_len = len;
+	t->m_tag_cookie = cookie;
+}
+
+/************ End functions from user_mbuf.h  ******************/
+
+
+
+/************ End functions to substitute umem_cache_alloc and umem_cache_free **************/
 
 /* __Userspace__ 
  * TODO: mbuf_init must be called in the initialization routines
@@ -73,21 +334,38 @@ mbuf_init(void *dummy)
 	 * There is no provision for trash_init and trash_fini in umem. 
 	 * 
 	 */
-  zone_mbuf = umem_cache_create(MBUF_MEM_NAME, MSIZE, 0,
+ /* zone_mbuf = umem_cache_create(MBUF_MEM_NAME, MSIZE, 0,
 				mb_ctor_mbuf, mb_dtor_mbuf, NULL, 
 				&mbuf_mb_args,
 				NULL, 0);
-
-  zone_ext_refcnt = umem_cache_create(MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int), 0,
+	zone_mbuf = umem_cache_create(MBUF_MEM_NAME, MSIZE, 0, NULL, NULL, NULL, NULL, NULL, 0);*/
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	SCTP_ZONE_INIT(zone_mbuf, MBUF_MEM_NAME, MSIZE, 0);
+#else
+	zone_mbuf = umem_cache_create(MBUF_MEM_NAME, MSIZE, 0,
+								  mb_ctor_mbuf, mb_dtor_mbuf, NULL, 
+								  &mbuf_mb_args,
+								  NULL, 0);
+#endif
+	/*zone_ext_refcnt = umem_cache_create(MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int), 0,
 				NULL, NULL, NULL, 
 				NULL,
-				NULL, 0);
+				NULL, 0);*/
+	SCTP_ZONE_INIT(zone_ext_refcnt, MBUF_EXTREFCNT_MEM_NAME, sizeof(u_int), 0);
   
-  zone_clust = umem_cache_create(MBUF_CLUSTER_MEM_NAME, MCLBYTES, 0,
+  /*zone_clust = umem_cache_create(MBUF_CLUSTER_MEM_NAME, MCLBYTES, 0,
 				 mb_ctor_clust, mb_dtor_clust, NULL,
 				 &clust_mb_args,
 				 NULL, 0);
-
+	zone_clust = umem_cache_create(MBUF_CLUSTER_MEM_NAME, MCLBYTES, 0, NULL, NULL, NULL, NULL, NULL,0);*/
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	SCTP_ZONE_INIT(zone_clust, MBUF_CLUSTER_MEM_NAME, MCLBYTES, 0);
+#else
+	zone_clust = umem_cache_create(MBUF_CLUSTER_MEM_NAME, MCLBYTES, 0,
+								   mb_ctor_clust, mb_dtor_clust, NULL,
+								   &clust_mb_args,
+								   NULL, 0);
+#endif
 
 	/* uma_prealloc() goes here... */
 
@@ -233,7 +511,7 @@ mb_ctor_clust(void *mem, void *arg, int flgs)
 	struct clust_args * cla;
 	u_int *refcnt;
 	int type, size;
-	umem_zone_t zone;
+	sctp_zone_t zone;
 	
 	/* Assigning cluster of MCLBYTES. TODO: Add jumbo frame functionality */
 	type = EXT_CLUSTER;
@@ -243,7 +521,8 @@ mb_ctor_clust(void *mem, void *arg, int flgs)
 	cla = (struct clust_args *)arg;
 	m = cla->parent_mbuf;
 
-	refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);
+	refcnt = SCTP_ZONE_GET(zone_ext_refcnt, u_int);
+	/*refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);*/
 	*refcnt = 1;
 
 	if (m != NULL) {
@@ -311,7 +590,18 @@ m_tag_delete_chain(struct mbuf *m, struct m_tag *t)
 	m_tag_delete(m, p);
 }
 
-
+#if 0
+static void
+sctp_print_mbuf_chain(struct mbuf *m)
+{
+	printf("Printing mbuf chain %p.\n", m);
+	for(; m; m=m->m_next) {
+		printf("%p: m_len = %ld, m_type = %x, m_next = %p.\n", m, m->m_len, m->m_type, m->m_next);
+		if (m->m_flags & M_EXT)
+			printf("%p: extend_size = %d, extend_buffer = %p, ref_cnt = %d.\n", m, m->m_ext.ext_size, m->m_ext.ext_buf, *(m->m_ext.ref_cnt));
+	}  
+}
+#endif
 
 /*
  * Free an entire chain of mbufs and associated external buffers, if
@@ -320,7 +610,6 @@ m_tag_delete_chain(struct mbuf *m, struct m_tag *t)
 void
 m_freem(struct mbuf *mb)
 {
-
 	while (mb != NULL)
 		mb = m_free(mb);
 }
@@ -349,13 +638,17 @@ mb_free_ext(struct mbuf *m)
 	 *__Userspace__ TODO: jumbo frames
 	 * 
 	*/
-        if (*(m->m_ext.ref_cnt) == 1 ||
-	    atomic_fetchadd_int(m->m_ext.ref_cnt, -1) == 1) {         
-            if (m->m_ext.ext_type == EXT_CLUSTER){
-                umem_cache_free(zone_clust, m->m_ext.ext_buf);
-                umem_cache_free(zone_ext_refcnt, (u_int*)m->m_ext.ref_cnt);
-                m->m_ext.ref_cnt = NULL;
-            }
+        if (atomic_fetchadd_int(m->m_ext.ref_cnt, -1) == 0) {
+		if (m->m_ext.ext_type == EXT_CLUSTER){
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+			mb_dtor_clust(m->m_ext.ext_buf, &clust_mb_args);
+#endif
+			SCTP_ZONE_FREE(zone_clust, m->m_ext.ext_buf);
+			SCTP_ZONE_FREE(zone_ext_refcnt, (u_int*)m->m_ext.ref_cnt);
+			/*umem_cache_free(zone_clust, m->m_ext.ext_buf);
+			umem_cache_free(zone_ext_refcnt, (u_int*)m->m_ext.ref_cnt);*/
+			m->m_ext.ref_cnt = NULL;
+		}
         }
         
 	if (skipmbuf)
@@ -373,7 +666,12 @@ mb_free_ext(struct mbuf *m)
 	m->m_ext.ext_size = 0;
 	m->m_ext.ext_type = 0;
 	m->m_flags &= ~M_EXT;
-	umem_cache_free(zone_mbuf, m);
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+	mb_dtor_mbuf(m, &mbuf_mb_args);
+#endif
+	SCTP_ZONE_FREE(zone_mbuf, m);
+	
+	/*umem_cache_free(zone_mbuf, m);*/
 }
 
 /*
@@ -911,5 +1209,3 @@ int pack_send_buffer(caddr_t buffer, struct mbuf* mb){
 
     return (total_count_copied);
 }
- 
-

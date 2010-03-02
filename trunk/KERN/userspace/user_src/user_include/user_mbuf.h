@@ -1,15 +1,26 @@
+#ifndef _USER_MBUF_H_
+#define _USER_MBUF_H_
+
 /* __Userspace__ header file for mbufs */
 #include <stdio.h>
+#if !defined(SCTP_SIMPLE_ALLOCATOR)
 #include "user_include/umem.h"
+#endif
 #include "user_include/user_malloc.h"
+#include "netinet/sctp_os_userspace.h"
 #include <sys/queue.h>
 /* #include <sys/param.h> This defines MSIZE 256 */
 
+#ifdef IPHONE
+#include <sys/types.h>
+typedef __const char * c_caddr_t;
+#else
 #if defined(__Userspace_os_Linux) || defined(__Userspace_os_Darwin)
 typedef char * caddr_t;
 typedef __const char * c_caddr_t;
 #else
 #include <sys/types.h>
+#endif
 #endif
 
 #define USING_MBUF_CONSTRUCTOR 0
@@ -22,6 +33,12 @@ typedef __const char * c_caddr_t;
 #ifndef MCLBYTES
 #define MCLBYTES 2048
 #endif
+
+struct mbuf * m_gethdr(int how, short type);
+struct mbuf * m_get(int how, short type);
+struct mbuf * m_free(struct mbuf *m);
+void m_clget(struct mbuf *m, int how);
+
 
 /* mbuf initialization function */
 void mbuf_init(void *);
@@ -37,16 +54,20 @@ void mbuf_init(void *);
 /* Length to m_copy to copy all. */
 #define	M_COPYALL	1000000000
 
-
 /* umem_cache_t is defined in user_include/umem.h as 
  * typedef struct umem_cache umem_cache_t;
  * Note:umem_zone_t is a pointer.
  */
-typedef umem_cache_t * umem_zone_t;
+#if defined(SCTP_SIMPLE_ALLOCATOR) 
+typedef size_t sctp_zone_t;
+#else
+typedef umem_cache_t *sctp_zone_t;
+#endif
 
-extern umem_zone_t	zone_mbuf;  /*  from user_mbuf.c */
-extern umem_zone_t	zone_clust; /* from user_mbuf.c */
-extern umem_zone_t	zone_ext_refcnt; /* from user_mbuf.c */
+extern sctp_zone_t zone_mbuf;
+extern sctp_zone_t zone_clust;
+extern sctp_zone_t zone_ext_refcnt;
+
 /*-
  * Macros for type conversion:
  * mtod(m, t)	-- Convert mbuf pointer to data pointer of correct type.
@@ -148,19 +169,6 @@ struct mbstat {
 #define	MINCLSIZE	(MHLEN + 1)	/* smallest amount to put in cluster */
 #define	M_MAXCOMPRESS	(MHLEN / 2)	/* max amount to copy for compression */
 
-
-
-/* __Userspace__  Setter function for mbuf_mb_args */
-static void set_mbuf_mb_args(int flags, short type) {
-  mbuf_mb_args.flags = flags;
-  mbuf_mb_args.type = type;
-}
-#if USING_MBUF_CONSTRUCTOR
-/* __Userspace__  Setter function for clust_mb_args */
-static void set_clust_mb_args(struct mbuf * mb) {
-  clust_mb_args.parent_mbuf = mb;
-}
-#endif
 
 /*
  * Header present at the beginning of every mbuf.
@@ -351,222 +359,7 @@ void		 m_tag_free_default(struct m_tag *);
 extern int max_linkhdr;    /* Largest link-level header */
 extern int max_protohdr; /* Size of largest protocol layer header. See user_mbuf.c */
 
-static int mbuf_constructor_dup(struct mbuf *m, int pkthdr, short type)
-{
-        int flags = pkthdr;
-        if (type == MT_NOINIT)
-		return (0);
-
-	m->m_next = NULL;
-	m->m_nextpkt = NULL;
-	m->m_len = 0;
-	m->m_flags = flags;
-	m->m_type = type;
-	if (flags & M_PKTHDR) {
-		m->m_data = m->m_pktdat;
-		m->m_pkthdr.rcvif = NULL;
-		m->m_pkthdr.len = 0;
-		m->m_pkthdr.header = NULL;
-		m->m_pkthdr.csum_flags = 0;
-		m->m_pkthdr.csum_data = 0;
-		m->m_pkthdr.tso_segsz = 0;
-		m->m_pkthdr.ether_vtag = 0;
-		SLIST_INIT(&m->m_pkthdr.tags);
-	} else
-		m->m_data = m->m_dat;
-        
-	return (0);
-}
-
-/* __Userspace__ */
-static __inline struct mbuf *
-m_get(int how, short type)
-{
-        struct mbuf *mret;
-        /* The following setter function is not yet being enclosed within
-         * #if USING_MBUF_CONSTRUCTOR - #endif, until I have thoroughly tested
-         * mb_dtor_mbuf. See comment there
-         */
-        set_mbuf_mb_args(0, type);
-
-	/* Mbuf master zone, zone_mbuf, has already been 
-	 * created in mbuf_init() */
-        mret =  ((struct mbuf *)umem_cache_alloc(zone_mbuf, UMEM_DEFAULT));
-
-        /* There are cases when an object available in the current CPU's
-         * loaded magazine and in those cases the object's constructor is not applied.
-         * If that is the case, then we are duplicating constructor initialization here,
-         * so that the mbuf is properly constructed before returning it.
-         */
-        if (mret) {
-#if USING_MBUF_CONSTRUCTOR
-            if (! (mret->m_type == type) ) {
-                mbuf_constructor_dup(mret, 0, type);
-            }
-#else            
-            mbuf_constructor_dup(mret, 0, type);
-#endif
-               
-        }
-
-	return mret;
-}
-
-
-/* __Userspace__ */
-static __inline struct mbuf *
-m_gethdr(int how, short type)
-{
-        struct mbuf *mret;
-        /* The following setter function is not yet being enclosed within
-         * #if USING_MBUF_CONSTRUCTOR - #endif, until I have thoroughly tested
-         * mb_dtor_mbuf. See comment there
-         */
-        set_mbuf_mb_args(M_PKTHDR, type);
-
-        mret = ((struct mbuf *)umem_cache_alloc(zone_mbuf, UMEM_DEFAULT));
-        /* There are cases when an object available in the current CPU's
-         * loaded magazine and in those cases the object's constructor is not applied.
-         * If that is the case, then we are duplicating constructor initialization here,
-         * so that the mbuf is properly constructed before returning it.
-         */
-        if (mret) {
-#if USING_MBUF_CONSTRUCTOR
-            if (! ((mret->m_flags & M_PKTHDR) && (mret->m_type == type)) ) {
-                mbuf_constructor_dup(mret, M_PKTHDR, type);
-            }
-#else
-            mbuf_constructor_dup(mret, M_PKTHDR, type);
-#endif
-        }
-
-	return mret;
-}
-
-/* __Userspace__ */
-static __inline struct mbuf *
-m_free(struct mbuf *m)
-{
-  
-	struct mbuf *n = m->m_next;
-
-	if (m->m_flags & M_EXT)
-		mb_free_ext(m);
-	else if ((m->m_flags & M_NOFREE) == 0)
-		umem_cache_free(zone_mbuf, m);
-	return (n);
-}
-
-
-static int clust_constructor_dup(caddr_t m_clust, struct mbuf* m)
-{
-	u_int *refcnt;
-	int type, size;
-	umem_zone_t zone;
-	
-	/* Assigning cluster of MCLBYTES. TODO: Add jumbo frame functionality */
-	type = EXT_CLUSTER;
-	zone = zone_clust;
-	size = MCLBYTES;
-
-	refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);
-        if (refcnt == NULL) {
-            printf("calling reap in %s\n", __func__);
-            umem_reap();
-            refcnt = (u_int *)umem_cache_alloc(zone_ext_refcnt, UMEM_DEFAULT);
-            assert(refcnt != NULL);
-        }
-        *refcnt = 1;
-	if (m != NULL) {
-		m->m_ext.ext_buf = (caddr_t)m_clust;
-		m->m_data = m->m_ext.ext_buf;
-		m->m_flags |= M_EXT;
-		m->m_ext.ext_free = NULL;
-		m->m_ext.ext_args = NULL;
-		m->m_ext.ext_size = size; 
-		m->m_ext.ext_type = type;
-		m->m_ext.ref_cnt = refcnt;
-	}
-
-	return (0);
-}
-
-
-
-/* __Userspace__ */
-static __inline void
-m_clget(struct mbuf *m, int how)
-{
-        caddr_t mclust_ret;
-	if (m->m_flags & M_EXT)
-		printf("%s: %p mbuf already has cluster\n", __func__, m);
-	m->m_ext.ext_buf = (char *)NULL;
-#if USING_MBUF_CONSTRUCTOR
-        set_clust_mb_args(m);
-#endif
-	mclust_ret = umem_cache_alloc(zone_clust, UMEM_DEFAULT);
-	/* 
-	   On a cluster allocation failure, call umem_reap() and retry.
-	*/
-	 
-	if ((mclust_ret == NULL)) {
-                printf("calling reap in %s\n", __func__);
-		umem_reap();
-		mclust_ret = umem_cache_alloc(zone_clust, UMEM_DEFAULT);
-                if(NULL == mclust_ret)
-                    {
-                        printf("Memory allocation failure in %s\n", __func__);
-                        exit(1);
-                    }
-	}
-
-#if USING_MBUF_CONSTRUCTOR
-        if ((m->m_ext.ext_buf == NULL)) {
-            clust_constructor_dup(mclust_ret, m);
-        }
-#else
-        clust_constructor_dup(mclust_ret, m);
-#endif
-
-}
-
-
 extern struct mbstat	mbstat;		/* General mbuf stats/infos */
-
-/*
- * Unlink a tag from the list of tags associated with an mbuf.
- */
-static __inline void
-m_tag_unlink(struct mbuf *m, struct m_tag *t)
-{
-
-	SLIST_REMOVE(&m->m_pkthdr.tags, t, m_tag, m_tag_link);
-}
-
-/*
- * Reclaim resources associated with a tag.
- */
-static __inline void
-m_tag_free(struct m_tag *t)
-{
-
-	(*t->m_tag_free)(t);
-}
-
-/*
- * Set up the contents of a tag.  Note that this does not fill in the free
- * method; the caller is expected to do that.
- *
- * XXX probably should be called m_tag_init, but that was already taken.
- */
-static __inline void
-m_tag_setup(struct m_tag *t, u_int32_t cookie, int type, int len)
-{
-
-	t->m_tag_id = type;
-	t->m_tag_len = len;
-	t->m_tag_cookie = cookie;
-}
 
 
 /*
@@ -646,3 +439,5 @@ m_tag_setup(struct m_tag *t, u_int32_t cookie, int type, int len)
 	assert((m)->m_data == (m)->m_pktdat);				\
 	(m)->m_data += (MHLEN - (len)) & ~(sizeof(long) - 1);		\
 } while (0)
+
+#endif
