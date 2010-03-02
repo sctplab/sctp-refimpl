@@ -1,3 +1,6 @@
+#ifndef _USER_ATOMIC_H_
+#define _USER_ATOMIC_H_
+
 /* __Userspace__ version of sys/i386/include/atomic.h goes here */
 
 /* TODO In the future, might want to not use i386 specific assembly.
@@ -238,4 +241,5 @@ atomic_cmpset_int(volatile u_int *dst, u_int exp, u_int src)
 		atomic_unlock();          \
 } while(0)
 
+#endif
 #endif

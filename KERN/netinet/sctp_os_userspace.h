@@ -311,6 +311,25 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 /*
  * zone allocation functions
  */
+
+
+#if defined(SCTP_SIMPLE_ALLOCATOR)
+/*typedef size_t sctp_zone_t;*/
+#define SCTP_ZONE_INIT(zone, name, size, number) { \
+	zone = size; \
+}
+
+/* __Userspace__ SCTP_ZONE_GET: allocate element from the zone */
+#define SCTP_ZONE_GET(zone, type) \
+        (type *)malloc(zone);
+
+
+/* __Userspace__ SCTP_ZONE_FREE: free element from the zone */
+#define SCTP_ZONE_FREE(zone, element) \
+	free(element);
+
+#define SCTP_ZONE_DESTROY(zone)
+#else
 /*__Userspace__
   Compiling & linking notes: Needs libumem, which has been placed in ./user_lib
   All userspace header files are in ./user_include. Makefile will need the
@@ -321,7 +340,6 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 #include "user_include/umem.h"
 
 /* __Userspace__ SCTP_ZONE_INIT: initialize the zone */
-typedef umem_cache_t *sctp_zone_t;
 /*
   __Userspace__ 
   No equivalent function to uma_zone_set_max added yet. (See SCTP_ZONE_INIT in sctp_os_bsd.h
@@ -346,7 +364,7 @@ typedef umem_cache_t *sctp_zone_t;
 /* __Userspace__ SCTP_ZONE_DESTROY: destroy the zone */
 #define SCTP_ZONE_DESTROY(zone) \
 	umem_cache_destroy(zone);
-
+#endif
 
 /* global struct ifaddrs used in sctp_init_ifns_for_vrf getifaddrs call
  *  but references to fields are needed to persist as the vrf is queried.

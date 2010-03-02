@@ -164,7 +164,7 @@ int main(int argc, char **argv) {
     
 #if defined(SCTP_USERMODE)
     sctp_init(); 
-    SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
+    SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=1; 
     
     if( !(psock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) ){
         printf("user_socket() returned NULL\n");

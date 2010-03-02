@@ -3,6 +3,9 @@
 all:
 	./buildall.sh
 
+malloc:
+	./buildallmalloc.sh
+
 clean:
 	rm -f userspace.make scripts/prepare_umem
 	(cd build && ls -1 | grep -v CVS | xargs rm -rf)

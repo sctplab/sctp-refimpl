@@ -1,3 +1,5 @@
+#ifndef _USER_ENVIRONMENT_H_
+#define _USER_ENVIRONMENT_H_
 /* __Userspace__ */
 #include <sys/types.h>
 
@@ -78,3 +80,5 @@ struct sx {};
 
 /* called in sctp_usrreq.c */
 #define in6_sin_2_v4mapsin6(arg1, arg2) /* STUB */
+
+#endif
