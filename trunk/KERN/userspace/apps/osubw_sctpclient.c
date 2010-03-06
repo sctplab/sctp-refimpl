@@ -339,11 +339,15 @@ int main(int argc, char **argv) {
     sleep(60);
     
     file = fopen(filename, "w+");
-    for (j=0; j<num_dp; j++)
+    if(file == NULL) {
+        perror("could not open results file");
+    } else {        
+        for (j=0; j<num_dp; j++)
         {
             fprintf(file,"%d , %.2f , %.2f\n",datapoints[j].msg_size, datapoints[j].tottime, datapoints[j].bw); /*write datapoints to file*/
         }
-    fclose(file);
+        fclose(file);
+    }
 
 
 #if defined(SCTP_USERMODE)
