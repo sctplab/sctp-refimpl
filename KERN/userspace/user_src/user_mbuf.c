@@ -638,15 +638,24 @@ mb_free_ext(struct mbuf *m)
 	 *__Userspace__ TODO: jumbo frames
 	 * 
 	*/
-        if (atomic_fetchadd_int(m->m_ext.ref_cnt, -1) == 0) {
+        /* NOTE: We had the same code that SCTP_DECREMENT_AND_CHECK_REFCOUNT
+                 reduces to here before but the IPHONE malloc commit had changed
+                 this to compare to 0 instead of 1 (see next line).  Why?
+
+                 ... this caused a huge memory leak in Linux.
+         */
+#ifdef IPHONE
+        if (atomic_fetchadd_int(m->m_ext.ref_cnt, -1) == 0)
+#else
+        if (SCTP_DECREMENT_AND_CHECK_REFCOUNT(m->m_ext.ref_cnt))
+#endif
+        {    
 		if (m->m_ext.ext_type == EXT_CLUSTER){
 #if defined(SCTP_SIMPLE_ALLOCATOR)
 			mb_dtor_clust(m->m_ext.ext_buf, &clust_mb_args);
 #endif
 			SCTP_ZONE_FREE(zone_clust, m->m_ext.ext_buf);
 			SCTP_ZONE_FREE(zone_ext_refcnt, (u_int*)m->m_ext.ref_cnt);
-			/*umem_cache_free(zone_clust, m->m_ext.ext_buf);
-			umem_cache_free(zone_ext_refcnt, (u_int*)m->m_ext.ref_cnt);*/
 			m->m_ext.ref_cnt = NULL;
 		}
         }

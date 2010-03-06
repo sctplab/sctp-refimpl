@@ -11,6 +11,7 @@ extern int userspace_udpsctp; /* needs to be declared = -1 */
 /* routing socket used for route lookups */
 extern int userspace_rawroute;
 
-extern void recv_thread_init();
+void recv_thread_init();
 
 #define RECV_THREAD_INIT    recv_thread_init
+

@@ -31,11 +31,16 @@ union control_data {
 };
 
 
+void recv_thread_destroy_udp(void *);
+void recv_thread_destroy_raw(void *);
+const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
+
+/* need ref to this for destroy... */
+struct mbuf **recvmbuf;
+
 static void *
 recv_function_raw(void *arg)
 {
-	const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
-	struct mbuf *recvmbuf[MAXLEN_MBUF_CHAIN];
 	struct iovec recv_iovec[MAXLEN_MBUF_CHAIN];
 	int iovcnt = MAXLEN_MBUF_CHAIN;
 	/*Initially the entire set of mbufs is to be allocated.
@@ -46,7 +51,13 @@ recv_function_raw(void *arg)
 	int iovlen = MCLBYTES;
 	int want_ext = (iovlen > MLEN)? 1 : 0;
 	int want_header = 0;
-	
+
+        recvmbuf = malloc(sizeof(struct mbuf *) * MAXLEN_MBUF_CHAIN);
+        /* why can't I compile with this? */
+#if 0
+        pthread_cleanup_push(recv_thread_destroy_raw, NULL);
+#endif
+        
 	while (1) {
 		for (i = 0; i < to_fill; i++) {
 			/* Not getting the packet header. Tests with chain of one run
@@ -92,11 +103,13 @@ recv_function_raw(void *arg)
 	return NULL;
 }
 
+
+/* need ref to this for destroy... */
+struct mbuf **udprecvmbuf;
+
 static void *
 recv_function_udp(void *arg)
 {
-	const int MAXLEN_MBUF_CHAIN = 32; /* What should this value be? */
-	struct mbuf *recvmbuf[MAXLEN_MBUF_CHAIN];
 	struct iovec iov[MAXLEN_MBUF_CHAIN];
 	/*Initially the entire set of mbufs is to be allocated.
 	  to_fill indicates this amount. */
@@ -113,14 +126,20 @@ recv_function_udp(void *arg)
 	union control_data cmsg;
 	struct cmsghdr *cmsgptr;
 
+        udprecvmbuf = malloc(sizeof(struct mbuf *) * MAXLEN_MBUF_CHAIN);
+        /* why can't I compile with this? */
+#if 0
+        pthread_cleanup_push(recv_thread_destroy_udp, NULL);
+#endif
+        
 	while (1) {
 		for (i = 0; i < to_fill; i++) {
 			/* Not getting the packet header. Tests with chain of one run
 			   as usual without having the packet header.
 			   Have tried both sending and receiving
 			 */
-			recvmbuf[i] = sctp_get_mbuf_for_msg(iovlen, want_header, M_DONTWAIT, want_ext, MT_DATA);
-			iov[i].iov_base = (caddr_t)recvmbuf[i]->m_data;
+			udprecvmbuf[i] = sctp_get_mbuf_for_msg(iovlen, want_header, M_DONTWAIT, want_ext, MT_DATA);
+			iov[i].iov_base = (caddr_t)udprecvmbuf[i]->m_data;
 			iov[i].iov_len = iovlen;
 		}
 		to_fill = 0;
@@ -140,21 +159,21 @@ recv_function_udp(void *arg)
 		ncounter = n = recvmsg(userspace_udpsctp, &msg, 0);
 
 		assert (n <= (MAXLEN_MBUF_CHAIN * iovlen));
-		SCTP_HEADER_LEN(recvmbuf[0]) = n; /* length of total packet */
+		SCTP_HEADER_LEN(udprecvmbuf[0]) = n; /* length of total packet */
 		
 		if (n <= iovlen) {
-			SCTP_BUF_LEN(recvmbuf[0]) = n;
+			SCTP_BUF_LEN(udprecvmbuf[0]) = n;
 			(to_fill)++;
 		} else {
 			printf("%s: n=%d > iovlen=%d\n", __func__, n, iovlen);
 			i = 0;
-			SCTP_BUF_LEN(recvmbuf[0]) = iovlen;
+			SCTP_BUF_LEN(udprecvmbuf[0]) = iovlen;
 
 			ncounter -= iovlen;
 			(to_fill)++;
 			do {
-				recvmbuf[i]->m_next = recvmbuf[i+1];
-				SCTP_BUF_LEN(recvmbuf[i]->m_next) = min(ncounter, iovlen);
+				udprecvmbuf[i]->m_next = udprecvmbuf[i+1];
+				SCTP_BUF_LEN(udprecvmbuf[i]->m_next) = min(ncounter, iovlen);
 				i++;
 				ncounter -= iovlen;
 				(to_fill)++;
@@ -184,7 +203,7 @@ recv_function_udp(void *arg)
 		ip->ip_dst = dst.sin_addr;
 		SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + n;
 		SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
-		SCTP_BUF_NEXT(ip_m) = recvmbuf[0];
+		SCTP_BUF_NEXT(ip_m) = udprecvmbuf[0];
 
 		SCTPDBG(SCTP_DEBUG_INPUT1, "%s: Received %d bytes.", __func__, n);
 		SCTPDBG(SCTP_DEBUG_INPUT1, " - calling sctp_input with off=%d\n", (int)sizeof(struct ip));
@@ -285,4 +304,50 @@ recv_thread_init()
 			exit(1);
 		}
 	}
+}
+
+
+void
+recv_thread_destroy_raw(void *parm) {
+
+    int i;
+
+    /* close sockets if they are open */
+    if (userspace_rawroute != -1)
+        close(userspace_rawroute);
+    if (userspace_rawsctp != -1)
+        close(userspace_rawsctp);
+
+    /* 
+     *  call m_free on contents of recvmbuf array
+     */
+    for(i=0; i < MAXLEN_MBUF_CHAIN; i++) {
+        m_free(recvmbuf[i]);
+    }
+
+    /* free the array itself */
+    free(recvmbuf);
+    
+    
+}
+
+void
+recv_thread_destroy_udp(void *parm) {
+
+    int i;
+    
+    /* socket closed in 
+    void sctp_over_udp_stop(void)
+    */
+    
+    /* 
+     *   call m_free on contents of udprecvmbuf array
+     */
+    for(i=0; i < MAXLEN_MBUF_CHAIN; i++) {
+        m_free(udprecvmbuf[i]);
+    }
+
+    /* free the array itself */
+    free(udprecvmbuf);
+
 }
