@@ -41,7 +41,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.h 188605 2009-02-14 11:34:57Z rr
 #if defined(_KERNEL) || defined(__Userspace__)
 
 uint32_t sctp_calculate_cksum(struct mbuf *, uint32_t);
-void sctp_delayed_cksum(struct mbuf *);
+void sctp_delayed_cksum(struct mbuf *, uint32_t offset);
 
 #endif				/* _KERNEL */
 
