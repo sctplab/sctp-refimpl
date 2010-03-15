@@ -313,7 +313,11 @@ struct sctp_base_info {
 	 * anchor the system must be here. 
 	 */
 	struct sctp_epinfo sctppcbinfo;
+#if defined(__FreeBSD__) && defined(SMP)
+	struct sctpstat    sctpstat[MAXCPU];
+#else
 	struct sctpstat    sctpstat;
+#endif
 	struct sctp_sysctl sctpsysctl;
 	uint8_t first_time;
 	char sctp_pcb_initialized;
