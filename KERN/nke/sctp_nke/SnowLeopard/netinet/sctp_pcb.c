@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 202449 2010-01-16 20:04:17Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 205629 2010-03-24 20:02:40Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5895,8 +5895,13 @@ sctp_pcb_init()
 #endif
 #endif
 	(void)SCTP_GETTIME_TIMEVAL(&tv);
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+	SCTP_BASE_STATS[PCPU_GET(cpuid)].sctps_discontinuitytime.tv_sec = (uint32_t)tv.tv_sec;
+	SCTP_BASE_STATS[PCPU_GET(cpuid)].sctps_discontinuitytime.tv_usec = (uint32_t)tv.tv_usec;
+#else
 	SCTP_BASE_STAT(sctps_discontinuitytime).tv_sec = (uint32_t)tv.tv_sec;
 	SCTP_BASE_STAT(sctps_discontinuitytime).tv_usec = (uint32_t)tv.tv_usec;
+#endif
 	/* init the empty list of (All) Endpoints */
 	LIST_INIT(&SCTP_BASE_INFO(listhead));
 #if defined(__APPLE__)
