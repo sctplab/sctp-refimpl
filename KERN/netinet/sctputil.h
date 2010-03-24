@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 196260 2009-08-15 21:10:52Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 205502 2010-03-23 01:36:50Z rrs $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -166,8 +166,6 @@ void sctp_report_all_outbound(struct sctp_tcb *, int, int
 
 int sctp_expand_mapping_array(struct sctp_association *, uint32_t);
 
-/* EY nr_sack version of the above method, expands nr_mapping_array */
-int sctp_expand_nr_mapping_array(struct sctp_association *, uint32_t);
 void sctp_abort_notification(struct sctp_tcb *, int, int
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
