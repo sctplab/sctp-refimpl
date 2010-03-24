@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 205502 2010-03-23 01:36:50Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 205627 2010-03-24 19:45:36Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -305,11 +305,13 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	return;
   }
   SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
+#ifdef INVARIANTS
   if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
 	printf("gap:%x tsn:%x\n", gap, tsn);
 	sctp_print_mapping_array(asoc);
 	panic("Things are really messed up now!!");
   }
+#endif
   SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
   SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
   if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -1862,10 +1864,6 @@ failed_express_del:
 	  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 		asoc->highest_tsn_inside_map = tsn;
 	  }
-	  printf("Mark TSN:%x gap:%d high:%x base:%x cumack:%x\n",
-			 tsn, gap, asoc->highest_tsn_inside_map,
-			 asoc->mapping_array_base_tsn,
-			 asoc->cumulative_tsn);
 	}
 	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		sctp_alloc_a_chunk(stcb, chk);
@@ -2311,10 +2309,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	} else {
 	  highest_tsn = asoc->highest_tsn_inside_map;
 	}
-	printf("Highest TSN in all maps:%x (%x:%x) cumack:%x\n",
-		   highest_tsn, asoc->highest_tsn_inside_nr_map,
-		   asoc->highest_tsn_inside_map,
-		   asoc->cumulative_tsn);
 	if ((asoc->cumulative_tsn == highest_tsn) && (at >= 8)) {
 		/* The complete array was completed by a single FR */
 		/* highest becomes the cum-ack */
@@ -2331,9 +2325,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->nr_mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
-		printf("Clearing %d new base:%x highest:%x\n",
-			   clr, asoc->nr_mapping_array_base_tsn, asoc->highest_tsn_inside_map);
-		
 	} else if (at >= 8) {
 		/* we can slide the mapping array down */
 		/* slide_from holds where we hit the first NON 0xff byte */
@@ -2370,8 +2361,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			sctp_log_map((uint32_t) slide_from, (uint32_t) slide_end,
 				     (uint32_t) lgap, SCTP_MAP_SLIDE_FROM);
 		}
-		printf("--sld:%d frm:%d to:%d\n", distance, slide_from, slide_end);
-
 		if (distance + slide_from > asoc->mapping_array_size ||
 		    distance < 0) {
 			/*
@@ -2402,8 +2391,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			}
 			asoc->mapping_array_base_tsn += (slide_from << 3);
 			asoc->nr_mapping_array_base_tsn += (slide_from << 3);
-			printf("New base:%x highest_tsn:%x\n", asoc->mapping_array_base_tsn,
-				   highest_tsn);
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 				sctp_log_map(asoc->mapping_array_base_tsn,
 					     asoc->cumulative_tsn, asoc->highest_tsn_inside_map,
