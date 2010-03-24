@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 202518 2010-01-17 19:24:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 205629 2010-03-24 20:02:40Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -747,7 +747,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 	}
 	return (error);
 }
-#if defined(__FreeBSD__) && defined(SMP)
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 static int
 sysctl_stat_get(SYSCTL_HANDLER_ARGS)
 {
@@ -1219,7 +1219,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, output_unlocked, CTLTYPE_INT|CTLFLAG_RW,
 	    &SCTP_BASE_SYSCTL(sctp_output_unlocked), 0, sysctl_sctp_check, "IU",
 	    SCTPCTL_OUTPUT_UNLOCKED_DESC);
 #endif
-#if defined(__FreeBSD__) && defined(SMP)
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, stats,  
             CTLTYPE_STRUCT|CTLFLAG_RD,
 	    0, 0, sysctl_stat_get, "S,sctpstat",
