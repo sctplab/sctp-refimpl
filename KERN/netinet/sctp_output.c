@@ -10352,7 +10352,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	int mergeable = 0;
 	int offset;
 	caddr_t limit;
-	uint32_t *dup;
+	uint32_t *dup, highest_tsn;
 	int limit_reached = 0;
 	int seen_non_zero=0;
 	unsigned int i, jstart, siz, j;
@@ -10444,7 +10444,13 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	if (a_chk->whoTo) {
 		atomic_add_int(&a_chk->whoTo->ref_count, 1);
 	}
-	if (asoc->highest_tsn_inside_map == asoc->cumulative_tsn) {
+	
+	if(compare_with_wrap(asoc->highest_tsn_inside_map, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+	  highest_tsn = asoc->highest_tsn_inside_map;
+	} else {
+	  highest_tsn = asoc->highest_tsn_inside_nr_map;
+	}
+	if (highest_tsn == asoc->cumulative_tsn) {
 		/* no gaps */
 		space_req = sizeof(struct sctp_nr_sack_chunk);
 	} else {
@@ -10543,10 +10549,6 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 	if (compare_with_wrap(asoc->highest_tsn_inside_map, asoc->cumulative_tsn, MAX_TSN)) {
 		/* we have a gap .. maybe */
 		for (i = 0; i < siz; i++) {
-		    if ((asoc->mapping_array[i] == 0) && (seen_non_zero == 0)){
-			  offset += 8;
-			  continue;
-			}
             seen_non_zero = 1;	
 			selector = &sack_array[asoc->mapping_array[i]];
 			if (mergeable && selector->right_edge) {
@@ -10594,14 +10596,6 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 			}
 			jstart = 0;
 			offset += 8;
-		}
-		if (num_gap_blocks == 0) {
-			/*
-			 * slide not yet happened, and somehow we got called
-			 * to send a sack. Cumack needs to move up.
-			 */
-			int abort_flag = 0;
-			sctp_sack_check(stcb, 0, 0, &abort_flag);
 		}
 	}
 	if (limit_reached == 0) {
