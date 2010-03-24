@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 197288 2009-09-17 15:11:12Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 205629 2010-03-24 20:02:40Z rrs $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -313,7 +313,11 @@ struct sctp_base_info {
 	 * anchor the system must be here. 
 	 */
 	struct sctp_epinfo sctppcbinfo;
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+	struct sctpstat    sctpstat[MAXCPU];
+#else
 	struct sctpstat    sctpstat;
+#endif
 	struct sctp_sysctl sctpsysctl;
 	uint8_t first_time;
 	char sctp_pcb_initialized;

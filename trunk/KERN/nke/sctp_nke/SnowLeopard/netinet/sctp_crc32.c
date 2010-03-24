@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 191891 2009-05-07 16:43:49Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_crc32.c 205104 2010-03-12 22:58:52Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -801,14 +801,12 @@ sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
 
 
 void
-sctp_delayed_cksum(struct mbuf *m)
+sctp_delayed_cksum(struct mbuf *m, uint32_t offset)
 {
 	struct ip *ip;
 	uint32_t checksum;
-	uint32_t offset;
 
 	ip = mtod(m, struct ip *);
-	offset = ip->ip_hl << 2;
 	checksum = sctp_calculate_cksum(m, offset);
 	SCTP_STAT_DECR(sctps_sendhwcrc);
 	SCTP_STAT_INCR(sctps_sendswcrc);

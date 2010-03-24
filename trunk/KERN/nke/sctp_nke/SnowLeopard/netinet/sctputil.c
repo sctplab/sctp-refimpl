@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 204096 2010-02-19 18:00:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 205627 2010-03-24 19:45:36Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1203,10 +1203,58 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->timoshutdownack = 0;
 	(void)SCTP_GETTIME_TIMEVAL(&asoc->start_time);
 	asoc->discontinuity_time = asoc->start_time;
-	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later whe
+	/* sa_ignore MEMLEAK {memory is put in the assoc mapping array and freed later when
 	 * the association is freed.
 	 */
 	return (0);
+}
+
+void
+sctp_print_mapping_array(struct sctp_association *asoc)
+{
+    int i,limit;
+	printf("Mapping size:%d baseTSN:%8.8x cumAck:%8.8x highestTSN:%8.8x\n",
+		 asoc->mapping_array_size,
+		 asoc->mapping_array_base_tsn,
+		 asoc->cumulative_tsn,
+		 asoc->highest_tsn_inside_map
+		   );
+	limit = asoc->mapping_array_size;
+	for(i=asoc->mapping_array_size; i>=0; i--) {
+	  if (asoc->mapping_array[i]) {
+		limit = i;
+		break;
+	  }
+	}
+	if (limit == 0)
+	  limit = 1;
+	for (i=0; i<limit; i++) {
+	  printf("%2.2x ", asoc->mapping_array[i]);
+	  if (((i+1) % 16) == 0) 
+		printf("\n");					
+	}
+	printf("\n");
+	printf("NR Mapping size:%d baseTSN:%8.8x highestTSN:%8.8x\n",
+		 asoc->nr_mapping_array_size,
+		 asoc->nr_mapping_array_base_tsn,
+		 asoc->highest_tsn_inside_nr_map
+		 );
+	limit = asoc->nr_mapping_array_size;
+	for(i=asoc->nr_mapping_array_size; i>=0; i--) {
+	  if (asoc->nr_mapping_array[i]) {
+		limit = i;
+		break;
+	  }
+	}
+	if (limit == 0)
+	  limit = 1;
+
+	for (i=0; i<limit; i++) {
+	  printf("%2.2x ", asoc->nr_mapping_array[i]);
+	  if (((i+1) % 16) == 0) 
+		printf("\n");					
+	}
+	printf("\n");
 }
 
 int
@@ -1215,8 +1263,10 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	/* mapping array needs to grow */
 	uint8_t *new_array;
 	uint32_t new_size;
+	
 
 	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
+
 	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
 		/* can't get more, forget it */
@@ -1229,21 +1279,19 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 	asoc->mapping_array = new_array;
 	asoc->mapping_array_size = new_size;
-	if (asoc->peer_supports_nr_sack ) {
-		new_size = asoc->nr_mapping_array_size + ((needed + 7) / 8 + SCTP_NR_MAPPING_ARRAY_INCR);
-		SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
-		if (new_array == NULL) {
-			/* can't get more, forget it */
-			SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
-				    new_size);
-			return (-1);
-		}
-		memset(new_array, 0, new_size);
-		memcpy(new_array, asoc->nr_mapping_array, asoc->nr_mapping_array_size);
-		SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
-		asoc->nr_mapping_array = new_array;
-		asoc->nr_mapping_array_size = new_size;
+	new_size = asoc->nr_mapping_array_size + ((needed + 7) / 8 + SCTP_NR_MAPPING_ARRAY_INCR);
+	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
+	if (new_array == NULL) {
+		/* can't get more, forget it */
+		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
+			    new_size);
+		return (-1);
 	}
+	memset(new_array, 0, new_size);
+	memcpy(new_array, asoc->nr_mapping_array, asoc->nr_mapping_array_size);
+	SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
+	asoc->nr_mapping_array = new_array;
+	asoc->nr_mapping_array_size = new_size;
 	return (0);
 }
 
