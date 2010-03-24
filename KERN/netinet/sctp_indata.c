@@ -2256,7 +2256,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	/* int nr_at;*/
 	/*int nr_last_all_ones = 0; */
 	/*int nr_slide_from, nr_slide_end, nr_lgap, nr_distance; */
-	uint32_t old_cumack, old_base, old_highest;
+	uint32_t old_cumack, old_base, old_highest, highest_tsn;
 
 	asoc = &stcb->asoc;
 	at = 0;
@@ -2300,7 +2300,15 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		asoc->highest_tsn_inside_nr_map = asoc->cumulative_tsn;
 #endif
 	}
-	if ((asoc->cumulative_tsn == asoc->highest_tsn_inside_nr_map) && (at >= 8)) {
+	if (compare_with_wrap(asoc->highest_tsn_inside_nr_map,
+						  asoc->highest_tsn_inside_map,
+						  MAX_TSN)) {
+	  highest_tsn = asoc->highest_tsn_inside_nr_map;
+	} else {
+	  highest_tsn = asoc->highest_tsn_inside_map;
+	}
+	
+	if ((asoc->cumulative_tsn == highest_tsn) && (at >= 8)) {
 		/* The complete array was completed by a single FR */
 		/* highest becomes the cum-ack */
 		int clr;
@@ -2325,7 +2333,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		 * now calculate the ceiling of the move using our highest
 		 * TSN value
 		 */
-	    SCTP_CALC_TSN_TO_GAP(lgap, asoc->highest_tsn_inside_nr_map, asoc->nr_mapping_array_base_tsn);
+	    SCTP_CALC_TSN_TO_GAP(lgap, highest_tsn, asoc->mapping_array_base_tsn);
 		slide_end = (lgap >> 3);
 		if (slide_end < slide_from) {
 		  sctp_print_mapping_array(asoc);
@@ -2337,13 +2345,13 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			return;
 #endif
 		}
-		if (slide_end > asoc->nr_mapping_array_size) {
+		if (slide_end > asoc->mapping_array_size) {
 #ifdef INVARIANTS
 		    panic("would overrun buffer");
 #else
 			printf("Gak, would have overrun map end:%d slide_end:%d\n",
 				   asoc->mapping_array_size, slide_end);
-			slide_end = asoc->nr_mapping_array_size;
+			slide_end = asoc->mapping_array_size;
 #endif			
 		} 
 		distance = (slide_end - slide_from) + 1;
@@ -2353,7 +2361,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			sctp_log_map((uint32_t) slide_from, (uint32_t) slide_end,
 				     (uint32_t) lgap, SCTP_MAP_SLIDE_FROM);
 		}
-		if (distance + slide_from > asoc->nr_mapping_array_size ||
+		if (distance + slide_from > asoc->mapping_array_size ||
 		    distance < 0) {
 			/*
 			 * Here we do NOT slide forward the array so that
@@ -2416,8 +2424,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			int is_a_gap;
 
 			/* is there a gap now ? */
-			is_a_gap = compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
-			    stcb->asoc.cumulative_tsn, MAX_TSN);
+			is_a_gap = compare_with_wrap(highest_tsn, stcb->asoc.cumulative_tsn, MAX_TSN);
 
 			/*
 			 * CMT DAC algorithm: increase number of packets
