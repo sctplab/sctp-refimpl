@@ -4917,11 +4917,9 @@ done_with_it:
 				/* EY- maybe check only if it is nr_acked nr_marked may not be possible */
 				if ((tp1->sent == SCTP_DATAGRAM_NR_ACKED) ||
 				    (tp1->sent == SCTP_DATAGRAM_NR_MARKED)) {
-					/* EY! - TODO: Something previously nr_gapped is reneged, abort the association */
-					return;
+				    continue;
 				}
-				if ((tp1->sent > SCTP_DATAGRAM_RESEND) &&
-				    (tp1->sent < SCTP_FORWARD_TSN_SKIP)) {
+				if (tp1->sent == SCTP_DATAGRAM_ACKED) {
 					tp1->sent = SCTP_DATAGRAM_SENT;
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 						sctp_misc_ints(SCTP_FLIGHT_LOG_UP_REVOKE,
@@ -4950,7 +4948,7 @@ done_with_it:
 		}
 		asoc->saw_sack_with_frags = 0;
 	}
-	if (num_seg)
+	if (num_seg || num_nr_seg)
 		asoc->saw_sack_with_frags = 1;
 	else
 		asoc->saw_sack_with_frags = 0;
