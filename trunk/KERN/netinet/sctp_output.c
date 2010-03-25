@@ -9171,6 +9171,11 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			/* No, not sent to this net or not ready for rtx */
 			continue;
 		}
+		if (chk->data == NULL) {
+		  printf("TSN:%x chk->snd_count:%d chk->sent:%d can't retran - no data\n",
+				 chk->rec.data.TSN_seq, chk->snd_count, chk->sent);
+		  continue;
+		}
 		if ((SCTP_BASE_SYSCTL(sctp_max_retran_chunk)) &&
 		    (chk->snd_count >= SCTP_BASE_SYSCTL(sctp_max_retran_chunk))) {
 			/* Gak, we have exceeded max unlucky retran, abort! */

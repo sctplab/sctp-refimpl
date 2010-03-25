@@ -2850,8 +2850,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 {
 	struct sctp_tmit_chunk *tp1;
 	unsigned int theTSN;
-	int j, wake_him=0;
-
+	int j, wake_him=0, circled=0;
 	/* Recover the tp1 we last saw */
 	tp1 =  *p_tp1;
 	if (tp1 == NULL) {
@@ -3029,18 +3028,12 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 					}
 					/* NR Sack code here */
 					if (nr_sacking) {
-						if (tp1->sent != SCTP_FORWARD_TSN_SKIP)
-							tp1->sent = SCTP_DATAGRAM_NR_MARKED;
-						/*TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next); */
 						if (tp1->data) {
 							/* sa_ignore NO_NULL_CHK */
 							sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
 							sctp_m_freem(tp1->data);
+							tp1->data = NULL;
 						}
-				
-						tp1->data = NULL;
-						/*asoc->sent_queue_cnt--;*/
-						/*sctp_free_a_chunk(stcb, tp1);*/
 						wake_him++;
 					}
 				}
@@ -3051,11 +3044,16 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 				break;
 
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
+			if ((tp1 == NULL) && (circled == 0)){
+			  circled++;
+			  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+			}
 		}	/* end while (tp1) */
-		/* In case the fragments were not in order we must reset */
-		if (tp1 == NULL) {
-			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+		if (tp1 == NULL){
+		  circled = 0;
+		  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 		}
+		/* In case the fragments were not in order we must reset */
 	}/* end for (j = fragStart */
 	*p_tp1 = tp1;
 	return (wake_him);	/* Return value only used for nr-sack */
@@ -3133,6 +3131,9 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 			non_revocable = 0;
 		} else {
 			non_revocable = 1;
+		}
+		if (i == num_seg) {
+			tp1 = NULL;
 		}
 		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
 		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
@@ -4402,44 +4403,6 @@ again:
 	}
 }
 
-/* EY- nr_sack */
-/* Identifies the non-renegable tsns that are revoked*/
-static void
-sctp_check_for_nr_revoked(struct sctp_tcb *stcb,
-                          struct sctp_association *asoc, uint32_t cumack,
-                          uint32_t biggest_tsn_acked)
-{
-	struct sctp_tmit_chunk *tp1;
-
-	for (tp1 = TAILQ_FIRST(&asoc->sent_queue); tp1; tp1 = TAILQ_NEXT(tp1, sctp_next)) {
-		if (compare_with_wrap(tp1->rec.data.TSN_seq, cumack,
-		    MAX_TSN)) {
-			/*
-			 * ok this guy is either ACK or MARKED. If it is
-			 * ACKED it has been previously acked but not this
-			 * time i.e. revoked.  If it is MARKED it was ACK'ed
-			 * again.
-			 */
-			if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
-			    MAX_TSN))
-				break;
-
-
-			if (tp1->sent == SCTP_DATAGRAM_NR_ACKED) {
-				/* EY! a non-renegable TSN is revoked, need to abort the association */
-				/* EY TODO: put in the code to abort the assoc. */
-				return;
-			} else if (tp1->sent == SCTP_DATAGRAM_NR_MARKED) {
-				/* it has been re-acked in this SACK */
-				tp1->sent = SCTP_DATAGRAM_NR_ACKED;
-			}
-		}
-		if (tp1->sent == SCTP_DATAGRAM_UNSENT)
-			break;
-	}
-	return;
-}
-
 void
 sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
                  struct sctp_tcb *stcb, struct sctp_nets *net_from,
@@ -4983,10 +4946,6 @@ done_with_it:
 		asoc->saw_sack_with_frags = 1;
 	else
 		asoc->saw_sack_with_frags = 0;
-
-	/* EY! - not sure about if there should be an IF*/
-	if (num_nr_seg > 0)
-		sctp_check_for_nr_revoked(stcb, asoc, cum_ack, biggest_tsn_acked);
 
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, accum_moved, reneged_all, will_exit_fast_recovery);
