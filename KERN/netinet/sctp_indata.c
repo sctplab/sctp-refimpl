@@ -2309,7 +2309,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	if ((asoc->cumulative_tsn == highest_tsn) && (at >= 8)) {
 		/* The complete array was completed by a single FR */
 		/* highest becomes the cum-ack */
-		int clr;
+	  int clr, i;
 
 		/* clear the array */
 		clr = ((at+7) >> 3);
@@ -2318,7 +2318,12 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		}
 		memset(asoc->mapping_array, 0, clr);
 		memset(asoc->nr_mapping_array, 0, clr);
-		
+		for(i=0; i<asoc->mapping_array_size; i++) {
+		  if ((asoc->mapping_array[i]) || (asoc->nr_mapping_array[i])) {
+			printf("Error Mapping array's not clean at clear\n");
+			sctp_print_mapping_array(asoc);
+		  }
+		}
 		asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->nr_mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
@@ -2382,7 +2387,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 						asoc->nr_mapping_array[slide_from + ii];
 
 			}
-			for (ii = distance; ii <= slide_end; ii++) {
+			for (ii = distance; ii <= asoc->mapping_array_size; ii++) {
 				asoc->mapping_array[ii] = 0;
 				asoc->nr_mapping_array[ii] = 0;
 			}
