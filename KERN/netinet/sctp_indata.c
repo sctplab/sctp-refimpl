@@ -2207,39 +2207,40 @@ finish_express_del:
 }
 
 int8_t sctp_map_lookup_tab[256] = {
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 4,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 5,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 4,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 6,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 4,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 5,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 4,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 3,
-	-1, 0, -1, 1, -1, 0, -1, 2,
-	-1, 0, -1, 1, -1, 0, -1, 7,
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 5, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 6, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 5, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 7, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 5, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 6, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 5, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 4, 
+  0, 1, 0, 2, 0, 1, 0, 3, 
+  0, 1, 0, 2, 0, 1, 0, 8 
 };
+
 
 
 void
@@ -2251,7 +2252,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	 */
 	struct sctp_association *asoc;
 	int at;
-	int last_all_ones=0;
 	int slide_from, slide_end, lgap, distance;
 	
 	/* EY nr_mapping array variables */
@@ -2274,16 +2274,13 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 	for (slide_from = 0; slide_from < stcb->asoc.nr_mapping_array_size; slide_from++) {
 		if (asoc->nr_mapping_array[slide_from] == 0xff) {
 			at += 8;
-			last_all_ones = 1;
 		} else {
 			/* there is a 0 bit */
 			at += sctp_map_lookup_tab[asoc->nr_mapping_array[slide_from]];
-			last_all_ones = 0;
 			break;
 		}
 	}
-	asoc->cumulative_tsn = asoc->nr_mapping_array_base_tsn + (at-last_all_ones);
-	at++;
+	asoc->cumulative_tsn = asoc->nr_mapping_array_base_tsn + (at-1);
 
 	if (compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_map, MAX_TSN) &&
 		compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)
@@ -2315,7 +2312,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 		int clr;
 
 		/* clear the array */
-		clr = (at >> 3) + 1;
+		clr = ((at+7) >> 3);
 		if (clr > asoc->mapping_array_size) {
 			clr = asoc->mapping_array_size; 
 		}
@@ -3929,6 +3926,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 #ifdef INVARIANTS
 			panic("Impossible sack 1");
 #else
+			
 			*abort_now = 1;
 			/* XXX */
 			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
@@ -4508,22 +4506,22 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			                 sctpchunk_listhead);
 			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
+		    tp1 = NULL;
 			send_s = asoc->sending_seq;
 		}
 		if (cum_ack == send_s ||
 		    compare_with_wrap(cum_ack, send_s, MAX_TSN)) {
-#ifndef INVARIANTS
 			struct mbuf *oper;
-
-#endif
-#ifdef INVARIANTS
-		hopeless_peer:
-			panic("Impossible sack 1");
-#else
 			/*
 			 * no way, we have not even sent this TSN out yet.
 			 * Peer is hopelessly messed up with us.
 			 */
+			printf("NEW cum_ack:%x send_s:%x is smaller or equal\n",
+				   cum_ack, send_s);
+			if (tp1) {
+			  printf("Got send_s from tsn:%x + 1 of tp1:%p\n",
+					 tp1->rec.data.TSN_seq, tp1);
+			}
 		hopeless_peer:
 			*abort_now = 1;
 			/* XXX */
@@ -4544,7 +4542,6 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA + SCTP_LOC_25;
 			sctp_abort_an_association(stcb->sctp_ep, stcb, SCTP_PEER_FAULTY, oper, SCTP_SO_NOT_LOCKED);
 			return;
-#endif
 		}
 	}
 	/**********************/
@@ -4764,6 +4761,10 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 				 * peer is either confused or we are under
 				 * attack. We must abort.
 				 */
+			  printf("Hopeless peer! biggest_tsn_acked:%x largest seq:%x\n",
+					 biggest_tsn_acked,
+					 send_s);
+
 				goto hopeless_peer;
 			}
 		}
