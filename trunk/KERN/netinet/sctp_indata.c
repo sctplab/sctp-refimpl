@@ -305,13 +305,14 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	return;
   }
   SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
-#ifdef INVARIANTS
   if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
 	printf("gap:%x tsn:%x\n", gap, tsn);
 	sctp_print_mapping_array(asoc);
+#ifdef INVARIANTS
 	panic("Things are really messed up now!!");
-  }
 #endif
+  }
+
   SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
   SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
   if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -319,7 +320,8 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
   }
   if (tsn == asoc->highest_tsn_inside_map) {
 	/* We must back down to see what the new highest is */
-	for (i=tsn-1; compare_with_wrap(i, asoc->mapping_array_base_tsn, MAX_TSN); i--) {
+	for (i=tsn-1; (compare_with_wrap(i, asoc->mapping_array_base_tsn, MAX_TSN) ||
+				   (i == asoc->mapping_array_base_tsn)); i--) {
 	  SCTP_CALC_TSN_TO_GAP(gap, i, asoc->mapping_array_base_tsn);
 	  if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
 		asoc->highest_tsn_inside_map = i;
