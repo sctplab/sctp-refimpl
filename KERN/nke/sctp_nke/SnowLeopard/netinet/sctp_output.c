@@ -9171,6 +9171,11 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			/* No, not sent to this net or not ready for rtx */
 			continue;
 		}
+		if (chk->data == NULL) {
+		  printf("TSN:%x chk->snd_count:%d chk->sent:%d can't retran - no data\n",
+				 chk->rec.data.TSN_seq, chk->snd_count, chk->sent);
+		  continue;
+		}
 		if ((SCTP_BASE_SYSCTL(sctp_max_retran_chunk)) &&
 		    (chk->snd_count >= SCTP_BASE_SYSCTL(sctp_max_retran_chunk))) {
 			/* Gak, we have exceeded max unlucky retran, abort! */
@@ -10062,6 +10067,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		/* Hmm we never received anything */
 		return;
 	}
+	sctp_slide_mapping_arrays(stcb);
 	sctp_set_rwnd(stcb, asoc);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) {
@@ -10287,15 +10293,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			jstart = 0;
 			offset += 8;
 		}
-		if (num_gap_blocks == 0) {
-			/* slide not yet happened, and 
-			 * somehow we got called to send a sack.
-			 * Cumack needs to move up.
-			 */
-			int abort_flag=0;
-
-			sctp_sack_check(stcb, 0, 0, &abort_flag);	
-		}
 	}
 	/* now we must add any dups we are going to report. */
 	if ((limit_reached == 0) && (asoc->numduptsns)) {
@@ -10367,6 +10364,7 @@ sctp_send_nr_sack(struct sctp_tcb *stcb)
 		/* Hmm we never received anything */
 		return;
 	}
+	sctp_slide_mapping_arrays(stcb);
 	sctp_set_rwnd(stcb, asoc);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK) {

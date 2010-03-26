@@ -5630,7 +5630,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			was_a_gap = 1;
 		}
 		stcb->asoc.send_sack = 1;
-		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
+		sctp_sack_check(stcb, was_a_gap, &abort_flag);
 		if (abort_flag) {
 			/* Again, we aborted so NO UNLOCK needed */
 			goto out_now;
