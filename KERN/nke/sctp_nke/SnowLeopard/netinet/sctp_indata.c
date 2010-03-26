@@ -47,13 +47,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 205627 2010-03-24 19:45:36Z r
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp_timer.h>
 
-#define SCTP_CALC_TSN_TO_GAP(gap, tsn, mapping_tsn) do { \
-	                if (tsn >= mapping_tsn) { \
-						gap = tsn - mapping_tsn; \
-					} else { \
-						gap = (MAX_TSN - mapping_tsn) + tsn + 1; \
-					} \
-                  } while(0)
 
 /*
  * NOTES: On the outbound side of things I need to check the sack timer to
@@ -2145,6 +2138,13 @@ failed_express_del:
 		}
 	}
 finish_express_del:
+	if (tsn == (asoc->cumulative_tsn + 1)) {
+	  asoc->cumulative_tsn = tsn;
+	  if (compare_with_wrap(asoc->nr_mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
+		/* more bits ahead of my new cum-ack .. do the slide to update */
+		sctp_slide_mapping_arrays(stcb);
+	  }
+	}
 	if (last_chunk) {
 		*m = NULL;
 	}

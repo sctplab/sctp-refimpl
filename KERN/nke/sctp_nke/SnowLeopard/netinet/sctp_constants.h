@@ -978,6 +978,13 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_IS_TSN_PRESENT(arry, gap) ((arry[(gap >> 3)] >> (gap & 0x07)) & 0x01)
 #define SCTP_SET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] |= (0x01 << ((gap & 0x07))))
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
+#define SCTP_CALC_TSN_TO_GAP(gap, tsn, mapping_tsn) do { \
+	                if (tsn >= mapping_tsn) { \
+						gap = tsn - mapping_tsn; \
+					} else { \
+						gap = (MAX_TSN - mapping_tsn) + tsn + 1; \
+					} \
+                  } while(0)
 
 
 #define SCTP_RETRAN_DONE -1
