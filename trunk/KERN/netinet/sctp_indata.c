@@ -312,7 +312,9 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	panic("Things are really messed up now!!");
 #endif
   }
-
+  /*  printf("1:TSN:%x set/unset:%d base:(%x:%x)\n",tsn, gap,
+		 asoc->nr_mapping_array_base_tsn,
+		 asoc->mapping_array_base_tsn);*/
   SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
   SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
   if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -1625,6 +1627,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		SCTP_STAT_INCR(sctps_badsid);
 		SCTP_TCB_LOCK_ASSERT(stcb);
 		
+		/*		printf("2:TSN:%x set nr:%d base(%x:%x)\n",tsn, gap,
+			   asoc->nr_mapping_array_base_tsn,
+			   asoc->mapping_array_base_tsn);*/
+
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			asoc->highest_tsn_inside_nr_map = tsn;
@@ -1784,6 +1790,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					      SCTP_STR_LOG_FROM_EXPRS_DEL);
 		}
 		control = NULL;
+		/*		printf("3:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
+			   asoc->nr_mapping_array_base_tsn,
+			   asoc->mapping_array_base_tsn);*/
+
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 		  asoc->highest_tsn_inside_nr_map = tsn;
@@ -1822,6 +1832,10 @@ failed_express_del:
 				SCTP_PRINTF("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
+			/*			printf("4:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
+			   asoc->nr_mapping_array_base_tsn,
+			   asoc->mapping_array_base_tsn);*/
+
 			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 			if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			  asoc->highest_tsn_inside_nr_map = tsn;
@@ -1846,10 +1860,6 @@ failed_express_del:
 					need_reasm_check = 1;
 				}
 			}
-			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
-			if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-			  asoc->highest_tsn_inside_nr_map = tsn;
-			}
 			control = NULL;
 			goto finish_express_del;
 		}
@@ -1857,11 +1867,19 @@ failed_express_del:
  failed_pdapi_express_del:
 	control = NULL;
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
+	  /*	  printf("6:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
+			 asoc->nr_mapping_array_base_tsn,
+			 asoc->mapping_array_base_tsn);*/
+
 	  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 	  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 		asoc->highest_tsn_inside_nr_map = tsn;
 	  }
 	} else {
+	  /*	  printf("7:TSN:%x set non-nr:%d (%x:%x)\n",tsn, gap,
+			 asoc->nr_mapping_array_base_tsn,
+			 asoc->mapping_array_base_tsn);*/
+
 	  SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
 	  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
 		asoc->highest_tsn_inside_map = tsn;
@@ -2055,7 +2073,7 @@ failed_express_del:
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			                  control,
 			                  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-
+			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else {
 			/*
 			 * Special check for when streams are resetting. We
@@ -5616,6 +5634,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		for (i = 0; i <= gap; i++) {
 			  SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, i);
 			  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, i);
+			  /* FIX ME add something to set up highest TSN in map */
 		}
 		/*
 		 * Now after marking all, slide thing forward but no sack please.
