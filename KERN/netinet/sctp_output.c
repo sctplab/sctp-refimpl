@@ -10067,13 +10067,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		/* Hmm we never received anything */
 		return;
 	}
-	if (asoc->nr_mapping_array[0] == 0xff) {
-	  /* Only slide if the first bits are all gone
-	   * we update the cum-ack dynamically as we get
-	   * tsn's (including call slide).
-	   */
-	  sctp_slide_mapping_arrays(stcb);
-	}
+	sctp_slide_mapping_arrays(stcb);
 	sctp_set_rwnd(stcb, asoc);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) {
@@ -10266,6 +10260,8 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (offset > 7) {
 		  starting_index = offset / 8;
 		  offset = offset % 8;
+		  printf("Strange starting index is %d offset:%d (not 0/x)\n",
+				 starting_index, offset);
 		} else {
 		  starting_index = 0;
 		}

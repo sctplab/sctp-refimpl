@@ -2138,13 +2138,6 @@ failed_express_del:
 		}
 	}
 finish_express_del:
-	if (tsn == (asoc->cumulative_tsn + 1)) {
-	  asoc->cumulative_tsn = tsn;
-	  if (compare_with_wrap(asoc->nr_mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
-		/* more bits ahead of my new cum-ack .. do the slide to update */
-		sctp_slide_mapping_arrays(stcb);
-	  }
-	}
 	if (last_chunk) {
 		*m = NULL;
 	}
