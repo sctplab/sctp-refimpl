@@ -10054,7 +10054,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	caddr_t limit;
 	uint32_t *dup;
 	int limit_reached = 0;
-	unsigned int i, jstart, siz, j;
+	unsigned int i, sel_start, siz, j, starting_index ;
 	unsigned int num_gap_blocks = 0, space;
 	int num_dups = 0;
 	int space_req;
@@ -10067,7 +10067,13 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		/* Hmm we never received anything */
 		return;
 	}
-	sctp_slide_mapping_arrays(stcb);
+	if (asoc->nr_mapping_array[0] == 0xff) {
+	  /* Only slide if the first bits are all gone
+	   * we update the cum-ack dynamically as we get
+	   * tsn's (including call slide).
+	   */
+	  sctp_slide_mapping_arrays(stcb);
+	}
 	sctp_set_rwnd(stcb, asoc);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) {
@@ -10231,21 +10237,45 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN )) {
 		offset = 1;
 		/*-
-		 * cum-ack behind the mapping array, so we start and use all
-		 * entries.
+		 * The base TSN is intialized to be the first TSN the peer
+		 * will send us. If the cum-ack is behind this then when they
+		 * send us the next in sequence it will mark the base_tsn bit.
+		 * Thus we need to use the very first selector and the offset
+		 * is 1. Our table is built for this case.
 		 */
-		jstart = 0;
+		starting_index = 0;
+		sel_start = 0;
 	} else {
-		offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn;
 		/*-
-		 * we skip the first one when the cum-ack is at or above the
-		 * mapping array base. Note this only works if 
+		 * we skip the first selector  when the cum-ack is at or above the
+		 * mapping array base. This is because the bits at the base or above
+		 * are turned on and our first selector in the table assumes they are
+		 * off. We thus will use the second selector (first is 0). We use
+		 * the reverse of our macro to fix the offset, in bits, that our
+		 * table is at. Note that this method assumes that the cum-tsn is
+		 * within the first bit, i.e. its value is 0-7 which means the
+		 * result to our offset will be either a 0 - -7. If the cumack
+		 * is NOT in the first byte (0) (which it should be since we did
+		 * a mapping array slide above) then we need to calculate the starting
+		 * index i.e. which byte of the mapping array we should start at. We
+		 * do this by dividing by 8 and pushing the remainder (mod) into offset.
+		 * then we multiply the offset to be negative, since we need a negative
+		 * offset into the selector table.
 		 */
-		jstart = 1;
+	    SCTP_CALC_TSN_TO_GAP(offset, asoc->cumulative_tsn, asoc->mapping_array_base_tsn);
+		if (offset > 7) {
+		  starting_index = offset / 8;
+		  offset = offset % 8;
+		} else {
+		  starting_index = 0;
+		}
+		/* We need a negative offset in our table */
+		offset *= -1;
+		sel_start = 1;
 	}
 	if (compare_with_wrap(highest_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 		/* we have a gap .. maybe */
-		for (i = 0; i < siz; i++) {
+		for (i = starting_index; i < siz; i++) {
 		  selector = &sack_array[(asoc->mapping_array[i]|asoc->nr_mapping_array[i])];
 			if (mergeable && selector->right_edge) {
 				/*
@@ -10258,7 +10288,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			if (selector->num_entries == 0)
 				mergeable = 0;
 			else {
-				for (j = jstart; j < selector->num_entries; j++) {
+				for (j = sel_start; j < selector->num_entries; j++) {
 					if (mergeable && selector->right_edge) {
 						/*
 						 * do a merge by NOT setting
@@ -10290,7 +10320,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				/* Reached the limit stop */
 				break;
 			}
-			jstart = 0;
+			sel_start = 0;
 			offset += 8;
 		}
 	}
