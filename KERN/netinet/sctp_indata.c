@@ -417,6 +417,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				end = 1;
 			else
 				end = 0;
+			sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 			sctp_add_to_readq(stcb->sctp_ep,
 			                  stcb, control, &stcb->sctp_socket->so_rcv, end,
 			                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
@@ -426,6 +427,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				end = 1;
 			else
 				end = 0;
+			sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 			if (sctp_append_to_readq(stcb->sctp_ep, stcb,
 			    stcb->asoc.control_pdapi,
 			    chk->data, end, chk->rec.data.TSN_seq,
@@ -460,7 +462,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		}
 		/* pull it we did it */
 		TAILQ_REMOVE(&asoc->reasmqueue, chk, sctp_next);
-		sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 		if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 			asoc->fragmented_delivery_inprogress = 0;
 			if ((chk->rec.data.rcv_flags & SCTP_DATA_UNORDERED) == 0) {
@@ -507,11 +508,11 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 						asoc->size_on_all_streams -= ctl->length;
 						sctp_ucount_decr(asoc->cnt_on_all_streams);
 						strm->last_sequence_delivered++;
+						sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 						sctp_add_to_readq(stcb->sctp_ep, stcb,
 						    ctl,
 							&stcb->sctp_socket->so_rcv, 1,
 							SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-						sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 						ctl = ctlat;
 					} else {
 						break;
@@ -621,11 +622,11 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_ucount_decr(asoc->cnt_on_all_streams);
 		strm->last_sequence_delivered++;
 		
+		sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		                  control,
 		                  &stcb->sctp_socket->so_rcv, 1,
 		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-		sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		control = TAILQ_FIRST(&strm->inqueue);
 		while (control != NULL) {
 			/* all delivered */
@@ -646,13 +647,12 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					sctp_log_strm_del(control, NULL,
 							  SCTP_STR_LOG_FROM_IMMED_DEL);
 				}
-				/* EY will be used to calculate nr-gap */
+				sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 				                  control,
 				                  &stcb->sctp_socket->so_rcv, 1,
 				                  SCTP_READ_LOCK_NOT_HELD,
 				                  SCTP_SO_NOT_LOCKED);
-				sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 				control = at;
 				continue;
 			}
@@ -2070,10 +2070,10 @@ failed_express_del:
 		/* ok, if we reach here we have passed the sanity checks */
 		if (chunk_flags & SCTP_DATA_UNORDERED) {
 			/* queue directly into socket buffer */
+			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			                  control,
 			                  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else {
 			/*
 			 * Special check for when streams are resetting. We
@@ -5387,11 +5387,10 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			sctp_ucount_decr(asoc->cnt_on_all_streams);
 			/* deliver it to at least the delivery-q */
 			if(stcb->sctp_socket) {
-				/* EY need the tsn info for calculating nr*/
+				sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
 						  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
-				sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 			}
 		} else {
 			/* no more delivery now. */
@@ -5416,10 +5415,10 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			/* deliver it to at least the delivery-q */
 			strmin->last_sequence_delivered = ctl->sinfo_ssn;
 			if(stcb->sctp_socket) {
+				sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  ctl,
 						  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_HELD, SCTP_SO_NOT_LOCKED);
-				sctp_mark_non_revokable(asoc, ctl->sinfo_tsn);
 
 			}
 			tt = strmin->last_sequence_delivered + 1;
