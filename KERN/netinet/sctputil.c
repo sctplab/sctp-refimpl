@@ -1729,13 +1729,8 @@ sctp_timeout_handler(void *t)
 			break;
 		}
 		{
-			int abort_flag;
 			SCTP_STAT_INCR(sctps_timosack);
 			stcb->asoc.timosack++;
-			if (stcb->asoc.cumulative_tsn != stcb->asoc.highest_tsn_inside_map)
-				sctp_sack_check(stcb, 0, 0, &abort_flag);
-				
-			/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
 			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
 				sctp_send_nr_sack(stcb);
 			else

@@ -2145,10 +2145,6 @@ failed_express_del:
 		}
 	}
 finish_express_del:
-	if (tsn == (asoc->cumulative_tsn + 1)) {
-		/* Update cum-ack */
-		asoc->cumulative_tsn = tsn;
-	}
 	if (last_chunk) {
 		*m = NULL;
 	}
@@ -2262,9 +2258,8 @@ int8_t sctp_map_lookup_tab[256] = {
 };
 
 
-
 void
-sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort_flag)
+sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 {
 	/*
 	 * Now we also need to check the mapping array in a couple of ways.
@@ -2420,11 +2415,28 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 			}
 		}
 	}
+}
+
+
+void
+sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
+{
+	struct sctp_association *asoc;
+	uint32_t highest_tsn;
+	
+	    asoc = &stcb->asoc;
+	if (compare_with_wrap(asoc->highest_tsn_inside_nr_map,
+						  asoc->highest_tsn_inside_map,
+						  MAX_TSN)) {
+	  highest_tsn = asoc->highest_tsn_inside_nr_map;
+	} else {
+	  highest_tsn = asoc->highest_tsn_inside_map;
+	}
+
 	/*
 	 * Now we need to see if we need to queue a sack or just start the
 	 * timer (if allowed).
 	 */
-	if (ok_to_sack) {
 		if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
 			/*
 			 * Ok special case, in SHUTDOWN-SENT case. here we
@@ -2504,7 +2516,6 @@ sctp_sack_check(struct sctp_tcb *stcb, int ok_to_sack, int was_a_gap, int *abort
 				}
 			}
 		}
-	}
 }
 
 void
@@ -2854,7 +2865,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			}
 		}
 	} else {
-		sctp_sack_check(stcb, 1, was_a_gap, &abort_flag);
+		sctp_sack_check(stcb, was_a_gap, &abort_flag);
 	}
 	if (abort_flag)
 		return (2);
@@ -5638,9 +5649,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		/*
 		 * Now after marking all, slide thing forward but no sack please.
 		 */
-		sctp_sack_check(stcb, 0, 0, abort_flag);
-		if (*abort_flag)
-			return;
+		sctp_slide_mapping_arrays(stcb);
 	}
 	/*************************************************************/
 	/* 2. Clear up re-assembly queue                             */
