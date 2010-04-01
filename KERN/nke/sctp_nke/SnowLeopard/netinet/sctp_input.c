@@ -2003,7 +2003,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	 * the socket is unbound and we must do an implicit bind. 
 	 * Since we are getting a cookie, we cannot be unbound.
 	 */
-	stcb = sctp_aloc_assoc(inp, init_src, 0, &error,
+	stcb = sctp_aloc_assoc(inp, init_src, &error,
 			       ntohl(initack_cp->init.initiate_tag), vrf_id,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			       (struct thread *)NULL

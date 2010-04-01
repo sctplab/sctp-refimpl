@@ -1798,7 +1798,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	
 
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, sa, 1, &error, 0, vrf_id, 
+	stcb = sctp_aloc_assoc(inp, sa, &error, 0, vrf_id, 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 			       (struct thread *)p
 #elif defined(__Windows__)
@@ -5017,7 +5017,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	}
 #endif
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, p);
+	stcb = sctp_aloc_assoc(inp, addr, &error, 0, vrf_id, p);
 	if (stcb == NULL) {
 		/* Gak! no memory */
 		goto out_now;

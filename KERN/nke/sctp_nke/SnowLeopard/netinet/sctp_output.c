@@ -12905,7 +12905,7 @@ sctp_lower_sosend(struct socket *so,
 				panic("Error, should hold create lock and I don't?");
 			}
 #endif
-			stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, 
+			stcb = sctp_aloc_assoc(inp, addr, &error, 0, vrf_id, 
 #if !( defined( __Panda__) || defined(__Userspace__) )
 					       p
 #else
