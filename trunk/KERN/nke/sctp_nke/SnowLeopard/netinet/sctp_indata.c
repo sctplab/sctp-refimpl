@@ -2441,11 +2441,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 				    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+SCTP_LOC_18);
 			}
 			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
-			/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
-				sctp_send_nr_sack(stcb);
-			else
-				sctp_send_sack(stcb);
+			sctp_send_sack(stcb);
 		} else {
 			int is_a_gap;
 
@@ -2496,11 +2492,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 					 * duplicates.
 					 */
 					(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
-					/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-					if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
-						sctp_send_nr_sack(stcb);
-					else
-						sctp_send_sack(stcb);
+					sctp_send_sack(stcb);
 				}
 			} else {
 				if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
@@ -2846,11 +2838,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 			}
-			/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-			if(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
-				sctp_send_nr_sack(stcb);
-			else
-				sctp_send_sack(stcb);
+			sctp_send_sack(stcb);
 		} else {
 			if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
