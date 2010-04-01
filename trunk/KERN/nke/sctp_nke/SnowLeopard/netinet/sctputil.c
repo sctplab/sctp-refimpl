@@ -876,7 +876,7 @@ sctp_select_a_tag(struct sctp_inpcb *inp, uint16_t lport, uint16_t rport, int sa
 
 int
 sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
-    int for_a_init, uint32_t override_tag, uint32_t vrf_id)
+               uint32_t override_tag, uint32_t vrf_id)
 {
 	struct sctp_association *asoc;
 	/*
