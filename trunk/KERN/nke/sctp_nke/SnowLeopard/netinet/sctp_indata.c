@@ -305,9 +305,6 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	panic("Things are really messed up now!!");
 #endif
   }
-  /*  printf("1:TSN:%x set/unset:%d base:(%x:%x)\n",tsn, gap,
-		 asoc->nr_mapping_array_base_tsn,
-		 asoc->mapping_array_base_tsn);*/
   SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
   SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
   if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -1619,11 +1616,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		SCTP_STAT_INCR(sctps_badsid);
 		SCTP_TCB_LOCK_ASSERT(stcb);
-		
-		/*		printf("2:TSN:%x set nr:%d base(%x:%x)\n",tsn, gap,
-			   asoc->nr_mapping_array_base_tsn,
-			   asoc->mapping_array_base_tsn);*/
-
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			asoc->highest_tsn_inside_nr_map = tsn;
@@ -1783,9 +1775,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					      SCTP_STR_LOG_FROM_EXPRS_DEL);
 		}
 		control = NULL;
-		/*		printf("3:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
-			   asoc->nr_mapping_array_base_tsn,
-			   asoc->mapping_array_base_tsn);*/
 
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -1825,9 +1814,6 @@ failed_express_del:
 				SCTP_PRINTF("Append fails end:%d\n", end);
 				goto failed_pdapi_express_del;
 			}
-			/*			printf("4:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
-			   asoc->nr_mapping_array_base_tsn,
-			   asoc->mapping_array_base_tsn);*/
 
 			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 			if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
@@ -1860,23 +1846,15 @@ failed_express_del:
  failed_pdapi_express_del:
 	control = NULL;
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
-	  /*	  printf("6:TSN:%x set nr:%d (%x:%x)\n",tsn, gap,
-			 asoc->nr_mapping_array_base_tsn,
-			 asoc->mapping_array_base_tsn);*/
-
-	  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
-	  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-		asoc->highest_tsn_inside_nr_map = tsn;
-	  }
+		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_nr_map = tsn;
+		}
 	} else {
-	  /*	  printf("7:TSN:%x set non-nr:%d (%x:%x)\n",tsn, gap,
-			 asoc->nr_mapping_array_base_tsn,
-			 asoc->mapping_array_base_tsn);*/
-
-	  SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
-	  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
-		asoc->highest_tsn_inside_map = tsn;
-	  }
+		SCTP_SET_TSN_PRESENT(asoc->mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_map = tsn;
+		}
 	}
 	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		sctp_alloc_a_chunk(stcb, chk);
@@ -2279,7 +2257,7 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 	 * offset of the current cum-ack as the starting point.
 	 */
 	at = 0;
-	for (slide_from = 0; slide_from < stcb->asoc.nr_mapping_array_size; slide_from++) {
+	for (slide_from = 0; slide_from < stcb->asoc.mapping_array_size; slide_from++) {
 		if (asoc->nr_mapping_array[slide_from] == 0xff) {
 			at += 8;
 		} else {
@@ -2288,7 +2266,7 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 			break;
 		}
 	}
-	asoc->cumulative_tsn = asoc->nr_mapping_array_base_tsn + (at-1);
+	asoc->cumulative_tsn = asoc->mapping_array_base_tsn + (at-1);
 
 	if (compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_map, MAX_TSN) &&
 		compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)
@@ -2333,7 +2311,6 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 		  }
 		}
 		asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
-		asoc->nr_mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
 	} else if (at >= 8) {
 		/* we can slide the mapping array down */
@@ -2400,7 +2377,6 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 				asoc->nr_mapping_array[ii] = 0;
 			}
 			asoc->mapping_array_base_tsn += (slide_from << 3);
-			asoc->nr_mapping_array_base_tsn += (slide_from << 3);
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
 				sctp_log_map(asoc->mapping_array_base_tsn,
 					     asoc->cumulative_tsn, asoc->highest_tsn_inside_map,
@@ -5574,7 +5550,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * now we know the new TSN is more advanced, let's find the actual
 	 * gap
 	 */
-	SCTP_CALC_TSN_TO_GAP(gap, new_cum_tsn, asoc->nr_mapping_array_base_tsn);
+	SCTP_CALC_TSN_TO_GAP(gap, new_cum_tsn, asoc->mapping_array_base_tsn);
 	asoc->cumulative_tsn = new_cum_tsn;
 	if (gap >= m_size) {
 		if ((long)gap > sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv)) {
@@ -5612,8 +5588,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		asoc->mapping_array_base_tsn = new_cum_tsn + 1;
 		asoc->highest_tsn_inside_map = new_cum_tsn;
 		
-		memset(stcb->asoc.nr_mapping_array, 0, stcb->asoc.nr_mapping_array_size);
-		asoc->nr_mapping_array_base_tsn = new_cum_tsn + 1;
+		memset(stcb->asoc.nr_mapping_array, 0, stcb->asoc.mapping_array_size);
 		asoc->highest_tsn_inside_nr_map = new_cum_tsn;
 		
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
