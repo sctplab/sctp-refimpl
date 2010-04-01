@@ -1162,9 +1162,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 		return (ENOMEM);
 	}
 	memset(asoc->mapping_array, 0, asoc->mapping_array_size);	
-	/* EY  - initialize the nr_mapping_array just like mapping array*/
-	asoc->nr_mapping_array_size = SCTP_INITIAL_NR_MAPPING_ARRAY;
-	SCTP_MALLOC(asoc->nr_mapping_array, uint8_t *, asoc->nr_mapping_array_size,
+	SCTP_MALLOC(asoc->nr_mapping_array, uint8_t *, asoc->mapping_array_size,
 	    SCTP_M_MAP);
 	if (asoc->nr_mapping_array == NULL) {
 		SCTP_FREE(asoc->strmout, SCTP_M_STRMO);
@@ -1172,7 +1170,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 		SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOMEM);
 		return (ENOMEM);
 	}
-	memset(asoc->nr_mapping_array, 0, asoc->nr_mapping_array_size);
+	memset(asoc->nr_mapping_array, 0, asoc->mapping_array_size);
 
 	/* Now the init of the other outqueues */
 	TAILQ_INIT(&asoc->free_chunks);
@@ -1235,12 +1233,12 @@ sctp_print_mapping_array(struct sctp_association *asoc)
 	}
 	printf("\n");
 	printf("NR Mapping size:%d baseTSN:%8.8x highestTSN:%8.8x\n",
-		 asoc->nr_mapping_array_size,
-		 asoc->nr_mapping_array_base_tsn,
+		 asoc->mapping_array_size,
+		 asoc->mapping_array_base_tsn,
 		 asoc->highest_tsn_inside_nr_map
 		 );
-	limit = asoc->nr_mapping_array_size;
-	for(i=asoc->nr_mapping_array_size; i>=0; i--) {
+	limit = asoc->mapping_array_size;
+	for(i=asoc->mapping_array_size; i>=0; i--) {
 	  if (asoc->nr_mapping_array[i]) {
 		limit = i;
 		break;
@@ -1279,7 +1277,6 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
 	asoc->mapping_array = new_array;
 	asoc->mapping_array_size = new_size;
-	new_size = asoc->nr_mapping_array_size + ((needed + 7) / 8 + SCTP_NR_MAPPING_ARRAY_INCR);
 	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
 	if (new_array == NULL) {
 		/* can't get more, forget it */
@@ -1288,10 +1285,9 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 		return (-1);
 	}
 	memset(new_array, 0, new_size);
-	memcpy(new_array, asoc->nr_mapping_array, asoc->nr_mapping_array_size);
+	memcpy(new_array, asoc->nr_mapping_array, asoc->mapping_array_size);
 	SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
 	asoc->nr_mapping_array = new_array;
-	asoc->nr_mapping_array_size = new_size;
 	return (0);
 }
 

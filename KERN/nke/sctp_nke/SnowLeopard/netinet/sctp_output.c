@@ -10348,12 +10348,12 @@ sctp_send_sack(struct sctp_tcb *stcb)
 
 		mergeable = 0;
 
-		if (asoc->highest_tsn_inside_nr_map > asoc->nr_mapping_array_base_tsn)
-			siz = (((asoc->highest_tsn_inside_nr_map - asoc->nr_mapping_array_base_tsn) + 1) + 7) / 8;
+		if (asoc->highest_tsn_inside_nr_map > asoc->mapping_array_base_tsn)
+			siz = (((asoc->highest_tsn_inside_nr_map - asoc->mapping_array_base_tsn) + 1) + 7) / 8;
 		else 
-			siz = (((MAX_TSN - asoc->nr_mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_nr_map + 7) / 8;
+			siz = (((MAX_TSN - asoc->mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_nr_map + 7) / 8;
 
-		if (compare_with_wrap(asoc->nr_mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
+		if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 			offset = 1;
 			/*-
 			* cum-ack behind the mapping array, so we start and use all
@@ -10361,7 +10361,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			*/
 			sel_start = 0;
 		} else {
-			offset = asoc->nr_mapping_array_base_tsn - asoc->cumulative_tsn;
+			offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn;
 			/*-
 			* we skip the first one when the cum-ack is at or above the
 			* mapping array base. Note this only works if
