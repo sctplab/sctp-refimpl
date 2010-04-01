@@ -3246,12 +3246,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		}
 		break;
 	case SCTP_SELECTIVE_ACK:
+	case SCTP_NR_SELECTIVE_ACK:
 		/* resend the sack */
 		sctp_send_sack(stcb);
-		break;
-	/* EY for nr_sacks*/	
-	case SCTP_NR_SELECTIVE_ACK:
-		sctp_send_nr_sack(stcb);	/* EY resend the nr-sack */
 		break;
 	case SCTP_HEARTBEAT_REQUEST:
 		/* resend a demand HB */
@@ -5734,7 +5731,7 @@ sctp_input(i_pak, va_alist)
 	 */
 	off = sizeof(struct ip);
 #endif
- 	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
+	if (SCTP_GET_PKT_VRFID(i_pak, vrf_id)) {
 		SCTP_RELEASE_PKT(i_pak);
 		return;
 	}

@@ -1731,10 +1731,7 @@ sctp_timeout_handler(void *t)
 		{
 			SCTP_STAT_INCR(sctps_timosack);
 			stcb->asoc.timosack++;
-			if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
-				sctp_send_nr_sack(stcb);
-			else
-				sctp_send_sack(stcb);
+			sctp_send_sack(stcb);
 		}
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
@@ -5307,11 +5304,7 @@ sctp_user_rcvd(struct sctp_tcb *stcb, uint32_t *freed_so_far, int hold_rlock,
 			goto out;
 		}
 		SCTP_STAT_INCR(sctps_wu_sacks_sent);
-		/* EY if nr_sacks used then send an nr-sack , a sack otherwise*/
-		if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) && stcb->asoc.peer_supports_nr_sack)
-			sctp_send_nr_sack(stcb);
-		else
-			sctp_send_sack(stcb);
+		sctp_send_sack(stcb);
 		
 		sctp_chunk_output(stcb->sctp_ep, stcb,
 				  SCTP_OUTPUT_FROM_USR_RCVD, SCTP_SO_LOCKED);
