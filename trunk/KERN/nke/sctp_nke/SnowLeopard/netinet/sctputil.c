@@ -1259,35 +1259,34 @@ int
 sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 {
 	/* mapping array needs to grow */
-	uint8_t *new_array;
+	uint8_t *new_array1, *new_array2;
 	uint32_t new_size;
 	
 
 	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
 
-	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
-	if (new_array == NULL) {
+	SCTP_MALLOC(new_array1, uint8_t *, new_size, SCTP_M_MAP);
+	SCTP_MALLOC(new_array2, uint8_t *, new_size, SCTP_M_MAP);
+	if ((new_array1 == NULL) || (new_array2 == NULL)) {
 		/* can't get more, forget it */
-		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
-			    new_size);
+		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n", new_size);
+		if (new_array1) {
+			SCTP_FREE(new_array1, SCTP_M_MAP);
+		}
+		if (new_array2) {
+			SCTP_FREE(new_array2, SCTP_M_MAP);
+		}
 		return (-1);
 	}
-	memset(new_array, 0, new_size);
-	memcpy(new_array, asoc->mapping_array, asoc->mapping_array_size);
+	memset(new_array1, 0, new_size);
+	memset(new_array2, 0, new_size);
+	memcpy(new_array1, asoc->mapping_array, asoc->mapping_array_size);
+	memcpy(new_array2, asoc->nr_mapping_array, asoc->mapping_array_size);
 	SCTP_FREE(asoc->mapping_array, SCTP_M_MAP);
-	asoc->mapping_array = new_array;
-	asoc->mapping_array_size = new_size;
-	SCTP_MALLOC(new_array, uint8_t *, new_size, SCTP_M_MAP);
-	if (new_array == NULL) {
-		/* can't get more, forget it */
-		SCTP_PRINTF("No memory for expansion of SCTP mapping array %d\n",
-			    new_size);
-		return (-1);
-	}
-	memset(new_array, 0, new_size);
-	memcpy(new_array, asoc->nr_mapping_array, asoc->mapping_array_size);
 	SCTP_FREE(asoc->nr_mapping_array, SCTP_M_MAP);
-	asoc->nr_mapping_array = new_array;
+	asoc->mapping_array = new_array1;
+	asoc->nr_mapping_array = new_array2;
+	asoc->mapping_array_size = new_size;
 	return (0);
 }
 
