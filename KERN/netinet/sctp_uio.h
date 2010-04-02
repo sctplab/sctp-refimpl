@@ -52,6 +52,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 205629 2010-03-24 20:02:40Z rrs 
 #include <netinet/in.h>
 #endif
 #if defined(__Windows__)
+#pragma warning(push)
+#pragma warning(disable: 4200)
 #if defined(_KERNEL)
 #include <sys/types.h>
 #include <sys/socket.h>
@@ -1194,6 +1196,8 @@ sctp_assoc_t sctp_getassocid __P((SOCKET sd, struct sockaddr *sa));
 
 ssize_t sctp_recvmsg __P((SOCKET, void *, size_t, struct sockaddr *,
     socklen_t *, struct sctp_sndrcvinfo *, int *));
+
+#pragma warning(pop)
 #endif				/* !__Windows__*/
 #endif				/* !_KERNEL */
 #endif				/* !__sctp_uio_h__ */
