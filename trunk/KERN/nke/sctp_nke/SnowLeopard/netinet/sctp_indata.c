@@ -1778,7 +1778,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-		  asoc->highest_tsn_inside_nr_map = tsn;
+			asoc->highest_tsn_inside_nr_map = tsn;
 		}
 		goto finish_express_del;
 	}
@@ -1817,7 +1817,7 @@ failed_express_del:
 
 			SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
 			if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-			  asoc->highest_tsn_inside_nr_map = tsn;
+				asoc->highest_tsn_inside_nr_map = tsn;
 			}
 			SCTP_STAT_INCR(sctps_recvexpressm);
 			control->sinfo_tsn = tsn;
