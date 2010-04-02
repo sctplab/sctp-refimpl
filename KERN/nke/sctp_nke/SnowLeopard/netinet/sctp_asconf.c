@@ -3045,7 +3045,7 @@ sctp_addr_in_initack(struct sctp_tcb *stcb, struct mbuf *m, uint32_t offset,
 			    (uint8_t *) & addr_store);
 			if (plen != sizeof(struct sctp_ipv6addr_param) ||
 			   (ph == NULL) ||
-			    (a6p == NULL) ){
+			    (a6p == NULL) ) {
 				return (0);
 			}
 			sin6 = (struct sockaddr_in6 *)sa;
