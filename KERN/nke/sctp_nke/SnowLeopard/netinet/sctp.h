@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* $KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	 */
@@ -180,16 +180,16 @@ struct sctp_paramhdr {
  */
 #define SCTP_SET_DYNAMIC_PRIMARY        0x00002001
 
-/* VRF (virtual router feature) and multi-VRF support 
+/* VRF (virtual router feature) and multi-VRF support
  * options. VRF's provide splits within a router
  * that give the views of multiple routers. A
  * standard host, without VRF support, is just
- * a single VRF. If VRF's are supported then 
+ * a single VRF. If VRF's are supported then
  * the transport must be VRF aware. This means
  * that every socket call coming in must be directed
  * within the endpoint to one of the VRF's it belongs
  * to. The endpoint, before binding, may select
- * the "default" VRF it is in by using a set socket 
+ * the "default" VRF it is in by using a set socket
  * option with SCTP_VRF_ID. This will also
  * get propegated to the default VRF. Once the
  * endpoint binds an address then it CANNOT add
@@ -204,7 +204,7 @@ struct sctp_paramhdr {
  * packets, assuming the router is VRF aware, can always
  * tell us what VRF they arrived on. A host not supporting
  * any VRF's will find that the packets always arrived on the
- * single VRF that the host has. 
+ * single VRF that the host has.
  *
  */
 
@@ -214,7 +214,7 @@ struct sctp_paramhdr {
 #define SCTP_GET_ASOC_VRF               0x00003004
 #define SCTP_DEL_VRF_ID                 0x00003005
 
-/* 
+/*
  * If you enable packet logging you can get
  * a poor mans ethereal output in binary
  * form. Note this is a compile option to
@@ -263,7 +263,7 @@ struct sctp_paramhdr {
 #define SCTP_CC_HTCP		0x00000002
 
 
-/* fragment interleave constants 
+/* fragment interleave constants
  * setting must be one of these or
  * EINVAL returned.
  */
@@ -515,7 +515,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_MAX_COOKIE_LIFE  3600000 /* 1 hour in ms */
 
 
-/* Types of logging/KTR tracing  that can be enabled via the 
+/* Types of logging/KTR tracing  that can be enabled via the
  * sysctl net.inet.sctp.sctp_logging. You must also enable
  * SUBSYS tracing.
  * Note that you must have the SCTP option in the kernel
