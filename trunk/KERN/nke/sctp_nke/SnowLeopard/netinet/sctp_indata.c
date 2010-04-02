@@ -260,7 +260,7 @@ sctp_build_ctl_cchunk(struct sctp_inpcb *inp,
 		return (NULL);
 	}
 
-	if(sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
 		use_extended = 1;
 		len = CMSG_LEN(sizeof(struct sctp_extrcvinfo));
 	} else {
@@ -291,40 +291,40 @@ sctp_build_ctl_cchunk(struct sctp_inpcb *inp,
 static void
 sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 {
-  uint32_t gap, i;
-  int fnd=0;
+	uint32_t gap, i;
+	int fnd=0;
 
-  if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
-	return;
-  }
-  SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
-  if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
-	printf("gap:%x tsn:%x\n", gap, tsn);
-	sctp_print_mapping_array(asoc);
+	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
+		return;
+	}
+	SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
+	if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
+		printf("gap:%x tsn:%x\n", gap, tsn);
+		sctp_print_mapping_array(asoc);
 #ifdef INVARIANTS
-	panic("Things are really messed up now!!");
+		panic("Things are really messed up now!!");
 #endif
-  }
-  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
-  SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
-  if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-	asoc->highest_tsn_inside_nr_map = tsn;
-  }
-  if (tsn == asoc->highest_tsn_inside_map) {
-	/* We must back down to see what the new highest is */
-	for (i=tsn-1; (compare_with_wrap(i, asoc->mapping_array_base_tsn, MAX_TSN) ||
-				   (i == asoc->mapping_array_base_tsn)); i--) {
-	  SCTP_CALC_TSN_TO_GAP(gap, i, asoc->mapping_array_base_tsn);
-	  if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
-		asoc->highest_tsn_inside_map = i;
-		fnd = 1;
-		break;
-	  }
 	}
-	if (!fnd) {
-	  asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn - 1;
+	SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+	SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
+	if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+		asoc->highest_tsn_inside_nr_map = tsn;
 	}
-  }
+	if (tsn == asoc->highest_tsn_inside_map) {
+		/* We must back down to see what the new highest is */
+		for (i=tsn-1; (compare_with_wrap(i, asoc->mapping_array_base_tsn, MAX_TSN) ||
+		               (i == asoc->mapping_array_base_tsn)); i--) {
+			SCTP_CALC_TSN_TO_GAP(gap, i, asoc->mapping_array_base_tsn);
+			if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
+				asoc->highest_tsn_inside_map = i;
+				fnd = 1;
+				break;
+			}
+		}
+		if (!fnd) {
+			asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn - 1;
+		}
+	}
 }
 
 
