@@ -958,8 +958,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					*abort_flag = 1;
 				} else if ((asoc->fragment_flags & SCTP_DATA_UNORDERED) !=
 					    SCTP_DATA_UNORDERED &&
-					    chk->rec.data.stream_seq !=
-				    asoc->ssn_of_pdapi) {
+					    chk->rec.data.stream_seq != asoc->ssn_of_pdapi) {
 					/* Got to be the right STR Seq */
 					SCTPDBG(SCTP_DEBUG_INDATA1, "Gak, Evil plot, it IS not same stream seq %d vs %d\n",
 						chk->rec.data.stream_seq,
