@@ -3663,7 +3663,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		/* Free associations that are NOT killing us */
 		SCTP_TCB_LOCK(asoc);
 		if ((SCTP_GET_STATE(&asoc->asoc) != SCTP_STATE_COOKIE_WAIT) &&
-		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)){
+		    ((asoc->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0)) {
 			struct mbuf *op_err;
 			uint32_t *ippp;
 			op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
@@ -6810,7 +6810,7 @@ next_param:
 		/* peer supports asconf but not auth? */
 		return (-32);
 	} else if ((stcb->asoc.peer_supports_asconf) && (stcb->asoc.peer_supports_auth) &&
-	           ((saw_asconf == 0) || (saw_asconf_ack == 0)) ){
+	           ((saw_asconf == 0) || (saw_asconf_ack == 0))) {
 		return (-33);
 	}
 	/* concatenate the full random key */

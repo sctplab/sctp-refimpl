@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -144,7 +144,7 @@ struct sctp_extrcvinfo {
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
 	uint16_t sreinfo_next_flags;
-	uint16_t sreinfo_next_stream; 
+	uint16_t sreinfo_next_stream;
 	uint32_t sreinfo_next_aid;
 	uint32_t sreinfo_next_length;
 	uint32_t sreinfo_next_ppid;
@@ -885,7 +885,7 @@ struct sctpstat {
 	uint32_t  sctps_timoassockill;       /* Number of asoc free timers expired */
 	uint32_t  sctps_timoinpkill;         /* Number of inp free timers expired */
 	/* Early fast retransmission counters */
-	uint32_t  sctps_earlyfrstart;        
+	uint32_t  sctps_earlyfrstart;
 	uint32_t  sctps_earlyfrstop;
 	uint32_t  sctps_earlyfrmrkretrans;
 	uint32_t  sctps_earlyfrstpout;
@@ -908,7 +908,7 @@ struct sctpstat {
 	uint32_t  sctps_naglesent;        /* nagle allowed sending      */
 	uint32_t  sctps_naglequeued;      /* nagle does't allow sending */
 	uint32_t  sctps_maxburstqueued;   /* max burst dosn't allow sending */
-	uint32_t  sctps_ifnomemqueued;    /* look ahead tells us no memory in 
+	uint32_t  sctps_ifnomemqueued;    /* look ahead tells us no memory in
                                          * interface ring buffer OR we had a
 					 * send error and are queuing one send.
                                          */
@@ -930,7 +930,7 @@ struct sctpstat {
 	uint32_t  sctps_slowpath_sack;    /* Sacks the slow way */
 	uint32_t  sctps_wu_sacks_sent;	/* Window Update only sacks sent */
 	uint32_t  sctps_sends_with_flags; /* number of sends with sinfo_flags !=0 */
-	uint32_t  sctps_sends_with_unord	/* number of undordered sends */; 
+	uint32_t  sctps_sends_with_unord	/* number of undordered sends */;
 	uint32_t  sctps_sends_with_eof; 	/* number of sends with EOF flag set */
 	uint32_t  sctps_sends_with_abort; /* number of sends with ABORT flag set */
 	uint32_t  sctps_protocol_drain_calls;	/* number of times protocol drain called */
@@ -1099,7 +1099,7 @@ sctp_lower_sosend(struct socket *so,
     int flags,
     int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
-#if !(defined(__Panda__) || defined (__Userspace__)) 
+#if !(defined(__Panda__) || defined (__Userspace__))
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
     ,struct thread *p
 #elif defined(__Windows__)
