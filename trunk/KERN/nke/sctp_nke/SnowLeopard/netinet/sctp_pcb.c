@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -172,8 +172,8 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  * addip iterator works through and frees the src address
  * selection pointing to the sctp_ifa, eventually the refcount
  * will reach 0 and we will delete it. Note that it is assumed
- * that any locking on system level ifn/ifa is done at the 
- * caller of these functions and these routines will only 
+ * that any locking on system level ifn/ifa is done at the
+ * caller of these functions and these routines will only
  * lock the SCTP structures as they add or delete things.
  *
  * Other notes on VRF concepts.
@@ -247,7 +247,7 @@ sctp_find_ifn(void *ifn, uint32_t ifn_index)
 	struct sctp_ifn *sctp_ifnp;
 	struct sctp_ifnlist *hash_ifn_head;
 
-	/* We assume the lock is held for the addresses 
+	/* We assume the lock is held for the addresses
 	 * if thats wrong problems could occur :-)
 	 */
 	hash_ifn_head = &SCTP_BASE_INFO(vrf_ifn_hash)[(ifn_index & SCTP_BASE_INFO(vrf_ifn_hashmark))];
@@ -341,13 +341,13 @@ sctp_delete_ifn(struct sctp_ifn *sctp_ifnp, int hold_addr_lock)
 		/* Not in the list.. sorry */
 		return;
 	}
-	if (hold_addr_lock == 0) 
+	if (hold_addr_lock == 0)
 		SCTP_IPI_ADDR_WLOCK();
 	LIST_REMOVE(sctp_ifnp, next_bucket);
 	LIST_REMOVE(sctp_ifnp, next_ifn);
 	SCTP_DEREGISTER_INTERFACE(sctp_ifnp->ifn_index,
 				  sctp_ifnp->registered_af);
-	if (hold_addr_lock == 0) 
+	if (hold_addr_lock == 0)
 		SCTP_IPI_ADDR_WUNLOCK();
 	/* Take away the reference, and possibly free it */
 	sctp_free_ifn(sctp_ifnp);
@@ -635,7 +635,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 				SCTPDBG(SCTP_DEBUG_PCB4, "Repairing ifn %p for ifa %p\n",
 					sctp_ifnp, sctp_ifap);
 				sctp_add_ifa_to_ifn(sctp_ifnp, sctp_ifap);
-			}				       
+			}
 			goto exit_stage_left;
 		}
 	}
@@ -680,7 +680,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		if (new_ifn_af)
 		    new_ifn_af = AF_INET;
 		break;
-	} 
+	}
 #ifdef INET6
 	case AF_INET6:
 	{
@@ -1133,8 +1133,8 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_INP_RUNLOCK(locked_tcb->sctp_ep);
 			}
 #else
-			/*- 
-			 * MVRF is tricky, we must look in every VRF 
+			/*-
+			 * MVRF is tricky, we must look in every VRF
 			 * the endpoint has.
 			 */
 			{
@@ -1423,7 +1423,7 @@ sctp_findassociation_ep_asocid(struct sctp_inpcb *inp, sctp_assoc_t asoc_id, int
   struct sctp_tcb *stcb;
   SCTP_INP_RLOCK(inp);
   stcb = sctp_findasoc_ep_asocid_locked(inp, asoc_id, want_lock);
-  SCTP_INP_RUNLOCK(inp);  
+  SCTP_INP_RUNLOCK(inp);
   return (stcb);
 }
 
@@ -1638,7 +1638,7 @@ sctp_isport_inuse(struct sctp_inpcb *inp, uint16_t lport, uint32_t vrf_id)
 		if (t_inp->def_vrf_id == vrf_id)
 			fnd = 1;
 #endif
-		if (!fnd) 
+		if (!fnd)
 			continue;
 
 		/* This one is in use. */
@@ -1765,7 +1765,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	 * Currently the onlyc caller that sets this flag is in bindx where
 	 * we are verifying that a user CAN bind the address. He either
 	 * has bound it already, or someone else has, or its open to bind,
-	 * so this is good enough. 
+	 * so this is good enough.
 	 */
 	if (inp == NULL && find_tcp_pool) {
 		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(lport,SCTP_BASE_INFO(hashtcpmark))];
@@ -2607,7 +2607,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	m->sctp_sws_receiver = SCTP_SWS_RECEIVER_DEF;
 	m->max_burst = SCTP_BASE_SYSCTL(sctp_max_burst_default);
 #if !defined(__Windows__) /* XXX */
-	if ((SCTP_BASE_SYSCTL(sctp_default_cc_module) >= SCTP_CC_RFC2581) && 
+	if ((SCTP_BASE_SYSCTL(sctp_default_cc_module) >= SCTP_CC_RFC2581) &&
 #else
 	if (1 &&
 #endif
@@ -2758,7 +2758,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 			new_inp->laddr_count++;
 		}
 	}
-	/* Now any running timers need to be adjusted 
+	/* Now any running timers need to be adjusted
 	 * since we really don't care if they are running
 	 * or not just blast in the new_inp into all of
 	 * them.
@@ -2894,7 +2894,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			lport = sin6->sin6_port;
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
- 
+
   				/*
  				 * For LOOPBACK the prison_local_ip6() call will transmute the ipv6 address
  				 * to the proper value.
@@ -3201,8 +3201,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		} else {
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_MULTIPLE_ASCONFS);
 		}
-		/* set the automatic mobility_base from kernel 
-		   flag (by micchie) 
+		/* set the automatic mobility_base from kernel
+		   flag (by micchie)
 		*/
 		if (SCTP_BASE_SYSCTL(sctp_mobility_base) == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_BASE);
@@ -3212,8 +3212,8 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sctp_mobility_feature_on(inp, SCTP_MOBILITY_BASE);
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_PRIM_DELETED);
 		}
-		/* set the automatic mobility_fasthandoff from kernel 
-		   flag (by micchie) 
+		/* set the automatic mobility_fasthandoff from kernel
+		   flag (by micchie)
 		*/
 		if (SCTP_BASE_SYSCTL(sctp_mobility_fasthandoff) == 0) {
 			sctp_mobility_feature_off(inp, SCTP_MOBILITY_FASTHANDOFF);
@@ -3228,7 +3228,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 		 * bind specific, make sure flags is off and add a new
 		 * address structure to the sctp_addr_list inside the ep
 		 * structure.
-		 * 
+		 *
 		 * We will need to allocate one and insert it at the head. The
 		 * socketopt call can just insert new addresses in there as
 		 * well. It will also have to do the embed scope kame hack
@@ -3432,7 +3432,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_INP_WLOCK(inp);
 	/* First time through we have the socket lock, after that no more. */
 	if (from == SCTP_CALLED_AFTER_CMPSET_OFCLOSE) {
-		/* Once we are in we can remove the flag 
+		/* Once we are in we can remove the flag
 		 * from = 1 is only passed from the actual
 		 * closing routines that are called via the
 		 * sockets layer.
@@ -3443,7 +3443,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
 	}
-	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL, 
+	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL,
 			SCTP_FROM_SCTP_PCB+SCTP_LOC_1 );
 
 	if (inp->control) {
@@ -3482,7 +3482,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				 * to get across first.
 				 */
 				/* Just abandon things in the front states */
-				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE, 
+				if (sctp_free_assoc(inp, asoc, SCTP_PCBFREE_NOFORCE,
 						   SCTP_FROM_SCTP_PCB+SCTP_LOC_2) == 0) {
 					cnt_in_sd++;
 				}
@@ -3526,7 +3526,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
-				if (sctp_free_assoc(inp, asoc, 
+				if (sctp_free_assoc(inp, asoc,
 						    SCTP_PCBFREE_NOFORCE, SCTP_FROM_SCTP_PCB+SCTP_LOC_4) == 0) {
 					cnt_in_sd++;
 				}
@@ -3556,7 +3556,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 					    asoc->asoc.primary_destination);
 					sctp_chunk_output(inp, asoc, SCTP_OUTPUT_FROM_SHUT_TMR, SCTP_SO_LOCKED);
-				} 
+				}
 			} else {
 				/* mark into shutdown pending */
 				struct sctp_stream_queue_pending *sp;
@@ -3565,7 +3565,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, asoc->sctp_ep, asoc,
 						 asoc->asoc.primary_destination);
 				if (asoc->asoc.locked_on_sending) {
-					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue), 
+					sp = TAILQ_LAST(&((asoc->asoc.locked_on_sending)->outqueue),
 						sctp_streamhead);
 					if (sp == NULL) {
 						SCTP_PRINTF("Error, sp is NULL, locked on sending is %p strm:%d\n",
@@ -3609,8 +3609,8 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 					    (SCTP_GET_STATE(&asoc->asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
-					if (sctp_free_assoc(inp, asoc, 
-							    SCTP_PCBFREE_NOFORCE, 
+					if (sctp_free_assoc(inp, asoc,
+							    SCTP_PCBFREE_NOFORCE,
 							    SCTP_FROM_SCTP_PCB+SCTP_LOC_6) == 0) {
 						cnt_in_sd++;
 					}
@@ -3647,7 +3647,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->sctp_flags |= SCTP_PCB_FLAGS_UNBOUND;
 	}
 
-	/* If there is a timer running to kill us, 
+	/* If there is a timer running to kill us,
 	 * forget it, since it may have a contest
 	 * on the INP lock.. which would cause us
 	 * to die ...
@@ -4159,18 +4159,18 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro)) {
 		/* Get source address */
 		net->ro._s_addr = sctp_source_address_selection(stcb->sctp_ep,
-								stcb, 
-								(sctp_route_t *)&net->ro, 
-								net, 
-								0, 
+								stcb,
+								(sctp_route_t *)&net->ro,
+								net,
+								0,
 								stcb->asoc.vrf_id);
 		/* Now get the interface MTU */
 		if (net->ro._s_addr && net->ro._s_addr->ifn_p) {
-			net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro._s_addr->ifn_p); 
+			net->mtu = SCTP_GATHER_MTU_FROM_INTFC(net->ro._s_addr->ifn_p);
 		} else {
 			net->mtu = 0;
 		}
-#ifdef SCTP_PRINT_FOR_B_AND_M 
+#ifdef SCTP_PRINT_FOR_B_AND_M
 		SCTP_PRINTF("We have found an interface mtu of %d\n", net->mtu);
 #endif
 		if (net->mtu == 0) {
@@ -4179,12 +4179,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		} else {
 			uint32_t rmtu;
 			rmtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._l_addr.sa, net->ro.ro_rt);
-#ifdef SCTP_PRINT_FOR_B_AND_M 
+#ifdef SCTP_PRINT_FOR_B_AND_M
 			SCTP_PRINTF("The route mtu is %d\n", rmtu);
 #endif
 			if (rmtu == 0) {
 				/* Start things off to match mtu of interface please. */
-				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa, 
+				SCTP_SET_MTU_OF_ROUTE(&net->ro._l_addr.sa,
 						      net->ro.ro_rt, net->mtu);
 			} else {
 				/* we take the route mtu over the interface, since
@@ -4195,7 +4195,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			}
 	        }
 		if (from == SCTP_ALLOC_ASOC) {
-#ifdef SCTP_PRINT_FOR_B_AND_M 
+#ifdef SCTP_PRINT_FOR_B_AND_M
 			SCTP_PRINTF("New assoc sets mtu to :%d\n", net->mtu);
 #endif
 			stcb->asoc.smallest_mtu = net->mtu;
@@ -4221,7 +4221,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->mtu -= sizeof(struct udphdr);
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
-#ifdef SCTP_PRINT_FOR_B_AND_M 
+#ifdef SCTP_PRINT_FOR_B_AND_M
 		SCTP_PRINTF("new address mtu:%d smaller than smallest:%d\n",
 			    net->mtu, stcb->asoc.smallest_mtu);
 #endif
@@ -4309,23 +4309,23 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	    net);
 	/* Validate primary is first */
 	net = TAILQ_FIRST(&stcb->asoc.nets);
-	if ((net != stcb->asoc.primary_destination) && 
+	if ((net != stcb->asoc.primary_destination) &&
 	    (stcb->asoc.primary_destination)) {
-		/* first one on the list is NOT the primary 
+		/* first one on the list is NOT the primary
 		 * sctp_cmpaddr() is much more efficent if
 		 * the primary is the first on the list, make it
 		 * so.
 		 */
-		TAILQ_REMOVE(&stcb->asoc.nets, 
+		TAILQ_REMOVE(&stcb->asoc.nets,
 			     stcb->asoc.primary_destination, sctp_next);
-		TAILQ_INSERT_HEAD(&stcb->asoc.nets, 
+		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
 	}
 	return (0);
 }
 
 
-static uint32_t 
+static uint32_t
 sctp_aloc_a_assoc_id(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 {
 	uint32_t id;
@@ -4467,8 +4467,8 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		 * ephemerial bind for you.
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
-		    (struct sockaddr *)NULL, 
-		    (struct sctp_ifa *)NULL, 
+		    (struct sockaddr *)NULL,
+		    (struct sctp_ifa *)NULL,
 #ifndef __Panda__
 					   p
 #else
@@ -4599,13 +4599,13 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 		lnet = TAILQ_FIRST(&asoc->nets);
 		/* Mobility adaptation
-		   Ideally, if deleted destination is the primary, it becomes 
-		   a fast retransmission trigger by the subsequent SET PRIMARY. 
-		   (by micchie) 
+		   Ideally, if deleted destination is the primary, it becomes
+		   a fast retransmission trigger by the subsequent SET PRIMARY.
+		   (by micchie)
 		 */
-		if (sctp_is_mobility_feature_on(stcb->sctp_ep, 
+		if (sctp_is_mobility_feature_on(stcb->sctp_ep,
 						SCTP_MOBILITY_BASE) ||
-		    sctp_is_mobility_feature_on(stcb->sctp_ep, 
+		    sctp_is_mobility_feature_on(stcb->sctp_ep,
 			    			SCTP_MOBILITY_FASTHANDOFF)) {
 			SCTPDBG(SCTP_DEBUG_ASCONF1, "remove_net: primary dst is deleting\n");
 			if (asoc->deleted_primary != NULL) {
@@ -4618,7 +4618,7 @@ sctp_remove_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 			memset(&net->lastsv, 0, sizeof(net->lastsv));
 			sctp_mobility_feature_on(stcb->sctp_ep,
 						 SCTP_MOBILITY_PRIM_DELETED);
-			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED, 
+			sctp_timer_start(SCTP_TIMER_TYPE_PRIM_DELETED,
 					 stcb->sctp_ep, stcb, NULL);
 		}
 out:
@@ -4795,7 +4795,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 		if (twait_block == NULL) {
 #ifdef INVARIANTS
 			panic("Can not alloc tagblock");
-#endif 	    
+#endif
 			return;
 		}
 		memset(twait_block, 0, sizeof(struct sctp_tagblock));
@@ -4847,7 +4847,7 @@ void panda_wakeup_socket(struct socket *so);
 /*-
  * Free the association after un-hashing the remote port. This
  * function ALWAYS returns holding NO LOCK on the stcb. It DOES
- * expect that the input to this function IS a locked TCB. 
+ * expect that the input to this function IS a locked TCB.
  * It will return 0, if it did NOT destroy the association (instead
  * it unlocks it. It will return NON-zero if it either destroyed the
  * association OR the association is already destroyed.
@@ -4897,7 +4897,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 
 	asoc = &stcb->asoc;
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE))
 		/* nothing around */
 		so = NULL;
 	else
@@ -5012,7 +5012,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		SCTP_TCB_UNLOCK(stcb);
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE))
 			/* nothing around */
 			so = NULL;
 		if (so) {
@@ -5057,7 +5057,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* Double check the GONE flag */
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) 
+	    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE))
 		/* nothing around */
 		so = NULL;
 
@@ -5073,9 +5073,9 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			if (so) {
 				SOCK_LOCK(so);
 				if (so->so_rcv.sb_cc == 0) {
-					so->so_state &= ~(SS_ISCONNECTING | 
-							  SS_ISDISCONNECTING | 
-							  SS_ISCONFIRMING | 
+					so->so_state &= ~(SS_ISCONNECTING |
+							  SS_ISDISCONNECTING |
+							  SS_ISCONFIRMING |
 							  SS_ISCONNECTED);
 				}
 				SOCK_UNLOCK(so);
@@ -5111,13 +5111,13 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* pull from vtag hash */
 	LIST_REMOVE(stcb, sctp_asocs);
-	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_BASE_SYSCTL(sctp_vtag_time_wait), 
+	sctp_add_vtag_to_timewait(asoc->my_vtag, SCTP_BASE_SYSCTL(sctp_vtag_time_wait),
 				  inp->sctp_lport, stcb->rport);
 
-	/* Now restop the timers to be sure - 
-	 * this is paranoia at is finest! 
+	/* Now restop the timers to be sure
+	 * this is paranoia at is finest!
 	 */
-	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer); 
+	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
@@ -5457,19 +5457,19 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if (from_inpcbfree == SCTP_NORMAL_PROC) {
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 			/* If its NOT the inp_free calling us AND
-			 * sctp_close as been called, we 
-			 * call back... 
+			 * sctp_close as been called, we
+			 * call back...
 			 */
 			SCTP_INP_RUNLOCK(inp);
-			/* This will start the kill timer (if we are 
+			/* This will start the kill timer (if we are
 			 * the lastone) since we hold an increment yet. But
 			 * this is the only safe way to do this
 			 * since otherwise if the socket closes
 			 * at the same time we are here we might
 			 * collide in the cleanup.
 			 */
-			sctp_inpcb_free(inp, 
-					SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE, 
+			sctp_inpcb_free(inp,
+					SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE,
 					SCTP_CALLED_DIRECTLY_NOCMPSET);
 			SCTP_INP_DECR_REF(inp);
 			goto out_of;
@@ -5714,7 +5714,7 @@ sctp_del_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa)
 				stcb->asoc.last_used_address = NULL;
 			/* Now spin through all the nets and purge any ref to laddr */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if (net->ro._s_addr && 
+				if (net->ro._s_addr &&
 				    (net->ro._s_addr->ifa == laddr->ifa)) {
 					/* Yep, purge src address selected */
 					sctp_rtentry_t *rt;
@@ -6170,7 +6170,7 @@ sctp_pcb_finish(void)
 	}
 
 	/* free the locks and mutexes */
-#if defined(__APPLE__) 
+#if defined(__APPLE__)
 	SCTP_TIMERQ_LOCK_DESTROY();
 #endif
 #ifdef SCTP_PACKET_LOGGING
@@ -6458,7 +6458,7 @@ add_it_now:
 						}
 						SCTP_TCB_UNLOCK(stcb_tmp);
 					}
-	  
+
 					if (stcb->asoc.state == 0) {
 						/* the assoc was freed? */
 						return (-12);
@@ -6560,7 +6560,7 @@ goto add_it_now6;
 				if (aip) {
 					stcb->asoc.peers_adaptation = ntohl(aip->indication);
 					stcb->asoc.adaptation_needed = 1;
-				} 
+				}
 			}
 		} else if (ptype == SCTP_SET_PRIM_ADDR) {
 			struct sctp_asconf_addr_param lstore, *fee;
@@ -6646,7 +6646,7 @@ goto add_it_now6;
 				case SCTP_NR_SELECTIVE_ACK:
 					if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off))
 						stcb->asoc.peer_supports_nr_sack = 1;
-					else 
+					else
 						stcb->asoc.peer_supports_nr_sack = 0;
 					break;
 				case SCTP_STREAM_RESET:
@@ -6871,7 +6871,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 		net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;
 		net = TAILQ_FIRST(&stcb->asoc.nets);
 		if (net != stcb->asoc.primary_destination) {
-			/* first one on the list is NOT the primary 
+			/* first one on the list is NOT the primary
 			 * sctp_cmpaddr() is much more efficent if
 			 * the primary is the first on the list, make it
 			 * so.
@@ -7221,16 +7221,16 @@ sctp_drain()
  * its way through all the stcbs.
  */
 int
-sctp_initiate_iterator(inp_func inpf,  
-		       asoc_func af, 
+sctp_initiate_iterator(inp_func inpf,
+		       asoc_func af,
 		       inp_func inpe,
 		       uint32_t pcb_state,
-		       uint32_t pcb_features, 
-		       uint32_t asoc_state, 
-		       void *argp, 
+		       uint32_t pcb_features,
+		       uint32_t asoc_state,
+		       void *argp,
 		       uint32_t argi,
-		       end_func ef, 
-		       struct sctp_inpcb *s_inp, 
+		       end_func ef,
+		       struct sctp_inpcb *s_inp,
 		       uint8_t chunk_output_off)
 {
 	struct sctp_iterator *it = NULL;
