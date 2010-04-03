@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -261,7 +261,7 @@ struct sctp_nets {
 
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
-	uint32_t marked_fastretrans;   
+	uint32_t marked_fastretrans;
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
@@ -421,7 +421,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * fit every chunk we pull to the send/sent
  * queue to make up the next full packet
  * if we can. An entry cannot be removed
- * from the stream_out queue until 
+ * from the stream_out queue until
  * the msg_is_complete flag is set. This
  * means at times data/tail_mbuf MIGHT
  * be NULL.. If that occurs it happens
@@ -430,7 +430,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * awoken to copy more data down... OR
  * the user is in the explict MSG_EOR mode
  * and wrote some data, but has not completed
- * sending. 
+ * sending.
  */
 struct sctp_stream_queue_pending {
 	struct mbuf *data;
@@ -484,9 +484,8 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct sctp_ifa *ifa;	/* save the ifa for add/del ip */
-        uint8_t sent;		/* has this been sent yet? */
-        uint8_t special_del;	/* not to be used in lookup */
-  
+	uint8_t sent;		/* has this been sent yet? */
+	uint8_t special_del;	/* not to be used in lookup */
 };
 
 struct sctp_scoping {
@@ -547,7 +546,7 @@ struct sctp_nonpad_sndrcvinfo {
 struct sctp_cc_functions {
 	void (*sctp_set_initial_cc_param)(struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
-		 	struct sctp_association *asoc, 
+		 	struct sctp_association *asoc,
 		 	int accum_moved ,int reneged_all, int will_exit);
 	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
 			struct sctp_association *asoc);
@@ -560,7 +559,7 @@ struct sctp_cc_functions {
 			uint32_t *bottle_bw, uint32_t *on_queue);
 	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, int burst_limit);
-	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp, 
+	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp,
 			struct sctp_tcb *stcb, struct sctp_nets *net);
 };
 
@@ -653,7 +652,7 @@ struct sctp_association {
 	 */
 	struct sctpwheel_listhead out_wheel;
 
-	/* This pointer will be set to NULL 
+	/* This pointer will be set to NULL
 	 * most of the time. But when we have
 	 * a fragmented message, where we could
 	 * not get out all of the message at
@@ -778,9 +777,7 @@ struct sctp_association {
 	
 	/* EY - new NR variables used for nr_sack based on mapping_array*/
 	uint8_t *nr_mapping_array;
-	uint32_t nr_mapping_array_base_tsn;
 	uint32_t highest_tsn_inside_nr_map;
-	uint16_t nr_mapping_array_size;
 
 	uint32_t last_echo_tsn;
 	uint32_t last_cwr_tsn;
@@ -803,17 +800,17 @@ struct sctp_association {
 	uint32_t last_sending_seq[SCTP_MAX_RESET_PARAMS];
 	uint32_t last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
 #ifdef SCTP_ASOCLOG_OF_TSNS
-	/* 
+	/*
 	 * special log  - This adds considerable size
 	 * to the asoc, but provides a log that you
 	 * can use to detect problems via kgdb.
 	 */
-        struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
-        struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_log[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_logsnt[SCTP_TSN_LOG_SIZE];
 	uint16_t tsn_in_at;
- 	uint16_t tsn_out_at;
+	uint16_t tsn_out_at;
 	uint16_t tsn_in_wrapped;
 	uint16_t tsn_out_wrapped;
 	uint16_t cumack_log_at;
@@ -942,7 +939,7 @@ struct sctp_association {
 	/* could re-arrange to optimize space here. */
 	uint16_t streamincnt;
 	uint16_t streamoutcnt;
-    uint16_t strm_realoutsize;
+	uint16_t strm_realoutsize;
 	/* my maximum number of retrans of INIT and SEND */
 	/* copied from SCTP but should be individually setable */
 	uint16_t max_init_times;

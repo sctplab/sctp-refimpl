@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
  * allow 1080 addresses, and each side has 1080 V6 addresses
  * that will be 21600 bytes. In the INIT-ACK we will
  * see the INIT-ACK 21600 + 43200 in the cookie. This leaves
- * about 500 bytes slack for misc things in the cookie. 
+ * about 500 bytes slack for misc things in the cookie.
  */
 #define SCTP_ADDRESS_LIMIT 1080
 
@@ -84,7 +84,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_ZERO_COPY_TICK_DELAY (((100 * hz) + 999) / 1000)
 #define SCTP_ZERO_COPY_SENDQ_TICK_DELAY (((100 * hz) + 999) / 1000)
 
-/* Number of ticks to delay before running 
+/* Number of ticks to delay before running
  * iterator on an address change.
  */
 #define SCTP_ADDRESS_TICK_DELAY 2
@@ -221,7 +221,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_SORCV_ADJD            101
 #define SCTP_UNKNOWN_MAX           102
 #define SCTP_RANDY_STUFF           103
-#define SCTP_RANDY_STUFF1          104 
+#define SCTP_RANDY_STUFF1          104
 #define SCTP_STRMOUT_LOG_ASSIGN	   105
 #define SCTP_STRMOUT_LOG_SEND	   106
 #define SCTP_FLIGHT_LOG_DOWN_CA    107
@@ -248,7 +248,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
  * To get something to log you define one of the logging defines.
  * (see LINT).
  *
- * This gets the compile in place, but you still need to turn the 
+ * This gets the compile in place, but you still need to turn the
  * logging flag on too in the sysctl (see in sctp.h).
  */
 
@@ -267,7 +267,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_LOG_EVENT_SB   12
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOG_EVENT_WAKE 14
-#define SCTP_LOG_MISC_EVENT 15 
+#define SCTP_LOG_MISC_EVENT 15
 #define SCTP_LOG_EVENT_CLOSE 16
 #define SCTP_LOG_EVENT_MBUF 17
 #define SCTP_LOG_CHUNK_PROC 18
@@ -331,7 +331,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
 
-/* How much of the rwnd must the 
+/* How much of the rwnd must the
  * message be taking up to start partial delivery.
  * We calculate this by shifing the hi_water (recv_win)
  * left the following .. set to 1, when a message holds
@@ -393,9 +393,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
-/* EY 
+/* EY
  * If a tsn is nr-gapped, its first tagged as NR_MARKED and then NR_ACKED
- * When yet another nr-sack is received, if a particular TSN's sent tag 
+ * When yet another nr-sack is received, if a particular TSN's sent tag
  * is observed to be NR_ACKED after gap-ack info is processed, this implies
  * that particular TSN is reneged
 */
@@ -576,13 +576,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_INITIAL_MAPPING_ARRAY  16
 /* how much we grow the mapping array each call */
 #define SCTP_MAPPING_ARRAY_INCR     32
-/* EY 05/13/08 - nr_sack version of the previous 3 constants */
-/* Maximum the nr mapping array will  grow to (TSN mapping array) */
-#define SCTP_NR_MAPPING_ARRAY	512
-/* size of the inital malloc on the nr mapping array */
-#define SCTP_INITIAL_NR_MAPPING_ARRAY  16
-/* how much we grow the nr mapping array each call */
-#define SCTP_NR_MAPPING_ARRAY_INCR     32
+
 /*
  * Here we define the timer types used by the implementation as arguments in
  * the set/get timer type calls.
@@ -1011,7 +1005,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
  */
 #define SCTP_TIME_WAIT 60
 
-/* The system retains a cache of free chunks such to 
+/* The system retains a cache of free chunks such to
  * cut down on calls the memory allocation system. There
  * is a per association limit of free items and a overall
  * system limit. If either one gets hit then the resource
@@ -1056,7 +1050,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 202516 2010-01-17 19:17:16
 #define SCTP_GETTIME_TIMEVAL(x)	gettimeofday(x, NULL)
 #define SCTP_GETPTIME_TIMEVAL(x)  /* this doesn't seem to ever be used.. */
 #endif
-     
+
 #if defined(_KERNEL)
 
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
