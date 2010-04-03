@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -52,7 +52,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 197955 2009-10-11 12:23:56Z
 
 /* Declare all of our malloc named types */
 
-/* Note to Michael/Peter for mac-os, 
+/* Note to Michael/Peter for mac-os,
  * I think mac has this too since I
  * do see the M_PCB type, so I
  * will also put in the mac file the
@@ -202,7 +202,7 @@ sctp_startup_iterator(void)
 #endif
 			   &SCTP_BASE_INFO(thread_proc),
 			   RFPROC,
-			   SCTP_KTHREAD_PAGES, 
+			   SCTP_KTHREAD_PAGES,
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
 	SCTP_BASE_INFO(thread_proc) = IOCreateThread(sctp_iterator_thread,
@@ -374,7 +374,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 	uint32_t ifa_flags;
 
 	rc = getifaddrs(&g_interfaces);
-	if(rc != 0) {
+	if (rc != 0) {
 		return;
 	}
 
@@ -400,7 +400,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 
 			ifa_flags = 0;
 		}
-		sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+		sctp_ifa = sctp_add_addr_to_vrf(vrfid,
 		                                ifa,
 		                                if_nametoindex(ifa->ifa_name),
 		                                0,
@@ -477,9 +477,9 @@ sctp_init_ifns_for_vrf(int vrfid)
 				ifa_flags = 0;
 			}
 			snprintf(name, SCTP_IFNAMSIZ, "%s%d", ifn->if_name, ifn->if_unit);
-			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+			sctp_ifa = sctp_add_addr_to_vrf(vrfid,
 			                                (void *)ifn,
-			                                ifn->if_index, 
+			                                ifn->if_index,
 			                                ifn->if_type,
 			                                name,
 			                                (void *)ifa,
@@ -545,9 +545,9 @@ sctp_init_ifns_for_vrf(int vrfid)
 			} else {
 				ifa_flags = 0;
 			}
-			sctp_ifa = sctp_add_addr_to_vrf(vrfid, 
+			sctp_ifa = sctp_add_addr_to_vrf(vrfid,
 			                                (void *)ifn,
-			                                ifn->if_index, 
+			                                ifn->if_index,
 			                                ifn->if_type,
 			                                ifn->if_xname,
 			                                (void *)ifa,
@@ -564,20 +564,20 @@ sctp_init_ifns_for_vrf(int vrfid)
 }
 #endif
 
-void 
+void
 sctp_init_vrf_list(int vrfid)
 {
-	if(vrfid > SCTP_MAX_VRF_ID)
+	if (vrfid > SCTP_MAX_VRF_ID)
 		/* can't do that */
 		return;
 
 	/* Don't care about return here */
 	(void)sctp_allocate_vrf(vrfid);
 
-	/* Now we need to build all the ifn's 
+	/* Now we need to build all the ifn's
 	 * for this vrf and there addresses
 	 */
-	sctp_init_ifns_for_vrf(vrfid); 
+	sctp_init_ifns_for_vrf(vrfid);
 }
 
 void
@@ -589,7 +589,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
 	/* BSD only has one VRF, if this changes
-	 * we will need to hook in the right 
+	 * we will need to hook in the right
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
@@ -708,13 +708,13 @@ out:
 #endif
 
 struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header, 
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		      int how, int allonebuf, int type)
 {
     struct mbuf *m = NULL;
 #if defined(__Userspace__)
 
-  /* 
+  /*
    * __Userspace__
    * Using m_clget, which creates and mbuf and a cluster and
    * hooks those together.
@@ -752,29 +752,29 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 
 #if defined(__Userspace__)
-	/* __Userspace__ 
-	 * Check if anything need to be done to ensure logging works 
+	/* __Userspace__
+	 * Check if anything need to be done to ensure logging works
 	 */
 #endif
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if(SCTP_BUF_IS_EXTENDED(m)) {
+		if (SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IALLOC);
 		}
 	}
 #endif
-#elif defined(__FreeBSD__) && __FreeBSD_version > 602000        
+#elif defined(__FreeBSD__) && __FreeBSD_version > 602000
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
-	if(m == NULL) {
+	if (m == NULL) {
 		/* bad, no memory */
 		return(m);
 	}
 	if (allonebuf) {
 		int siz;
-		if(SCTP_BUF_IS_EXTENDED(m)) {
+		if (SCTP_BUF_IS_EXTENDED(m)) {
 			siz = SCTP_BUF_EXTEND_SIZE(m);
 		} else {
-			if(want_header)
+			if (want_header)
 				siz = MHLEN;
 			else
 				siz = MLEN;
@@ -784,13 +784,13 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			return (NULL);
 		}
 	}
-	if(SCTP_BUF_NEXT(m)) {
+	if (SCTP_BUF_NEXT(m)) {
 		sctp_m_freem( SCTP_BUF_NEXT(m));
 		SCTP_BUF_NEXT(m) = NULL;
 	}
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if(SCTP_BUF_IS_EXTENDED(m)) {
+		if (SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IALLOC);
 		}
 	}
@@ -809,7 +809,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	if (m == NULL) {
 		return (NULL);
 	}
-	if(allonebuf == 0)
+	if (allonebuf == 0)
 		mbuf_threshold = SCTP_BASE_SYSCTL(sctp_mbuf_threshold_count);
 	else
 		mbuf_threshold = 1;
@@ -819,7 +819,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 #if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	try_again:
 		index = 4;
-		if(space_needed <= MCLBYTES){ 
+		if (space_needed <= MCLBYTES) {
 			aloc_size = MCLBYTES;
 		} else {
 			aloc_size = MJUMPAGESIZE;
@@ -830,14 +830,14 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 			return (NULL);
 		}
 		if (SCTP_BUF_IS_EXTENDED(m) == 0) {
-			if((aloc_size != MCLBYTES) &&
-			   (allonebuf == 0)){
+			if ((aloc_size != MCLBYTES) &&
+			   (allonebuf == 0)) {
 				aloc_size -= 10;
 				goto try_again;
 			}
 			sctp_m_freem(m);
 			return (NULL);
-		} 
+		}
 #else
 		MCLGET(m, how);
 		if (m == NULL) {
@@ -853,7 +853,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if(SCTP_BUF_IS_EXTENDED(m)) {
+		if (SCTP_BUF_IS_EXTENDED(m)) {
 			sctp_log_mb(m, SCTP_MBUF_IALLOC);
 		}
 	}
@@ -873,7 +873,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	int total_len;
 	int grabbed_lock=0;
 	int value, newval, thisend, thisbegin;
-	/* 
+	/*
 	 * Buffer layout.
 	 * -sizeof this entry (total_len)
 	 * -previous end      (value)
@@ -881,7 +881,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	 * o -ip packet
 	 * o -as logged
 	 * - where this started (thisbegin)
-	 * x <--end points here 
+	 * x <--end points here
 	 */
 	total_len = SCTP_SIZE32((length + (4 * sizeof(int))));
 	/* Log a packet to the buffer. */
@@ -900,7 +900,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	again_locked:
 		value = SCTP_BASE_VAR(packet_log_end);
 		newval = SCTP_BASE_VAR(packet_log_end) + total_len;
-		if(newval >= SCTP_PACKET_LOG_SIZE) {
+		if (newval >= SCTP_PACKET_LOG_SIZE) {
 			/* we wrapped */
 			thisbegin = 0;
 			thisend = total_len;
@@ -927,7 +927,7 @@ sctp_packet_log(struct mbuf *m, int length)
 		}
 	}
 	/* Sanity check */
-	if(thisend >= SCTP_PACKET_LOG_SIZE) {
+	if (thisend >= SCTP_PACKET_LOG_SIZE) {
 		printf("Insanity stops a log thisbegin:%d thisend:%d writers:%d lock:%d end:%d\n",
 		       thisbegin,
 		       thisend,
@@ -936,7 +936,7 @@ sctp_packet_log(struct mbuf *m, int length)
 		       SCTP_BASE_VAR(packet_log_end));
 		SCTP_BASE_VAR(packet_log_end) = 0;
 		goto no_log;
-		       
+
 	}
 	lenat = (int *)&SCTP_BASE_VAR(packet_log_buffer)[thisbegin];
 	*lenat = total_len;

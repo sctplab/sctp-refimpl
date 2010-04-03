@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /*	$KAME: sctp6_usrreq.c,v 1.38 2005/08/24 08:08:56 suz Exp $	*/
@@ -73,10 +73,10 @@ extern struct protosw inetsw[];
 int ip6_v6only=0;
 #endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__))
-extern void 
+extern void
 in6_sin_2_v4mapsin6(struct sockaddr_in *sin,
     struct sockaddr_in6 *sin6);
-extern void 
+extern void
 in6_sin6_2_sin(struct sockaddr_in *,
     struct sockaddr_in6 *sin6);
 extern void in6_sin6_2_sin_in_sock(struct sockaddr *nam);
@@ -158,7 +158,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #ifdef __Panda__
 	/*-
 	 * This is Evil, but its the only way to make
-	 * panda work right 
+	 * panda work right
 	 */
 	off = sizeof(struct ip6_hdr);
 #endif
@@ -229,7 +229,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	if (sh->dest_port == 0)
 		goto bad;
 
-#if defined(__FreeBSD__) 
+#if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
 	SCTPDBG(SCTP_DEBUG_CRCOFFLOAD,
 		"sctp_input(): Packet of length %d received on %s with csum_flags 0x%x.\n",
@@ -326,9 +326,9 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 			init_chk = (struct sctp_init_chunk *)sctp_m_getptr(m,
 									   iphlen + sizeof(*sh), sizeof(*init_chk),
 									   (uint8_t *) & chunk_buf);
-			if(init_chk)
+			if (init_chk)
 				sh->v_tag = init_chk->init.initiate_tag;
-			else 
+			else
 				sh->v_tag = 0;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
@@ -415,7 +415,7 @@ void
 #else
 static void
 #endif
-sctp6_notify_mbuf(struct sctp_inpcb *inp, struct icmp6_hdr *icmp6, 
+sctp6_notify_mbuf(struct sctp_inpcb *inp, struct icmp6_hdr *icmp6,
 		  struct sctphdr *sh, struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	uint32_t nxtsz;
@@ -509,7 +509,7 @@ sctp6_notify(struct sctp_inpcb *inp,
 
 	if ((inp == NULL) || (stcb == NULL) || (net == NULL) ||
 	    (sh == NULL) || (to == NULL)) {
-		if(stcb)
+		if (stcb)
 			SCTP_TCB_UNLOCK(stcb);
 		return;
 	}
@@ -825,7 +825,7 @@ sctp6_abort(struct socket *so)
 #ifdef SCTP_LOG_CLOSING
 		sctp_log_closing(inp, NULL, 16);
 #endif
-		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT, 
+		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT,
 				SCTP_CALLED_AFTER_CMPSET_OFCLOSE);
 		SOCK_LOCK(so);
 		SCTP_SB_CLEAR(so->so_snd);
@@ -955,14 +955,14 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		return EINVAL;
 	}
 
-	if(addr) {
+	if (addr) {
 #if !defined(__Windows__)
-		if((addr->sa_family == AF_INET6) && 
+		if ((addr->sa_family == AF_INET6) &&
 		   (addr->sa_len != sizeof(struct sockaddr_in6))) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
 		}
-		if((addr->sa_family == AF_INET) && 
+		if ((addr->sa_family == AF_INET) &&
 		   (addr->sa_len != sizeof(struct sockaddr_in))) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
@@ -1059,7 +1059,7 @@ sctp6_detach(struct socket *so)
 #endif
 
 #if !defined(__Panda__)
-static 
+static
 #endif
 int
 sctp6_disconnect(struct socket *so)
@@ -1252,7 +1252,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (ECONNRESET);	/* I made the same as TCP since we are
 					 * not setup? */
 	}
-	if(addr == NULL) {
+	if (addr == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
 	}
@@ -1354,7 +1354,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EALREADY);
 	}
 	/* We are GOOD to go */
-	stcb = sctp_aloc_assoc(inp, addr, 1, &error, 0, vrf_id, p);
+	stcb = sctp_aloc_assoc(inp, addr, &error, 0, vrf_id, p);
 	SCTP_ASOC_CREATE_UNLOCK(inp);
 	if (stcb == NULL) {
 		/* Gak! no memory */
@@ -1650,7 +1650,7 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if defined(__Panda__) 
+#if defined(__Panda__)
 			*namelen = sizeof(sin6);
 #endif
 

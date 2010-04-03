@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -46,7 +46,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 198522 2009-10-27 18:17:07Z tuexen $");
 #endif
-void 
+void
 sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/*
@@ -142,7 +142,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 
 void
 sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
-		 struct sctp_association *asoc, 
+		 struct sctp_association *asoc,
 		 int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
@@ -155,13 +155,13 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) { 
+		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
                     if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) || 
+		        net->fast_recovery_tsn, MAX_TSN) ||
                          (asoc->last_acked_seq == net->fast_recovery_tsn) ||
 		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) { 
-		          net->will_exit_fast_recovery = 1; 
+                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
+		          net->will_exit_fast_recovery = 1;
                     }
 		 }
 #endif
@@ -250,7 +250,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		     @@@ Do something
-		 }	   
+		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
 #endif
@@ -295,11 +295,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			} else {
 				/* We are in congestion avoidance */
 				/*
-				 * Add to pba 
+				 * Add to pba
 				 */
 			        net->partial_bytes_acked += net->net_ack;
 
-				if ((net->flight_size + net->net_ack >= net->cwnd) && 
+				if ((net->flight_size + net->net_ack >= net->cwnd) &&
                                     (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
 					net->cwnd += net->mtu;
@@ -755,7 +755,7 @@ sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
 
 void
 sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
-		 struct sctp_association *asoc, 
+		 struct sctp_association *asoc,
 		 int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
@@ -768,13 +768,13 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) { 
+		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
                     if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) || 
+		        net->fast_recovery_tsn, MAX_TSN) ||
                          (asoc->last_acked_seq == net->fast_recovery_tsn) ||
 		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) { 
-		          net->will_exit_fast_recovery = 1; 
+                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
+		          net->will_exit_fast_recovery = 1;
                     }
 		 }
 #endif
@@ -863,7 +863,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		    @@@ Do something
-		 }	   
+		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
 #endif
@@ -957,7 +957,7 @@ between(uint32_t seq1, uint32_t seq2, uint32_t seq3)
 	return seq3 - seq2 >= seq1 - seq2;
 }
 
-static inline uint32_t 
+static inline uint32_t
 htcp_cong_time(struct htcp *ca)
 {
 	return sctp_get_tick_count() - ca->last_cong;
@@ -1216,7 +1216,7 @@ htcp_init(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->htcp_ca.last_cong = sctp_get_tick_count();
 }
 
-void 
+void
 sctp_htcp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/*
@@ -1234,7 +1234,7 @@ sctp_htcp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 void
 sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
-		 struct sctp_association *asoc, 
+		 struct sctp_association *asoc,
 		 int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
@@ -1247,13 +1247,13 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) { 
+		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
                     if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) || 
+		        net->fast_recovery_tsn, MAX_TSN) ||
                          (asoc->last_acked_seq == net->fast_recovery_tsn) ||
 		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) { 
-		          net->will_exit_fast_recovery = 1; 
+                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
+		          net->will_exit_fast_recovery = 1;
                     }
 		 }
 #endif
@@ -1342,7 +1342,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		    @@@ Do something
-		 }	   
+		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
 #endif
