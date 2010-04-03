@@ -5485,7 +5485,8 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 
 void
 sctp_handle_forward_tsn(struct sctp_tcb *stcb,
-    struct sctp_forward_tsn_chunk *fwd, int *abort_flag, struct mbuf *m ,int offset)
+                        struct sctp_forward_tsn_chunk *fwd,
+                        int *abort_flag, struct mbuf *m ,int offset)
 {
 	/*
 	 * ISSUES that MUST be fixed for ECN! When we are the sender of the
@@ -5511,8 +5512,8 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	 * report where we are.
 	 */
 	struct sctp_association *asoc;
-	uint32_t new_cum_tsn, gap;
-	unsigned int i, fwd_sz, cumack_set_flag, m_size;
+	uint32_t new_cum_tsn, tsn, gap;
+	unsigned int i, fwd_sz, cumack_set_flag, m_size, fnd = 0;
 	uint32_t str_seq;
 	struct sctp_stream_in *strm;
 	struct sctp_tmit_chunk *chk, *at;
@@ -5600,6 +5601,25 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 			  SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, i);
 			  SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, i);
 			  /* FIX ME add something to set up highest TSN in map */
+		}
+		if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_nr_map = new_cum_tsn;
+		}
+		if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_map, MAX_TSN) ||
+		    new_cum_tsn == asoc->highest_tsn_inside_map) {
+			/* We must back down to see what the new highest is */
+			for (tsn = new_cum_tsn; (compare_with_wrap(tsn, asoc->mapping_array_base_tsn, MAX_TSN) ||
+			                       (tsn == asoc->mapping_array_base_tsn)); tsn--) {
+				SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
+				if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
+					asoc->highest_tsn_inside_map = tsn;
+					fnd = 1;
+					break;
+				}
+			}
+			if (!fnd) {
+				asoc->highest_tsn_inside_map = asoc->mapping_array_base_tsn - 1;
+			}
 		}
 		/*
 		 * Now after marking all, slide thing forward but no sack please.
