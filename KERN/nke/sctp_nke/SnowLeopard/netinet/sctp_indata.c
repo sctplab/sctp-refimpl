@@ -4498,7 +4498,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			                 sctpchunk_listhead);
 			send_s = tp1->rec.data.TSN_seq + 1;
 		} else {
-		    tp1 = NULL;
+			tp1 = NULL;
 			send_s = asoc->sending_seq;
 		}
 		if (cum_ack == send_s ||
@@ -4511,8 +4511,8 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			printf("NEW cum_ack:%x send_s:%x is smaller or equal\n",
 				   cum_ack, send_s);
 			if (tp1) {
-			  printf("Got send_s from tsn:%x + 1 of tp1:%p\n",
-					 tp1->rec.data.TSN_seq, tp1);
+				printf("Got send_s from tsn:%x + 1 of tp1:%p\n",
+				       tp1->rec.data.TSN_seq, tp1);
 			}
 		hopeless_peer:
 			*abort_now = 1;
@@ -4753,9 +4753,9 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 				 * peer is either confused or we are under
 				 * attack. We must abort.
 				 */
-			  printf("Hopeless peer! biggest_tsn_acked:%x largest seq:%x\n",
-					 biggest_tsn_acked,
-					 send_s);
+				printf("Hopeless peer! biggest_tsn_acked:%x largest seq:%x\n",
+				       biggest_tsn_acked,
+				       send_s);
 
 				goto hopeless_peer;
 			}
