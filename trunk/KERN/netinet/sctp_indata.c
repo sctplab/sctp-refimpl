@@ -292,7 +292,7 @@ static void
 sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 {
 	uint32_t gap, i;
-	int fnd=0;
+	int fnd = 0;
 
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
 		return;
@@ -2268,8 +2268,7 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 	asoc->cumulative_tsn = asoc->mapping_array_base_tsn + (at-1);
 
 	if (compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_map, MAX_TSN) &&
-		compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)
-		) {
+            compare_with_wrap(asoc->cumulative_tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 #ifdef INVARIANTS
 		panic("huh, cumack 0x%x greater than high-tsn 0x%x in map",
 		      asoc->cumulative_tsn, asoc->highest_tsn_inside_map);
@@ -2285,16 +2284,16 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 #endif
 	}
 	if (compare_with_wrap(asoc->highest_tsn_inside_nr_map,
-						  asoc->highest_tsn_inside_map,
-						  MAX_TSN)) {
-	  highest_tsn = asoc->highest_tsn_inside_nr_map;
+                              asoc->highest_tsn_inside_map,
+	                      MAX_TSN)) {
+		highest_tsn = asoc->highest_tsn_inside_nr_map;
 	} else {
-	  highest_tsn = asoc->highest_tsn_inside_map;
+		highest_tsn = asoc->highest_tsn_inside_map;
 	}
 	if ((asoc->cumulative_tsn == highest_tsn) && (at >= 8)) {
 		/* The complete array was completed by a single FR */
 		/* highest becomes the cum-ack */
-	  int clr, i;
+		int clr, i;
 
 		/* clear the array */
 		clr = ((at+7) >> 3);
@@ -2303,11 +2302,11 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 		}
 		memset(asoc->mapping_array, 0, clr);
 		memset(asoc->nr_mapping_array, 0, clr);
-		for(i=0; i<asoc->mapping_array_size; i++) {
-		  if ((asoc->mapping_array[i]) || (asoc->nr_mapping_array[i])) {
-			printf("Error Mapping array's not clean at clear\n");
-			sctp_print_mapping_array(asoc);
-		  }
+		for(i = 0; i<asoc->mapping_array_size; i++) {
+			if ((asoc->mapping_array[i]) || (asoc->nr_mapping_array[i])) {
+				printf("Error Mapping array's not clean at clear\n");
+				sctp_print_mapping_array(asoc);
+			}
 		}
 		asoc->mapping_array_base_tsn = asoc->cumulative_tsn + 1;
 		asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map = asoc->cumulative_tsn;
@@ -2319,10 +2318,10 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 		 * now calculate the ceiling of the move using our highest
 		 * TSN value
 		 */
-	    SCTP_CALC_TSN_TO_GAP(lgap, highest_tsn, asoc->mapping_array_base_tsn);
+		SCTP_CALC_TSN_TO_GAP(lgap, highest_tsn, asoc->mapping_array_base_tsn);
 		slide_end = (lgap >> 3);
 		if (slide_end < slide_from) {
-		  sctp_print_mapping_array(asoc);
+			sctp_print_mapping_array(asoc);
 #ifdef INVARIANTS
 			panic("impossible slide");
 #else
@@ -2333,10 +2332,10 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 		}
 		if (slide_end > asoc->mapping_array_size) {
 #ifdef INVARIANTS
-		    panic("would overrun buffer");
+			panic("would overrun buffer");
 #else
 			printf("Gak, would have overrun map end:%d slide_end:%d\n",
-				   asoc->mapping_array_size, slide_end);
+			       asoc->mapping_array_size, slide_end);
 			slide_end = asoc->mapping_array_size;
 #endif
 		}
@@ -2391,91 +2390,91 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 {
 	struct sctp_association *asoc;
 	uint32_t highest_tsn;
-	
-	    asoc = &stcb->asoc;
+
+	asoc = &stcb->asoc;
 	if (compare_with_wrap(asoc->highest_tsn_inside_nr_map,
-						  asoc->highest_tsn_inside_map,
-						  MAX_TSN)) {
-	  highest_tsn = asoc->highest_tsn_inside_nr_map;
+	                      asoc->highest_tsn_inside_map,
+	                      MAX_TSN)) {
+		highest_tsn = asoc->highest_tsn_inside_nr_map;
 	} else {
-	  highest_tsn = asoc->highest_tsn_inside_map;
+		highest_tsn = asoc->highest_tsn_inside_map;
 	}
 
 	/*
 	 * Now we need to see if we need to queue a sack or just start the
 	 * timer (if allowed).
 	 */
-		if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
-			/*
-			 * Ok special case, in SHUTDOWN-SENT case. here we
-			 * maker sure SACK timer is off and instead send a
-			 * SHUTDOWN and a SACK
-			 */
-			if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
-				sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-				    stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+SCTP_LOC_18);
-			}
-			sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
-			sctp_send_sack(stcb);
-		} else {
-			int is_a_gap;
+	if (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) {
+		/*
+		 * Ok special case, in SHUTDOWN-SENT case. here we
+		 * maker sure SACK timer is off and instead send a
+		 * SHUTDOWN and a SACK
+		 */
+		if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
+			sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
+			                stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+SCTP_LOC_18);
+		}
+		sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+		sctp_send_sack(stcb);
+	} else {
+		int is_a_gap;
 
-			/* is there a gap now ? */
-			is_a_gap = compare_with_wrap(highest_tsn, stcb->asoc.cumulative_tsn, MAX_TSN);
+		/* is there a gap now ? */
+		is_a_gap = compare_with_wrap(highest_tsn, stcb->asoc.cumulative_tsn, MAX_TSN);
 
-			/*
-			 * CMT DAC algorithm: increase number of packets
-			 * received since last ack
-			 */
-			stcb->asoc.cmt_dac_pkts_rcvd++;
+		/*
+		 * CMT DAC algorithm: increase number of packets
+		 * received since last ack
+		 */
+		stcb->asoc.cmt_dac_pkts_rcvd++;
 
-			if ((stcb->asoc.send_sack == 1) ||	/* We need to send a SACK */
-			    ((was_a_gap) && (is_a_gap == 0)) ||	/* was a gap, but no
-								 * longer is one */
-			    (stcb->asoc.numduptsns) ||	/* we have dup's */
-			    (is_a_gap) ||	/* is still a gap */
-			    (stcb->asoc.delayed_ack == 0) ||	/* Delayed sack disabled */
-			    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
+		if ((stcb->asoc.send_sack == 1) ||      /* We need to send a SACK */
+		    ((was_a_gap) && (is_a_gap == 0)) ||	/* was a gap, but no
+		                                         * longer is one */
+		    (stcb->asoc.numduptsns) ||          /* we have dup's */
+		    (is_a_gap) ||                       /* is still a gap */
+		    (stcb->asoc.delayed_ack == 0) ||    /* Delayed sack disabled */
+		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
 			    ) {
 
-				if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off))&&
-				    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
-				    (stcb->asoc.send_sack == 0) &&
-				    (stcb->asoc.numduptsns == 0) &&
-				    (stcb->asoc.delayed_ack) &&
-				    (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer))) {
+			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off))&&
+			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
+			    (stcb->asoc.send_sack == 0) &&
+			    (stcb->asoc.numduptsns == 0) &&
+			    (stcb->asoc.delayed_ack) &&
+			    (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer))) {
 
-					/*
-					 * CMT DAC algorithm: With CMT,
-					 * delay acks even in the face of
+				/*
+				 * CMT DAC algorithm: With CMT,
+				 * delay acks even in the face of
 
-					 * reordering. Therefore, if acks
-					 * that do not have to be sent
-					 * because of the above reasons,
-					 * will be delayed. That is, acks
-					 * that would have been sent due to
-					 * gap reports will be delayed with
-					 * DAC. Start the delayed ack timer.
-					 */
-					sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-					    stcb->sctp_ep, stcb, NULL);
-				} else {
-					/*
-					 * Ok we must build a SACK since the
-					 * timer is pending, we got our
-					 * first packet OR there are gaps or
-					 * duplicates.
-					 */
-					(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
-					sctp_send_sack(stcb);
-				}
+				 * reordering. Therefore, if acks
+				 * that do not have to be sent
+				 * because of the above reasons,
+				 * will be delayed. That is, acks
+				 * that would have been sent due to
+				 * gap reports will be delayed with
+				 * DAC. Start the delayed ack timer.
+				 */
+				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+				                 stcb->sctp_ep, stcb, NULL);
 			} else {
-				if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
-					sctp_timer_start(SCTP_TIMER_TYPE_RECV,
-					    stcb->sctp_ep, stcb, NULL);
-				}
+				/*
+				 * Ok we must build a SACK since the
+				 * timer is pending, we got our
+				 * first packet OR there are gaps or
+				 * duplicates.
+				 */
+				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
+				sctp_send_sack(stcb);
+			}
+		} else {
+			if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
+				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
+				                 stcb->sctp_ep, stcb, NULL);
 			}
 		}
+	}
 }
 
 void
@@ -5533,7 +5532,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	new_cum_tsn = ntohl(fwd->new_cumulative_tsn);
 
 	if (compare_with_wrap(asoc->cumulative_tsn, new_cum_tsn, MAX_TSN) ||
-	    asoc->cumulative_tsn == new_cum_tsn) {
+		asoc->cumulative_tsn == new_cum_tsn) {
 		/* Already got there ... */
 		return;
 	}
@@ -5544,7 +5543,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	if (compare_with_wrap(new_cum_tsn, asoc->highest_tsn_inside_nr_map,		
 			      MAX_TSN)) {
-	  asoc->highest_tsn_inside_nr_map = new_cum_tsn;
+		asoc->highest_tsn_inside_nr_map = new_cum_tsn;
 	}
 	/*
 	 * now we know the new TSN is more advanced, let's find the actual
