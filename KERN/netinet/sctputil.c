@@ -1210,48 +1210,38 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 void
 sctp_print_mapping_array(struct sctp_association *asoc)
 {
-	int i,limit;
+	unsigned int i, limit;
 
-	printf("Mapping size:%d baseTSN:%8.8x cumAck:%8.8x highestTSN:%8.8x\n",
+	printf("Mapping array size: %d, baseTSN: %8.8x, cumAck: %8.8x, highestTSN: (%8.8x, %8.8x).\n",
 	       asoc->mapping_array_size,
 	       asoc->mapping_array_base_tsn,
 	       asoc->cumulative_tsn,
-	       asoc->highest_tsn_inside_map);
-	limit = asoc->mapping_array_size;
-	for(i=asoc->mapping_array_size; i>=0; i--) {
-		if (asoc->mapping_array[i]) {
-			limit = i;
-			break;
-		}
-	}
-	if (limit == 0)
-		limit = 1;
-	for (i=0; i<limit; i++) {
-		printf("%2.2x ", asoc->mapping_array[i]);
-		if (((i+1) % 16) == 0)
-			printf("\n");
-	}
-	printf("\n");
-	printf("NR Mapping size:%d baseTSN:%8.8x highestTSN:%8.8x\n",
-	       asoc->mapping_array_size,
-	       asoc->mapping_array_base_tsn,
+	       asoc->highest_tsn_inside_map,
 	       asoc->highest_tsn_inside_nr_map);
-	limit = asoc->mapping_array_size;
-	for(i=asoc->mapping_array_size; i>=0; i--) {
-		if (asoc->nr_mapping_array[i]) {
-			limit = i;
+	for (limit = asoc->mapping_array_size; limit > 1; limit--) {
+		if (asoc->mapping_array[limit - 1]) {
 			break;
 		}
 	}
-	if (limit == 0)
-		limit = 1;
-
-	for (i=0; i<limit; i++) {
-		printf("%2.2x ", asoc->nr_mapping_array[i]);
-		if (((i+1) % 16) == 0)
+	printf("Renegable mapping array (last %d entries are zero):\n", asoc->mapping_array_size - limit);
+	for (i = 0; i < limit; i++) {
+		printf("%2.2x%c", asoc->mapping_array[i], ((i + 1) % 16) ? ' ' : '\n');
+		if (((i + 1) % 16) == 0)
 			printf("\n");
 	}
-	printf("\n");
+	if (limit % 16)
+		printf("\n");
+	for (limit = asoc->mapping_array_size; limit > 1; limit--) {
+		if (asoc->nr_mapping_array[limit - 1]) {
+			break;
+		}
+	}
+	printf("Non renegable mapping array (last %d entries are zero):\n", asoc->mapping_array_size - limit);
+	for (i = 0; i < limit; i++) {
+		printf("%2.2x%c", asoc->mapping_array[i], ((i + 1) % 16) ? ' ': '\n');
+	}
+	if (limit % 16)
+		printf("\n");
 }
 
 int
@@ -1260,10 +1250,8 @@ sctp_expand_mapping_array(struct sctp_association *asoc, uint32_t needed)
 	/* mapping array needs to grow */
 	uint8_t *new_array1, *new_array2;
 	uint32_t new_size;
-	
 
 	new_size = asoc->mapping_array_size + ((needed+7)/8 + SCTP_MAPPING_ARRAY_INCR);
-
 	SCTP_MALLOC(new_array1, uint8_t *, new_size, SCTP_M_MAP);
 	SCTP_MALLOC(new_array2, uint8_t *, new_size, SCTP_M_MAP);
 	if ((new_array1 == NULL) || (new_array2 == NULL)) {
