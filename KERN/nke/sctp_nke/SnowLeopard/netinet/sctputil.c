@@ -1210,47 +1210,46 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 void
 sctp_print_mapping_array(struct sctp_association *asoc)
 {
-    int i,limit;
+	int i,limit;
+
 	printf("Mapping size:%d baseTSN:%8.8x cumAck:%8.8x highestTSN:%8.8x\n",
-		 asoc->mapping_array_size,
-		 asoc->mapping_array_base_tsn,
-		 asoc->cumulative_tsn,
-		 asoc->highest_tsn_inside_map
-		   );
+	       asoc->mapping_array_size,
+	       asoc->mapping_array_base_tsn,
+	       asoc->cumulative_tsn,
+	       asoc->highest_tsn_inside_map);
 	limit = asoc->mapping_array_size;
 	for(i=asoc->mapping_array_size; i>=0; i--) {
-	  if (asoc->mapping_array[i]) {
-		limit = i;
-		break;
-	  }
+		if (asoc->mapping_array[i]) {
+			limit = i;
+			break;
+		}
 	}
 	if (limit == 0)
-	  limit = 1;
+		limit = 1;
 	for (i=0; i<limit; i++) {
-	  printf("%2.2x ", asoc->mapping_array[i]);
-	  if (((i+1) % 16) == 0)
-		printf("\n");
+		printf("%2.2x ", asoc->mapping_array[i]);
+		if (((i+1) % 16) == 0)
+			printf("\n");
 	}
 	printf("\n");
 	printf("NR Mapping size:%d baseTSN:%8.8x highestTSN:%8.8x\n",
-		 asoc->mapping_array_size,
-		 asoc->mapping_array_base_tsn,
-		 asoc->highest_tsn_inside_nr_map
-		 );
+	       asoc->mapping_array_size,
+	       asoc->mapping_array_base_tsn,
+	       asoc->highest_tsn_inside_nr_map);
 	limit = asoc->mapping_array_size;
 	for(i=asoc->mapping_array_size; i>=0; i--) {
-	  if (asoc->nr_mapping_array[i]) {
-		limit = i;
-		break;
-	  }
+		if (asoc->nr_mapping_array[i]) {
+			limit = i;
+			break;
+		}
 	}
 	if (limit == 0)
-	  limit = 1;
+		limit = 1;
 
 	for (i=0; i<limit; i++) {
-	  printf("%2.2x ", asoc->nr_mapping_array[i]);
-	  if (((i+1) % 16) == 0)
-		printf("\n");
+		printf("%2.2x ", asoc->nr_mapping_array[i]);
+		if (((i+1) % 16) == 0)
+			printf("\n");
 	}
 	printf("\n");
 }
