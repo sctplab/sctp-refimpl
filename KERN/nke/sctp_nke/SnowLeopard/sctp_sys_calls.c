@@ -275,9 +275,9 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			sin = (struct sockaddr_in *)sa;
 			if (sin->sin_port) {
 				/* non-zero port, check or save */
-				if(sport) {
+				if (sport) {
 					/* Check against our port */
-					if(sport != sin->sin_port) {
+					if (sport != sin->sin_port) {
 						goto out_error;
 					}
 				} else {
@@ -291,9 +291,9 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			sin6 = (struct sockaddr_in6 *)sa;
 			if (sin6->sin6_port) {
 				/* non-zero port, check or save */
-				if(sport) {
+				if (sport) {
 					/* Check against our port */
-					if(sport != sin6->sin6_port) {
+					if (sport != sin6->sin6_port) {
 						goto out_error;
 					}
 				} else {
