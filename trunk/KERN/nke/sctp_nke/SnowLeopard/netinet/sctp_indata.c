@@ -1503,7 +1503,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* See if we have received this one already */
 	if (SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap) ||
-		SCTP_IS_TSN_PRESENT(asoc->nr_mapping_array, gap)) {
+	    SCTP_IS_TSN_PRESENT(asoc->nr_mapping_array, gap)) {
 		SCTP_STAT_INCR(sctps_recvdupdata);
 		if (asoc->numduptsns < SCTP_MAX_DUP_TSNS) {
 			/* Record a dup for the next outbound sack */
@@ -2370,7 +2370,7 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 						asoc->nr_mapping_array[slide_from + ii];
 
 			}
-			for (ii = distance; ii <= asoc->mapping_array_size; ii++) {
+			for (ii = distance; ii < asoc->mapping_array_size; ii++) {
 				asoc->mapping_array[ii] = 0;
 				asoc->nr_mapping_array[ii] = 0;
 			}
