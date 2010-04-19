@@ -2115,6 +2115,10 @@ failed_express_del:
 		}
 	}
 finish_express_del:
+	if (tsn == (asoc->cumulative_tsn + 1)) {	 
+		/* Update cum-ack */	 
+		asoc->cumulative_tsn = tsn;	 
+	}
 	if (last_chunk) {
 		*m = NULL;
 	}
@@ -2148,7 +2152,7 @@ finish_express_del:
 		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
 		SCTP_FREE(liste, SCTP_M_STRESET);
-        /*sa_ignore FREED_MEMORY*/
+		/*sa_ignore FREED_MEMORY*/
 		liste = TAILQ_FIRST(&asoc->resetHead);
 		ctl = TAILQ_FIRST(&asoc->pending_reply_queue);
 		if (ctl && (liste == NULL)) {
