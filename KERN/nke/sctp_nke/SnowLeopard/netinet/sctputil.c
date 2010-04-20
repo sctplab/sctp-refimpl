@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 206281 2010-04-06 18:57:50Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 206891 2010-04-20 08:50:19Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1238,7 +1238,7 @@ sctp_print_mapping_array(struct sctp_association *asoc)
 	}
 	printf("Non renegable mapping array (last %d entries are zero):\n", asoc->mapping_array_size - limit);
 	for (i = 0; i < limit; i++) {
-		printf("%2.2x%c", asoc->mapping_array[i], ((i + 1) % 16) ? ' ': '\n');
+		printf("%2.2x%c", asoc->nr_mapping_array[i], ((i + 1) % 16) ? ' ': '\n');
 	}
 	if (limit % 16)
 		printf("\n");
