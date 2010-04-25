@@ -4966,7 +4966,7 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *stcb, struct sctp_tmit_chunk *tp1,
 			goto next_on_sent;
 		}
 	}
-	if (foundeom ==  0) {
+	if (foundeom == 0) {
 		/*
 		 * Still no eom found. That means there
 		 * is stuff left on the stream out queue.. yuck.
