@@ -681,19 +681,19 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				       MAX_TSN)) ||
 		    (stcb->asoc.last_acked_seq == chk->rec.data.TSN_seq)) {
 			/* Strange case our list got out of order? */
-		  SCTP_PRINTF("Our list is out of order? last_acked:%x chk:%x",
-			      (unsigned int)stcb->asoc.last_acked_seq, (unsigned int)chk->rec.data.TSN_seq);
-		  recovery_cnt++;
+			SCTP_PRINTF("Our list is out of order? last_acked:%x chk:%x",
+			            (unsigned int)stcb->asoc.last_acked_seq, (unsigned int)chk->rec.data.TSN_seq);
+			recovery_cnt++;
 #ifdef INVARIANTS
-		  panic("last acked >= chk on sent-Q");
+			panic("last acked >= chk on sent-Q");
 #else
-		  SCTP_PRINTF("Recover attempts a restart cnt:%d\n", recovery_cnt);
-		  sctp_recover_sent_list(stcb);
-		  if (recovery_cnt < 10) {
-		    goto start_again;
-		  } else {
-		    SCTP_PRINTF("Recovery fails %d times??\n", recovery_cnt);
-		  }
+			SCTP_PRINTF("Recover attempts a restart cnt:%d\n", recovery_cnt);
+			sctp_recover_sent_list(stcb);
+			if (recovery_cnt < 10) {
+				goto start_again;
+			} else {
+				SCTP_PRINTF("Recovery fails %d times??\n", recovery_cnt);
+			}
 #endif
 		}
 		if ((chk->whoTo == net) && (chk->sent < SCTP_DATAGRAM_ACKED)) {
