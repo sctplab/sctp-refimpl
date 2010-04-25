@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 206151 2010-04-03 23:51:41Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207197 2010-04-25 19:00:37Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9141,7 +9141,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		/* (void)SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time); */
 		*cnt_out += 1;
 		chk->sent = SCTP_DATAGRAM_SENT;
-		sctp_ucount_decr(asoc->sent_queue_retran_cnt);
+		/* sctp_ucount_decr(asoc->sent_queue_retran_cnt); */
 		if (fwd_tsn == 0) {
 			return (0);
 		} else {
