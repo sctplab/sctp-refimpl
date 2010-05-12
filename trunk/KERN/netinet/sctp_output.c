@@ -9954,19 +9954,13 @@ sctp_fill_in_rest:
 			 * ok we must trim down the chunk by lowering the
 			 * advance peer ack point.
 			 */
-			printf("Triming space to fit skipped was:%d!\n",
-				cnt_of_skipped);
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_TRY_ADVANCE) {
 				sctp_misc_ints(SCTP_FWD_TSN_CHECK,
 					       0xff, 0xff, cnt_of_space,
 					       space_needed);
 			}
-			cnt_of_skipped = (cnt_of_space -
-			    ((sizeof(struct sctp_forward_tsn_chunk)) /
-			    sizeof(struct sctp_strseq)));
-			printf("Now %d (space:%d)\n", cnt_of_skipped,
-				cnt_of_space);
-			cnt_of_skipped -= 4;
+			cnt_of_skipped = (cnt_of_space - sizeof(struct sctp_forward_tsn_chunk);
+			cnt_of_skipped /= sizeof(struct sctp_strseq);
 			/*-
 			 * Go through and find the TSN that will be the one
 			 * we report.
