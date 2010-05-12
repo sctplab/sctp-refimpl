@@ -211,7 +211,7 @@ typedef	__uint16_t	in_port_t;
 /* 101-254: Partly Unassigned */
 #define	IPPROTO_PIM		103		/* Protocol Independent Mcast */
 #define	IPPROTO_PGM		113		/* PGM */
-#define IPPROTO_SCTP	132		/* SCTP */
+#define IPPROTO_SCTP		132		/* SCTP */
 /* 255: Reserved */
 /* BSD Private, local use, namespace incursion */
 #define	IPPROTO_DIVERT		254		/* divert pseudo-protocol */
