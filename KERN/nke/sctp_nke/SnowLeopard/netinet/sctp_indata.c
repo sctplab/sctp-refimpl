@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 207966 2010-05-12 16:10:33Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 207983 2010-05-12 18:00:15Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3731,7 +3731,8 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * the chunk, advance our peer ack point and we can check
 		 * the next chunk.
 		 */
-		if (tp1->sent == SCTP_FORWARD_TSN_SKIP) {
+		if ((tp1->sent == SCTP_FORWARD_TSN_SKIP)  ||
+			(tp1->sent == SCTP_DATAGRAM_ACKED)){
 			/* advance PeerAckPoint goes forward */
 			if (compare_with_wrap(tp1->rec.data.TSN_seq,
 					      asoc->advanced_peer_ack_point,
@@ -5324,7 +5325,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *ctl, *nctl;
 	struct sctp_association *asoc;
-	int tt;
+	uint16_t tt;
 	
 	asoc = &stcb->asoc;
 	tt = strmin->last_sequence_delivered;

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207197 2010-04-25 19:00:37Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207985 2010-05-12 18:33:25Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9891,9 +9891,8 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	chk->rec.chunk_id.can_take_data = 0;
 	chk->asoc = asoc;
 	chk->whoTo = NULL;
-
-        chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
-        if (chk->data == NULL) {
+	chk->data = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
+	if (chk->data == NULL) {
 		sctp_free_a_chunk(stcb, chk);
 		return;
 	}
@@ -9918,7 +9917,8 @@ sctp_fill_in_rest:
 		unsigned int cnt_of_skipped = 0;
 
 		TAILQ_FOREACH(at, &asoc->sent_queue, sctp_next) {
-			if (at->sent != SCTP_FORWARD_TSN_SKIP) {
+		if ((at->sent != SCTP_FORWARD_TSN_SKIP) &&
+		    (at->sent != SCTP_DATAGRAM_ACKED)){
 				/* no more to look at */
 				break;
 			}
@@ -9959,9 +9959,8 @@ sctp_fill_in_rest:
 					       0xff, 0xff, cnt_of_space,
 					       space_needed);
 			}
-			cnt_of_skipped = (cnt_of_space -
-			    ((sizeof(struct sctp_forward_tsn_chunk)) /
-			    sizeof(struct sctp_strseq)));
+			cnt_of_skipped = cnt_of_space - sizeof(struct sctp_forward_tsn_chunk);
+			cnt_of_skipped /= sizeof(struct sctp_strseq);
 			/*-
 			 * Go through and find the TSN that will be the one
 			 * we report.
