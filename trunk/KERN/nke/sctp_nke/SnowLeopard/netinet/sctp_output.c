@@ -3556,7 +3556,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		}
                 if ((nofragment_flag) && (port == 0)) {
-#if defined(WITH_CONVERT_IP_OFF) || defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
+#if defined(__FreeBSD__)
+			ip->ip_off = IP_DF;
+#elif defined(WITH_CONVERT_IP_OFF) || defined(__APPLE__) || defined(__Userspace__)
 			ip->ip_off = IP_DF;
 #else
 			ip->ip_off = htons(IP_DF);
