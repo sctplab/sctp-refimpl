@@ -5325,7 +5325,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 {
 	struct sctp_queued_to_read *ctl, *nctl;
 	struct sctp_association *asoc;
-	int tt;
+	uint16_t tt;
 	
 	asoc = &stcb->asoc;
 	tt = strmin->last_sequence_delivered;
