@@ -3670,6 +3670,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	while (tp1) {
 		if (tp1->sent != SCTP_FORWARD_TSN_SKIP &&
+			tp1->sent != SCTP_DATAGRAM_ACKED &&
 		    tp1->sent != SCTP_DATAGRAM_RESEND) {
 			/* no chance to advance, out of here */
 			break;
@@ -5591,10 +5592,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				}
 			}
 		}
-		/*
-		 * Now after marking all, slide thing forward but no sack please.
-		 */
-		sctp_slide_mapping_arrays(stcb);
 	}
 	/*************************************************************/
 	/* 2. Clear up re-assembly queue                             */
@@ -5681,7 +5678,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	/*******************************************************/
 	/* 3. Update the PR-stream re-ordering queues and fix  */
-        /*    delivery issues as needed.                       */
+    /*    delivery issues as needed.                       */
 	/*******************************************************/
 	fwd_sz -= sizeof(*fwd);
 	if (m && fwd_sz) {
@@ -5761,6 +5758,11 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 		}
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
+	/*
+	 * Now slide thing forward.
+	 */
+	sctp_slide_mapping_arrays(stcb);
+
 	if (TAILQ_FIRST(&asoc->reasmqueue)) {
 		/* now lets kick out and check for more fragmented delivery */
                 /*sa_ignore NO_NULL_CHK*/
