@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207983 2010-05-12 18:00:15Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207985 2010-05-12 18:33:25Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9959,7 +9959,7 @@ sctp_fill_in_rest:
 					       0xff, 0xff, cnt_of_space,
 					       space_needed);
 			}
-			cnt_of_skipped = (cnt_of_space - sizeof(struct sctp_forward_tsn_chunk);
+			cnt_of_skipped = cnt_of_space - sizeof(struct sctp_forward_tsn_chunk);
 			cnt_of_skipped /= sizeof(struct sctp_strseq);
 			/*-
 			 * Go through and find the TSN that will be the one
