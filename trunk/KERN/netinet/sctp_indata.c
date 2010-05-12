@@ -3731,7 +3731,8 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * the chunk, advance our peer ack point and we can check
 		 * the next chunk.
 		 */
-		if (tp1->sent == SCTP_FORWARD_TSN_SKIP) {
+		if ((tp1->sent == SCTP_FORWARD_TSN_SKIP)  ||
+			(tp1->sent == SCTP_DATAGRAM_ACKED)){
 			/* advance PeerAckPoint goes forward */
 			if (compare_with_wrap(tp1->rec.data.TSN_seq,
 					      asoc->advanced_peer_ack_point,
