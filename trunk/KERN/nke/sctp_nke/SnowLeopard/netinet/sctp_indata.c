@@ -3670,7 +3670,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 	tp1 = TAILQ_FIRST(&asoc->sent_queue);
 	while (tp1) {
 		if (tp1->sent != SCTP_FORWARD_TSN_SKIP &&
-			tp1->sent != SCTP_DATAGRAM_ACKED &&
+		    tp1->sent != SCTP_DATAGRAM_ACKED &&
 		    tp1->sent != SCTP_DATAGRAM_RESEND) {
 			/* no chance to advance, out of here */
 			break;
@@ -3732,7 +3732,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * the next chunk.
 		 */
 		if ((tp1->sent == SCTP_FORWARD_TSN_SKIP)  ||
-			(tp1->sent == SCTP_DATAGRAM_ACKED)){
+		    (tp1->sent == SCTP_DATAGRAM_ACKED)) {
 			/* advance PeerAckPoint goes forward */
 			if (compare_with_wrap(tp1->rec.data.TSN_seq,
 					      asoc->advanced_peer_ack_point,
