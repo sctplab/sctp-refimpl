@@ -1,6 +1,6 @@
 CC = gcc
 OSTYPE = $(shell uname)
-ARCHTYPE = $(shell uname -p | sed 's/386/486/')
+ARCHTYPE = $(shell uname -p | sed 's/386/486/' | sed 's/amd/x86-/')
 
 # FreeBSD needs -march for gcc atomics, but that breaks 64bit x86 Darwin
 ifeq ($(OSTYPE),FreeBSD)

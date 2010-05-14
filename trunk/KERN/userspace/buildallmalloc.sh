@@ -1,7 +1,7 @@
 #!/bin/sh
 
 OSTYPE=`uname`
-ARCHTYPE=`uname -p`
+#ARCHTYPE=`uname -p`
 
 
 cp userspace_malloc.make userspace.make
