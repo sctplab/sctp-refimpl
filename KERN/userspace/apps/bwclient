@@ -26,7 +26,7 @@ then
     v1=`uname`
     v2="-D__Userspace_os_"
     v3="$v2$v1"
-    v4=`uname -p | sed 's/386/486/'`
+    v4=`uname -p | sed 's/386/486/' | sed 's/amd/x86-/'`
 if [ "$v1" = "FreeBSD" ];
 then
     make BUILD=bclient CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DSCTP_USERMODE -Wall -march=$v4" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops" -f hmakefile
@@ -39,7 +39,7 @@ fi
 
 
 # Launch application with appropriate parameters
-echo "\n\n./osubw_sctpclient $1 $2"
+echo "./osubw_sctpclient $1 $2"
 ./osubw_sctpclient $1 $2
 
 

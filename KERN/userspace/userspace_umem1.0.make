@@ -1,6 +1,7 @@
 CC = gcc
 OSTYPE = $(shell uname)
-ARCHTYPE = $(shell uname -p | sed 's/386/486/')
+#ARCHTYPE = $(shell uname -p | sed 's/386/486/')
+ARCHTYPE = $(shell uname -p | sed 's/386/486/' | sed 's/amd/x86-/')
 UMEMMAKE = $(shell ls 2> /dev/null ../umem-1.0/Makefile)
 ATOMICMAKE = $(shell ls 2> /dev/null ../libatomic_ops-1.1/Makefile)
 
