@@ -56,6 +56,11 @@ __FBSDID("$FreeBSD$");
 #define SCTP_INP_INFO_RUNLOCK()
 #define SCTP_INP_INFO_WUNLOCK()
 
+#define SCTP_WQ_ADDR_INIT()
+#define SCTP_WQ_ADDR_DESTROY() 
+#define SCTP_WQ_ADDR_LOCK()	
+#define SCTP_WQ_ADDR_UNLOCK()
+
 
 #define SCTP_IPI_ADDR_INIT()
 #define SCTP_IPI_ADDR_DESTROY()

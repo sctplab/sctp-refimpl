@@ -185,8 +185,6 @@ struct sctp_epinfo {
 #if defined(__APPLE__)
 	struct inpcbhead inplisthead;
 #endif
-	struct sctpiterators iteratorhead;
-	int threads_must_exit;
 	/* ep zone info */
 	sctp_zone_t ipi_zone_ep;
 	sctp_zone_t ipi_zone_asoc;
@@ -204,7 +202,6 @@ struct sctp_epinfo {
 #else
 	struct rwlock ipi_ep_mtx;
 #endif
-	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
 #if __FreeBSD_version <= 602000
 	struct mtx ipi_addr_mtx;
@@ -212,41 +209,37 @@ struct sctp_epinfo {
 	struct rwlock ipi_addr_mtx;
 #endif
 	struct mtx ipi_pktlog_mtx;
+	struct mtx wq_addr_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
-	pthread_mutex_t it_mtx;
-	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 	pthread_mutex_t ipi_pktlog_mtx;
+	pthread_mutex_t wq_addr_mtx;
 #elif defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
 	lck_attr_t *mtx_attr;
 	lck_rw_t *ipi_ep_mtx;
-	lck_mtx_t *it_mtx;
-	lck_mtx_t *ipi_iterator_wq_mtx;
 	lck_mtx_t *ipi_addr_mtx;
 	lck_mtx_t *ipi_count_mtx;
 	lck_mtx_t *ipi_pktlog_mtx;
 	lck_mtx_t *logging_mtx;
+	lck_mtx_t *wq_addr_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
 	void *mtx_attr;
 	void *ipi_ep_mtx;
-	void *it_mtx;
-	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
 	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #elif defined(__Windows__)
 	struct rwlock ipi_ep_lock;
-	struct spinlock it_lock;
-	struct spinlock ipi_iterator_wq_lock;
 	struct rwlock ipi_addr_lock;
 	struct spinlock ipi_pktlog_mtx;
+	struct rwlock wq_addr_mtx;
 #elif defined(__Userspace__)
     /* TODO decide on __Userspace__ locks */
 #endif
@@ -283,23 +276,9 @@ struct sctp_epinfo {
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
 
-
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
 	/* address work queue handling */
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	uint32_t iterator_running;
-#if !defined(__Windows__)
-	SCTP_PROCESS_STRUCT thread_proc;
-#else
-	PFILE_OBJECT iterator_thread_obj;
-#endif
-#if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_cond_t iterator_wakeup;
-#elif defined(__Windows__)
-	KEVENT iterator_wakeup[2];
-#endif
-#endif
 	struct sctp_timer addr_wq_timer;
 
 #if defined(_SCTP_NEEDS_CALLOUT_) || defined(_USER_SCTP_NEEDS_CALLOUT_)

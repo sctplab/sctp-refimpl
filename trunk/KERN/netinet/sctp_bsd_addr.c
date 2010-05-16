@@ -51,16 +51,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 197955 2009-10-11 12:23:56Z
 #include <sys/unistd.h>
 
 /* Declare all of our malloc named types */
-
-/* Note to Michael/Peter for mac-os,
- * I think mac has this too since I
- * do see the M_PCB type, so I
- * will also put in the mac file the
- * MALLOC_DECLARE. If this does not
- * work for mac uncomment the defines for
- * the strings that we use in Panda, I put
- * them in comments in the mac-os file.
- */
 #ifndef __Panda__
 #ifndef __Windows__
 MALLOC_DEFINE(SCTP_M_MAP, "sctp_map", "sctp asoc map descriptor");
@@ -105,6 +95,24 @@ MALLOC_DEFINE(SCTP_M_SOCKOPT, 'nm18', "sctp_socko", "sctp socket option");
 #endif
 #endif
 
+/* Global NON-VNET structure that controls the iterator */
+struct iterator_control sctp_it_ctl;
+static int __sctp_thread_based_iterator_started = 0;
+
+
+static void
+sctp_cleanup_itqueue(void)
+{
+	struct sctp_iterator *it;
+	while ((it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead)) != NULL) {
+		if (it->function_atend != NULL) {
+			(*it->function_atend) (it->pointer, it->val);
+		}
+		TAILQ_REMOVE(&sctp_it_ctl.iteratorhead, it, sctp_nxt_itr);
+		SCTP_FREE(it, SCTP_M_ITER);
+	}
+}
+
 #if defined(__Userspace__)
 /*__Userspace__ TODO if we use thread based iterator
  * then the implementation of wakeup will need to change.
@@ -113,14 +121,14 @@ MALLOC_DEFINE(SCTP_M_SOCKOPT, 'nm18', "sctp_socko", "sctp socket option");
  * like wakeup(&sctppcbinfo.iterator_running);
  */
 #endif
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+
 void
 sctp_wakeup_iterator(void)
 {
 #if !defined(__Windows__)
-	wakeup(&SCTP_BASE_INFO(iterator_running));
+	wakeup(&sctp_it_ctl.iterator_running);
 #else
-	KeSetEvent(&SCTP_BASE_INFO(iterator_wakeup)[0],
+	KeSetEvent(&sctp_it_ctl.iterator_wakeup[0],
 		   IO_NO_INCREMENT,
 		   FALSE);
 #endif
@@ -133,22 +141,21 @@ sctp_iterator_thread(void *v)
 	NTSTATUS status = STATUS_SUCCESS;
 	PVOID events[2];
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
-	CURVNET_SET((struct vnet *)v);
-#endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	SCTP_BASE_INFO(iterator_running) = 0;
 	while (1) {
 #if !defined(__Windows__) && !defined(__Userspace__)
-		msleep(&SCTP_BASE_INFO(iterator_running),
+		msleep(&sctp_it_ctl.iterator_running,
 #if defined(__FreeBSD__)
-		       &SCTP_BASE_INFO(ipi_iterator_wq_mtx),
+		       &sctp_it_ctl.ipi_iterator_wq_mtx,
 #elif defined(__APPLE__)
-		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
+		       sctp_it_ctl.ipi_iterator_wq_mtx,
 #endif
 		       0, "waiting_for_work", 0);
-		if (SCTP_BASE_INFO(threads_must_exit)) {
+		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
 			SCTP_IPI_ITERATOR_WQ_DESTROY();
+			SCTP_ITERATOR_LOCK_DESTROY();
+			sctp_cleanup_itqueue();
+			__sctp_thread_based_iterator_started = 0;
 #if defined(__FreeBSD__) && __FreeBSD_version < 730000
 			kthread_exit(0);
 #else
@@ -158,10 +165,8 @@ sctp_iterator_thread(void *v)
 #elif defined(__Userspace__)
                 /* TODO msleep alternative */
 #else
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
-
-		events[0] = &SCTP_BASE_INFO(iterator_wakeup[0]);
-		events[1] = &SCTP_BASE_INFO(iterator_wakeup[1]);
+		events[0] = &sctp_it_ctl.iterator_wakeup[0];
+		events[1] = &sctp_it_ctl.iterator_wakeup[1];
 		status = KeWaitForMultipleObjects(2,
 					       events,
 					       WaitAny,
@@ -171,15 +176,15 @@ sctp_iterator_thread(void *v)
 					       NULL,
 					       NULL);
 		if (status == STATUS_WAIT_1) {
+			SCTP_IPI_ITERATOR_WQ_DESTROY();
+			SCTP_ITERATOR_LOCK_DESTROY();
+			sctp_cleanup_itqueue();
+			__sctp_thread_based_iterator_started = 0;
 			break;
 		}
-		SCTP_IPI_ITERATOR_WQ_LOCK();
 #endif /* !__Windows__ */
 		sctp_iterator_worker();
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
-	CURVNET_RESTORE();
-#endif
 #if defined(__Windows__)
 	PsTerminateSystemThread(STATUS_SUCCESS);
 #endif
@@ -188,6 +193,19 @@ sctp_iterator_thread(void *v)
 void
 sctp_startup_iterator(void)
 {
+	if (__sctp_thread_based_iterator_started) {
+	/* You only get one */
+		return;
+	}
+	/* init the iterator head */
+	__sctp_thread_based_iterator_started = 1;
+	sctp_it_ctl.iterator_running = 0;
+	sctp_it_ctl.iterator_flags = 0;
+	sctp_it_ctl.cur_it = NULL;
+	SCTP_ITERATOR_LOCK_INIT();
+	SCTP_IPI_ITERATOR_WQ_INIT();
+	TAILQ_INIT(&sctp_it_ctl.iteratorhead);
+
 #if defined(__FreeBSD__)
 	int ret;
 #if __FreeBSD_version <= 701000
@@ -195,17 +213,13 @@ sctp_startup_iterator(void)
 #else
 	ret = kproc_create(sctp_iterator_thread,
 #endif
-#if __FreeBSD_version >= 800000
-			   (void *)curvnet,
-#else
 			   (void *)NULL,
-#endif
-			   &SCTP_BASE_INFO(thread_proc),
+			   &sctp_it_ctl.thread_proc,
 			   RFPROC,
 			   SCTP_KTHREAD_PAGES,
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-	SCTP_BASE_INFO(thread_proc) = IOCreateThread(sctp_iterator_thread,
+	sctp_it_ctl.thread_proc = IOCreateThread(sctp_iterator_thread,
 						 (void *)NULL);
 #elif defined(__Userspace__)
                              /* TODO pthread_create or alternative to create a thread? */
@@ -214,10 +228,10 @@ sctp_startup_iterator(void)
 	OBJECT_ATTRIBUTES objectAttributes;
 	HANDLE iterator_thread_handle;
 
-	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[0]),
+	KeInitializeEvent(&sctp_it_ctl.iterator_wakeup[0],
 			  SynchronizationEvent,
 			  FALSE);
-	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[1]),
+	KeInitializeEvent(&sctp_it_ctl.iterator_wakeup[1],
 			  SynchronizationEvent,
 			  FALSE);
 	InitializeObjectAttributes(&objectAttributes,
@@ -237,15 +251,15 @@ sctp_startup_iterator(void)
 					  THREAD_ALL_ACCESS,
 					  NULL,
 					  KernelMode,
-					  (PVOID)&SCTP_BASE_INFO(iterator_thread_obj),
+					  (PVOID)&sctp_it_ctl.iterator_thread_obj,
 					  NULL);
 		ZwClose(iterator_thread_handle);
 	} else {
-		SCTP_BASE_INFO(iterator_thread_obj) = NULL;
+		sctp_it_ctl.iterator_thread_obj = NULL;
 	}
 #endif
 }
-#endif
+
 
 #ifdef INET6
 
