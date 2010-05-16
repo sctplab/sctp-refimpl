@@ -118,6 +118,23 @@ extern LARGE_INTEGER zero_timeout;
 } while (0)
 
 
+#define SCTP_WQ_ADDR_INIT() do { \
+	rwlock_init(&SCTP_BASE_INFO(wq_addr_mtx), "sctp-addr-wq","sctp_addr_wq", 0); \
+} while (0)
+
+#define SCTP_WQ_ADDR_DESTROY() do { \
+	rwlock_destroy(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
+#define SCTP_WQ_ADDR_LOCK() do { \
+	rwlock_acquire(&SCTP_BASE_INFO(wq_addr_mtx), 1); \
+} while (0)
+
+#define SCTP_WQ_ADDR_UNLOCK() do { \
+	rwlock_release(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
+
 #define SCTP_IPI_ADDR_INIT() do { \
 	rwlock_init(&SCTP_BASE_INFO(ipi_addr_lock), "sctp-addr", "sctp_addr", 0); \
 } while (0)
@@ -144,19 +161,19 @@ extern LARGE_INTEGER zero_timeout;
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() do { \
-	spinlock_init(&SCTP_BASE_INFO(ipi_iterator_wq_lock), "sctp-it-wq", "sctp_it_wq", 0); \
+	spinlock_init(&sctp_it_ctl.ipi_iterator_wq_lock, "sctp-it-wq", "sctp_it_wq", 0); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() do { \
-	spinlock_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_destroy(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_acquire(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() do { \
-	spinlock_release(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_release(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 
@@ -356,26 +373,26 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() do { \
-	spinlock_init(&SCTP_BASE_INFO(it_lock), "sctp-it", "iterator", 0); \
+	spinlock_init(&sctp_it_ctl.it_lock, "sctp-it", "iterator", 0); \
 } while (0)
 
 #define SCTP_ITERATOR_LOCK_DESTROY() do { \
-	spinlock_destroy(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_destroy(&sctp_it_ctl.it_lock); \
 } while (0)
 
 
 #ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_acquire(&sctp_it_ctl.it_lock); \
 } while (0)
 #else
 #define SCTP_ITERATOR_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_acquire(&sctp_it_ctl.it_lock); \
 } while (0)
 #endif
 
 #define SCTP_ITERATOR_UNLOCK() do { \
-	spinlock_release(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_release(&sctp_it_ctl.it_lock); \
 } while (0)
 
 #define SCTP_INCR_EP_COUNT() do { \

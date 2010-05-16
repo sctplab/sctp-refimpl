@@ -43,6 +43,14 @@
 #define SCTP_MTX_GRP SCTP_BASE_INFO(mtx_grp)
 #define SCTP_MTX_ATTR SCTP_BASE_INFO(mtx_attr)
 
+
+#define SCTP_WQ_ADDR_INIT() \
+	SCTP_BASE_INFO(wq_addr_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_WQ_ADDR_DESTROY()  \
+        lck_mtx_free(SCTP_BASE_INFO(wq_addr_mtx), SCTP_MTX_GRP)
+#define SCTP_WQ_ADDR_LOCK()	lck_mtx_lock(SCTP_BASE_INFO(wq_addr_mtx)) 
+#define SCTP_WQ_ADDR_UNLOCK() lck_mtx_unlock(SCTP_BASE_INFO(wq_addr_mtx))
+
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
 	SCTP_BASE_INFO(ipi_ep_mtx) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
@@ -156,22 +164,22 @@ do { \
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
-	SCTP_BASE_INFO(it_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	sctp_it_ctl.it_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_ITERATOR_LOCK() \
-	lck_mtx_lock(SCTP_BASE_INFO(it_mtx))
+	lck_mtx_lock(sctp_it_ctl.it_mtx)
 #define SCTP_ITERATOR_UNLOCK() \
-	lck_mtx_unlock(SCTP_BASE_INFO(it_mtx))
+	lck_mtx_unlock(sctp_it_ctl.it_mtx)
 #define SCTP_ITERATOR_LOCK_DESTROY() \
-	lck_mtx_free(SCTP_BASE_INFO(it_mtx), SCTP_MTX_GRP)
+	lck_mtx_free(sctp_it_ctl.it_mtx, SCTP_MTX_GRP)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-	SCTP_BASE_INFO(ipi_iterator_wq_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	sctp_it_ctl.ipi_iterator_wq_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	lck_mtx_free(SCTP_BASE_INFO(ipi_iterator_wq_mtx), SCTP_MTX_GRP)
+	lck_mtx_free(sctp_it_ctl.ipi_iterator_wq_mtx, SCTP_MTX_GRP)
 #define SCTP_IPI_ITERATOR_WQ_LOCK() \
-	lck_mtx_lock(SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+	lck_mtx_lock(sctp_it_ctl.ipi_iterator_wq_mtx)
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
-	lck_mtx_unlock(SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+	lck_mtx_unlock(sctp_it_ctl.ipi_iterator_wq_mtx)
 
 
 /* socket locks */
