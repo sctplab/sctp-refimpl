@@ -6116,7 +6116,7 @@ sctp_pcb_finish(void)
 	}
 #endif	
 #else
-	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_MUST_EXIT
+	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_MUST_EXIT;
 #endif
 #if defined(__APPLE__)
 	/* free the iterator worker thread */
