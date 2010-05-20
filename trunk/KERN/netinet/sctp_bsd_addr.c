@@ -193,6 +193,12 @@ sctp_iterator_thread(void *v)
 void
 sctp_startup_iterator(void)
 {
+#if defined(__Windows__)
+	NTSTATUS status = STATUS_SUCCESS;
+	OBJECT_ATTRIBUTES objectAttributes;
+	HANDLE iterator_thread_handle;
+#endif
+
 	if (__sctp_thread_based_iterator_started) {
 	/* You only get one */
 		return;
@@ -224,10 +230,6 @@ sctp_startup_iterator(void)
 #elif defined(__Userspace__)
                              /* TODO pthread_create or alternative to create a thread? */
 #elif defined(__Windows__)
-	NTSTATUS status = STATUS_SUCCESS;
-	OBJECT_ATTRIBUTES objectAttributes;
-	HANDLE iterator_thread_handle;
-
 	KeInitializeEvent(&sctp_it_ctl.iterator_wakeup[0],
 			  SynchronizationEvent,
 			  FALSE);
