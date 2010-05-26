@@ -6040,7 +6040,7 @@ sctp_pcb_init()
 	}
 
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	(void)pthread_cond_init(&SCTP_BASE_INFO(iterator_wakeup), NULL);
+	(void)pthread_cond_init(&sctp_it_ctl.iterator_wakeup, NULL);
 #endif
 	sctp_startup_iterator();
 
