@@ -125,7 +125,9 @@ sctp_cleanup_itqueue(void)
 void
 sctp_wakeup_iterator(void)
 {
-#if !defined(__Windows__)
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
+        pthread_cond_broadcast(&sctp_it_ctl.iterator_wakeup);
+#elif !defined(__Windows__)
 	wakeup(&sctp_it_ctl.iterator_running);
 #else
 	KeSetEvent(&sctp_it_ctl.iterator_wakeup[0],
