@@ -7,13 +7,12 @@ if [ $OSTYPE = FreeBSD ]; then
 
     echo "... is FreeBSD."
   if [ $ARCHTYPE = amd64 ]; then
-# use umem-1.0.1
       echo "... is amd64."
-      echo "64-bit bug with libumem. Build with make malloc instead."
-      exit 1 
-#      echo "Using umem-1.0.1 ..."
-#      cp userspace_umem1.0.1.make userspace.make
-#      cp scripts/prepare_umem101 scripts/prepare_umem
+# use umem-bsd64 
+      echo "Using umem-bsd64 ..."
+      cp userspace_umembsd64.make userspace.make
+      cp scripts/prepare_umembsd64 scripts/prepare_umem
+
   else
 # use umem-1.0
     echo "Using umem-1.0 ..."
