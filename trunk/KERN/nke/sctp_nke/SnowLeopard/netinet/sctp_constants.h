@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 207966 2010-05-12 16:10:33Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 208160 2010-05-16 17:03:56Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -93,12 +93,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 207966 2010-05-12 16:10:33
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
 
-#ifdef __FreeBSD__
-/* temporary disabled since it does not work with VNET. */
-#if 0
-#define SCTP_USE_THREAD_BASED_ITERATOR 1
-#endif
-#endif
 
 #define SCTP_KTRHEAD_NAME "sctp_iterator"
 #define SCTP_KTHREAD_PAGES 0
@@ -604,7 +598,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 207966 2010-05-12 16:10:33
 #define SCTP_TIMER_TYPE_EVENTWAKE	13
 #define SCTP_TIMER_TYPE_STRRESET        14
 #define SCTP_TIMER_TYPE_INPKILL         15
-#define SCTP_TIMER_TYPE_ITERATOR        16
 #define SCTP_TIMER_TYPE_EARLYFR         17
 #define SCTP_TIMER_TYPE_ASOCKILL        18
 #define SCTP_TIMER_TYPE_ADDR_WQ         19

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 207924 2010-05-11 17:02:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 208160 2010-05-16 17:03:56Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -747,13 +747,11 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 		wi->ifa = sctp_ifap;
 		wi->action = SCTP_ADD_IP_ADDRESS;
-		SCTP_IPI_ITERATOR_WQ_LOCK();
-		/*
-		 * Should this really be a tailq? As it is we will process the
-		 * newest first :-0
-		 */
+		
+		SCTP_WQ_ADDR_LOCK();
 		LIST_INSERT_HEAD(&SCTP_BASE_INFO(addr_wq), wi, sctp_nxt_addr);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+		SCTP_WQ_ADDR_UNLOCK();
+
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
 				 (struct sctp_tcb *)NULL,
@@ -857,13 +855,13 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 		(void)SCTP_GETTIME_TIMEVAL(&wi->start_time);
 		wi->ifa = sctp_ifap;
 		wi->action = SCTP_DEL_IP_ADDRESS;
-		SCTP_IPI_ITERATOR_WQ_LOCK();
+		SCTP_WQ_ADDR_LOCK();
 		/*
 		 * Should this really be a tailq? As it is we will process the
 		 * newest first :-0
 		 */
 		LIST_INSERT_HEAD(&SCTP_BASE_INFO(addr_wq), wi, sctp_nxt_addr);
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+		SCTP_WQ_ADDR_UNLOCK();
 
 		sctp_timer_start(SCTP_TIMER_TYPE_ADDR_WQ,
 				 (struct sctp_inpcb *)NULL,
@@ -3325,57 +3323,71 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 
 static void
-sctp_iterator_inp_being_freed(struct sctp_inpcb *inp, struct sctp_inpcb *inp_next)
+sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 {
-	struct sctp_iterator *it;
+	struct sctp_iterator *it, *nit;
 
 	/*
 	 * We enter with the only the ITERATOR_LOCK in place and a write
 	 * lock on the inp_info stuff.
 	 */
-
-	/*
-	 * Go through all iterators, we must do this since it is possible
-	 * that some iterator does NOT have the lock, but is waiting for it.
-	 * And the one that had the lock has either moved in the last
-	 * iteration or we just cleared it above. We need to find all of
-	 * those guys. The list of iterators should never be very big
-	 * though.
+	it = sctp_it_ctl.cur_it;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	if (it && (it->vn != curvnet)) {
+		/* Its not looking at our VNET */
+		return;
+	}
+#endif
+	if (it && (it->inp == inp)) {
+		/*
+		 * This is tricky and we hold the iterator lock,
+		 * but when it returns and gets the lock (when we
+		 * release it) the iterator will try to operate on
+		 * inp. We need to stop that from happening. But
+		 * of course the iterator has a reference on the
+		 * stcb and inp. We can mark it and it will stop.
+		 * 
+		 * If its a single iterator situation, we 
+		 * set the end iterator flag. Otherwise
+		 * we set the iterator to go to the next inp.
+		 * 
+		 */
+		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
+			sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_STOP_CUR_IT;
+		} else {
+			sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_STOP_CUR_INP;
+		}
+	}
+	/* Now go through and remove any single reference to
+	 * our inp that may be still pending on the list 
 	 */
-	TAILQ_FOREACH(it, &SCTP_BASE_INFO(iteratorhead), sctp_nxt_itr) {
-		if (it == inp->inp_starting_point_for_iterator)
-			/* skip this guy, he's special */
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead);
+	while(it) {
+		nit = TAILQ_NEXT(it, sctp_nxt_itr);
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+		if (it->vn != curvnet) {
+			it = nit;
 			continue;
+		}	
+#endif
 		if (it->inp == inp) {
-			/*
-			 * This is tricky and we DON'T lock the iterator.
-			 * Reason is he's running but waiting for me since
-			 * inp->inp_starting_point_for_iterator has the lock
-			 * on me (the guy above we skipped). This tells us
-			 * its is not running but waiting for
-			 * inp->inp_starting_point_for_iterator to be
-			 * released by the guy that does have our INP in a
-			 * lock.
-			 */
+			/* This one points to me is it inp specific? */
 			if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
-				it->inp = NULL;
-				it->stcb = NULL;
+				/* Remove and free this one */
+				TAILQ_REMOVE(&sctp_it_ctl.iteratorhead,
+				    it, sctp_nxt_itr);
+				if (it->function_atend != NULL) {
+					(*it->function_atend) (it->pointer, it->val);
+				}
+				SCTP_FREE(it,SCTP_M_ITER);
 			} else {
-				/* set him up to do the next guy not me */
-				it->inp = inp_next;
-				it->stcb = NULL;
+				it->inp = LIST_NEXT(it->inp, sctp_list);
 			}
 		}
+		it = nit;
 	}
-	it = inp->inp_starting_point_for_iterator;
-	if (it) {
-		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
-			it->inp = NULL;
-		} else {
-			it->inp = inp_next;
-		}
-		it->stcb = NULL;
-	}
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 }
 
 /* release sctp_inpcb unbind the port */
@@ -3391,7 +3403,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	 * all associations. d) finally the ep itself.
 	 */
 	struct sctp_pcb *m;
-	struct sctp_inpcb *inp_save;
 	struct sctp_tcb *asoc, *nasoc;
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
@@ -3416,6 +3427,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	sctp_log_closing(inp, NULL, 0);
 #endif
 	SCTP_ITERATOR_LOCK();
+
 	so = inp->sctp_socket;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
@@ -3442,6 +3454,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		inp->sctp_flags |= SCTP_PCB_FLAGS_DONT_WAKE;
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
 		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
+
+		/* mark any iterators on the list or being processed */
+		sctp_iterator_inp_being_freed(inp);
 	}
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL,
 			SCTP_FROM_SCTP_PCB+SCTP_LOC_1 );
@@ -3849,7 +3864,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		shared_key = LIST_FIRST(&inp->sctp_ep.shared_keys);
 	}
 
-	inp_save = LIST_NEXT(inp, sctp_list);
 #if defined(__APPLE__)
 	inp->ip_inp.inp.inp_state = INPCB_STATE_DEAD;
 	if (in_pcb_checkstate(&inp->ip_inp.inp, WNT_STOPUSING, 1) != WNT_STOPUSING)
@@ -3858,8 +3872,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 	LIST_REMOVE(inp, sctp_list);
 
-	/* fix any iterators only after out of the list */
-	sctp_iterator_inp_being_freed(inp, inp_save);
 	/*
 	 * if we have an address list the following will free the list of
 	 * ifaddr's that are set into this ep. Again macro limitations here,
@@ -5157,12 +5169,12 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			/* Free the zone stuff  */
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), sp);
 			SCTP_DECR_STRMOQ_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&outs->outqueue);
 		}
 	}
 
-	/*sa_ignore FREED_MEMORY*/
+    /*sa_ignore FREED_MEMORY*/
 	while ((liste = TAILQ_FIRST(&asoc->resetHead)) != NULL) {
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
 		SCTP_FREE(liste, SCTP_M_STRESET);
@@ -5181,7 +5193,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		/* Free the ctl entry */
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), sq);
 		SCTP_DECR_READQ_COUNT();
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		sq = TAILQ_FIRST(&asoc->pending_reply_queue);
 	}
 
@@ -5199,7 +5211,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		SCTP_DECR_CHK_COUNT();
 		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1);
 		asoc->free_chunk_cnt--;
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		chk = TAILQ_FIRST(&asoc->free_chunks);
 	}
 	/* pending send queue SHOULD be empty */
@@ -5217,7 +5229,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 			SCTP_DECR_CHK_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->send_queue);
 		}
 	}
@@ -5242,7 +5254,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 			SCTP_DECR_CHK_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->sent_queue);
 		}
 	}
@@ -5267,7 +5279,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 			SCTP_DECR_CHK_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->control_send_queue);
 		}
 	}
@@ -5293,7 +5305,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			sctp_free_remote_addr(chk->whoTo);
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 			SCTP_DECR_CHK_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->asconf_send_queue);
 		}
 	}
@@ -5317,7 +5329,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			ccnt++;
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 			SCTP_DECR_CHK_COUNT();
-			/*sa_ignore FREED_MEMORY*/
+            /*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 	}
@@ -5372,7 +5384,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	asoc->streamincnt = 0;
 	while (!TAILQ_EMPTY(&asoc->nets)) {
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		net = TAILQ_FIRST(&asoc->nets);
 		/* pull from list */
 		if ((SCTP_BASE_INFO(ipi_count_raddr) == 0) || (prev == net)) {
@@ -5387,20 +5399,20 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 
 	while (!LIST_EMPTY(&asoc->sctp_restricted_addrs)) {
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		laddr = LIST_FIRST(&asoc->sctp_restricted_addrs);
 		sctp_remove_laddr(laddr);
 	}
 
 	/* pending asconf (address) parameters */
 	while (!TAILQ_EMPTY(&asoc->asconf_queue)) {
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		aparam = TAILQ_FIRST(&asoc->asconf_queue);
 		TAILQ_REMOVE(&asoc->asconf_queue, aparam, next);
 		SCTP_FREE(aparam,SCTP_M_ASC_ADDR);
 	}
 	while (!TAILQ_EMPTY(&asoc->asconf_ack_sent)) {
-		/*sa_ignore FREED_MEMORY*/
+        /*sa_ignore FREED_MEMORY*/
 		aack = TAILQ_FIRST(&asoc->asconf_ack_sent);
 		TAILQ_REMOVE(&asoc->asconf_ack_sent, aack, next);
 		if (aack->data != NULL) {
@@ -5907,8 +5919,6 @@ sctp_pcb_init()
 	LIST_INIT(&SCTP_BASE_INFO(inplisthead));
 #endif
 
-	/* init the iterator head */
-	TAILQ_INIT(&SCTP_BASE_INFO(iteratorhead));
 
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
@@ -5993,16 +6003,15 @@ sctp_pcb_init()
 #endif				/* __APPLE__ */
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_STATLOG_INIT_LOCK();
-	SCTP_ITERATOR_LOCK_INIT();
 
 	SCTP_IPI_COUNT_INIT();
 	SCTP_IPI_ADDR_INIT();
-	SCTP_IPI_ITERATOR_WQ_INIT();
 #ifdef SCTP_PACKET_LOGGING
 	SCTP_IP_PKTLOG_INIT();
 #endif
 	LIST_INIT(&SCTP_BASE_INFO(addr_wq));
 
+	SCTP_WQ_ADDR_INIT();
 	/* not sure if we need all the counts */
 	SCTP_BASE_INFO(ipi_count_ep) = 0;
 	/* assoc/tcb zone info */
@@ -6030,14 +6039,10 @@ sctp_pcb_init()
 		LIST_INIT(&SCTP_BASE_INFO(vtag_timewait)[i]);
 	}
 
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	(void)pthread_cond_init(&SCTP_BASE_INFO(iterator_wakeup), NULL);
+	(void)pthread_cond_init(&sctp_it_ctl.iterator_wakeup, NULL);
 #endif
-	SCTP_BASE_INFO(iterator_running) = 0;
-	SCTP_BASE_INFO(threads_must_exit) = 0;
 	sctp_startup_iterator();
-#endif
 
 #ifndef __Panda__
 	/*
@@ -6073,53 +6078,76 @@ sctp_pcb_finish(void)
 	struct sctpvtaghead *chain;
 	struct sctp_tagblock *twait_block, *prev_twait_block;
 	struct sctp_laddr *wi;
-	struct sctp_iterator *it;
 	int i;
 
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	SCTP_BASE_INFO(threads_must_exit) = 1;
+#if defined(__FreeBSD__)
+	/* Free BSD the it thread never exits
+	 * but we do clean up. The only way
+	 * freebsd reaches here if we have VRF's
+	 * but we still add the ifdef to make it
+	 * compile on old versions.
+	 */
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	{
+		struct sctp_iterator *it, *nit;
+		SCTP_IPI_ITERATOR_WQ_LOCK();
+		it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead);
+		while(it) {
+			nit = TAILQ_NEXT(it, sctp_nxt_itr);
+			if (it->vn != curvnet) {
+				it = nit;
+				continue;
+			}	
+			TAILQ_REMOVE(&sctp_it_ctl.iteratorhead,
+				it, sctp_nxt_itr);
+			if (it->function_atend != NULL) {
+				(*it->function_atend) (it->pointer, it->val);
+			}
+			SCTP_FREE(it,SCTP_M_ITER);
+			it = nit;
+		}
+		SCTP_IPI_ITERATOR_WQ_UNLOCK();
+		SCTP_ITERATOR_LOCK();
+		if ((sctp_it_ctl.cur_it) &&
+		    (sctp_it_ctl.cur_it->vn == curvnet)) {
+			sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_STOP_CUR_IT;
+		}
+		SCTP_ITERATOR_UNLOCK();
+	}
+#endif	
+#else
+	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_MUST_EXIT;
+#endif
 #if defined(__APPLE__)
 	/* free the iterator worker thread */
-	if (SCTP_BASE_INFO(thread_proc) != THREAD_NULL) {
-		thread_terminate(SCTP_BASE_INFO(thread_proc));
-		SCTP_BASE_INFO(thread_proc) = THREAD_NULL;
+	if (sctp_it_ctl.thread_proc != THREAD_NULL) {
+		thread_terminate(sctp_it_ctl.thread_proc);
+		sctp_it_ctl.thread_proc = THREAD_NULL;
 	}
 #endif
 #if defined(__Windows__)
-	if (SCTP_BASE_INFO(iterator_thread_obj) != NULL) {
+	if (sctp_it_ctl.iterator_thread_obj != NULL) {
 		NTSTATUS status = STATUS_SUCCESS;
 
-		KeSetEvent(&SCTP_BASE_INFO(iterator_wakeup[1]), IO_NO_INCREMENT, FALSE);
-		status = KeWaitForSingleObject(SCTP_BASE_INFO(iterator_thread_obj),
+		KeSetEvent(&sctp_it_ctl.iterator_wakeup[1], IO_NO_INCREMENT, FALSE);
+		status = KeWaitForSingleObject(sctp_it_ctl.iterator_thread_obj,
 					       Executive,
 					       KernelMode,
 					       FALSE,
 					       NULL);
-		ObDereferenceObject(SCTP_BASE_INFO(iterator_thread_obj));
+		ObDereferenceObject(sctp_it_ctl.iterator_thread_obj);
 	}
 #endif
-#if defined(__FreeBSD__)
-	/* Wake the thread up so it will exit now */
-	sctp_wakeup_iterator();
-#endif
-
-#endif
+	
 	SCTP_OS_TIMER_STOP(&SCTP_BASE_INFO(addr_wq_timer.timer));
-	SCTP_IPI_ITERATOR_WQ_LOCK();
+	SCTP_WQ_ADDR_LOCK();
 	while ((wi = LIST_FIRST(&SCTP_BASE_INFO(addr_wq))) != NULL) {
 		LIST_REMOVE(wi, sctp_nxt_addr);
 		SCTP_DECR_LADDR_COUNT();
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_laddr), wi);
 	}
-	SCTP_IPI_ITERATOR_WQ_UNLOCK();
-	while ((it = TAILQ_FIRST(&SCTP_BASE_INFO(iteratorhead))) != NULL) {
-		if (it->function_atend != NULL) {
-			(*it->function_atend) (it->pointer, it->val);
-		}
-		TAILQ_REMOVE(&SCTP_BASE_INFO(iteratorhead), it, sctp_nxt_itr);
-		SCTP_FREE(it, SCTP_M_ITER);
-	}
-
+	SCTP_WQ_ADDR_UNLOCK();
+	
 	/*
 	 * free the vrf/ifn/ifa lists and hashes (be sure address monitor
 	 * is destroyed first).
@@ -6179,12 +6207,13 @@ sctp_pcb_finish(void)
 #if defined(__APPLE__)
 	SCTP_IPI_COUNT_DESTROY();
 #endif
-	SCTP_ITERATOR_LOCK_DESTROY();
 	SCTP_STATLOG_DESTROY();
 #if !defined(__Userspace__)
 	SCTP_INP_INFO_LOCK_DESTROY();
 #endif
-
+	
+	SCTP_WQ_ADDR_DESTROY();
+	
 #if defined(__APPLE__)
 	lck_grp_attr_free(SCTP_BASE_INFO(mtx_grp_attr));
 	lck_grp_free(SCTP_BASE_INFO(mtx_grp));
@@ -7216,6 +7245,9 @@ sctp_initiate_iterator(inp_func inpf,
 	it->asoc_state = asoc_state;
 	it->function_inp_end = inpe;
 	it->no_chunk_output = chunk_output_off;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	it->vn = curvnet;
+#endif	
 	if (s_inp) {
 		it->inp = s_inp;
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
@@ -7231,22 +7263,11 @@ sctp_initiate_iterator(inp_func inpf,
 	if (it->inp) {
 		SCTP_INP_INCR_REF(it->inp);
 	}
-	TAILQ_INSERT_TAIL(&SCTP_BASE_INFO(iteratorhead), it, sctp_nxt_itr);
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	if (SCTP_BASE_INFO(iterator_running) == 0) {
+	TAILQ_INSERT_TAIL(&sctp_it_ctl.iteratorhead, it, sctp_nxt_itr);
+	if (sctp_it_ctl.iterator_running == 0) {
 		sctp_wakeup_iterator();
 	}
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
-#else
-	if (it->inp)
-		SCTP_INP_DECR_REF(it->inp);
-	SCTP_IPI_ITERATOR_WQ_UNLOCK();
-	/* Init the timer */
-	SCTP_OS_TIMER_INIT(&it->tmr.timer);
-	/* add to the list of all iterators */
-	sctp_timer_start(SCTP_TIMER_TYPE_ITERATOR, (struct sctp_inpcb *)it,
-			 NULL, NULL);
-#endif
 	/* sa_ignore MEMLEAK {memory is put on the tailq for the iterator} */
 	return (0);
 }
