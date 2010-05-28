@@ -128,10 +128,14 @@ sctp_iterator_thread(void *v)
 			SCTP_ITERATOR_LOCK_DESTROY();
 			sctp_cleanup_itqueue();
 			__sctp_thread_based_iterator_started = 0;
-#if defined(__FreeBSD__) && __FreeBSD_version < 730000
+#if defined(__FreeBSD__)
+#if __FreeBSD_version < 730000
 			kthread_exit(0);
 #else
 			kthread_exit();
+#endif
+#else
+			thread_terminate(current_thread());
 #endif
 		}
 #elif defined(__Userspace__)
@@ -170,8 +174,8 @@ sctp_startup_iterator(void)
 			   SCTP_KTHREAD_PAGES,
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-	sctp_it_ctl.thread_proc = IOCreateThread(sctp_iterator_thread,
-						 (void *)NULL);
+        (void) kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
+        thread_deallocate(sctp_it_ctl.thread_proc);
 #elif defined(__Userspace__)
                              /* TODO pthread_create or alternative to create a thread? */
 #endif
