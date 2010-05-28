@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 197955 2009-10-11 12:23:56Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 208160 2010-05-16 17:03:56Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -51,18 +51,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 197955 2009-10-11 12:23:56Z
 #include <sys/unistd.h>
 
 /* Declare all of our malloc named types */
-
-/* Note to Michael/Peter for mac-os,
- * I think mac has this too since I
- * do see the M_PCB type, so I
- * will also put in the mac file the
- * MALLOC_DECLARE. If this does not
- * work for mac uncomment the defines for
- * the strings that we use in Panda, I put
- * them in comments in the mac-os file.
- */
 #ifndef __Panda__
-#ifndef __Windows__
 MALLOC_DEFINE(SCTP_M_MAP, "sctp_map", "sctp asoc map descriptor");
 MALLOC_DEFINE(SCTP_M_STRMI, "sctp_stri", "sctp stream in array");
 MALLOC_DEFINE(SCTP_M_STRMO, "sctp_stro", "sctp stream out array");
@@ -82,28 +71,25 @@ MALLOC_DEFINE(SCTP_M_TIMW, "sctp_timw", "sctp time block");
 MALLOC_DEFINE(SCTP_M_MVRF, "sctp_mvrf", "sctp mvrf pcb list");
 MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
 MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
-#else
-MALLOC_DEFINE(SCTP_M_MAP, 'nm00', "sctp_map", "sctp asoc map descriptor");
-MALLOC_DEFINE(SCTP_M_STRMI, 'nm01', "sctp_stri", "sctp stream in array");
-MALLOC_DEFINE(SCTP_M_STRMO, 'nm02', "sctp_stro", "sctp stream out array");
-MALLOC_DEFINE(SCTP_M_ASC_ADDR, 'nm03', "sctp_aadr", "sctp asconf address");
-MALLOC_DEFINE(SCTP_M_ASC_IT, 'nm04', "sctp_a_it", "sctp asconf iterator");
-MALLOC_DEFINE(SCTP_M_AUTH_CL, 'nm05', "sctp_atcl", "sctp auth chunklist");
-MALLOC_DEFINE(SCTP_M_AUTH_KY, 'nm06', "sctp_atky", "sctp auth key");
-MALLOC_DEFINE(SCTP_M_AUTH_HL, 'nm07', "sctp_athm", "sctp auth hmac list");
-MALLOC_DEFINE(SCTP_M_AUTH_IF, 'nm08', "sctp_athi", "sctp auth info");
-MALLOC_DEFINE(SCTP_M_STRESET, 'nm09', "sctp_stre", "sctp stream reset");
-MALLOC_DEFINE(SCTP_M_CMSG, 'nm10', "sctp_cmsg", "sctp CMSG buffer");
-MALLOC_DEFINE(SCTP_M_COPYAL, 'nm11', "sctp_cpal", "sctp copy all");
-MALLOC_DEFINE(SCTP_M_VRF, 'nm12', "sctp_vrf", "sctp vrf struct");
-MALLOC_DEFINE(SCTP_M_IFA, 'nm13', "sctp_ifa", "sctp ifa struct");
-MALLOC_DEFINE(SCTP_M_IFN, 'nm14', "sctp_ifn", "sctp ifn struct");
-MALLOC_DEFINE(SCTP_M_TIMW, 'nm15', "sctp_timw", "sctp time block");
-MALLOC_DEFINE(SCTP_M_MVRF, 'nm16', "sctp_mvrf", "sctp mvrf pcb list");
-MALLOC_DEFINE(SCTP_M_ITER, 'nm17', "sctp_iter", "sctp iterator control");
-MALLOC_DEFINE(SCTP_M_SOCKOPT, 'nm18', "sctp_socko", "sctp socket option");
 #endif
-#endif
+
+/* Global NON-VNET structure that controls the iterator */
+struct iterator_control sctp_it_ctl;
+static int __sctp_thread_based_iterator_started = 0;
+
+
+static void
+sctp_cleanup_itqueue(void)
+{
+	struct sctp_iterator *it;
+	while ((it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead)) != NULL) {
+		if (it->function_atend != NULL) {
+			(*it->function_atend) (it->pointer, it->val);
+		}
+		TAILQ_REMOVE(&sctp_it_ctl.iteratorhead, it, sctp_nxt_itr);
+		SCTP_FREE(it, SCTP_M_ITER);
+	}
+}
 
 #if defined(__Userspace__)
 /*__Userspace__ TODO if we use thread based iterator
@@ -113,81 +99,68 @@ MALLOC_DEFINE(SCTP_M_SOCKOPT, 'nm18', "sctp_socko", "sctp socket option");
  * like wakeup(&sctppcbinfo.iterator_running);
  */
 #endif
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
+
 void
 sctp_wakeup_iterator(void)
 {
-#if !defined(__Windows__)
-	wakeup(&SCTP_BASE_INFO(iterator_running));
+#if defined(SCTP_PROCESS_LEVEL_LOCKS)
+        pthread_cond_broadcast(&sctp_it_ctl.iterator_wakeup);
 #else
-	KeSetEvent(&SCTP_BASE_INFO(iterator_wakeup)[0],
-		   IO_NO_INCREMENT,
-		   FALSE);
+	wakeup(&sctp_it_ctl.iterator_running);
 #endif
 }
 
 static void
 sctp_iterator_thread(void *v)
 {
-#if defined(__Windows__)
-	NTSTATUS status = STATUS_SUCCESS;
-	PVOID events[2];
-#endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
-	CURVNET_SET((struct vnet *)v);
-#endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	SCTP_BASE_INFO(iterator_running) = 0;
 	while (1) {
-#if !defined(__Windows__) && !defined(__Userspace__)
-		msleep(&SCTP_BASE_INFO(iterator_running),
+#if !defined(__Userspace__)
+		msleep(&sctp_it_ctl.iterator_running,
 #if defined(__FreeBSD__)
-		       &SCTP_BASE_INFO(ipi_iterator_wq_mtx),
+		       &sctp_it_ctl.ipi_iterator_wq_mtx,
 #elif defined(__APPLE__)
-		       SCTP_BASE_INFO(ipi_iterator_wq_mtx),
+		       sctp_it_ctl.ipi_iterator_wq_mtx,
 #endif
 		       0, "waiting_for_work", 0);
-		if (SCTP_BASE_INFO(threads_must_exit)) {
+		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
 			SCTP_IPI_ITERATOR_WQ_DESTROY();
-#if defined(__FreeBSD__) && __FreeBSD_version < 730000
+			SCTP_ITERATOR_LOCK_DESTROY();
+			sctp_cleanup_itqueue();
+			__sctp_thread_based_iterator_started = 0;
+#if defined(__FreeBSD__)
+#if __FreeBSD_version < 730000
 			kthread_exit(0);
 #else
 			kthread_exit();
 #endif
+#else
+			thread_terminate(current_thread());
+#endif
 		}
 #elif defined(__Userspace__)
                 /* TODO msleep alternative */
-#else
-		SCTP_IPI_ITERATOR_WQ_UNLOCK();
-
-		events[0] = &SCTP_BASE_INFO(iterator_wakeup[0]);
-		events[1] = &SCTP_BASE_INFO(iterator_wakeup[1]);
-		status = KeWaitForMultipleObjects(2,
-					       events,
-					       WaitAny,
-					       Executive,
-					       KernelMode,
-					       FALSE,
-					       NULL,
-					       NULL);
-		if (status == STATUS_WAIT_1) {
-			break;
-		}
-		SCTP_IPI_ITERATOR_WQ_LOCK();
-#endif /* !__Windows__ */
+#endif /* !__Userspace__ */
 		sctp_iterator_worker();
 	}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
-	CURVNET_RESTORE();
-#endif
-#if defined(__Windows__)
-	PsTerminateSystemThread(STATUS_SUCCESS);
-#endif
 }
 
 void
 sctp_startup_iterator(void)
 {
+	if (__sctp_thread_based_iterator_started) {
+	/* You only get one */
+		return;
+	}
+	/* init the iterator head */
+	__sctp_thread_based_iterator_started = 1;
+	sctp_it_ctl.iterator_running = 0;
+	sctp_it_ctl.iterator_flags = 0;
+	sctp_it_ctl.cur_it = NULL;
+	SCTP_ITERATOR_LOCK_INIT();
+	SCTP_IPI_ITERATOR_WQ_INIT();
+	TAILQ_INIT(&sctp_it_ctl.iteratorhead);
+
 #if defined(__FreeBSD__)
 	int ret;
 #if __FreeBSD_version <= 701000
@@ -195,57 +168,18 @@ sctp_startup_iterator(void)
 #else
 	ret = kproc_create(sctp_iterator_thread,
 #endif
-#if __FreeBSD_version >= 800000
-			   (void *)curvnet,
-#else
 			   (void *)NULL,
-#endif
-			   &SCTP_BASE_INFO(thread_proc),
+			   &sctp_it_ctl.thread_proc,
 			   RFPROC,
 			   SCTP_KTHREAD_PAGES,
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-	SCTP_BASE_INFO(thread_proc) = IOCreateThread(sctp_iterator_thread,
-						 (void *)NULL);
+        (void) kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
+        thread_deallocate(sctp_it_ctl.thread_proc);
 #elif defined(__Userspace__)
                              /* TODO pthread_create or alternative to create a thread? */
-#elif defined(__Windows__)
-	NTSTATUS status = STATUS_SUCCESS;
-	OBJECT_ATTRIBUTES objectAttributes;
-	HANDLE iterator_thread_handle;
-
-	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[0]),
-			  SynchronizationEvent,
-			  FALSE);
-	KeInitializeEvent(&SCTP_BASE_INFO(iterator_wakeup[1]),
-			  SynchronizationEvent,
-			  FALSE);
-	InitializeObjectAttributes(&objectAttributes,
-				   NULL,
-				   OBJ_KERNEL_HANDLE,
-				   NULL,
-				   NULL);
-	status = PsCreateSystemThread(&iterator_thread_handle,
-				      0,
-				      &objectAttributes,
-				      NULL,
-				      NULL,
-				      sctp_iterator_thread,
-				      NULL);
-	if (NT_SUCCESS(status)) {
-		ObReferenceObjectByHandle(iterator_thread_handle,
-					  THREAD_ALL_ACCESS,
-					  NULL,
-					  KernelMode,
-					  (PVOID)&SCTP_BASE_INFO(iterator_thread_obj),
-					  NULL);
-		ZwClose(iterator_thread_handle);
-	} else {
-		SCTP_BASE_INFO(iterator_thread_obj) = NULL;
-	}
 #endif
 }
-#endif
 
 #ifdef INET6
 
@@ -302,7 +236,6 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 
 	/* check the interface type to see if it's one we care about */
 	switch (ifa->ifa_ifp->if_type) {
-#if !defined(__Windows__)
 	case IFT_ETHER:
 	case IFT_ISO88023:
 	case IFT_ISO88024:
@@ -328,19 +261,6 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	case IFT_IPOVERCDLC:
 	case IFT_IPOVERCLAW:
 	case IFT_VIRTUALIPADDRESS:
-#endif
-#else
-	case IFT_OTHER:
-	case IFT_ETHER:
-	case IFT_ISO88025:
-	case IFT_FDDI:
-	case IFT_PPP:
-	case IFT_LOOP:
-	case IFT_SLIP:
-	case IFT_ATM:
-	case IFT_IEEE80211:
-	case IFT_TUNNEL:
-	case IFT_IEEE1394:
 #endif
 		result = 1;
 		break;
@@ -497,7 +417,7 @@ sctp_init_ifns_for_vrf(int vrfid)
 }
 #endif
 
-#if defined (__FreeBSD__) || defined(__Windows__)
+#if defined (__FreeBSD__)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
@@ -593,15 +513,12 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 	 * things here to get the id to pass to
 	 * the address managment routine.
 	 */
-#if defined(__Windows__)
-	/* On Windows, anything not built yet when sctp_addr_change at first. */
-#else
 	if (SCTP_BASE_VAR(first_time) == 0) {
 		/* Special test to see if my ::1 will showup with this */
 		SCTP_BASE_VAR(first_time) = 1;
 		sctp_init_ifns_for_vrf(SCTP_DEFAULT_VRFID);
 	}
-#endif
+	
 	if ((cmd != RTM_ADD) && (cmd != RTM_DELETE)) {
 		/* don't know what to do with this */
 		return;

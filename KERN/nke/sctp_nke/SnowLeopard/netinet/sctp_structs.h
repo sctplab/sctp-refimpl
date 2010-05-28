@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 206137 2010-04-03 15:40:14Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 208160 2010-05-16 17:03:56Z rrs $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -112,9 +112,13 @@ typedef void (*end_func) (void *ptr, uint32_t val);
 
 struct sctp_iterator {
 	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	struct vnet *vn;
+#endif
 	struct sctp_timer tmr;
 	struct sctp_inpcb *inp;		/* current endpoint */
 	struct sctp_tcb *stcb;		/* current* assoc */
+	struct sctp_inpcb *next_inp;    /* special hook to skip to */
 	asoc_func function_assoc;	/* per assoc function */
 	inp_func function_inp;		/* per endpoint function */
 	inp_func function_inp_end;	/* end INP function */
@@ -132,6 +136,7 @@ struct sctp_iterator {
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
 #define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
+
 TAILQ_HEAD(sctpiterators, sctp_iterator);
 
 struct sctp_copy_all {
@@ -147,6 +152,37 @@ struct sctp_asconf_iterator {
 	struct sctpladdr list_of_work;
 	int cnt;
 };
+
+struct iterator_control {
+#if defined(__FreeBSD__)
+	struct mtx ipi_iterator_wq_mtx;
+	struct mtx it_mtx;
+#elif defined(__APPLE__)
+	lck_mtx_t *ipi_iterator_wq_mtx;
+	lck_mtx_t *it_mtx;
+#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+  	pthread_mutex_t ipi_iterator_wq_mtx;
+	pthread_mutex_t it_mtx;
+	pthread_cond_t iterator_wakeup;
+#elif defined(__Windows__)  
+	struct spinlock it_lock;
+	struct spinlock ipi_iterator_wq_lock;  
+	KEVENT iterator_wakeup[2];
+	PFILE_OBJECT iterator_thread_obj;
+#else
+	void *it_mtx;
+#endif  
+#if !defined(__Windows__)
+	SCTP_PROCESS_STRUCT thread_proc;
+#endif
+	struct sctpiterators iteratorhead;
+	struct sctp_iterator *cur_it;
+	uint32_t iterator_running;
+	uint32_t iterator_flags;
+};
+#define SCTP_ITERATOR_MUST_EXIT   	0x00000001
+#define SCTP_ITERATOR_STOP_CUR_IT  	0x00000002
+#define SCTP_ITERATOR_STOP_CUR_INP  	0x00000004
 
 struct sctp_net_route {
 	sctp_rtentry_t *ro_rt;

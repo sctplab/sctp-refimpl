@@ -3105,32 +3105,32 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 * it out
 	 * zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
 	 * For V4
-         *------------------------------------------
+	 * ------------------------------------------
 	 *      source     *      dest  *  result
 	 * -----------------------------------------
 	 * <a>  Private    *    Global  *  NAT
 	 * -----------------------------------------
 	 * <b>  Private    *    Private *  No problem
 	 * -----------------------------------------
-         * <c>  Global     *    Private *  Huh, How will this work?
+	 * <c>  Global     *    Private *  Huh, How will this work?
 	 * -----------------------------------------
-         * <d>  Global     *    Global  *  No Problem
-         *------------------------------------------
+	 * <d>  Global     *    Global  *  No Problem
+	 *------------------------------------------
 	 * zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
 	 * For V6
-         *------------------------------------------
+	 *------------------------------------------
 	 *      source     *      dest  *  result
 	 * -----------------------------------------
 	 * <a>  Linklocal  *    Global  *
 	 * -----------------------------------------
 	 * <b>  Linklocal  * Linklocal  *  No problem
 	 * -----------------------------------------
-         * <c>  Global     * Linklocal  *  Huh, How will this work?
+	 * <c>  Global     * Linklocal  *  Huh, How will this work?
 	 * -----------------------------------------
-         * <d>  Global     *    Global  *  No Problem
-         *------------------------------------------
+	 * <d>  Global     *    Global  *  No Problem
+	 *------------------------------------------
 	 * zzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzzz
-         *
+	 *
 	 * And then we add to that what happens if there are multiple addresses
 	 * assigned to an interface. Remember the ifa on a ifn is a linked
 	 * list of addresses. So one interface can have more than one IP
@@ -3143,13 +3143,13 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	 * Decisions:
 	 *
 	 * - count the number of addresses on the interface.
-         * - if it is one, no problem except case <c>.
-         *   For <a> we will assume a NAT out there.
+	 * - if it is one, no problem except case <c>.
+	 *   For <a> we will assume a NAT out there.
 	 * - if there are more than one, then we need to worry about scope P
 	 *   or G. We should prefer G -> G and P -> P if possible.
 	 *   Then as a secondary fall back to mixed types G->P being a last
 	 *   ditch one.
-         * - The above all works for bound all, but bound specific we need to
+	 * - The above all works for bound all, but bound specific we need to
 	 *   use the same concept but instead only consider the bound
 	 *   addresses. If the bound set is NOT assigned to the interface then
 	 *   we must use rotation amongst the bound addresses..
