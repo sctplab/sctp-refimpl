@@ -26,6 +26,8 @@
 		<string>10.3.0</string>
 		<key>com.apple.kpi.unsupported</key>
 		<string>10.3.0</string>
+		<key>com.apple.kpi.mach</key>
+		<string>10.3.0</string>
 		<key>org.sctp.kpi.sctpsupport</key>
 		<string>10.3.0</string>
 	</dict>
