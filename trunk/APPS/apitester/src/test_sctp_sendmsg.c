@@ -56,19 +56,19 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -89,19 +89,19 @@ DEFINE_APITEST(sctp_sendmsg, c_p_c_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -123,20 +123,20 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
 
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -149,7 +149,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a)
  * TEST-DESCR: (without port correct address override).
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Validate that no error
- * TEST-DESCR: occurs when sending with an address 
+ * TEST-DESCR: occurs when sending with an address
  * TEST-DESCR: that is set with a port of zero, but sized correctly and
  * TEST-DESCR: with the override address flag set.
  */
@@ -158,20 +158,20 @@ DEFINE_APITEST(sctp_sendmsg, w_p_c_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
 
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -191,20 +191,20 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -226,20 +226,20 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -260,21 +260,21 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_port        = htons(0);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -295,21 +295,21 @@ DEFINE_APITEST(sctp_sendmsg, w_p_w_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_port        = htons(0);
 	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -330,20 +330,20 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -364,20 +364,20 @@ DEFINE_APITEST(sctp_sendmsg, b_p_c_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -398,20 +398,20 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -421,7 +421,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a)
 
 /*
  * TEST-TITLE sctp_sendmsg/c_p_b_a_over
- * TEST-DESCR: (correct port bad address override) 
+ * TEST-DESCR: (correct port bad address override)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a correct port
  * TEST-DESCR: with bad address and override.
@@ -432,20 +432,20 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -455,7 +455,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_b_a_over)
 
 /*
  * TEST-TITLE sctp_sendmsg/b_p_b_a
- * TEST-DESCR: (bad port bad address) 
+ * TEST-DESCR: (bad port bad address)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a bad port
  * TEST-DESCR: with bad address and override.
@@ -466,21 +466,21 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -490,7 +490,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a)
 
 /*
  * TEST-TITLE sctp_sendmsg/b_p_b_a_over
- * TEST-DESCR: (bad port bad address override) 
+ * TEST-DESCR: (bad port bad address override)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a bad port
  * TEST-DESCR: with bad address and override.
@@ -501,21 +501,21 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -525,7 +525,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_b_a_over)
 
 /*
  * TEST-TITLE sctp_sendmsg/w_p_b_a
- * TEST-DESCR: (without port bad address) 
+ * TEST-DESCR: (without port bad address)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a no port (0)
  * TEST-DESCR: with bad address.
@@ -536,21 +536,21 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -560,7 +560,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a)
 
 /*
  * TEST-TITLE sctp_sendmsg/w_p_b_a_over
- * TEST-DESCR: (without port bad address override) 
+ * TEST-DESCR: (without port bad address override)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a no port (0)
  * TEST-DESCR: with bad address and override.
@@ -571,21 +571,21 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -595,7 +595,7 @@ DEFINE_APITEST(sctp_sendmsg, w_p_b_a_over)
 
 /*
  * TEST-TITLE sctp_sendmsg/b_p_w_a
- * TEST-DESCR: (bad port without address) 
+ * TEST-DESCR: (bad port without address)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a bad port
  * TEST-DESCR: without an  address.
@@ -606,21 +606,21 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -629,7 +629,7 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a)
 }
 /*
  * TEST-TITLE sctp_sendmsg/b_p_w_a
- * TEST-DESCR: (bad port without address override) 
+ * TEST-DESCR: (bad port without address override)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a bad port
  * TEST-DESCR: without an address with override.
@@ -640,17 +640,17 @@ DEFINE_APITEST(sctp_sendmsg, b_p_w_a_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(0);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
@@ -673,21 +673,21 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, 0, 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -707,21 +707,21 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)&addr, 0, 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -741,21 +741,21 @@ DEFINE_APITEST(sctp_sendmsg, null_zero)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, 0, 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -775,21 +775,21 @@ DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, 0, 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else {
@@ -809,21 +809,21 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -843,21 +843,21 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 	int fd[2], n;
 	struct sockaddr_in addr;
 	socklen_t size;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-	
+
 	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
 	addr.sin_port        = htons(1);
-	
+
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -898,7 +898,7 @@ DEFINE_APITEST(sctp_sendmsg, large_addrlen)
 			 size, 0, 0, 0, 0, 0);
 	close(fds[0]);
 	close(fds[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {
@@ -923,7 +923,7 @@ DEFINE_APITEST(sctp_sendmsg, short_addrlen)
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if (result < 0)
 		return strerror(errno);
-	
+
 	size = (socklen_t)sizeof(addr);
 	memset((void *)&addr, 0, size);
 	(void)getsockname(fds[0], (struct sockaddr *)&addr, &size);
@@ -934,7 +934,7 @@ DEFINE_APITEST(sctp_sendmsg, short_addrlen)
 			 size - 1, 0, 0, 0, 0, 0);
 	close(fds[0]);
 	close(fds[1]);
-	
+
 	if (n < 0) {
 		return NULL;
 	} else {

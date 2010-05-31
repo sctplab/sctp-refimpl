@@ -79,7 +79,7 @@ run_test(unsigned int i)
 
 void
 run_tests_random(int ignore_failed)
-{	
+{
 	do {
 		run_test(random() % number_of_tests);
 	} while ((failed == 0) || ignore_failed);
@@ -89,7 +89,7 @@ void
 run_tests_once(int ignore_failed)
 {
 	unsigned int i;
-	
+
 	for (i = 0; i < number_of_tests; i++) {
 		run_test(i);
 		if ((failed > 0) && !ignore_failed)
@@ -101,7 +101,7 @@ void
 run_tests_loop(int ignore_failed)
 {
 	unsigned int i;
-	
+
 	i = 0;
 	do {
 		run_test(i);
@@ -131,14 +131,14 @@ enable_tests(int number_of_suites, char *suite_name[])
 	}
 }
 
-int 
+int
 main(int argc, char *argv[])
 {
 	char c;
 	int ignore_failed = 1;
 	int test_randomly = 0;
 	int test_loop = 0;
-	
+
 	while ((c = getopt(argc, argv, "fhlr")) != -1)
 		switch(c) {
 			case 'f':

@@ -62,15 +62,15 @@ int sctp_get_minimum_rto(int fd, sctp_assoc_t, uint32_t *);
 
 int sctp_one2many(unsigned short port, int bindall);
 int sctp_socketpair_1tom(int *fds, sctp_assoc_t *asocids, int bindall);
-int sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id, 
+int sctp_get_assoc_info(int fd, sctp_assoc_t assoc_id,
 			uint16_t *asoc_maxrxt,
-			uint16_t *peer_dest_cnt, 
+			uint16_t *peer_dest_cnt,
 			uint32_t *peer_rwnd,
 			uint32_t *local_rwnd,
 			uint32_t *cookie_life);
-int sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id, 
+int sctp_set_assoc_info(int fd, sctp_assoc_t assoc_id,
 			uint16_t asoc_maxrxt,
-			uint16_t peer_dest_cnt, 
+			uint16_t peer_dest_cnt,
 			uint32_t peer_rwnd,
 			uint32_t local_rwnd,
 			uint32_t cookie_life);
@@ -92,15 +92,15 @@ int sctp_get_asoc_cookie_life(int fd, sctp_assoc_t asoc, uint32_t *life);
 uint32_t sctp_get_number_of_associations(int);
 uint32_t sctp_get_association_identifiers(int, sctp_assoc_t [], unsigned int);
 
-int 
-sctp_get_initmsg(int fd, 
+int
+sctp_get_initmsg(int fd,
 		 uint16_t *ostreams,
 		 uint16_t *istreams,
 		 uint16_t *maxattempt,
 		 uint16_t *max_init_timeo);
 
-int 
-sctp_set_initmsg(int fd, 
+int
+sctp_set_initmsg(int fd,
 		 uint16_t ostreams,
 		 uint16_t istreams,
 		 uint16_t maxattempt,
@@ -127,7 +127,7 @@ int sctp_get_adaptation( int fd, uint32_t *val);
 int sctp_set_disfrag( int fd, int val);
 int sctp_get_disfrag( int fd, int *val);
 
-int sctp_get_paddr_param(int fd, sctp_assoc_t id, 
+int sctp_get_paddr_param(int fd, sctp_assoc_t id,
 			 struct sockaddr *sa,
 			 uint32_t *hbinterval,
 			 uint16_t *maxrxt,
@@ -136,7 +136,7 @@ int sctp_get_paddr_param(int fd, sctp_assoc_t id,
 			 uint32_t *ipv6_flowlabel,
 			 uint8_t *ipv4_tos);
 
-int sctp_set_paddr_param(int fd, sctp_assoc_t id, 
+int sctp_set_paddr_param(int fd, sctp_assoc_t id,
 			 struct sockaddr *sa,
 			 uint32_t hbinterval,
 			 uint16_t maxrxt,
@@ -148,42 +148,42 @@ int sctp_set_paddr_param(int fd, sctp_assoc_t id,
 
 
 int
-sctp_set_hbint(int fd, sctp_assoc_t id, 
+sctp_set_hbint(int fd, sctp_assoc_t id,
 	       struct sockaddr *sa,
 	       uint16_t hbinterval);
 int
-sctp_set_hbdisable(int fd, sctp_assoc_t id, 
+sctp_set_hbdisable(int fd, sctp_assoc_t id,
 		   struct sockaddr *sa);
 
 int
-sctp_set_hbenable(int fd, sctp_assoc_t id, 
+sctp_set_hbenable(int fd, sctp_assoc_t id,
 		   struct sockaddr *sa);
 
 int
-sctp_set_hbzero(int fd, sctp_assoc_t id, 
+sctp_set_hbzero(int fd, sctp_assoc_t id,
 		struct sockaddr *sa);
 
 
 int
-sctp_set_maxrxt(int fd, sctp_assoc_t id, 
+sctp_set_maxrxt(int fd, sctp_assoc_t id,
 		struct sockaddr *sa,
 		uint32_t maxrxt);
 
 int
-sctp_set_pmtu(int fd, sctp_assoc_t id, 
+sctp_set_pmtu(int fd, sctp_assoc_t id,
 	      struct sockaddr *sa,
 	      uint32_t pathmtu);
 int
-sctp_set_pmtu_enable(int fd, sctp_assoc_t id, 
+sctp_set_pmtu_enable(int fd, sctp_assoc_t id,
 		     struct sockaddr *sa);
 
 int
-sctp_set_flow(int fd, sctp_assoc_t id, 
+sctp_set_flow(int fd, sctp_assoc_t id,
 	      struct sockaddr *sa,
 	      uint32_t ipv6_flowlabel);
 
 int
-sctp_set_tos(int fd, sctp_assoc_t id, 
+sctp_set_tos(int fd, sctp_assoc_t id,
 	     struct sockaddr *sa,
 	     uint8_t ipv4_tos);
 
