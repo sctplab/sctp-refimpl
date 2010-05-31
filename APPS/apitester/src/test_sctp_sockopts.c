@@ -4080,6 +4080,7 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 	result = sctp_get_primary(fds[0], 0,  &store.sa, &len);
 	if (result < 0) {
 		retstring = strerror(errno);
+		goto out;
 	}
 	/* validate its in the list of addresses */
 	at = sa;
