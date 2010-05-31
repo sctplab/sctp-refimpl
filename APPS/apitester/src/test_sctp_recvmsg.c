@@ -48,10 +48,10 @@ DEFINE_APITEST(sctp_recvmsg, rd_compl)
 	int fd[2], n;
 	int flags;
 	char buffer[10];
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	if (send(fd[0], "Hello", 5, 0) != 5) {
 		close(fd[0]);
 		close(fd[1]);
@@ -62,7 +62,7 @@ DEFINE_APITEST(sctp_recvmsg, rd_compl)
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else if (n != 5) {
@@ -79,10 +79,10 @@ DEFINE_APITEST(sctp_recvmsg, rd_incompl)
 	int fd[2], n;
 	int flags;
 	char buffer[10];
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	if (send(fd[0], "Hello", 5, 0) != 5) {
 		close(fd[0]);
 		close(fd[1]);
@@ -93,7 +93,7 @@ DEFINE_APITEST(sctp_recvmsg, rd_incompl)
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else if (n != 1) {
@@ -110,10 +110,10 @@ DEFINE_APITEST(sctp_recvmsg, msg_peek_in)
 	int fd[2], n;
 	int flags;
 	char buffer[10];
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	if (send(fd[0], "Hello", 5, 0) != 5) {
 		close(fd[0]);
 		close(fd[1]);
@@ -124,7 +124,7 @@ DEFINE_APITEST(sctp_recvmsg, msg_peek_in)
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else if (n != 1) {
@@ -142,10 +142,10 @@ DEFINE_APITEST(sctp_recvmsg, msg_eor_in)
 	int fd[2], n;
 	int flags;
 	char buffer[10];
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	if (send(fd[0], "Hello", 5, 0) != 5) {
 		close(fd[0]);
 		close(fd[1]);
@@ -156,7 +156,7 @@ DEFINE_APITEST(sctp_recvmsg, msg_eor_in)
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else if (n != 1) {
@@ -174,10 +174,10 @@ DEFINE_APITEST(sctp_recvmsg, msg_notification_in)
 	int fd[2], n;
 	int flags;
 	char buffer[10];
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-	
+
 	if (send(fd[0], "Hello", 5, 0) != 5) {
 		close(fd[0]);
 		close(fd[1]);
@@ -188,7 +188,7 @@ DEFINE_APITEST(sctp_recvmsg, msg_notification_in)
 
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (n < 0) {
 		return strerror(errno);
 	} else if (n != 1) {

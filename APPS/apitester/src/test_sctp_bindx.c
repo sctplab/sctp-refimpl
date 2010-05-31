@@ -55,10 +55,10 @@ DEFINE_APITEST(bindx, port_w_a_w_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -66,10 +66,10 @@ DEFINE_APITEST(bindx, port_w_a_w_p)
 #endif
 	address.sin_port = htons(0);
 	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return strerror(errno);
 	else
@@ -87,10 +87,10 @@ DEFINE_APITEST(bindx, port_s_a_w_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -98,10 +98,10 @@ DEFINE_APITEST(bindx, port_s_a_w_p)
 #endif
 	address.sin_port = htons(0);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return strerror(errno);
 	else
@@ -119,10 +119,10 @@ DEFINE_APITEST(bindx, port_w_a_s_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -130,10 +130,10 @@ DEFINE_APITEST(bindx, port_w_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return strerror(errno);
 	else
@@ -151,10 +151,10 @@ DEFINE_APITEST(bindx, port_s_a_s_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -162,10 +162,10 @@ DEFINE_APITEST(bindx, port_s_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return strerror(errno);
 	else
@@ -182,10 +182,10 @@ DEFINE_APITEST(bindx, zero_flag)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -193,10 +193,10 @@ DEFINE_APITEST(bindx, zero_flag)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, 0);
 	close(fd);
-		
+
 	if (result)
 		return NULL;
 	else
@@ -213,10 +213,10 @@ DEFINE_APITEST(bindx, add_zero_addresses)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -224,10 +224,10 @@ DEFINE_APITEST(bindx, add_zero_addresses)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 0, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -247,10 +247,10 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -258,10 +258,10 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 0, SCTP_BINDX_REM_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -279,13 +279,13 @@ DEFINE_APITEST(bindx, rem_zero_addresses)
 DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	result = sctp_bindx(fd, NULL, 0, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -303,13 +303,13 @@ DEFINE_APITEST(bindx, add_zero_addresses_NULL)
 DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	result = sctp_bindx(fd, NULL, 0, SCTP_BINDX_REM_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -327,13 +327,13 @@ DEFINE_APITEST(bindx, rem_zero_addresses_NULL)
 DEFINE_APITEST(bindx, add_null_addresses)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	result = sctp_bindx(fd, NULL, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -351,13 +351,13 @@ DEFINE_APITEST(bindx, add_null_addresses)
 DEFINE_APITEST(bindx, rem_null_addresses)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	result = sctp_bindx(fd, NULL, 1, SCTP_BINDX_REM_ADDR);
 	close(fd);
-		
+
 	if (result)
 		if (errno == EINVAL)
 			return NULL;
@@ -378,10 +378,10 @@ DEFINE_APITEST(bindx, dup_add_s_a_s_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -389,15 +389,15 @@ DEFINE_APITEST(bindx, dup_add_s_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	if (sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR) < 0) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return strerror(errno);
 	else
@@ -415,10 +415,10 @@ DEFINE_APITEST(bindx, rem_last_s_a_s_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -426,15 +426,15 @@ DEFINE_APITEST(bindx, rem_last_s_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	if (sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR) < 0) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_REM_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return NULL;
 	else
@@ -453,10 +453,10 @@ DEFINE_APITEST(bindx, rem_s_a_s_p)
 {
 	int fd, result;
 	struct sockaddr_in address;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-		
+
 	bzero((void *)&address, sizeof(struct sockaddr_in));
 	address.sin_family = AF_INET;
 #ifdef HAVE_SIN_LEN
@@ -464,7 +464,7 @@ DEFINE_APITEST(bindx, rem_s_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_ANY);
-	
+
 	if (sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_ADD_ADDR) < 0) {
 		close(fd);
 		return strerror(errno);
@@ -477,10 +477,10 @@ DEFINE_APITEST(bindx, rem_s_a_s_p)
 #endif
 	address.sin_port = htons(1234);
 	address.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
-	
+
 	result = sctp_bindx(fd, (struct sockaddr *)&address, 1, SCTP_BINDX_REM_ADDR);
 	close(fd);
-		
+
 	if (result)
 		return NULL;
 	else

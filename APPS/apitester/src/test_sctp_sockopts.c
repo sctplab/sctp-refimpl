@@ -53,20 +53,20 @@ DEFINE_APITEST(rtoinfo, gso_1_1_defaults)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-	
+
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if ((init != 3000) || (min != 1000) || (max != 60000))
 		return "Default not RFC 4960 compliant";
-	
+
 	return NULL;
 }
 
@@ -81,41 +81,41 @@ DEFINE_APITEST(rtoinfo, gso_1_M_defaults)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-	
+
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if ((init != 3000) || (min != 1000) || (max != 60000))
 		return "Default not RFC 4960 compliant";
-	
+
 	return NULL;
 }
 
 /*
  * TEST-TITLE rtoinfo/gso_1_1_badid
  * TEST-DESCR: will open a 1-1 socket, and attempt to
- * TEST-DESCR: get association level rto information  using a bad 
+ * TEST-DESCR: get association level rto information  using a bad
  * TEST-DESCR: association id. It expects the call to
  * TEST-DESCR: fail.
  */
 DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-	
+
 	result = sctp_get_rto_info(fd, 1, NULL, NULL, NULL);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
@@ -125,27 +125,27 @@ DEFINE_APITEST(rtoinfo, gso_1_1_bad_id)
 /*
  * TEST-TITLE rtoinfo/gso_1_M_badid
  * TEST-DESCR: will open a 1-M socket, and attempt to
- * TEST-DESCR: association level get rto information  using a bad 
+ * TEST-DESCR: association level get rto information  using a bad
  * TEST-DESCR: association id. It expects the call to
  * TEST-DESCR: fail.
  */
 DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-	
+
 	result = sctp_get_rto_info(fd, 1, NULL, NULL, NULL);
-	
+
 	close(fd);
-	
+
 	if (!result)
 		return "getsockopt was successful";
 
 	if (errno != ENOENT)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -160,38 +160,38 @@ DEFINE_APITEST(rtoinfo, sso_1_1_good)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	init *= 2;
 	min  *= 2;
 	max  *= 2;
-	
+
 	result = sctp_set_rto_info(fd, 0, init, max, min);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if ((init != new_init) || (min != new_min) || (max != new_max))
 		return "Values could not be set correctly";
-	
+
 	return NULL;
 }
 
@@ -206,38 +206,38 @@ DEFINE_APITEST(rtoinfo, sso_1_M_good)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	init *= 2;
 	min  *= 2;
 	max  *= 2;
-	
+
 	result = sctp_set_rto_info(fd, 0, init, max, min);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if ((init != new_init) || (min != new_min) || (max != new_max))
 		return "Values could not be set correctly";
-	
+
 	return NULL;
 }
 
@@ -251,24 +251,24 @@ DEFINE_APITEST(rtoinfo, sso_1_1_bad_id)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_set_rto_info(fd, 1, init, max, min);
 	close(fd);
 
 	if (result) {
 		return strerror(errno);
 	}
-	
+
 	return NULL;
 }
 
@@ -282,17 +282,17 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_set_rto_info(fd, 1, init, max, min);
 	close(fd);
 
@@ -308,9 +308,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 
 /*
  * TEST-TITLE rtoinfo/sso_1_1_init
- * TEST-DESCR: opens a 1-1 socket, gets the 
+ * TEST-DESCR: opens a 1-1 socket, gets the
  * TEST-DESCR: current values on an endpoint adds 10
- * TEST-DESCR: to initial value but leaves max/min 
+ * TEST-DESCR: to initial value but leaves max/min
  * TEST-DESCR: unchanged (0 values). Then it validates
  * TEST-DESCR: that the initial value changed but NOT
  * TEST-DESCR: max and min.
@@ -319,47 +319,47 @@ DEFINE_APITEST(rtoinfo, sso_1_1_init)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	init  += 10;
-	
+
 	result = sctp_set_initial_rto(fd, 0, init);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (init != new_init)
 		return "Value could not be set correctly";
-		
+
 	if ((max != new_max) || (min != new_min))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
 /*
  * TEST-TITLE rtoinfo/sso_1_M_init
- * TEST-DESCR: opens a 1-1 socket, gets the 
+ * TEST-DESCR: opens a 1-1 socket, gets the
  * TEST-DESCR: current values on an endpoint adds 10
- * TEST-DESCR: to initial value but leaves max/min 
+ * TEST-DESCR: to initial value but leaves max/min
  * TEST-DESCR: unchanged (0 values). Then it validates
  * TEST-DESCR: that the initial value changed but NOT
  * TEST-DESCR: max and min.
@@ -368,39 +368,39 @@ DEFINE_APITEST(rtoinfo, sso_1_M_init)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	init  += 10;
-	
+
 	result = sctp_set_initial_rto(fd, 0, init);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (init != new_init)
 		return "Value could not be set correctly";
-		
+
 	if ((max != new_max) || (min != new_min))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
@@ -414,39 +414,39 @@ DEFINE_APITEST(rtoinfo, sso_1_1_max)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	max  += 10;
-	
+
 	result = sctp_set_maximum_rto(fd, 0, max);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (max != new_max)
 		return "Value could not be set correctly";
-		
+
 	if ((init != new_init) || (min != new_min))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
@@ -460,39 +460,39 @@ DEFINE_APITEST(rtoinfo, sso_1_M_max)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	max  += 10;
-	
+
 	result = sctp_set_maximum_rto(fd, 0, max);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (max != new_max)
 		return "Value could not be set correctly";
-		
+
 	if ((init != new_init) || (min != new_min))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
@@ -506,39 +506,39 @@ DEFINE_APITEST(rtoinfo, sso_1_1_min)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	min  += 10;
-	
+
 	result = sctp_set_minimum_rto(fd, 0, min);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (min != new_min)
 		return "Value could not be set correctly";
-		
+
 	if ((init != new_init) || (max != new_max))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
@@ -552,39 +552,39 @@ DEFINE_APITEST(rtoinfo, sso_1_M_min)
 {
 	int fd, result;
 	uint32_t init, max, min, new_init, new_max, new_min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	min  += 10;
-	
+
 	result = sctp_set_minimum_rto(fd, 0, min);
 
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
 	if (min != new_min)
 		return "Value could not be set correctly";
-		
+
 	if ((init != new_init) || (max != new_max))
 		return "Values have been changed";
-	
+
 	return NULL;
 }
 
@@ -598,28 +598,28 @@ DEFINE_APITEST(rtoinfo, sso_1_1_same)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_set_rto_info(fd, 0, 100, 100, 100);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
-		
+
 	if ((init != 100) || (max != 100) || (min != 100))
 		return "Values could not be set correclty";
-	
+
 	return NULL;
 }
 
@@ -633,28 +633,28 @@ DEFINE_APITEST(rtoinfo, sso_1_M_same)
 {
 	int fd, result;
 	uint32_t init, max, min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_set_rto_info(fd, 0, 100, 100, 100);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
-	
+
 	close(fd);
-	
+
 	if (result)
 		return strerror(errno);
 
-		
+
 	if ((init != 100) || (max != 100) || (min != 100))
 		return "Values could not be set correclty";
-	
+
 	return NULL;
 }
 
@@ -668,27 +668,27 @@ DEFINE_APITEST(rtoinfo, sso_ill_1)
 {
 	int fd, result;
 	uint32_t min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_minimum_rto(fd, 0, &min);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_initial_rto(fd, 0, min - 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.init smaller than RTO.min";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -702,27 +702,27 @@ DEFINE_APITEST(rtoinfo, sso_ill_2)
 {
 	int fd, result;
 	uint32_t max;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	result = sctp_get_maximum_rto(fd, 0, &max);
-	
+
 	if (result) {
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_initial_rto(fd, 0, max + 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.init greater than RTO.max";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -736,7 +736,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 {
 	int fd, result;
 	uint32_t init;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -745,17 +745,17 @@ DEFINE_APITEST(rtoinfo, sso_ill_3)
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_minimum_rto(fd, 0, init + 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.min greater than RTO.init";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -769,7 +769,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 {
 	int fd, result;
 	uint32_t max;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -778,17 +778,17 @@ DEFINE_APITEST(rtoinfo, sso_ill_4)
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_minimum_rto(fd, 0, max + 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.min greater than RTO.max";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -802,7 +802,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 {
 	int fd, result;
 	uint32_t init;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -811,17 +811,17 @@ DEFINE_APITEST(rtoinfo, sso_ill_5)
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_maximum_rto(fd, 0, init - 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.max smaller than RTO.init";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -835,7 +835,7 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 {
 	int fd, result;
 	uint32_t min;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -844,17 +844,17 @@ DEFINE_APITEST(rtoinfo, sso_ill_6)
 		close(fd);
 		return strerror(errno);
 	}
-		
+
 	result = sctp_set_maximum_rto(fd, 0, min - 10);
 
 	close(fd);
-	
+
 	if (!result)
 		return "Can set RTO.max smaller than RTO.min";
-	
+
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -873,12 +873,12 @@ DEFINE_APITEST(rtoinfo, gso_1_1_c_bad_id)
 
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-		
+
 	result = sctp_get_rto_info(fd[0], 1, NULL, NULL, NULL);
-	
+
 	close(fd[0]);
 	close(fd[1]);
-	
+
 	if (result)
 		return strerror(errno);
 
@@ -898,18 +898,18 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 {
 	int fd[2], result;
 	uint32_t init, max, min;
-	
+
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
 
 	result = sctp_get_rto_info(fd[0], 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(fd[0]);
 		close(fd[1]);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_set_rto_info(fd[0], 1, init, max, min);
 	close(fd[0]);
 	close(fd[1]);
@@ -917,7 +917,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_c_bad_id)
 	if (result) {
 		return strerror(errno);
 	}
-	
+
 	return NULL;
 }
 
@@ -960,23 +960,23 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 	}
 
 	result = sctp_get_rto_info(lfd, 0, &init, &max, &min);
-	
+
 	if (result) {
 		close(lfd);
 		return strerror(errno);
 	}
-	
+
 	init *= 2;
 	min  *= 2;
 	max  *= 2;
-	
+
 	result = sctp_set_rto_info(lfd, 0, init, max, min);
 
 	if (result) {
 		close(lfd);
 		return strerror(errno);
 	}
-	
+
 	if ((cfd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0) {
 		close(lfd);
 		return strerror(errno);
@@ -1017,7 +1017,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 	close(lfd);
 
 	result = sctp_get_rto_info(afd, 0, &new_init, &new_max, &new_min);
-	
+
 	close(cfd);
 	close(afd);
 
@@ -1026,7 +1026,7 @@ DEFINE_APITEST(rtoinfo, sso_1_1_inherit)
 
 	if ((init != new_init) || (min != new_min) || (max != new_max))
 		return "Values are not inherited correctly";
-	
+
 	return NULL;
 }
 
@@ -1047,8 +1047,8 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	socklen_t addr_len;
 	uint32_t init, min, max, new_init, new_max, new_min;
 	sctp_assoc_t assoc_id;
-	
-	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) 
+
+	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 	   	return strerror(errno);
 	if (sctp_bind(lfd, INADDR_LOOPBACK, 0) < 0) {
 		close(lfd);
@@ -1068,7 +1068,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 		close(cfd);
 		return strerror(errno);
 	}
-	
+
 	init *= 2;
 	min  *= 2;
 	max  *= 2;
@@ -1134,12 +1134,12 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 DEFINE_APITEST(assoclist, gso_numbers_zero)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 	    	return strerror(errno);
-		
+
 	result = sctp_get_number_of_associations(fd);
-	
+
 	close(fd);
 
 	if (result == 0)
@@ -1161,17 +1161,17 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 {
 	int fd, fds[NUMBER_OF_ASSOCS], result;
 	unsigned int i;
-	
+
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
-	
+
 	sctp_delay(SCTP_SLEEP_MS);
 	result = sctp_get_number_of_associations(fd);
-	
+
 	close(fd);
 	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 		close(fds[i]);
-	
+
 	if (result == NUMBER_OF_ASSOCS)
 		return NULL;
 	else
@@ -1180,7 +1180,7 @@ DEFINE_APITEST(assoclist, gso_numbers_pos)
 
 /*
  * TEST-TITLE assoclist/gso_ids_no_assoc
- * TEST-DESCR: Open a 1-1 socket, and get the 
+ * TEST-DESCR: Open a 1-1 socket, and get the
  * TEST-DESCR: assocation list. Verify that no
  * TEST-DESCR: association id's are returned.
  */
@@ -1188,7 +1188,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 {
 	int fd, result;
 	sctp_assoc_t id;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -1196,7 +1196,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
 		close(fd);
 		return "Wrong number of identifiers";
 	}
-	
+
 	result = sctp_get_association_identifiers(fd, &id, 1);
 	close(fd);
 	if (result == 0)
@@ -1209,7 +1209,7 @@ DEFINE_APITEST(assoclist, gso_ids_no_assoc)
  * TEST-TITLE assoclist/gso_ids_buf_fit
  * TEST-DESCR: Open a 1-M socket and create a
  * TEST-DESCR: number of assocaitions connected to
- * TEST-DESCR: the 1-M socket. Get the association 
+ * TEST-DESCR: the 1-M socket. Get the association
  * TEST-DESCR: identifiers and validate that they are not
  * TEST-DESCR: duplicated.
  */
@@ -1218,7 +1218,7 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 	int fd, fds[NUMBER_OF_ASSOCS], result;
 	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
 	unsigned int i, j;
-	
+
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
 	sctp_delay(SCTP_SLEEP_MS);
@@ -1229,13 +1229,13 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 			close(fds[i]);
 		return "Wrong number of associations";
 	}
-	
+
 	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS);
-	
+
 	close(fd);
 	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 		close(fds[i]);
-	
+
 	if (result == NUMBER_OF_ASSOCS) {
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 			for (j = 0; j < NUMBER_OF_ASSOCS; j++)
@@ -1249,7 +1249,7 @@ DEFINE_APITEST(assoclist, gso_ids_buf_fit)
 /*
  * TEST-TITLE assoclist/gso_ids_buf_large
  * TEST-DESCR: Create a number of associations connected
- * TEST-DESCR: to our 1-M socket. Get the number of 
+ * TEST-DESCR: to our 1-M socket. Get the number of
  * TEST-DESCR: assocations passing in a larger buffer
  * TEST-DESCR: then needed i.e. 1 extra id. Then validate
  * TEST-DESCR: that no duplicate association id is given.
@@ -1259,24 +1259,24 @@ DEFINE_APITEST(assoclist, gso_ids_buf_large)
 	int fd, fds[NUMBER_OF_ASSOCS + 1], result;
 	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
 	unsigned int i, j;
-	
+
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
 	sctp_delay(SCTP_SLEEP_MS);
-	
+
 	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
 		close(fd);
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
-			close(fds[i]);	
+			close(fds[i]);
 		return "Wrong number of associations";
 	}
-	
+
 	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS + 1);
-	
+
 	close(fd);
 	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 		close(fds[i]);
-	
+
 	if (result == NUMBER_OF_ASSOCS) {
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 			for (j = 0; j < NUMBER_OF_ASSOCS; j++)
@@ -1301,24 +1301,24 @@ DEFINE_APITEST(assoclist, gso_ids_buf_small)
 	int fd, fds[NUMBER_OF_ASSOCS], result;
 	sctp_assoc_t ids[NUMBER_OF_ASSOCS];
 	unsigned int i;
-	
+
 	if (sctp_socketstar(&fd, fds, NUMBER_OF_ASSOCS) < 0)
 		return strerror(errno);
 	sctp_delay(SCTP_SLEEP_MS);
-	
+
 	if (sctp_get_number_of_associations(fd) != NUMBER_OF_ASSOCS) {
 		close(fd);
 		for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 			close(fds[i]);
 		return strerror(errno);
 	}
-	
+
 	result = sctp_get_association_identifiers(fd, ids, NUMBER_OF_ASSOCS - 1);
-	
+
 	close(fd);
 	for (i = 0; i < NUMBER_OF_ASSOCS; i++)
 		close(fds[i]);
-	
+
 	if (result > 0)
 		return "getsockopt successful";
 	else
@@ -1343,15 +1343,15 @@ DEFINE_APITEST(associnfo, gso_1_1_defaults)
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;
 	uint32_t peer_rwnd, local_rwnd, cookie_life;
-	
+
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	if (fd < 0) {
 		return (strerror(errno));
 	}
-	
-	result = sctp_get_assoc_info(fd, 0, 
+
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt,
-				     &peer_dest_cnt, 
+				     &peer_dest_cnt,
 				     &peer_rwnd,
 				     &local_rwnd,
 				     &cookie_life);
@@ -1391,15 +1391,15 @@ DEFINE_APITEST(associnfo, gso_1_M_defaults)
 	int fd, result;
 	uint16_t asoc_maxrxt, peer_dest_cnt;
 	uint32_t peer_rwnd, local_rwnd, cookie_life;
-	
+
 	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
 	if (fd < 0) {
 		return (strerror(errno));
 	}
 
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt,
-				     &peer_dest_cnt, 
+				     &peer_dest_cnt,
 				     &peer_rwnd,
 				     &local_rwnd,
 				     &cookie_life);
@@ -1449,9 +1449,9 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 	}
 
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1468,9 +1468,9 @@ DEFINE_APITEST(associnfo, sso_rxt_1_1)
 
 	}
 	/* Get all the values for assoc info on ep again */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1521,9 +1521,9 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 	}
 
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1541,9 +1541,9 @@ DEFINE_APITEST(associnfo, sso_rxt_1_M)
 
 	}
 	/* Get all the values for assoc info on ep again */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1594,9 +1594,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1619,9 +1619,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 		goto out;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[1], 0, 
+	result = sctp_get_assoc_info(fds[1], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1645,9 +1645,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1)
 		goto out;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -1698,9 +1698,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 		return (strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1722,9 +1722,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 		goto out;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[0], ids[0], 
+	result = sctp_get_assoc_info(fds[0], ids[0],
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1748,9 +1748,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M)
 		goto out;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -1797,9 +1797,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1817,9 +1817,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 		goto out_nopair;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1851,9 +1851,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_1_inherit)
 	}
 
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[1], 0, 
+	result = sctp_get_assoc_info(fds[1], 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -1904,9 +1904,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -1924,9 +1924,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 		goto out_nopair;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -1957,9 +1957,9 @@ DEFINE_APITEST(associnfo, sso_rxt_asoc_1_M_inherit)
 		goto out_nopair;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[0], ids[0], 
+	result = sctp_get_assoc_info(fds[0], ids[0],
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -2007,9 +2007,9 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 	}
 
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2026,9 +2026,9 @@ DEFINE_APITEST(associnfo, sso_clife_1_1)
 
 	}
 	/* Get all the values for assoc info on ep again */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2079,9 +2079,9 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 	}
 
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2099,9 +2099,9 @@ DEFINE_APITEST(associnfo, sso_clife_1_M)
 
 	}
 	/* Get all the values for assoc info on ep again */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2152,9 +2152,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2177,9 +2177,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 		goto out;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[1], 0, 
+	result = sctp_get_assoc_info(fds[1], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2203,9 +2203,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1)
 		goto out;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -2256,9 +2256,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 		return (strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2280,9 +2280,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 		goto out;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[0], ids[0], 
+	result = sctp_get_assoc_info(fds[0], ids[0],
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2306,9 +2306,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M)
 		goto out;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -2355,9 +2355,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2375,9 +2375,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 		goto out_nopair;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2409,9 +2409,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_1_inherit)
 	}
 
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[1], 0, 
+	result = sctp_get_assoc_info(fds[1], 0,
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -2462,9 +2462,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2482,9 +2482,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 		goto out_nopair;
 	}
 	/* Validate it set */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
@@ -2515,9 +2515,9 @@ DEFINE_APITEST(associnfo, sso_clife_asoc_1_M_inherit)
 		goto out_nopair;
 	}
 	/* Now what about on ep? */
-	result = sctp_get_assoc_info(fds[0], ids[0], 
+	result = sctp_get_assoc_info(fds[0], ids[0],
 				     &asoc_maxrxt[2],
-				     &peer_dest_cnt[2], 
+				     &peer_dest_cnt[2],
 				     &peer_rwnd[2],
 				     &local_rwnd[2],
 				     &cookie_life[2]);
@@ -2565,9 +2565,9 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2579,13 +2579,13 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_1)
 	 * whatever. We care about if it changed.
 	 */
 	(void)sctp_set_asoc_local_rwnd(fd, 0,  (2*local_rwnd[0]));
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2628,9 +2628,9 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2643,13 +2643,13 @@ DEFINE_APITEST(associnfo, sso_lrwnd_ep_1_M)
 	 */
 	(void)sctp_set_asoc_local_rwnd(fd, 0,  (2*local_rwnd[0]));
 
-	result = sctp_get_assoc_info(fd, 0, 
+	result = sctp_get_assoc_info(fd, 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2693,9 +2693,9 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2707,13 +2707,13 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_1)
 	 * whatever. We care about if it changed.
 	 */
 	(void)sctp_set_asoc_local_rwnd(fds[0], 0,  (2*local_rwnd[0]));
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2752,7 +2752,7 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
-	sctp_assoc_t ids[2];	
+	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
@@ -2761,9 +2761,9 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2776,13 +2776,13 @@ DEFINE_APITEST(associnfo, sso_lrwnd_asoc_1_M)
 	 */
 	(void)sctp_set_asoc_local_rwnd(fds[0], 0,  (2*local_rwnd[0]));
 
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2829,9 +2829,9 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2843,13 +2843,13 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_1)
 	 * whatever. We care about if it changed.
 	 */
 	(void)sctp_set_asoc_peer_rwnd(fds[0], 0,  (2*peer_rwnd[0]));
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2891,7 +2891,7 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
-	sctp_assoc_t ids[2];	
+	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
@@ -2900,9 +2900,9 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2915,13 +2915,13 @@ DEFINE_APITEST(associnfo, sso_prwnd_asoc_1_M)
 	 */
 	(void)sctp_set_asoc_peer_rwnd(fds[0], 0,  (2*peer_rwnd[0]));
 
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -2968,9 +2968,9 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -2982,13 +2982,13 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_1)
 	 * whatever. We care about if it changed.
 	 */
 	(void)sctp_set_asoc_peerdest_cnt(fds[0], 0,  (2*peer_rwnd[0]));
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -3029,7 +3029,7 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 	uint16_t asoc_maxrxt[2], peer_dest_cnt[2];
 	uint32_t peer_rwnd[2], local_rwnd[2], cookie_life[2];
 	int fds[2];
-	sctp_assoc_t ids[2];	
+	sctp_assoc_t ids[2];
 	char *retstring=NULL;
 	fds[0] = fds[1] = -1;
 
@@ -3038,9 +3038,9 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 		return(strerror(errno));
 	}
 	/* Get all the values for assoc info on ep */
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[0],
-				     &peer_dest_cnt[0], 
+				     &peer_dest_cnt[0],
 				     &peer_rwnd[0],
 				     &local_rwnd[0],
 				     &cookie_life[0]);
@@ -3053,13 +3053,13 @@ DEFINE_APITEST(associnfo, sso_pdest_asoc_1_M)
 	 */
 	(void)sctp_set_asoc_peerdest_cnt(fds[0], 0,  (2*peer_rwnd[0]));
 
-	result = sctp_get_assoc_info(fds[0], 0, 
+	result = sctp_get_assoc_info(fds[0], 0,
 				     &asoc_maxrxt[1],
-				     &peer_dest_cnt[1], 
+				     &peer_dest_cnt[1],
 				     &peer_rwnd[1],
 				     &local_rwnd[1],
 				     &cookie_life[1]);
-	
+
 	if (result) {
 		retstring = strerror(errno);
 		goto out;
@@ -3110,7 +3110,7 @@ DEFINE_APITEST(initmsg, gso_1_1_defaults)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams, &istreams,
 				  &max, &timeo);
 	close(fd);
@@ -3142,7 +3142,7 @@ DEFINE_APITEST(initmsg, gso_1_M_defaults)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams, &istreams,
 				  &max, &timeo);
 	close(fd);
@@ -3175,7 +3175,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3192,7 +3192,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_ostrm)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[1] != newval) {
 		return "failed to set new ostream value";
@@ -3227,7 +3227,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3244,7 +3244,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_istrm)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "istream set changed ostream value";
@@ -3278,7 +3278,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3295,7 +3295,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_max)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "max attempt set changed ostream value";
@@ -3329,7 +3329,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3346,7 +3346,7 @@ DEFINE_APITEST(initmsg, gso_1_1_set_timeo)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "max timeo set changed ostream value";
@@ -3381,7 +3381,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3398,7 +3398,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_ostrm)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[1] != newval) {
 		return "failed to set new ostream value";
@@ -3433,7 +3433,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3450,7 +3450,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_istrm)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "istream set changed ostream value";
@@ -3484,7 +3484,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3501,7 +3501,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_max)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "max attempt set changed ostream value";
@@ -3535,7 +3535,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_initmsg(fd, &ostreams[0], &istreams[0],
 				  &max[0], &timeo[0]);
 	if(result < 0) {
@@ -3552,7 +3552,7 @@ DEFINE_APITEST(initmsg, gso_1_M_set_timeo)
 				  &max[1], &timeo[1]);
 	close(fd);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	if (ostreams[0] != ostreams[1]) {
 		return "max timeo set changed ostream value";
@@ -4099,7 +4099,7 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4107,7 +4107,7 @@ DEFINE_APITEST(setprim, gso_1_1_get_prim)
 		} else {
 			break;
 		}
-	skip_forward:			
+	skip_forward:
 		if (at->sa_family == AF_INET)
 			len = sizeof(struct sockaddr_in);
 		else if (at->sa_family == AF_INET6)
@@ -4193,7 +4193,7 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4201,7 +4201,7 @@ DEFINE_APITEST(setprim, gso_1_M_get_prim)
 		} else {
 			break;
 		}
-	skip_forward:			
+	skip_forward:
 		if (at->sa_family == AF_INET)
 			len = sizeof(struct sockaddr_in);
 		else if (at->sa_family == AF_INET6)
@@ -4286,7 +4286,7 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4352,7 +4352,7 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 		} else {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)setit;
-			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 			}
@@ -4366,7 +4366,7 @@ DEFINE_APITEST(setprim, sso_1_1_set_prim)
 		}
 		retstring = "set to new primary failed";
 	}
-	
+
 	sctp_freepaddrs(sa);
  out:
 	close(fds[0]);
@@ -4439,7 +4439,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4505,7 +4505,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
 		} else {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)setit;
-			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 			}
@@ -4531,7 +4531,7 @@ DEFINE_APITEST(setprim, sso_1_M_set_prim)
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
  * TEST-DESCR: but corrupt it to be a non-valid address.
- * TEST-DESCR: Set it. Validate that it fails OR the 
+ * TEST-DESCR: Set it. Validate that it fails OR the
  * TEST-DESCR: primary has not changed.
  * TEST-DESCR: Note we must be multi-homed for this to work.
  */
@@ -4590,7 +4590,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4612,7 +4612,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 		retstring = "Bad primary - not in peer addr list";
 		sctp_freepaddrs(sa);
 		goto out;
-	} 
+	}
 	/* ok we now know that cnt is the current primary */
 	sinc = *((struct sockaddr_in *)sa);
 	sinc.sin_addr.s_addr = 0x12345678;
@@ -4642,7 +4642,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	} else {
 		struct sockaddr_in6 *sin6;
 		sin6 = (struct sockaddr_in6 *)setit;
-		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 				       &store.sin6.sin6_addr)) {
 			found = 1;
 		}
@@ -4650,7 +4650,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
 	if (found == 0) {
 		retstring = "set to corrupt primary allowed";
 	}
-	
+
 	sctp_freepaddrs(sa);
  out:
 	close(fds[0]);
@@ -4664,7 +4664,7 @@ DEFINE_APITEST(setprim, sso_1_1_bad_prim)
  * TEST-DESCR: After creating, get the address list and
  * TEST-DESCR: retrieve the primary address. Pick a new primary
  * TEST-DESCR: but corrupt it to be a non-valid address.
- * TEST-DESCR: Set it. Validate that it fails OR the 
+ * TEST-DESCR: Set it. Validate that it fails OR the
  * TEST-DESCR: primary has not changed.
  * TEST-DESCR: Note we must be multi-homed for this to work.
  */
@@ -4725,7 +4725,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 		} else if (at->sa_family == AF_INET6) {
 			struct sockaddr_in6 *sin6;
 			sin6 = (struct sockaddr_in6 *)at;
-			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+			if (IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 					      &store.sin6.sin6_addr)) {
 				found = 1;
 				break;
@@ -4783,7 +4783,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 	} else {
 		struct sockaddr_in6 *sin6;
 		sin6 = (struct sockaddr_in6 *)setit;
-		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr, 
+		if (!IN6_ARE_ADDR_EQUAL(&sin6->sin6_addr,
 				       &store.sin6.sin6_addr)) {
 			found = 1;
 		}
@@ -4807,7 +4807,7 @@ DEFINE_APITEST(setprim, sso_1_M_bad_prim)
 /*
  * TEST-TITLE adaptation/gso_1_1
  * TEST-DESCR: On a 1-1 socket, and retrieve the
- * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: adaptation layer indication set on
  * TEST-DESCR: the endpoint.
  */
 DEFINE_APITEST(adaptation, gso_1_1)
@@ -4829,7 +4829,7 @@ DEFINE_APITEST(adaptation, gso_1_1)
 /*
  * TEST-TITLE adaptation/gso_1_M
  * TEST-DESCR: On a 1-1 socket, and retrieve the
- * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: adaptation layer indication set on
  * TEST-DESCR: the endpoint.
  */
 DEFINE_APITEST(adaptation, gso_1_M)
@@ -4852,7 +4852,7 @@ DEFINE_APITEST(adaptation, gso_1_M)
 /*
  * TEST-TITLE adaptation/sso_1_1
  * TEST-DESCR: On a 1-1 socket, and retrieve the
- * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: adaptation layer indication set on
  * TEST-DESCR: the endpoint add one to it and set it.
  * TEST-DESCR: Validate that we set the new value.
  */
@@ -4892,7 +4892,7 @@ DEFINE_APITEST(adaptation, sso_1_1)
 /*
  * TEST-TITLE adaptation/sso_1_M
  * TEST-DESCR: On a 1-M socket, and retrieve the
- * TEST-DESCR: adaptation layer indication set on 
+ * TEST-DESCR: adaptation layer indication set on
  * TEST-DESCR: the endpoint add one to it and set it.
  * TEST-DESCR: Validate that we set the new value.
  */
@@ -4923,7 +4923,7 @@ DEFINE_APITEST(adaptation, sso_1_M)
 	}
 	close (fd);
 	if(val1 != val) {
-		printf("%x was what I set, val:%x\n", 
+		printf("%x was what I set, val:%x\n",
 		       val1, val);
 		return "Set failed, not new value that was set";
 	}
@@ -4938,7 +4938,7 @@ DEFINE_APITEST(adaptation, sso_1_M)
  ********************************************************/
 /*
  * TEST-TITLE disfrag/gso_def_1_1
- * TEST-DESCR: On a 1-1 socket, get the disable 
+ * TEST-DESCR: On a 1-1 socket, get the disable
  * TEST-DESCR: fragmentation setting. Validate it
  * TEST-DESCR: is not enabled (sctp will fragment messages).
  */
@@ -4965,7 +4965,7 @@ DEFINE_APITEST(disfrag, gso_def_1_1)
 
 /*
  * TEST-TITLE disfrag/gso_def_1_M
- * TEST-DESCR: On a 1-M socket, get the disable 
+ * TEST-DESCR: On a 1-M socket, get the disable
  * TEST-DESCR: fragmentation setting. Validate it
  * TEST-DESCR: is not enabled (sctp will fragment messages).
  */
@@ -4993,8 +4993,8 @@ DEFINE_APITEST(disfrag, gso_def_1_M)
 
 /*
  * TEST-TITLE disfrag/sso_1_1
- * TEST-DESCR: On a 1-1 socket, get the disable 
- * TEST-DESCR: fragmentation setting. Change it to the 
+ * TEST-DESCR: On a 1-1 socket, get the disable
+ * TEST-DESCR: fragmentation setting. Change it to the
  * TEST-DESCR: opposite. Validate that our set was
  * TEST-DESCR: successful.
  */
@@ -5032,8 +5032,8 @@ DEFINE_APITEST(disfrag, sso_1_1)
 
 /*
  * TEST-TITLE disfrag/sso_1_M
- * TEST-DESCR: On a 1-1 socket, get the disable 
- * TEST-DESCR: fragmentation setting. Change it to the 
+ * TEST-DESCR: On a 1-1 socket, get the disable
+ * TEST-DESCR: fragmentation setting. Change it to the
  * TEST-DESCR: opposite. Validate that our set was
  * TEST-DESCR: successful.
  */
@@ -5461,7 +5461,7 @@ DEFINE_APITEST(paddrpara, sso_hb_zero_1_M)
 /*
  * TEST-TITLE paddrpara/sso_hb_off_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
- * TEST-DESCR: the current values, 
+ * TEST-DESCR: the current values,
  * TEST-DESCR: turn off hb's, assure the change
  * TEST-DESCR: happens and no other parameters
  * TEST-DESCR: are effected.
@@ -5534,7 +5534,7 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_1)
 /*
  * TEST-TITLE paddrpara/sso_hb_off_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
- * TEST-DESCR: the current values, 
+ * TEST-DESCR: the current values,
  * TEST-DESCR: turn off hb's, assure the change
  * TEST-DESCR: happens and no other parameters
  * TEST-DESCR: are effected.
@@ -5609,8 +5609,8 @@ DEFINE_APITEST(paddrpara, sso_hb_off_1_M)
 /*
  * TEST-TITLE paddrpara/sso_hb_on_1_1
  * TEST-DESCR: On a 1-1 socket, Retreive
- * TEST-DESCR: the current values, 
- * TEST-DESCR: turn off hb's then turn them back on, 
+ * TEST-DESCR: the current values,
+ * TEST-DESCR: turn off hb's then turn them back on,
  * TEST-DESCR: assure the change happens and no other parameters
  * TEST-DESCR: are effected.
  */
@@ -5688,7 +5688,7 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_1)
 		close(fd);
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_paddr_param(fd, 0, sa, &hbinterval[2],
 				      &maxrxt[2],
 				      &pathmtu[2],
@@ -5715,8 +5715,8 @@ DEFINE_APITEST(paddrpara, sso_hb_on_1_1)
 /*
  * TEST-TITLE paddrpara/sso_hb_on_1_M
  * TEST-DESCR: On a 1-M socket, Retreive
- * TEST-DESCR: the current values, 
- * TEST-DESCR: turn off hb's then turn them back on, 
+ * TEST-DESCR: the current values,
+ * TEST-DESCR: turn off hb's then turn them back on,
  * TEST-DESCR: assure the change happens and no other parameters
  * TEST-DESCR: are effected.
  */
@@ -6656,7 +6656,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_1)
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[2],
 				      &maxrxt[2],
 				      &pathmtu[2],
@@ -6768,7 +6768,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_on_1_M)
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[2],
 				      &maxrxt[2],
 				      &pathmtu[2],
@@ -7048,7 +7048,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 	muflags[1] = flags[1] & ~(SPP_PMTUD_ENABLE|SPP_PMTUD_DISABLE);
 	if(muflags[0] != muflags[1]) {
 		return "flag settings changed";
-		
+
 	}
 	if (hbinterval[1] != hbinterval[0]) {
 		return "hb interval settings changed";
@@ -7136,7 +7136,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 	muflags[1] = flags[1] & ~(SPP_PMTUD_ENABLE|SPP_PMTUD_DISABLE);
 	if(muflags[0] != muflags[1]) {
 		return "flag settings changed";
-		
+
 	}
 	if (hbinterval[1] != hbinterval[0]) {
 		return "hb interval settings changed";
@@ -7364,7 +7364,7 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_1)
 		return "failed, flags changed";
 	}
 	if (ipv6_flowlabel[1] != ipv6_flowlabel[0]) {
-		return "ipv6 flow label settings changed";		
+		return "ipv6 flow label settings changed";
 	}
 	if (hbinterval[1] != hbinterval[0]) {
 		return "hb interval settings changed";
@@ -7439,7 +7439,7 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_M)
 		return "failed, flags changed";
 	}
 	if (ipv6_flowlabel[1] != ipv6_flowlabel[0]) {
-		return "ipv6 flow label settings changed";		
+		return "ipv6 flow label settings changed";
 	}
 	if (hbinterval[1] != hbinterval[0]) {
 		return "hb interval settings changed";
@@ -8909,7 +8909,7 @@ DEFINE_APITEST(paddrpara, sso_dhb_off_1_M)
 
 /*
  * TEST-TITLE paddrpara/sso_dpmrxt_int_1_1
- * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: On a 1-1 socket, create an assocation and
  * TEST-DESCR: set the path max retransmit.
  * TEST-DESCR: assure the new value is on the association and
  * TEST-DESCR: no other values have changed.
@@ -9004,7 +9004,7 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_1)
 
 /*
  * TEST-TITLE paddrpara/sso_dpmrxt_int_1_M
- * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: On a 1-M socket, create an assocation and
  * TEST-DESCR: set the path max retransmit.
  * TEST-DESCR: assure the new value is on the association and
  * TEST-DESCR: no other values have changed.
@@ -9108,7 +9108,7 @@ DEFINE_APITEST(paddrpara, sso_dpmrxt_int_1_M)
 
 /*
  * TEST-TITLE paddrpara/sso_dpmrxt_int_1_1
- * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: On a 1-1 socket, create an assocation and
  * TEST-DESCR: set the ipv4 tos (DSCP).
  * TEST-DESCR: assure the new value is on the association and
  * TEST-DESCR: no other values have changed.
@@ -9204,7 +9204,7 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_1)
 
 /*
  * TEST-TITLE paddrpara/sso_dpmrxt_int_1_M
- * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: On a 1-M socket, create an assocation and
  * TEST-DESCR: set the ipv4 tos (DSCP).
  * TEST-DESCR: assure the new value is on the association and
  * TEST-DESCR: no other values have changed.
@@ -9309,7 +9309,7 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 
 /*
  * TEST-TITLE paddrpara/sso_hb_demand_1_1
- * TEST-DESCR: On a 1-1 socket, create an assocation and 
+ * TEST-DESCR: On a 1-1 socket, create an assocation and
  * TEST-DESCR: demand a heartbeat.
  * TEST-DESCR: assure that no settings on the association
  * TEST-DESCR: have changed.
@@ -9355,7 +9355,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_1)
 		retstring = strerror(errno);
 		goto out;
 	}
-	result =  sctp_set_paddr_param(fds[0], 0, 
+	result =  sctp_set_paddr_param(fds[0], 0,
 				       sa, 0, 0, 0,
 				       SPP_HB_DEMAND,
 				       0, 0);
@@ -9408,7 +9408,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_1)
 
 /*
  * TEST-TITLE paddrpara/sso_hb_demand_1_M
- * TEST-DESCR: On a 1-M socket, create an assocation and 
+ * TEST-DESCR: On a 1-M socket, create an assocation and
  * TEST-DESCR: demand a heartbeat.
  * TEST-DESCR: assure that no settings on the association
  * TEST-DESCR: have changed.
@@ -9463,7 +9463,7 @@ DEFINE_APITEST(paddrpara, sso_hb_demand_1_M)
 		retstring = strerror(errno);
 		goto out;
 	}
-	result =  sctp_set_paddr_param(fds[0], ids[0], 
+	result =  sctp_set_paddr_param(fds[0], ids[0],
 				       sa, 0, 0, 0,
 				       SPP_HB_DEMAND,
 				       0, 0);
@@ -9734,7 +9734,7 @@ DEFINE_APITEST(defsend, sso_asc_1_1)
 	close (fd);
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		return "Def send stream did not change";
 	}
@@ -9795,7 +9795,7 @@ DEFINE_APITEST(defsend, sso_asc_1_M)
 	}
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		return "Def send stream did not change";
 	}
@@ -9859,7 +9859,7 @@ DEFINE_APITEST(defsend, sso_inherit_1_1)
 	close (fd);
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		return "Def send stream did not change";
 	}
@@ -9922,7 +9922,7 @@ DEFINE_APITEST(defsend, sso_inherit_1_M)
 	}
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		return "Def send stream did not change";
 	}
@@ -9988,7 +9988,7 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_1)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		retstring = "Def send stream did not change";
 		goto out;
@@ -10081,7 +10081,7 @@ DEFINE_APITEST(defsend, sso_inherit_ncep_1_M)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		retstring = "Def send stream did not change";
 		goto out;
@@ -10182,7 +10182,7 @@ DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
 		close (fds2[1]);
 		return(strerror(errno));
 	}
-	
+
 	if ((sinfo[0].sinfo_stream+1) != sinfo[1].sinfo_stream) {
 		retstring = "Def send stream did not change";
 		goto out;
@@ -10248,7 +10248,7 @@ DEFINE_APITEST(defsend, sso_nc_other_asc_1_M)
 /*
  * TEST-TITLE events/gso_def_1_1
  * TEST-DESCR: On a 1-1 socket.
- * TEST-DESCR: Get the default events and 
+ * TEST-DESCR: Get the default events and
  * TEST-DESCR: validate that no notification is
  * TEST-DESCR: enabled.
  */
@@ -10292,7 +10292,7 @@ DEFINE_APITEST(events, gso_def_1_1)
 /*
  * TEST-TITLE events/gso_def_1_M
  * TEST-DESCR: On a 1-M socket.
- * TEST-DESCR: Get the default events and 
+ * TEST-DESCR: Get the default events and
  * TEST-DESCR: validate that no notification is
  * TEST-DESCR: enabled.
  */
@@ -10394,7 +10394,7 @@ DEFINE_APITEST(events, sso_1_1)
 	if (ev[0].sctp_peer_error_event != ev[1].sctp_peer_error_event)
 		return "peer_error_event changed";
 
-	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event) 
+	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event)
 		return "shutdown_event changed";
 	if (ev[0].sctp_partial_delivery_event !=ev[1].sctp_partial_delivery_event)
 		return "pdap_event changed";
@@ -10465,7 +10465,7 @@ DEFINE_APITEST(events, sso_1_M)
 	if (ev[0].sctp_peer_error_event != ev[1].sctp_peer_error_event)
 		return "peer_error_event changed";
 
-	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event) 
+	if (ev[0].sctp_shutdown_event != ev[1].sctp_shutdown_event)
 		return "shutdown_event changed";
 	if (ev[0].sctp_partial_delivery_event !=ev[1].sctp_partial_delivery_event)
 		return "pdap_event changed";
@@ -10490,14 +10490,14 @@ DEFINE_APITEST(events, sso_1_M)
 DEFINE_APITEST(mapped, gso_1_1_def)
 {
 	int fd, onoff;
-	
+
 	fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
 	onoff = sctp_v4_address_mapping_enabled(fd);
 	close(fd);
-	
+
 	if (onoff) {
 		return "Option enabled by default";
 	} else {
@@ -10513,14 +10513,14 @@ DEFINE_APITEST(mapped, gso_1_1_def)
 DEFINE_APITEST(mapped, gso_1_M_def)
 {
 	int fd, onoff;
-	
+
 	fd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
 	onoff = sctp_v4_address_mapping_enabled(fd);
 	close(fd);
-	
+
 	if (onoff) {
 		return "Option enabled by default";
 	} else {
@@ -11035,10 +11035,10 @@ DEFINE_APITEST(maxseg, sso_inherit_1_M)
 
 /*
  * TEST-TITLE maxseg/sso_inherit_ncep_1_1
- * TEST-DESCR: On a 1-1 socket, 
+ * TEST-DESCR: On a 1-1 socket,
  * TEST-DESCR: Set the max seg to 1200 bytes.
  * TEST-DESCR: Start an association and validate it inherits
- * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the new value. Then set a different value on
  * TEST-DESCR: the association. Validate the endpoint value is
  * TEST-DESCR: unchanged.
  */
@@ -11079,7 +11079,7 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (val[1] != 1200) {
 		retstring = "maxseg did not change on asoc";
 		goto out;
@@ -11113,10 +11113,10 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_1)
 }
 /*
  * TEST-TITLE maxseg/sso_inherit_ncep_1_M
- * TEST-DESCR: On a 1-M socket, 
+ * TEST-DESCR: On a 1-M socket,
  * TEST-DESCR: Set the max seg to 1200 bytes.
  * TEST-DESCR: Start an association and validate it inherits
- * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the new value. Then set a different value on
  * TEST-DESCR: the association. Validate the endpoint value is
  * TEST-DESCR: unchanged.
  */
@@ -11156,7 +11156,7 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_M)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (val[1] != 1200) {
 		retstring = "maxseg did not change";
 		goto out;
@@ -11187,10 +11187,10 @@ DEFINE_APITEST(maxseg, sso_inherit_ncep_1_M)
 
 /*
  * TEST-TITLE maxseg/sso_nc_other_asoc_1_M
- * TEST-DESCR: On a 1-M socket, 
+ * TEST-DESCR: On a 1-M socket,
  * TEST-DESCR: Set the max seg to 1200 bytes.
  * TEST-DESCR: Start two associations and validate they inherit
- * TEST-DESCR: the new value. Then set a different value on 
+ * TEST-DESCR: the new value. Then set a different value on
  * TEST-DESCR: the association. Validate the endpoint and other
  * TEST-DESCR: associations  value's are unchanged.
  */
@@ -11240,7 +11240,7 @@ DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
 		close (fds2[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (1200 != val[1]) {
 		retstring = "maxseg did not change in assoc";
 		goto out;
@@ -11293,7 +11293,7 @@ DEFINE_APITEST(maxseg, sso_nc_other_asc_1_M)
  * TEST-TITLE authchk/gso_1_1
  * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Attempt to get an auth-chunk id.
- * TEST-DESCR: This should fail since its a set 
+ * TEST-DESCR: This should fail since its a set
  * TEST-DESCR: only option.
  */
 DEFINE_APITEST(authchk, gso_1_1)
@@ -11318,7 +11318,7 @@ DEFINE_APITEST(authchk, gso_1_1)
  * TEST-TITLE authchk/gso_1_M
  * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Attempt to get an auth-chunk id.
- * TEST-DESCR: This should fail since its a set 
+ * TEST-DESCR: This should fail since its a set
  * TEST-DESCR: only option.
  */
 DEFINE_APITEST(authchk, gso_1_M)
@@ -11553,7 +11553,7 @@ DEFINE_APITEST(hmacid, sso_bad_1_1)
 	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close(fd);
-	
+
 	if (result >= 0) {
 		return "was able to set bogus hmac id 2960";
 	}
@@ -11584,7 +11584,7 @@ DEFINE_APITEST(hmacid, sso_bad_1_M)
 	len = sizeof(struct sctp_hmacalgo) + 2 * sizeof(uint16_t);
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_HMAC_IDENT, algo, len);
 	close(fd);
-	
+
 	if (result >= 0) {
 		return "was able to set bogus hmac id 2960";
 	}
@@ -11594,7 +11594,7 @@ DEFINE_APITEST(hmacid, sso_bad_1_M)
 /*
  * TEST-TITLE hmacid/sso_nosha1_1_1
  * TEST-DESCR: On a 1-1 socket.
- * TEST-DESCR: Set to prefer only sha256 without 
+ * TEST-DESCR: Set to prefer only sha256 without
  * TEST-DESCR: including sha1. The test should fail
  * TEST-DESCR: since sha1 is required to be in the list.
  */
@@ -11633,7 +11633,7 @@ DEFINE_APITEST(hmacid, sso_nosha1_1_1)
 /*
  * TEST-TITLE hmacid/sso_nosha1_1_M
  * TEST-DESCR: On a 1-M socket.
- * TEST-DESCR: Set to prefer only sha256 without 
+ * TEST-DESCR: Set to prefer only sha256 without
  * TEST-DESCR: including sha1. The test should fail
  * TEST-DESCR: since sha1 is required to be in the list.
  */
@@ -11875,7 +11875,7 @@ DEFINE_APITEST(authkey, sso_new_1_1)
 DEFINE_APITEST(authkey, sso_new_1_M)
 {
 	int fd, result;
-	uint16_t keyid, keylen;	
+	uint16_t keyid, keylen;
 	char *keytext = "This is my new key";
 
 	fd = sctp_one2many(0, 1);
@@ -12445,7 +12445,7 @@ DEFINE_APITEST(actkey, sso_new_1_1)
 		return "failed to set auth key";
 	}
 	result = sctp_set_active_key(fd, 0, keyid);
-	if (result < 0) {	
+	if (result < 0) {
 		close(fd);
 		return "was unable to set new key active";
 	}
@@ -12566,7 +12566,7 @@ DEFINE_APITEST(actkey, sso_inhdef_1_M)
 		close(fds[0]);
 		return (strerror(errno));
 	}
-	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);	
+	result = sctp_get_active_key(fds[0], ids[0], &a_keyid);
 	if (result < 0) {
 		ret = "was unable to get assoc active key";
 		goto out;
@@ -13614,7 +13614,7 @@ DEFINE_APITEST(dsack, sso_asc_1_1)
 	close (fd);
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if (newval != delay[1]) {
 		return "Could not set delay";
 	}
@@ -13682,7 +13682,7 @@ DEFINE_APITEST(dsack, sso_asc_1_M)
 
 /*
  * TEST-TITLE dsack/sso_inherit_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
@@ -13739,7 +13739,7 @@ DEFINE_APITEST(dsack, sso_inherit_1_1)
 
 /*
  * TEST-TITLE dsack/sso_inherit_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
@@ -13794,7 +13794,7 @@ DEFINE_APITEST(dsack, sso_inherit_1_M)
 
 /*
  * TEST-TITLE dsack/sso_inherit_ncep_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
@@ -13839,7 +13839,7 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (delay[1] != newval) {
 		retstring = "Inheritance failed";
 		goto out;
@@ -13878,7 +13878,7 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_1)
 
 /*
  * TEST-TITLE dsack/sso_inherit_ncep_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
@@ -13924,7 +13924,7 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (newval != delay[1]) {
 		retstring = "Delay did not change";
 		goto out;
@@ -13961,7 +13961,7 @@ DEFINE_APITEST(dsack, sso_inherit_ncep_1_M)
 
 /*
  * TEST-TITLE dsack/sso_nc_other_asc_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the delay to a new value for the ep.
  * TEST-DESCR: create two associations validate that both
  * TEST-DESCR: association inherit the new value. Now
@@ -14020,7 +14020,7 @@ DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
 		close (fds2[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (newval != delay[1]) {
 		retstring = "Did not change delay on asoc";
 		goto out;
@@ -14072,7 +14072,7 @@ DEFINE_APITEST(dsack, sso_nc_other_asc_1_M)
  ********************************************************/
 /*
  * TEST-TITLE fraginter/gso_def_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Get the default fragment interleave and
  * TEST-DESCR: validate it is set to 1.
  */
@@ -14098,7 +14098,7 @@ DEFINE_APITEST(fraginter, gso_def_1_1)
 
 /*
  * TEST-TITLE fraginter/gso_def_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Get the default fragment interleave and
  * TEST-DESCR: validate it is set to 1.
  */
@@ -14124,7 +14124,7 @@ DEFINE_APITEST(fraginter, gso_def_1_M)
 
 /*
  * TEST-TITLE fraginter/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that we can set levels 0, 1 and 2
  */
 DEFINE_APITEST(fraginter, sso_1_1)
@@ -14146,12 +14146,12 @@ DEFINE_APITEST(fraginter, sso_1_1)
 				close(fd);
 				return(strerror(errno));
 			}
-		
+
 			result = sctp_get_interleave(fd, &inter[1]);
 			if(result < 0) {
 				close(fd);
 				return(strerror(errno));
-			} 
+			}
 			if(inter[1] != newval) {
 				close(fd);
 				return "failed to set fragment interleave";
@@ -14165,7 +14165,7 @@ DEFINE_APITEST(fraginter, sso_1_1)
 
 /*
  * TEST-TITLE fraginter/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Validate that we can set levels 0, 1 and 2
  */
 DEFINE_APITEST(fraginter, sso_1_M)
@@ -14192,12 +14192,12 @@ DEFINE_APITEST(fraginter, sso_1_M)
 				close(fd);
 				return(strerror(errno));
 			}
-		
+
 			result = sctp_get_interleave(fd, &inter[1]);
 			if(result < 0) {
 				close(fd);
 				return(strerror(errno));
-			} 
+			}
 			if(inter[1] != newval) {
 				close(fd);
 				return "failed to set fragment interleave";
@@ -14212,7 +14212,7 @@ DEFINE_APITEST(fraginter, sso_1_M)
 
 /*
  * TEST-TITLE fraginter/sso_bad_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that we fail to set a
  * TEST-DESCR: bad fragment interleave level (42).
  */
@@ -14229,7 +14229,7 @@ DEFINE_APITEST(fraginter, sso_bad_1_1)
 	if(result < 0) {
 		close(fd);
 		return(strerror(errno));
-	} 
+	}
 	newval = 42;
 	result = sctp_set_interleave(fd, newval);
 	if(result < 0) {
@@ -14240,18 +14240,18 @@ DEFINE_APITEST(fraginter, sso_bad_1_1)
 	if(result < 0) {
 		close(fd);
 		return(strerror(errno));
-	} 
+	}
 	if(inter[1] != inter[0]) {
 		close(fd);
 		return "bogus set changed interleave value";
 	}
-	close(fd);	
+	close(fd);
 	return NULL;
 }
 
 /*
  * TEST-TITLE fraginter/sso_bad_1_M
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that we fail to set a
  * TEST-DESCR: bad fragment interleave level (42).
  */
@@ -14268,7 +14268,7 @@ DEFINE_APITEST(fraginter, sso_bad_1_M)
 	if(result < 0) {
 		close(fd);
 		return(strerror(errno));
-	} 
+	}
 	newval = 42;
 	result = sctp_set_interleave(fd, newval);
 	if(result < 0) {
@@ -14279,12 +14279,12 @@ DEFINE_APITEST(fraginter, sso_bad_1_M)
 	if(result < 0) {
 		close(fd);
 		return(strerror(errno));
-	} 
+	}
 	if(inter[1] != inter[0]) {
 		close(fd);
 		return "bogus set changed interleave value";
 	}
-	close(fd);	
+	close(fd);
 	return NULL;
 }
 
@@ -14295,7 +14295,7 @@ DEFINE_APITEST(fraginter, sso_bad_1_M)
  ********************************************************/
 /*
  * TEST-TITLE paapi/gso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that we can retrieve
  * TEST-DESCR: the pd-api point.
  */
@@ -14318,7 +14318,7 @@ DEFINE_APITEST(pdapi, gso_1_1)
 
 /*
  * TEST-TITLE paapi/gso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Validate that we can retrieve
  * TEST-DESCR: the pd-api point.
  */
@@ -14342,7 +14342,7 @@ DEFINE_APITEST(pdapi, gso_1_M)
 
 /*
  * TEST-TITLE paapi/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that we can set
  * TEST-DESCR: the pd-api point.
  */
@@ -14385,7 +14385,7 @@ DEFINE_APITEST(padapi, sso_1_1)
 
 /*
  * TEST-TITLE paapi/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Validate that we can set
  * TEST-DESCR: the pd-api point.
  */
@@ -14433,7 +14433,7 @@ DEFINE_APITEST(pdapi, sso_1_M)
  ********************************************************/
 /*
  * TEST-TITLE xrcvinfo/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Validate that you can get and set
  * TEST-DESCR: the SCTP_USE_EXT_RECVINFO flags.
  */
@@ -14476,11 +14476,11 @@ DEFINE_APITEST(xrcvinfo, sso_1_1)
 		return "Set of ext_rcvinfo failed";
 	}
 	return NULL;
-	
+
 }
 /*
  * TEST-TITLE xrcvinfo/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Validate that you can get and set
  * TEST-DESCR: the SCTP_USE_EXT_RECVINFO flags.
  */
@@ -14533,8 +14533,8 @@ DEFINE_APITEST(xrcvinfo, sso_1_M)
 
 /*
  * TEST-TITLE aasconf/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
- * TEST-DESCR: Validate that the auto-asconf 
+ * TEST-DESCR: On a 1-1 socket.
+ * TEST-DESCR: Validate that the auto-asconf
  * TEST-DESCR: option can be retrieved and changed.
  */
 DEFINE_APITEST(aasconf, sso_1_1)
@@ -14576,13 +14576,13 @@ DEFINE_APITEST(aasconf, sso_1_1)
 		return "Set of auto-asconf failed";
 	}
 	return NULL;
-	
+
 }
 
 /*
  * TEST-TITLE aasconf/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
- * TEST-DESCR: Validate that the auto-asconf 
+ * TEST-DESCR: On a 1-M socket.
+ * TEST-DESCR: Validate that the auto-asconf
  * TEST-DESCR: option can be retrieved and changed.
  */
 DEFINE_APITEST(aasconf, sso_1_M)
@@ -14634,7 +14634,7 @@ DEFINE_APITEST(aasconf, sso_1_M)
  ********************************************************/
 /*
  * TEST-TITLE maxburst/gso_def_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Retrieve the max burst setting and
  * TEST-DESCR: validate it conforms to RFC4960.
  */
@@ -14663,7 +14663,7 @@ DEFINE_APITEST(maxburst, gso_def_1_1)
 
 /*
  * TEST-TITLE maxburst/gso_def_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Retrieve the max burst setting and
  * TEST-DESCR: validate it conforms to RFC4960.
  */
@@ -14692,7 +14692,7 @@ DEFINE_APITEST(maxburst, gso_def_1_M)
 
 /*
  * TEST-TITLE maxburst/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Retrieve the max burst lower this
  * TEST-DESCR: by one, and then set it. Validate
  * TEST-DESCR: we can set it.
@@ -14737,12 +14737,12 @@ DEFINE_APITEST(maxburst, sso_1_1)
 		return "Set of max-burst failed";
 	}
 	return NULL;
-	
+
 }
 
 /*
  * TEST-TITLE maxburst/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Retrieve the max burst lower this
  * TEST-DESCR: by one, and then set it. Validate
  * TEST-DESCR: we can set it.
@@ -14833,7 +14833,7 @@ DEFINE_APITEST(context, sso_1_1)
 		return "Set of context failed";
 	}
 	return NULL;
-	
+
 }
 
 /*
@@ -14875,7 +14875,7 @@ DEFINE_APITEST(context, sso_1_M)
 		return "Set of context failed";
 	}
 	return NULL;
-	
+
 }
 
 
@@ -14883,7 +14883,7 @@ DEFINE_APITEST(context, sso_1_M)
  * TEST-TITLE context/sso_asc_1_1
  * TEST-DESCR: On a 1-1 socket, create an association
  * TEST-DESCR: Set the context to a new value for the assoc.
- * TEST-DESCR: Validate that it happens 
+ * TEST-DESCR: Validate that it happens
  */
 DEFINE_APITEST(context, sso_asc_1_1)
 {
@@ -14924,7 +14924,7 @@ DEFINE_APITEST(context, sso_asc_1_1)
 	close (fd);
 	close (fds[0]);
 	close (fds[1]);
-	
+
 	if (newval != val[1]) {
 		return "Could not set context";
 	}
@@ -14935,7 +14935,7 @@ DEFINE_APITEST(context, sso_asc_1_1)
  * TEST-TITLE context/sso_asc_1_M
  * TEST-DESCR: On a 1-M socket, create an association
  * TEST-DESCR: Set the context to a new value for the assoc.
- * TEST-DESCR: Validate that it happens 
+ * TEST-DESCR: Validate that it happens
  */
 DEFINE_APITEST(context, sso_asc_1_M)
 {
@@ -14982,7 +14982,7 @@ DEFINE_APITEST(context, sso_asc_1_M)
 
 /*
  * TEST-TITLE context/sso_inherit_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Set the context to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
@@ -15032,7 +15032,7 @@ DEFINE_APITEST(context, sso_inherit_1_1)
 
 /*
  * TEST-TITLE context/sso_inherit_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the context to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value.
@@ -15081,7 +15081,7 @@ DEFINE_APITEST(context, sso_inherit_1_M)
 
 /*
  * TEST-TITLE context/sso_inherit_ncep_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Set the context to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
@@ -15123,7 +15123,7 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_1)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (val[1] != newval) {
 		retstring = "Inheritance failed";
 		goto out;
@@ -15158,7 +15158,7 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_1)
 
 /*
  * TEST-TITLE context/sso_inherit_ncep_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the context to a new value for the ep.
  * TEST-DESCR: create an association validate that the
  * TEST-DESCR: association inherits the new value. Now
@@ -15201,7 +15201,7 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_M)
 		close (fds[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (newval != val[1]) {
 		retstring = "Context did not change";
 		goto out;
@@ -15234,7 +15234,7 @@ DEFINE_APITEST(context, sso_inherit_ncep_1_M)
 
 /*
  * TEST-TITLE context/sso_nc_other_asc_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Set the context to a new value for the ep.
  * TEST-DESCR: create two associations validate that both
  * TEST-DESCR: association inherit the new value. Now
@@ -15289,7 +15289,7 @@ DEFINE_APITEST(context, sso_nc_other_asc_1_M)
 		close (fds2[1]);
 		return(strerror(errno));
 	}
-	
+
 	if (newval != val[1]) {
 		retstring = "Did not change context on asoc";
 		goto out;
@@ -15342,7 +15342,7 @@ DEFINE_APITEST(context, sso_nc_other_asc_1_M)
  ********************************************************/
 /*
  * TEST-TITLE eeor/sso_1_1
- * TEST-DESCR: On a 1-1 socket. 
+ * TEST-DESCR: On a 1-1 socket.
  * TEST-DESCR: Get the eeor mode setting, Change it
  * TEST-DESCR: and validate the change occurs.
  */
@@ -15385,12 +15385,12 @@ DEFINE_APITEST(eeor, sso_1_1)
 		return "Set of auto-asconf failed";
 	}
 	return NULL;
-	
+
 }
 
 /*
  * TEST-TITLE eeor/sso_1_M
- * TEST-DESCR: On a 1-M socket. 
+ * TEST-DESCR: On a 1-M socket.
  * TEST-DESCR: Get the eeor mode setting, Change it
  * TEST-DESCR: and validate the change occurs.
  */
@@ -15443,7 +15443,7 @@ DEFINE_APITEST(eeor, sso_1_M)
 /*
  * TEST-TITLE read/status
  * TEST-DESCR: Setup an association on a 1-M socket
- * TEST-DESCR: and get the SCTP_STATUS, validate 
+ * TEST-DESCR: and get the SCTP_STATUS, validate
  * TEST-DESCR: there is no error.
  */
 DEFINE_APITEST(read, status)
@@ -15457,7 +15457,7 @@ DEFINE_APITEST(read, status)
 	memset(&stat, 0, sizeof(stat));
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	stat.sstat_assoc_id = ids[0];
 	len = sizeof(stat);
@@ -15470,7 +15470,7 @@ DEFINE_APITEST(read, status)
 	}
 	if(len != sizeof(stat)) {
 		return "Did not get back a full stat structure";
-	} 
+	}
 	return NULL;
 }
 
@@ -15492,7 +15492,7 @@ DEFINE_APITEST(read, paddrinfo)
 	memset(&stat, 0, sizeof(stat));
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	stat.sstat_assoc_id = ids[0];
 	len = sizeof(stat);
@@ -15515,7 +15515,7 @@ DEFINE_APITEST(read, paddrinfo)
 	}
 	if(len != sizeof(pa)) {
 		return "Did not get back a full structure";
-	} 
+	}
 	return NULL;
 }
 
@@ -15540,7 +15540,7 @@ DEFINE_APITEST(read, auth_p_chklist)
 	fds[0] = fds[1] = -1;
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
  try_again:
 	memset(buffer, 0, sizeof(buffer));
@@ -15599,7 +15599,7 @@ DEFINE_APITEST(read, auth_l_chklist)
 	fds[0] = fds[1] = -1;
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if(result < 0) {
-		return(strerror(errno));		
+		return(strerror(errno));
 	}
 	memset(buffer, 0, sizeof(buffer));
 	auth = (struct sctp_authchunks *)buffer;
@@ -15637,13 +15637,13 @@ DEFINE_APITEST(reuseport, set_1_to_M)
 	int fd, result;
 	const int on = 1;
 	socklen_t optlen;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
-	optlen = (socklen_t)sizeof(int);	
+	optlen = (socklen_t)sizeof(int);
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&on, optlen);
-	
+
 	close(fd);
 
 	if (!result)
@@ -15651,7 +15651,7 @@ DEFINE_APITEST(reuseport, set_1_to_M)
 
 	if (errno != EINVAL)
 		return strerror(errno);
-	
+
 	return NULL;
 }
 
@@ -15660,13 +15660,13 @@ DEFINE_APITEST(reuseport, get_1_to_M)
 	int fd, result;
 	int opt;
 	socklen_t optlen;
-	
+
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-	
+
 	optlen = (socklen_t)sizeof(int);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
-	
+
 	close(fd);
 
 	if (!result) {
@@ -15683,18 +15683,18 @@ DEFINE_APITEST(reuseport, set_before_bind)
 	int fd, result;
 	const int on = 1;
 	socklen_t optlen;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
-	optlen = (socklen_t)sizeof(int);	
+	optlen = (socklen_t)sizeof(int);
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (const void *)&on, optlen);
-	
+
 	close(fd);
 
 	if (result) {
 		return strerror(errno);
-	} else {	
+	} else {
 		return NULL;
 	}
 }
@@ -15704,21 +15704,21 @@ DEFINE_APITEST(reuseport, get_default)
 	int fd, result;
 	int opt;
 	socklen_t optlen;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
 	opt = 1;
 	optlen = (socklen_t)sizeof(int);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
-	
+
 	close(fd);
 
 	if (result) {
 		return strerror(errno);
 	} else if (opt) {
 		return "SCTP_REUSE_PORT enabled by default";
-	} else {	
+	} else {
 		return NULL;
 	}
 }
@@ -15728,7 +15728,7 @@ DEFINE_APITEST(reuseport, get_after_set)
 	int fd, result;
 	int opt;
 	socklen_t optlen;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
 
@@ -15736,18 +15736,18 @@ DEFINE_APITEST(reuseport, get_after_set)
 		close(fd);
 		return strerror(errno);
 	}
-	
+
 	opt = 0;
 	optlen = (socklen_t)sizeof(int);
 	result = getsockopt(fd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
-	
+
 	close(fd);
 
 	if (result) {
 		return strerror(errno);
 	} else if (!opt) {
 		return "SCTP_REUSE_PORT not enabled";
-	} else {	
+	} else {
 		return NULL;
 	}
 }
@@ -15755,7 +15755,7 @@ DEFINE_APITEST(reuseport, get_after_set)
 DEFINE_APITEST(reuseport, set_after_bind)
 {
 	int fd, result;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15770,7 +15770,7 @@ DEFINE_APITEST(reuseport, set_after_bind)
 		return "setsockopt() was successful";
 	} else if (errno != EINVAL) {
 		return strerror(errno);
-	} else { 
+	} else {
 		return NULL;
 	}
 }
@@ -15779,7 +15779,7 @@ DEFINE_APITEST(reuseport, set_after_bindx)
 {
 	int fd, result;
 	struct sockaddr_in addr;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15797,7 +15797,7 @@ DEFINE_APITEST(reuseport, set_after_bindx)
 		return strerror(errno);
 	}
 
-	result = sctp_enable_reuse_port(fd);	
+	result = sctp_enable_reuse_port(fd);
 	close(fd);
 
 	if (!result) {
@@ -15812,7 +15812,7 @@ DEFINE_APITEST(reuseport, set_after_bindx)
 DEFINE_APITEST(reuseport, bind_twice)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15820,7 +15820,7 @@ DEFINE_APITEST(reuseport, bind_twice)
 		close(fd1);
 		return strerror(errno);
 	}
-	
+
 	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		close(fd1);
 		return strerror(errno);
@@ -15835,7 +15835,7 @@ DEFINE_APITEST(reuseport, bind_twice)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));	
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));
 	close(fd1);
 	close(fd2);
 
@@ -15849,7 +15849,7 @@ DEFINE_APITEST(reuseport, bind_twice)
 DEFINE_APITEST(reuseport, bind_twice_illegal_1)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15867,8 +15867,8 @@ DEFINE_APITEST(reuseport, bind_twice_illegal_1)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));	
-	
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));
+
 	close(fd1);
 	close(fd2);
 
@@ -15884,7 +15884,7 @@ DEFINE_APITEST(reuseport, bind_twice_illegal_1)
 DEFINE_APITEST(reuseport, bind_twice_illegal_2)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15901,7 +15901,7 @@ DEFINE_APITEST(reuseport, bind_twice_illegal_2)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));		
+	result = sctp_bind(fd2, INADDR_LOOPBACK, sctp_get_local_port(fd1));
 	close(fd1);
 	close(fd2);
 
@@ -15916,7 +15916,7 @@ DEFINE_APITEST(reuseport, bind_twice_illegal_2)
 DEFINE_APITEST(reuseport, bind_twice_listen)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -15943,7 +15943,7 @@ DEFINE_APITEST(reuseport, bind_twice_listen)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = listen(fd1, 1);	
+	result = listen(fd1, 1);
 	close(fd1);
 	close(fd2);
 
@@ -15957,14 +15957,14 @@ DEFINE_APITEST(reuseport, bind_twice_listen)
 DEFINE_APITEST(reuseport, bind_subset)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
 	if (sctp_enable_reuse_port(fd1) < 0) {
 		close(fd1);
 		return strerror(errno);
-	}	
+	}
 	if ((fd2 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		close(fd1);
 		return strerror(errno);
@@ -15979,7 +15979,7 @@ DEFINE_APITEST(reuseport, bind_subset)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = sctp_bind(fd2, INADDR_ANY, sctp_get_local_port(fd1));		
+	result = sctp_bind(fd2, INADDR_ANY, sctp_get_local_port(fd1));
 	close(fd1);
 	close(fd2);
 
@@ -15993,7 +15993,7 @@ DEFINE_APITEST(reuseport, bind_subset)
 DEFINE_APITEST(reuseport, listen_twice)
 {
 	int fd1, fd2, result;
-	
+
 	if ((fd1 = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return strerror(errno);
 	}
@@ -16025,7 +16025,7 @@ DEFINE_APITEST(reuseport, listen_twice)
 		close(fd2);
 		return strerror(errno);
 	}
-	result = listen(fd2, 1);	
+	result = listen(fd2, 1);
 	close(fd1);
 	close(fd2);
 	if (!result) {
@@ -16041,7 +16041,7 @@ static int
 sctp_bound_socket(in_addr_t address, in_port_t port)
 {
 	int fd;
-	
+
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 		return -1;
 	}
@@ -16060,7 +16060,7 @@ static int
 sctp_listening_socket(in_addr_t address, in_port_t port)
 {
 	int fd;
-	
+
 	if ((fd = sctp_bound_socket(address, port)) < 0) {
 		return -1;
 	}
@@ -16076,7 +16076,7 @@ DEFINE_APITEST(reuseport, accept_inheritage)
 	int fd, lfd, cfd, result;
 	int opt;
 	socklen_t optlen;
-	
+
 	if ((lfd = sctp_listening_socket(INADDR_LOOPBACK, 0)) < 0) {
 		return strerror(errno);
 	}
@@ -16093,7 +16093,7 @@ DEFINE_APITEST(reuseport, accept_inheritage)
 		close(lfd);
 		close(fd);
 		return strerror(errno);
-	}		
+	}
 	opt = 0;
 	optlen = (socklen_t)sizeof(int);
 	result = getsockopt(cfd, IPPROTO_SCTP, SCTP_REUSE_PORT, (void *)&opt, &optlen);
@@ -16101,12 +16101,12 @@ DEFINE_APITEST(reuseport, accept_inheritage)
 	close(lfd);
 	close(fd);
 	close(cfd);
-	
+
 	if (result) {
 		return strerror(errno);
 	} else if (!opt) {
 		return "SCTP_REUSE_PORT not enabled";
-	} else {	
+	} else {
 		return NULL;
 	}
 }
@@ -16114,7 +16114,7 @@ DEFINE_APITEST(reuseport, accept_inheritage)
 DEFINE_APITEST(reuseport, connect)
 {
 	int fd1, fd2, lfd1,lfd2;
-	
+
 	if ((lfd1 = sctp_listening_socket(INADDR_LOOPBACK, 0)) < 0) {
 		return strerror(errno);
 	}
@@ -16151,6 +16151,6 @@ DEFINE_APITEST(reuseport, connect)
 	close(lfd2);
 	close(fd1);
 	close(fd2);
-	
+
 	return NULL;
 }

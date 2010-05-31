@@ -46,7 +46,7 @@
 DEFINE_APITEST(shutdown, 1to1_not_connected)
 {
 	int fd, n;
-	
+
 	fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
 	if (fd < 0) {
 		return strerror(errno);
