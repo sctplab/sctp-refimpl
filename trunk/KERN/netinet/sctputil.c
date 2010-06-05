@@ -61,9 +61,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208160 2010-05-16 17:03:56Z rrs 
 #define APPLE_FILE_NO 8
 #endif
 
-#if defined(__Windows__) && !defined(SCTP_LOCAL_TRACE_BUF)
+#if defined(__Windows__) 
+#if !defined(SCTP_LOCAL_TRACE_BUF)
 #include "eventrace_netinet.h"
 #include "sctputil.tmh" /* this is the file that will be auto generated */
+#endif
 #else
 #ifndef KTR_SCTP
 #define KTR_SCTP KTR_SUBSYS
