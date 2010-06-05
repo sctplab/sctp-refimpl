@@ -6704,6 +6704,11 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 		return (NULL);
 #endif
 	}
+
+	/* no memory? */
+	if (hashtbl == NULL)
+		return (NULL);
+
 	for (i = 0; i < hashsize; i++)
 		LIST_INIT(&hashtbl[i]);
 	*hashmask = hashsize - 1;
@@ -6753,6 +6758,11 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 		return (NULL);
 #endif
 	}
+
+	/* no memory? */
+	if (hashtbl == NULL)
+		return (NULL);
+
 	for (i = 0; i < hashsize; i++)
 		LIST_INIT(&hashtbl[i]);
 	*hashmask = hashsize - 1;
