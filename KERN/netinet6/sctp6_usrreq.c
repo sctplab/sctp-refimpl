@@ -1403,6 +1403,8 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+	if (sin6 == NULL)
+		return ENOMEM;
 #elif defined(__Panda__)
 	bzero(sin6, sizeof(*sin6));
 #else
@@ -1543,6 +1545,8 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+	if (sin6 == NULL)
+		return (ENOMEM);
 #elif defined(__Panda__)
 	bzero(sin6, sizeof(*sin6));
 #else
