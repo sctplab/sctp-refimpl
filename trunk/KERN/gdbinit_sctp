@@ -1,5 +1,5 @@
 define sctp_allasocs
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
  set $_asoc=$_inp->sctp_asoc_list.lh_first
  while ( $_asoc != 0) 
@@ -13,8 +13,27 @@ document sctp_allasocs
 Show all SCTP associations
 end
 
+define sctp_allasocslock
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
+while ( $_inp != 0 )
+ set $_asoc=$_inp->sctp_asoc_list.lh_first
+ while ( $_asoc != 0) 
+    if ( $_asoc->tcb_mtx.mtx_lock != 4 )
+        print $_asoc
+	print $_asoc->tcb_mtx.mtx_lock
+    end
+    set $_asoc=$_asoc->sctp_tcblist.le_next
+  end
+ set $_inp=$_inp->sctp_list.le_next
+end
+end
+document sctp_allasocslock
+Show all SCTP associations with locks
+end
+
+
 define sctp_allcallouts
-set $_c=sctppcbinfo.callqueue.tqh_first
+set $_c=system_base_info.sctppcbinfo.callqueue.tqh_first
 while ( $_c != 0 )
  print $_c
  set $_c=$_c->tqe.tqe_next
@@ -25,7 +44,7 @@ Show all SCTP callouts
 end
 
 define sctp_findep
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
   if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
     print $_inp
@@ -40,7 +59,7 @@ find an SCTP endpoint and print it out as a variable for use
 end
 
 define sctp_allep_wrefcnt
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
 	if ( $_inp->refcount > 0 ) 
           print $_inp
@@ -54,7 +73,7 @@ end
 
 
 define sctp_findasoc
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
  while ( $_inp != 0 )
   if ($_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport == $arg0)
      print $_inp
@@ -95,7 +114,7 @@ The interesting stuff I want to show on an sctp_allasoc command
 end
 
 define sctp_allasoc
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
  set $_asoc=$_inp->sctp_asoc_list.lh_first
  while ( $_asoc != 0) 
@@ -110,7 +129,7 @@ Show some things on all SCTP associations
 end
 
 define sctp_allep
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
 print $_inp
 set $_inp=$_inp->sctp_list.le_next
@@ -121,7 +140,7 @@ Show all SCTP endpoints
 end
 
 define sctp_allepflags
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
 printf "%X ", $_inp
 printf "State %X\n", $_inp->sctp_flags
@@ -134,7 +153,7 @@ end
 
 
 define sctp_allepports
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
    print $_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport 
 set $_inp=$_inp->sctp_list.le_next
@@ -145,7 +164,7 @@ Show all SCTP endpoint port numbers
 end
 
 define sctp_findepports
-set $_inp=sctppcbinfo.listhead.lh_first
+set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
 while ( $_inp != 0 )
    if ( $arg0 == $_inp->ip_inp.inp.inp_inc.inc_ie.ie_lport )
 	print $_inp
@@ -161,7 +180,7 @@ end
 
 
 define sctp_allreadq
- set $_inp=sctppcbinfo.listhead.lh_first
+ set $_inp=system_base_info.sctppcbinfo.listhead.lh_first
  while ( $_inp != 0 )
   print $_inp->read_queue.tqh_first
   set $_inp=$_inp->sctp_list.le_next
