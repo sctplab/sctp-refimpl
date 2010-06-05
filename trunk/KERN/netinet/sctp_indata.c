@@ -3829,7 +3829,8 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	sctp_total_flight_decrease(stcb, tp1);
 	/* Now mark for resend */
 	tp1->sent = SCTP_DATAGRAM_RESEND;
-	asoc->sent_queue_retran_cnt++;
+	sctp_ucount_incr(asoc->sent_queue_retran_cnt);
+	
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 		sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_WP,
 			       tp1->whoTo->flight_size,
@@ -4240,7 +4241,7 @@ again:
 					sctp_flight_size_increase(tp1);
 					sctp_total_flight_increase(stcb, tp1);
 				} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
-					asoc->sent_queue_retran_cnt++;
+					sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 				}
 			}
 		}
@@ -5236,7 +5237,7 @@ again:
 					sctp_flight_size_increase(tp1);
 					sctp_total_flight_increase(stcb, tp1);
 				} else if (tp1->sent == SCTP_DATAGRAM_RESEND) {
-					asoc->sent_queue_retran_cnt++;
+					sctp_ucount_incr(asoc->sent_queue_retran_cnt);
 				}
 			}
 		}
