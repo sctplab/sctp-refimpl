@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 207924 2010-05-11 17:02:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 208863 2010-06-06 02:32:20Z rrs $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -5278,6 +5278,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
+		if (sin == NULL)
+			return (ENOMEM);
 #else
 		sin = (struct sockaddr_in *)addr;
 		bzero((caddr_t)sin, sizeof(*sin));
@@ -5302,6 +5304,8 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined(__Userspace__)
 		SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+		if (sin6 == NULL)
+			return (ENOMEM);
 #else
 		sin6 = (struct sockaddr_in6 *)addr;
 		bzero((caddr_t)sin6, sizeof(*sin6));
@@ -5421,6 +5425,8 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
+	if (sin == NULL)
+		return (ENOMEM);
 #elif defined(__Panda__)
 	bzero(sin, sizeof(*sin));
 #else
@@ -5551,6 +5557,8 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin, struct sockaddr_in *, sizeof *sin);
+	if (sin == NULL)
+		return (ENOMEM);
 #elif defined(__Panda__)
 	memset(sin, 0, sizeof(*sin));
 #else

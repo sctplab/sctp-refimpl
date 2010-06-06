@@ -1131,7 +1131,6 @@ sctp_sorecvmsg(struct socket *so,
  * API system calls
  */
 #if !(defined(_KERNEL)) && !(defined(__Userspace__))
-#if !defined(__Windows__)
 
 __BEGIN_DECLS
 int sctp_peeloff __P((int, sctp_assoc_t));
@@ -1166,38 +1165,5 @@ ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
 
 __END_DECLS
 
-#else
-SOCKET sctp_peeloff __P((SOCKET, sctp_assoc_t));
-int sctp_bindx __P((SOCKET, struct sockaddr *, int, int));
-int sctp_connectx __P((SOCKET, const struct sockaddr *, int, sctp_assoc_t *));
-int sctp_getaddrlen __P((sa_family_t));
-int sctp_getpaddrs __P((SOCKET, sctp_assoc_t, struct sockaddr **));
-void sctp_freepaddrs __P((struct sockaddr *));
-int sctp_getladdrs __P((SOCKET, sctp_assoc_t, struct sockaddr **));
-void sctp_freeladdrs __P((struct sockaddr *));
-int sctp_opt_info __P((SOCKET, sctp_assoc_t, int, void *, socklen_t *));
-
-ssize_t sctp_sendmsg (SOCKET, const void *, size_t,
-    const struct sockaddr *,
-    socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t);
-
-ssize_t sctp_send __P((SOCKET sd, const void *msg, size_t len,
-    const struct sctp_sndrcvinfo *sinfo, int flags));
-
-ssize_t	sctp_sendx __P((SOCKET sd, const void *msg, size_t len,
-    struct sockaddr *addrs, int addrcnt,
-    struct sctp_sndrcvinfo *sinfo, int flags));
-
-ssize_t	sctp_sendmsgx __P((SOCKET sd, const void *, size_t,
-    struct sockaddr *, int,
-    uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
-
-sctp_assoc_t sctp_getassocid __P((SOCKET sd, struct sockaddr *sa));
-
-ssize_t sctp_recvmsg __P((SOCKET, void *, size_t, struct sockaddr *,
-    socklen_t *, struct sctp_sndrcvinfo *, int *));
-
-#pragma warning(pop)
-#endif				/* !__Windows__*/
 #endif				/* !_KERNEL */
 #endif				/* !__sctp_uio_h__ */
