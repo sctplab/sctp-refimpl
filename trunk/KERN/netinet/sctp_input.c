@@ -5419,6 +5419,12 @@ sctp_validate_no_locks(struct sctp_inpcb *inp)
 			panic("Own lock on stcb at return from input");
 		}
 	}
+	if (mtx_owned(&inp->inp_create_mtx)) {
+		panic("Own create lock on inp");
+	}
+	if (mtx_owned(&inp->inp_mtx)) {
+		panic("Own inp lock on inp");
+	}
 #endif
 }
 #endif
