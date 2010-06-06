@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 207924 2010-05-11 17:02:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 208863 2010-06-06 02:32:20Z rrs $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
