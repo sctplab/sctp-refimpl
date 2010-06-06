@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUMBER_OF_THREADS 250 
+#define NUMBER_OF_THREADS 250
 #define RUNTIME 600
 #define BUFFER_SIZE (1<<16)
 
@@ -78,17 +78,17 @@ discard_server(void *arg)
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("bind");
 	}
-	
+
 	port = sctp_get_local_port(fd);
-	
+
 	if (listen(fd, 1) < 0) {
 		perror("listen");
 	}
-	
+
 	while (1) {
 		recv(fd, (void *)buffer, BUFFER_SIZE, 0);
 	}
-	
+
 	return (NULL);
 }
 
@@ -97,7 +97,7 @@ create_associations(void *arg)
 {
 	struct sockaddr_in remote_addr;
 	int fd;
-	
+
 	remote_addr.sin_family      = AF_INET;
 	remote_addr.sin_len         = sizeof(struct sockaddr_in);
 	remote_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
@@ -106,7 +106,7 @@ create_associations(void *arg)
 	while (!done) {
 		if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 			perror("socket");
-		}		
+		}
 		if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0) {
 			perror("connect");
 		}
@@ -115,13 +115,13 @@ create_associations(void *arg)
 		}
 	}
 	return (NULL);
-}		
-		
-int 
+}
+
+int
 main() {
 	pthread_t tid;
 	unsigned int i;
-	
+
 	pthread_create(&tid, NULL, &discard_server, (void *)NULL);
 	sleep(1);
 	done = 0;
