@@ -1953,7 +1953,7 @@ sctp_timeout_handler(void *t)
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT,
-				SCTP_CALLED_DIRECTLY_NOCMPSET);
+				SCTP_CALLED_FROM_INPKILL_TIMER);
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif
