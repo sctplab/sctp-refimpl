@@ -4538,7 +4538,8 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
  				if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 					;
 				} else {
-					if (locked_tcb) {
+					if (locked_tcb != stcb) {
+						/* Very unlikely */
 						SCTP_TCB_UNLOCK(locked_tcb);
 					}
 					*offset = length;
