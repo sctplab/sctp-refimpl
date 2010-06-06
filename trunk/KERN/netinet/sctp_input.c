@@ -4855,6 +4855,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
+				abend:
 					if (stcb) {
 						SCTP_TCB_UNLOCK(stcb);
 					}
@@ -4904,7 +4905,12 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 
 				if (linp) {
 					SCTP_ASOC_CREATE_LOCK(linp);
+					if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+					    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE)) {
+						goto abend;
+					}
 				}
+
 				if (netp) {
 					ret_buf =
 						sctp_handle_cookie_echo(m, iphlen,
