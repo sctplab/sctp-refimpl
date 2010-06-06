@@ -247,6 +247,13 @@ extern LARGE_INTEGER zero_timeout;
 } while (0)
 
 
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) do { \
 	spinlock_init(&(_inp)->inp_create_lock, "sctp-create", "inp_create", 0); \
 } while (0)

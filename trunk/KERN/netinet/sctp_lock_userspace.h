@@ -96,6 +96,12 @@ __FBSDID("$FreeBSD$");
 #define SCTP_INP_RLOCK(_inp)
 #define SCTP_INP_WLOCK(_inp)
 
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
 
 #define SCTP_TCB_SEND_LOCK_INIT(_tcb)
 #define SCTP_TCB_SEND_LOCK_DESTROY(_tcb)
