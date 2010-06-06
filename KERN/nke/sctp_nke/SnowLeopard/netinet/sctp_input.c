@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 207924 2010-05-11 17:02:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 208853 2010-06-05 21:20:28Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4854,6 +4854,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			} else {
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					/* We are not interested anymore */
+					if (stcb) {
+						SCTP_TCB_UNLOCK(stcb);
+					}
 					*offset = length;
 					return (NULL);
 				}
@@ -5403,13 +5406,16 @@ sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
 }
 
 #ifdef INVARIANTS
-static void
+#ifdef __GNUC__
+__attribute__((noinline))
+#endif
+void
 sctp_validate_no_locks(struct sctp_inpcb *inp)
 {
 #ifndef __APPLE__
-	struct sctp_tcb *stcb;
-	LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
-		if (mtx_owned(&stcb->tcb_mtx)) {
+	struct sctp_tcb *lstcb;
+	LIST_FOREACH(lstcb, &inp->sctp_asoc_list, sctp_tcblist) {
+		if (mtx_owned(&lstcb->tcb_mtx)) {
 			panic("Own lock on stcb at return from input");
 		}
 	}

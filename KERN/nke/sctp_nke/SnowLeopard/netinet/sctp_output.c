@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 207985 2010-05-12 18:33:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 208855 2010-06-05 21:27:43Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9083,6 +9083,9 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		if ((chk->rec.chunk_id.id == SCTP_COOKIE_ECHO) ||
 		    (chk->rec.chunk_id.id == SCTP_STREAM_RESET) ||
 		    (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN)) {
+			if (chk->sent != SCTP_DATAGRAM_RESEND) {
+				continue;
+			}
 			if (chk->rec.chunk_id.id == SCTP_STREAM_RESET) {
 				if (chk != asoc->str_reset) {
 					/*
@@ -9143,7 +9146,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		/* (void)SCTP_GETTIME_TIMEVAL(&chk->whoTo->last_sent_time); */
 		*cnt_out += 1;
 		chk->sent = SCTP_DATAGRAM_SENT;
-		/* sctp_ucount_decr(asoc->sent_queue_retran_cnt); */
+		sctp_ucount_decr(stcb->asoc.sent_queue_retran_cnt);
 		if (fwd_tsn == 0) {
 			return (0);
 		} else {
@@ -14118,6 +14121,13 @@ out_unlocked:
 		if (i_pak) {
 			(void)SCTP_RELEASE_HEADER(i_pak);
 		}
+	}
+#endif
+#ifdef INVARIANTS
+	if (inp) {
+		sctp_validate_no_locks(inp);
+	} else {
+		printf("Warning - inp is NULL so cant validate locks\n");
 	}
 #endif
 	if (top) {

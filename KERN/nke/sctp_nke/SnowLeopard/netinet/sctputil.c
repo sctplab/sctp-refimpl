@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208160 2010-05-16 17:03:56Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208857 2010-06-05 21:39:52Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -61,9 +61,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208160 2010-05-16 17:03:56Z rrs 
 #define APPLE_FILE_NO 8
 #endif
 
-#if defined(__Windows__) && !defined(SCTP_LOCAL_TRACE_BUF)
+#if defined(__Windows__) 
+#if !defined(SCTP_LOCAL_TRACE_BUF)
 #include "eventrace_netinet.h"
 #include "sctputil.tmh" /* this is the file that will be auto generated */
+#endif
 #else
 #ifndef KTR_SCTP
 #define KTR_SCTP KTR_SUBSYS
@@ -6702,6 +6704,11 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 		return (NULL);
 #endif
 	}
+
+	/* no memory? */
+	if (hashtbl == NULL)
+		return (NULL);
+
 	for (i = 0; i < hashsize; i++)
 		LIST_INIT(&hashtbl[i]);
 	*hashmask = hashsize - 1;
@@ -6751,6 +6758,11 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 		return (NULL);
 #endif
 	}
+
+	/* no memory? */
+	if (hashtbl == NULL)
+		return (NULL);
+
 	for (i = 0; i < hashsize; i++)
 		LIST_INIT(&hashtbl[i]);
 	*hashmask = hashsize - 1;
