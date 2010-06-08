@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 208864 2010-06-06 02:33:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 208891 2010-06-07 11:33:20Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3407,7 +3407,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	struct sctp_laddr *laddr, *nladdr;
 	struct inpcb *ip_pcb;
 	struct socket *so;
-
+	int being_refed=0;
 	struct sctp_queued_to_read *sq;
 
 #if !defined(__Panda__) && !defined(__Userspace__)
@@ -3737,7 +3737,16 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #endif
 		return;
 	}
-	if ( (inp->refcount) || (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP) ) {
+	if (SCTP_INP_LOCK_CONTENDED(inp)) 
+		being_refed++;
+	if (SCTP_INP_READ_CONTENDED(inp)) 
+		being_refed++;
+	if(SCTP_ASOC_CREATE_LOCK_CONTENDED(inp)) 
+		being_refed++;
+
+	if ( (inp->refcount) || 
+	     (being_refed) ||
+	     (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP)) {
 		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
 		sctp_timer_start(SCTP_TIMER_TYPE_INPKILL, inp, NULL, NULL);
 		SCTP_INP_WUNLOCK(inp);
@@ -5100,8 +5109,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 							  SS_ISCONFIRMING |
 							  SS_ISCONNECTED);
 				}
-				SOCK_UNLOCK(so);
+#if defined(__APPLE__)
 				socantrcvmore(so);
+#else
+				socantrcvmore_locked(so);
+#endif
 				sctp_sowwakeup(inp, so);
 				sctp_sorwakeup(inp, so);
 				SCTP_SOWAKEUP(so);

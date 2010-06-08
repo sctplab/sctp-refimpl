@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208857 2010-06-05 21:39:52Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208878 2010-06-06 19:24:32Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1953,7 +1953,7 @@ sctp_timeout_handler(void *t)
 		SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
 		sctp_inpcb_free(inp, SCTP_FREE_SHOULD_USE_ABORT,
-				SCTP_CALLED_DIRECTLY_NOCMPSET);
+				SCTP_CALLED_FROM_INPKILL_TIMER);
 #if defined(__APPLE__)
 		SCTP_SOCKET_UNLOCK(SCTP_INP_SO(inp), 1);
 #endif

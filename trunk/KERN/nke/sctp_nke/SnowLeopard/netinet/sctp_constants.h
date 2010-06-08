@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 208160 2010-05-16 17:03:56Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 208879 2010-06-06 20:34:17Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -937,7 +937,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 208160 2010-05-16 17:03:56
 /* third argument */
 #define SCTP_CALLED_DIRECTLY_NOCMPSET     0
 #define SCTP_CALLED_AFTER_CMPSET_OFCLOSE  1
-
+#define SCTP_CALLED_FROM_INPKILL_TIMER    2
 /* second argument */
 #define SCTP_FREE_SHOULD_USE_ABORT          1
 #define SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE 0
