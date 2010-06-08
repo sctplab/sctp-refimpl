@@ -133,6 +133,14 @@
 #define SCTP_ASOC_CREATE_UNLOCK(_inp) \
 	lck_mtx_unlock((_inp)->inp_create_mtx)
 
+
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+
 #define SCTP_INP_READ_INIT(_inp) \
 	(_inp)->inp_rdata_mtx = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_READ_DESTROY(_inp) \

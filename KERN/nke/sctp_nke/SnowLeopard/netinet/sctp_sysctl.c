@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 205629 2010-03-24 20:02:40Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 208879 2010-06-06 20:34:17Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -372,6 +372,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	struct xsctp_inpcb xinpcb;
 	struct xsctp_tcb xstcb;
 	struct xsctp_raddr xraddr;
+	struct socket *so;
 
 	number_of_endpoints = 0;
 	number_of_local_addresses = 0;
@@ -424,6 +425,10 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 
 	LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 		SCTP_INP_RLOCK(inp);
+		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
+			/* if its allgone it is being freed - skip it  */
+			goto skip;
+		}
 		xinpcb.last                   = 0;
 		xinpcb.local_port             = ntohs(inp->sctp_lport);
 		xinpcb.flags                  = inp->sctp_flags;
@@ -432,13 +437,14 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		xinpcb.total_recvs            = inp->total_recvs;
 		xinpcb.total_nospaces         = inp->total_nospaces;
 		xinpcb.fragmentation_point    = inp->sctp_frag_point;
-		if ((inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+		so = inp->sctp_socket;
+		if ((so == NULL) || 
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 			xinpcb.qlen                   = 0;
 			xinpcb.maxqlen                = 0;
 		} else {
-			xinpcb.qlen                   = inp->sctp_socket->so_qlen;
-			xinpcb.maxqlen                = inp->sctp_socket->so_qlimit;
+			xinpcb.qlen                   = so->so_qlen;
+			xinpcb.maxqlen                = so->so_qlimit;
 		}
 		SCTP_INP_INCR_REF(inp);
 		SCTP_INP_RUNLOCK(inp);
@@ -568,6 +574,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 		if (error) {
 			return error;
 		}
+	skip:
 		SCTP_INP_INFO_RLOCK();
 	}
 	SCTP_INP_INFO_RUNLOCK();
