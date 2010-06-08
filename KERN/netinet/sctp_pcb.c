@@ -5109,7 +5109,11 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 							  SS_ISCONFIRMING |
 							  SS_ISCONNECTED);
 				}
+#if defined(__APPLE__)
+				socantrcvmore(so);
+#else
 				socantrcvmore_locked(so);
+#endif
 				sctp_sowwakeup(inp, so);
 				sctp_sorwakeup(inp, so);
 				SCTP_SOWAKEUP(so);
