@@ -38,7 +38,7 @@
 #include <stdlib.h>
 #include <string.h>
 
-#define NUMBER_OF_THREADS 250
+#define NUMBER_OF_THREADS 1000
 #define RUNTIME 600
 #define BUFFER_SIZE (1<<16)
 
@@ -95,17 +95,27 @@ discard_server(void *arg)
 static void *
 create_associations(void *arg)
 {
-	struct sockaddr_in remote_addr;
+	struct sockaddr_in remote_addr, local_addr;
 	int fd;
 
+	memset((void *)&remote_addr, 0, sizeof(struct sockaddr_in));
 	remote_addr.sin_family      = AF_INET;
 	remote_addr.sin_len         = sizeof(struct sockaddr_in);
-	remote_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 	remote_addr.sin_port        = htons(port);
+	remote_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+
+	memset((void *)&local_addr, 0, sizeof(struct sockaddr_in));
+	local_addr.sin_len         = sizeof(struct sockaddr_in);
+	local_addr.sin_family      = AF_INET;
+	local_addr.sin_port        = htons(0);
+	local_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
 
 	while (!done) {
 		if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
 			perror("socket");
+		}
+		if (bind(fd, (struct sockaddr *)&local_addr, sizeof(struct sockaddr_in)) < 0) {
+			perror("bind");
 		}
 		if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0) {
 			perror("connect");
