@@ -299,10 +299,10 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	}
 	cumackp1 = asoc->cumulative_tsn + 1;
 	if (compare_with_wrap(cumackp1, tsn, MAX_TSN)) {
-	  /* this tsn is behind the cum ack and thus we don't
-	   * need to worry about it being moved from one to the other.
-	   */
-	  return;
+		/* this tsn is behind the cum ack and thus we don't
+		 * need to worry about it being moved from one to the other.
+		 */
+		return;
 	}
 	SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
 	if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
@@ -2281,9 +2281,9 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 	}
 	at = 0;
 	for (slide_from = 0; slide_from < stcb->asoc.mapping_array_size; slide_from++) {
-		if (type == SCTP_NR_SELECTIVE_ACK) 
+		if (type == SCTP_NR_SELECTIVE_ACK)
 			val = asoc->nr_mapping_array[slide_from];
-		else 
+		else
 			val = asoc->nr_mapping_array[slide_from] | asoc->mapping_array[slide_from];
 		if (val == 0xff) {
 			at += 8;
