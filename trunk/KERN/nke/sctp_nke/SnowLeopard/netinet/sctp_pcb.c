@@ -3433,12 +3433,6 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		 * sockets layer.
 		 */
 		SCTP_ITERATOR_LOCK();
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
-		/* socket is gone, so no more wakeups allowed */
-		inp->sctp_flags |= SCTP_PCB_FLAGS_DONT_WAKE;
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
-		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
-
 		/* mark any iterators on the list or being processed */
 		sctp_iterator_inp_being_freed(inp);
 		SCTP_ITERATOR_UNLOCK();
@@ -3456,6 +3450,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_INP_INFO_WLOCK();
 
 	SCTP_INP_WLOCK(inp);
+	if (from == SCTP_CALLED_AFTER_CMPSET_OFCLOSE) {
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_CLOSE_IP;
+		/* socket is gone, so no more wakeups allowed */
+		inp->sctp_flags |= SCTP_PCB_FLAGS_DONT_WAKE;
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEINPUT;
+		inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAKEOUTPUT;
+
+	}
 	/* First time through we have the socket lock, after that no more. */
 	sctp_timer_stop(SCTP_TIMER_TYPE_NEWCOOKIE, inp, NULL, NULL,
 			SCTP_FROM_SCTP_PCB+SCTP_LOC_1 );
@@ -3646,13 +3648,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		}
 		/* now is there some left in our SHUTDOWN state? */
 		if (cnt_in_sd) {
+			inp->sctp_socket = NULL;
 			SCTP_INP_WUNLOCK(inp);
 			SCTP_ASOC_CREATE_UNLOCK(inp);
 			SCTP_INP_INFO_WUNLOCK();
 #ifdef SCTP_LOG_CLOSING
 			sctp_log_closing(inp, NULL, 2);
 #endif
-			inp->sctp_socket = NULL;
 			return;
 		}
 	}
