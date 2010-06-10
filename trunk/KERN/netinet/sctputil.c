@@ -1287,7 +1287,8 @@ sctp_iterator_work(struct sctp_iterator *it)
 	int iteration_count = 0;
 	int inp_skip = 0;
 	int first_in=1;
-
+	struct sctp_inpcb *tinp;
+	
 	SCTP_ITERATOR_LOCK();
  	if (it->inp) {
 		SCTP_INP_RLOCK(it->inp);
@@ -1318,8 +1319,9 @@ select_a_new_ep:
 			SCTP_INP_RUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
-		SCTP_INP_RUNLOCK(it->inp);
+		tinp = it->inp;
 		it->inp = LIST_NEXT(it->inp, sctp_list);
+		SCTP_INP_RUNLOCK(tinp);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
