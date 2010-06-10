@@ -482,6 +482,9 @@ sctp_ctlinput(cmd, sa, vip)
 				SCTP_INP_DECR_REF(inp);
 				SCTP_INP_WUNLOCK(inp);
 			}
+			if (stcb) {
+				SCTP_TCB_UNLOCK(stcb);
+			}
 		}
 	}
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
