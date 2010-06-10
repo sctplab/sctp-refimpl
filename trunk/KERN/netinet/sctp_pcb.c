@@ -3388,6 +3388,8 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 			} else {
 				it->inp = LIST_NEXT(it->inp, sctp_list);
 			}
+			/* When its put in the refcnt is incremented so decr it */
+			SCTP_INP_DECR_REF(inp);
 		}
 		it = nit;
 	}
@@ -7292,20 +7294,22 @@ sctp_initiate_iterator(inp_func inpf,
 	it->vn = curvnet;
 #endif	
 	if (s_inp) {
+		/* Assume lock is held here */
 		it->inp = s_inp;
+		SCTP_INP_INCR_REF(it->inp);
 		it->iterator_flags = SCTP_ITERATOR_DO_SINGLE_INP;
 	} else {
 		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_FIRST(&SCTP_BASE_INFO(listhead));
-
+		if (it->inp) {
+			SCTP_INP_INCR_REF(it->inp);
+		}
 		SCTP_INP_INFO_RUNLOCK();
 		it->iterator_flags = SCTP_ITERATOR_DO_ALL_INP;
 
 	}
 	SCTP_IPI_ITERATOR_WQ_LOCK();
-	if (it->inp) {
-		SCTP_INP_INCR_REF(it->inp);
-	}
+
 	TAILQ_INSERT_TAIL(&sctp_it_ctl.iteratorhead, it, sctp_nxt_itr);
 	if (sctp_it_ctl.iterator_running == 0) {
 		sctp_wakeup_iterator();
