@@ -1286,12 +1286,13 @@ sctp_iterator_work(struct sctp_iterator *it)
 {
 	int iteration_count = 0;
 	int inp_skip = 0;
+	int first_in=1;
 
 	SCTP_ITERATOR_LOCK();
  	if (it->inp) {
+		SCTP_INP_RLOCK(it->inp);
 		SCTP_INP_DECR_REF(it->inp);
 	}
-
 	if (it->inp == NULL) {
 		/* iterator is complete */
 done_with_iterator:
@@ -1303,7 +1304,11 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
-	SCTP_INP_RLOCK(it->inp);
+	if (first_in) {
+		first_in = 0;
+	} else {
+		SCTP_INP_RLOCK(it->inp);
+	}
 	while (((it->pcb_flags) &&
 		((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) ||
 	       ((it->pcb_features) &&
