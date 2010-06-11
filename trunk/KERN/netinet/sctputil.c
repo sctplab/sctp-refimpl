@@ -1289,6 +1289,7 @@ sctp_iterator_work(struct sctp_iterator *it)
 	int first_in=1;
 	struct sctp_inpcb *tinp;
 	
+	SCTP_INP_INFO_RLOCK();
 	SCTP_ITERATOR_LOCK();
  	if (it->inp) {
 		SCTP_INP_RLOCK(it->inp);
@@ -1298,6 +1299,7 @@ sctp_iterator_work(struct sctp_iterator *it)
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
+		SCTP_INP_INFO_RUNLOCK();
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
@@ -1362,6 +1364,8 @@ select_a_new_ep:
 			SCTP_INP_INCR_REF(it->inp);
 			SCTP_INP_RUNLOCK(it->inp);
 			SCTP_ITERATOR_UNLOCK();
+			SCTP_INP_INFO_RUNLOCK();
+			SCTP_INP_INFO_RLOCK();
 			SCTP_ITERATOR_LOCK();
 			if (sctp_it_ctl.iterator_flags) {
 				/* We won't be staying here */
@@ -1422,9 +1426,7 @@ select_a_new_ep:
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
-		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {
 		goto done_with_iterator;
