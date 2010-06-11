@@ -74,7 +74,7 @@ discard_server(void *arg)
 	addr.sin_len         = sizeof(struct sockaddr_in);
 	addr.sin_family      = AF_INET;
 	addr.sin_port        = htons(0);
-	addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	addr.sin_addr.s_addr = htonl(INADDR_ANY);
 	if (bind(fd, (struct sockaddr *)&addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("bind");
 	}
@@ -108,7 +108,7 @@ create_associations(void *arg)
 	local_addr.sin_len         = sizeof(struct sockaddr_in);
 	local_addr.sin_family      = AF_INET;
 	local_addr.sin_port        = htons(0);
-	local_addr.sin_addr.s_addr = htonl(INADDR_LOOPBACK);
+	local_addr.sin_addr.s_addr = htonl(INADDR_ANY);
 
 	while (!done) {
 		if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0) {
