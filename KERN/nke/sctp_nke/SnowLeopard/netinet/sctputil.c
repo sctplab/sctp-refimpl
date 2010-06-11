@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 208878 2010-06-06 19:24:32Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 209029 2010-06-11 03:54:00Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1286,16 +1286,20 @@ sctp_iterator_work(struct sctp_iterator *it)
 {
 	int iteration_count = 0;
 	int inp_skip = 0;
-
+	int first_in=1;
+	struct sctp_inpcb *tinp;
+	
+	SCTP_INP_INFO_RLOCK();
 	SCTP_ITERATOR_LOCK();
  	if (it->inp) {
+		SCTP_INP_RLOCK(it->inp);
 		SCTP_INP_DECR_REF(it->inp);
 	}
-
 	if (it->inp == NULL) {
 		/* iterator is complete */
 done_with_iterator:
 		SCTP_ITERATOR_UNLOCK();
+		SCTP_INP_INFO_RUNLOCK();
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
@@ -1303,7 +1307,11 @@ done_with_iterator:
 		return;
 	}
 select_a_new_ep:
-	SCTP_INP_RLOCK(it->inp);
+	if (first_in) {
+		first_in = 0;
+	} else {
+		SCTP_INP_RLOCK(it->inp);
+	}
 	while (((it->pcb_flags) &&
 		((it->inp->sctp_flags & it->pcb_flags) != it->pcb_flags)) ||
 	       ((it->pcb_features) &&
@@ -1313,8 +1321,9 @@ select_a_new_ep:
 			SCTP_INP_RUNLOCK(it->inp);
 			goto done_with_iterator;
 		}
-		SCTP_INP_RUNLOCK(it->inp);
+		tinp = it->inp;
 		it->inp = LIST_NEXT(it->inp, sctp_list);
+		SCTP_INP_RUNLOCK(tinp);
 		if (it->inp == NULL) {
 			goto done_with_iterator;
 		}
@@ -1355,6 +1364,8 @@ select_a_new_ep:
 			SCTP_INP_INCR_REF(it->inp);
 			SCTP_INP_RUNLOCK(it->inp);
 			SCTP_ITERATOR_UNLOCK();
+			SCTP_INP_INFO_RUNLOCK();
+			SCTP_INP_INFO_RLOCK();
 			SCTP_ITERATOR_LOCK();
 			if (sctp_it_ctl.iterator_flags) {
 				/* We won't be staying here */
@@ -1415,9 +1426,7 @@ select_a_new_ep:
 	if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 		it->inp = NULL;
 	} else {
-		SCTP_INP_INFO_RLOCK();
 		it->inp = LIST_NEXT(it->inp, sctp_list);
-		SCTP_INP_INFO_RUNLOCK();
 	}
 	if (it->inp == NULL) {
 		goto done_with_iterator;
