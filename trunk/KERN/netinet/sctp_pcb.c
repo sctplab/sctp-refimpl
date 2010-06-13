@@ -5120,8 +5120,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		stcb->asoc.state &= ~SCTP_STATE_IN_ACCEPT_QUEUE;
 		sctp_timer_start(SCTP_TIMER_TYPE_ASOCKILL, inp, stcb, NULL);
 		if (from_inpcbfree == SCTP_NORMAL_PROC) {
-		  SCTP_INP_INFO_WUNLOCK();
-		  SCTP_INP_WUNLOCK(inp);
+			SCTP_INP_INFO_WUNLOCK();
+			SCTP_INP_WUNLOCK(inp);
 		}
 		SCTP_TCB_UNLOCK(stcb);
 		return (0);
