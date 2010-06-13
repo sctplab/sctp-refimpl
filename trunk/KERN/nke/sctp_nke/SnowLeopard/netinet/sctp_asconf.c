@@ -1060,7 +1060,8 @@ sctp_asconf_nets_cleanup(struct sctp_tcb *stcb, struct sctp_ifn *ifn)
 		 * address.
 		 */
 		if (SCTP_ROUTE_HAS_VALID_IFN(&net->ro) &&
-		    SCTP_GET_IF_INDEX_FROM_ROUTE(&net->ro) != ifn->ifn_index) {
+		    ((ifn == NULL) ||
+		     (SCTP_GET_IF_INDEX_FROM_ROUTE(&net->ro) != ifn->ifn_index))) {
 			/* clear any cached route */
 			RTFREE(net->ro.ro_rt);
 			net->ro.ro_rt = NULL;
