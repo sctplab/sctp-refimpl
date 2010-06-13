@@ -1,6 +1,5 @@
 /*
- * Copyright (C) 2008 Michael Tuexen, tuexen@fh-muenster.de,
- *
+ * Copyright (c) 2008-2010 Michael Tuexen, tuexen@freebsd.org
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -11,14 +10,11 @@
  * 2. Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in the
  *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the project nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * THIS SOFTWARE IS PROVIDED BY THE AUTHOR AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE AUTHOR OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -26,6 +22,7 @@
  * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
+ *
  */
 
 #include <sys/types.h>
@@ -43,9 +40,9 @@
 #define BUFFER_SIZE (1<<16)
 
 static int done;
-static unsigned short port;
+static in_port_t port;
 
-unsigned short
+in_port_t
 sctp_get_local_port(int fd)
 {
 	struct sockaddr_in addr;
@@ -54,7 +51,7 @@ sctp_get_local_port(int fd)
 	addr_len = (socklen_t)sizeof(struct sockaddr_in);
 	memset((void *)&addr, 0, sizeof(struct sockaddr_in));
 	(void)getsockname(fd, (struct sockaddr *) &addr, &addr_len);
-	return ntohs(addr.sin_port);
+	return (in_port_t)ntohs(addr.sin_port);
 }
 
 static void *
@@ -129,17 +126,19 @@ create_associations(void *arg)
 
 int
 main() {
-	pthread_t tid;
+	pthread_t server_tid, client_tid[NUMBER_OF_THREADS];
 	unsigned int i;
 
-	pthread_create(&tid, NULL, &discard_server, (void *)NULL);
+	pthread_create(&server_tid, NULL, &discard_server, (void *)NULL);
 	sleep(1);
 	done = 0;
-	for(i = 0; i < NUMBER_OF_THREADS; i++) {
-		pthread_create(&tid, NULL, &create_associations, (void *)NULL);
+	for (i = 0; i < NUMBER_OF_THREADS; i++) {
+		pthread_create(&client_tid[i], NULL, &create_associations, (void *)NULL);
 	}
 	sleep(RUNTIME);
 	done = 1;
-	sleep(1);
+	for (i = 0; i < NUMBER_OF_THREADS; i++) {
+		pthread_join(client_tid[i], NULL);
+	}
 	return (0);
 }
