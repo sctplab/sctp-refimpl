@@ -3432,17 +3432,10 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 #ifdef SCTP_LOG_CLOSING
 	sctp_log_closing(inp, NULL, 0);
 #endif
-	if (from == SCTP_CALLED_AFTER_CMPSET_OFCLOSE) {
-		/* Once we are in we can remove the flag
-		 * from = 1 is only passed from the actual
-		 * closing routines that are called via the
-		 * sockets layer.
-		 */
-		SCTP_ITERATOR_LOCK();
-		/* mark any iterators on the list or being processed */
-		sctp_iterator_inp_being_freed(inp);
-		SCTP_ITERATOR_UNLOCK();
-	}
+	SCTP_ITERATOR_LOCK();
+	/* mark any iterators on the list or being processed */
+	sctp_iterator_inp_being_freed(inp);
+	SCTP_ITERATOR_UNLOCK();
 	so = inp->sctp_socket;
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) {
 		/* been here before.. eeks.. get out of here */
