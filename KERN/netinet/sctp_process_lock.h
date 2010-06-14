@@ -269,6 +269,13 @@
 /*
  * common locks
  */
+
+/* copied over to compile */
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+
 /* socket locks */
 
 #if defined(__Userspace__)
