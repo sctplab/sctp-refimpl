@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 209029 2010-06-11 03:54:00Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 209178 2010-06-14 21:25:07Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3367,7 +3367,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 	 */
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead);
-	while(it) {
+	while (it) {
 		nit = TAILQ_NEXT(it, sctp_nxt_itr);
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		if (it->vn != curvnet) {
@@ -3384,9 +3384,12 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 				if (it->function_atend != NULL) {
 					(*it->function_atend) (it->pointer, it->val);
 				}
-				SCTP_FREE(it,SCTP_M_ITER);
+				SCTP_FREE(it, SCTP_M_ITER);
 			} else {
 				it->inp = LIST_NEXT(it->inp, sctp_list);
+				if (it->inp) {
+					SCTP_INP_INCR_REF(it->inp);
+				}
 			}
 			/* When its put in the refcnt is incremented so decr it */
 			SCTP_INP_DECR_REF(inp);
