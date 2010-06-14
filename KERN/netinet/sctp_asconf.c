@@ -850,6 +850,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	ack->serial_number = serial_num;
 	ack->last_sent_to = NULL;
 	ack->data = m_ack;
+	ack->len = 0;
 	n = m_ack;
 	while(n) {
 		ack->len += SCTP_BUF_LEN(n);
