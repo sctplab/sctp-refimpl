@@ -234,7 +234,7 @@ static void* handle_connection(void *arg)
 	flags = 0;
 	len = (socklen_t)sizeof(struct sockaddr_in);
 #if defined(SCTP_USERMODE)
-        n = userspace_sctp_recvmsg(psock, buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
+        n = userspace_sctp_recvmsg(conn_sock, buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
 #else
 	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, (struct sockaddr *)&addr, &len, &sinfo, &flags);
 #endif
@@ -263,7 +263,7 @@ static void* handle_connection(void *arg)
 		flags = 0;
 		len = (socklen_t)sizeof(struct sockaddr_in);
 #if defined(SCTP_USERMODE)
-                n = userspace_sctp_recvmsg(psock, (void *) buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
+                n = userspace_sctp_recvmsg(conn_sock, (void *) buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
 #else
 		n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, (struct sockaddr *)&addr, &len, &sinfo, &flags);
 #endif
