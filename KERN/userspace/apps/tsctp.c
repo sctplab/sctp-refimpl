@@ -276,7 +276,11 @@ static void* handle_connection(void *arg)
 	fprintf(stdout, "%u, %lu, %lu, %lu, %llu, %f, %f\n",
 			first_length, messages, recv_calls, notifications, sum, seconds, (double)first_length * (double)messages / seconds);
 	fflush(stdout);
-	close(fd);
+#if defined(SCTP_USERMODE)
+    userspace_close(conn_sock); 
+#else
+    close(fd);
+#endif
 	free(buf);
 	return NULL;
 }
@@ -410,8 +414,9 @@ int main(int argc, char **argv)
 	}
 #if defined(SCTP_USERMODE)
         sctp_init();
-        SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
-
+        SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0;
+        SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)=9899;
+        SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;
         if( !(psock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) ){
             printf("user_socket() returned NULL\n");
             exit(1);
@@ -482,10 +487,10 @@ int main(int argc, char **argv)
 			addr_len = sizeof(struct sockaddr_in);
 			cfdptr = malloc(sizeof(int));
 #if defined(SCTP_USERMODE)
-                        if( (conn_sock = userspace_accept(psock, (struct sockaddr *) &remote_addr, &addr_len))== NULL) {
+            if( (conn_sock = userspace_accept(psock, (struct sockaddr *) &remote_addr, &addr_len))== NULL) {
                             printf("userspace_accept failed.  exiting...\n");
                             continue;        
-                        }
+            }
 #else
 			if ((*cfdptr = accept(fd, (struct sockaddr *)&remote_addr, &addr_len)) < 0) {
 				perror("accept");
@@ -641,9 +646,10 @@ int main(int argc, char **argv)
 		linger.l_linger = LINGERTIME;
 #if defined(SCTP_USERMODE)
                 /* TODO SO_LINGER stuff */
-                
-                userspace_close(psock);
+        sleep (2);
+        userspace_close(psock);
 #else
+
 		if (setsockopt(fd, SOL_SOCKET, SO_LINGER,(char*)&linger, sizeof(struct linger))<0)
 			perror("setsockopt");
 
