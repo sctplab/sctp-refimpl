@@ -1049,7 +1049,7 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	sctp_assoc_t assoc_id;
 
 	if ((lfd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
-	   	return strerror(errno);
+		return strerror(errno);
 	if (sctp_bind(lfd, INADDR_LOOPBACK, 0) < 0) {
 		close(lfd);
 		return strerror(errno);
