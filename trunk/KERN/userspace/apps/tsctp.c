@@ -287,8 +287,7 @@ static void* handle_connection(void *arg)
 
 int main(int argc, char **argv)
 {
-		int fd, *cfdptr;
-	size_t intlen;
+	int *cfdptr;
 	char c, *buffer;
 	socklen_t addr_len;
 	struct sockaddr_in local_addr[MAX_LOCAL_ADDR], remote_addr;
@@ -298,25 +297,31 @@ int main(int argc, char **argv)
 	short local_port, remote_port, port;
 	double seconds;
 	double throughput;
-	const int on = 1;
-	const int off = 0;
 	int nodelay = 0;
 	unsigned long i, number_of_messages;
 	pthread_t tid;
-	int rcvbufsize=0, sndbufsize=0, myrcvbufsize, mysndbufsize;
+	int rcvbufsize=0, sndbufsize=0; 
 	struct msghdr msghdr;
 	struct iovec iov[1024];
-	struct linger linger;
 	int fragpoint = 0;
 	unsigned int runtime = 0;
 	struct sctp_setadaptation ind = {0};
+#if !defined (SCTP_USERMODE)
+	struct sctp_assoc_value av;
+	struct linger linger;
+	int myrcvbufsize, mysndbufsize;
+	const int on = 1;
+	const int off = 0;
+	size_t intlen;
+	int fd;
+#endif
 #ifdef SCTP_AUTH_CHUNK
 	unsigned int number_of_chunks_to_auth = 0;
 	unsigned int chunk_number;
 	unsigned char chunk[256];
 	struct sctp_authchunk sac;
 #endif
-	struct sctp_assoc_value av;
+	
 	int unordered = 0;
 	
 	memset(iov, 0, sizeof(iov));
