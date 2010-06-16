@@ -612,6 +612,7 @@ int main(int argc, char **argv)
 #endif
 			i++;
 		}
+		
 #if defined(SCTP_USERMODE)
                 if((userspace_sctp_sendmsg(psock /* struct socket *so */,
                                                     buffer /* const void *data */,
@@ -641,7 +642,7 @@ int main(int argc, char **argv)
 #if defined(SCTP_USERMODE)
                 /* TODO SO_LINGER stuff */
                 
-                userspace_close(conn_sock);
+                userspace_close(psock);
 #else
 		if (setsockopt(fd, SOL_SOCKET, SO_LINGER,(char*)&linger, sizeof(struct linger))<0)
 			perror("setsockopt");
