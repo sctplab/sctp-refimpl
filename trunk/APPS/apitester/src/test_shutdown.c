@@ -43,6 +43,69 @@
 #include "sctp_utilities.h"
 #include "api_tests.h"
 
+DEFINE_APITEST(shutdown, 1toM_RD)
+{
+	int fd, n;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return strerror(errno);
+	}
+	n = shutdown(fd, SHUT_RD);
+	close(fd);
+	if (n < 0) {
+		if (errno == EOPNOTSUPP) {
+			RETURN_PASSED;
+		} else {
+			RETURN_FAILED("errno is %d instead of %d", errno, EOPNOTSUPP);
+		}
+	} else {
+		RETURN_FAILED("shutdown() was successful");
+	}
+}
+
+DEFINE_APITEST(shutdown, 1toM_WR)
+{
+	int fd, n;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return strerror(errno);
+	}
+	n = shutdown(fd, SHUT_WR);
+	close(fd);
+	if (n < 0) {
+		if (errno == EOPNOTSUPP) {
+			RETURN_PASSED;
+		} else {
+			RETURN_FAILED("errno is %d instead of %d", errno, EOPNOTSUPP);
+		}
+	} else {
+		RETURN_FAILED("shutdown() was successful");
+	}
+}
+
+DEFINE_APITEST(shutdown, 1toM_RDWR)
+{
+	int fd, n;
+
+	fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
+	if (fd < 0) {
+		return strerror(errno);
+	}
+	n = shutdown(fd, SHUT_RDWR);
+	close(fd);
+	if (n < 0) {
+		if (errno == EOPNOTSUPP) {
+			RETURN_PASSED;
+		} else {
+			RETURN_FAILED("errno is %d instead of %d", errno, EOPNOTSUPP);
+		}
+	} else {
+		RETURN_FAILED("shutdown() was successful");
+	}
+}
+
 DEFINE_APITEST(shutdown, 1to1_not_connected)
 {
 	int fd, n;
@@ -63,3 +126,4 @@ DEFINE_APITEST(shutdown, 1to1_not_connected)
 		RETURN_FAILED("shutdown() was successful");
 	}
 }
+
