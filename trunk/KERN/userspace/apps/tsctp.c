@@ -7,18 +7,18 @@
  * modification, are permitted provided that the following conditions
  * are met:
  * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
+ *	  notice, this list of conditions and the following disclaimer.
  * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
+ *	  notice, this list of conditions and the following disclaimer in the
+ *	  documentation and/or other materials provided with the distribution.
  * 3. Neither the name of the project nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ *	  may be used to endorse or promote products derived from this software
+ *	  without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
  * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
  * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * ARE DISCLAIMED.	IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
  * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
  * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
  * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
@@ -56,31 +56,31 @@ extern int userspace_bind(struct socket *so, struct sockaddr *name, int namelen)
 extern int userspace_listen(struct socket *so, int backlog);
 extern struct socket * userspace_accept(struct socket *so, struct sockaddr * aname, socklen_t * anamelen);
 extern int userspace_connect(struct socket *so, struct sockaddr *name, int namelen);
-extern  void userspace_close(struct socket *so);
+extern	void userspace_close(struct socket *so);
 extern ssize_t userspace_sctp_sendmsg(struct socket *so, 
-                                      const void *data,
-                                      size_t len,
-                                      struct sockaddr *to,
-                                      socklen_t tolen,
-                                      u_int32_t ppid,
-                                      u_int32_t flags,
-                                      u_int16_t stream_no,
-                                      u_int32_t timetolive,
-                                      u_int32_t context);
+									  const void *data,
+									  size_t len,
+									  struct sockaddr *to,
+									  socklen_t tolen,
+									  u_int32_t ppid,
+									  u_int32_t flags,
+									  u_int16_t stream_no,
+									  u_int32_t timetolive,
+									  u_int32_t context);
 
 
 extern ssize_t userspace_sctp_recvmsg(struct socket *so,
-                                      void *dbuf,
-                                      size_t len,
-                                      struct sockaddr *from,
-                                      socklen_t * fromlen,
-                                      struct sctp_sndrcvinfo *sinfo,
-                                      int *msg_flags);
+									  void *dbuf,
+									  size_t len,
+									  struct sockaddr *from,
+									  socklen_t * fromlen,
+									  struct sctp_sndrcvinfo *sinfo,
+									  int *msg_flags);
 extern int sctp_setopt(struct socket *so,
-                        int optname,
-                        void *optval,
-                        size_t optsize,
-                        void *p);
+						int optname,
+						void *optval,
+						size_t optsize,
+						void *p);
 
 uint32_t optval=1;
 struct socket *psock = NULL;
@@ -92,44 +92,44 @@ struct socket *conn_sock = NULL;
 #include <errno.h>
 
 #ifndef timersub
-#define timersub(tvp, uvp, vvp)                                         \
-        do {                                                            \
-                (vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;          \
-                (vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;       \
-                if ((vvp)->tv_usec < 0) {                               \
-                        (vvp)->tv_sec--;                                \
-                        (vvp)->tv_usec += 1000000;                      \
-                }                                                       \
-        } while (0)
+#define timersub(tvp, uvp, vvp)											\
+		do {															\
+				(vvp)->tv_sec = (tvp)->tv_sec - (uvp)->tv_sec;			\
+				(vvp)->tv_usec = (tvp)->tv_usec - (uvp)->tv_usec;		\
+				if ((vvp)->tv_usec < 0) {								\
+						(vvp)->tv_sec--;								\
+						(vvp)->tv_usec += 1000000;						\
+				}														\
+		} while (0)
 #endif
 
 
 char Usage[] =
 "Usage: tsctp [options] [address]\n"
 "Options:\n"
-"        -a      set adaptation layer indication\n"
+"		 -a		 set adaptation layer indication\n"
 #ifdef SCTP_AUTH_CHUNK
-"        -A      chunk type to authenticate \n"
+"		 -A		 chunk type to authenticate \n"
 #endif
-"        -f      fragmentation point\n"
-"        -L      local address\n"
-"        -l      size of send/receive buffer\n"
-"        -n      number of messages sent (0 means infinite)/received\n"
-"        -D      turns Nagle off\n"
-"        -R      socket recv buffer\n"
-"        -S      socket send buffer\n"
-"        -T      time to send messages\n"
-"        -u      use unordered user messages\n"
-"        -v      verbose\n"
-"        -V      very verbose\n"
+"		 -f		 fragmentation point\n"
+"		 -L		 local address\n"
+"		 -l		 size of send/receive buffer\n"
+"		 -n		 number of messages sent (0 means infinite)/received\n"
+"		 -D		 turns Nagle off\n"
+"		 -R		 socket recv buffer\n"
+"		 -S		 socket send buffer\n"
+"		 -T		 time to send messages\n"
+"		 -u		 use unordered user messages\n"
+"		 -v		 verbose\n"
+"		 -V		 very verbose\n"
 ;
 
-#define DEFAULT_LENGTH             1024
+#define DEFAULT_LENGTH			   1024
 #define DEFAULT_NUMBER_OF_MESSAGES 1024
-#define DEFAULT_PORT               5001
-#define BUFFERSIZE                  (1<<16)
-#define LINGERTIME                 1
-#define MAX_LOCAL_ADDR             2
+#define DEFAULT_PORT			   5001
+#define BUFFERSIZE					(1<<16)
+#define LINGERTIME				   1
+#define MAX_LOCAL_ADDR			   2
 
 static int verbose, very_verbose;
 static unsigned int done;
@@ -234,7 +234,7 @@ static void* handle_connection(void *arg)
 	flags = 0;
 	len = (socklen_t)sizeof(struct sockaddr_in);
 #if defined(SCTP_USERMODE)
-        n = userspace_sctp_recvmsg(conn_sock, buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
+		n = userspace_sctp_recvmsg(conn_sock, buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
 #else
 	n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, (struct sockaddr *)&addr, &len, &sinfo, &flags);
 #endif
@@ -263,7 +263,7 @@ static void* handle_connection(void *arg)
 		flags = 0;
 		len = (socklen_t)sizeof(struct sockaddr_in);
 #if defined(SCTP_USERMODE)
-                n = userspace_sctp_recvmsg(conn_sock, (void *) buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
+				n = userspace_sctp_recvmsg(conn_sock, (void *) buf, BUFFERSIZE, (struct sockaddr *) &addr, &len, &sinfo, &flags);
 #else
 		n = sctp_recvmsg(fd, (void*)buf, BUFFERSIZE, (struct sockaddr *)&addr, &len, &sinfo, &flags);
 #endif
@@ -277,9 +277,9 @@ static void* handle_connection(void *arg)
 			first_length, messages, recv_calls, notifications, sum, seconds, (double)first_length * (double)messages / seconds);
 	fflush(stdout);
 #if defined(SCTP_USERMODE)
-    userspace_close(conn_sock); 
+	userspace_close(conn_sock); 
 #else
-    close(fd);
+	close(fd);
 #endif
 	free(buf);
 	return NULL;
@@ -287,7 +287,7 @@ static void* handle_connection(void *arg)
 
 int main(int argc, char **argv)
 {
-        int fd, *cfdptr;
+		int fd, *cfdptr;
 	size_t intlen;
 	char c, *buffer;
 	socklen_t addr_len;
@@ -320,18 +320,18 @@ int main(int argc, char **argv)
 	int unordered = 0;
 	
 	memset(iov, 0, sizeof(iov));
-	length             = DEFAULT_LENGTH;
+	length			   = DEFAULT_LENGTH;
 	number_of_messages = DEFAULT_NUMBER_OF_MESSAGES;
-	port               = DEFAULT_PORT;
-	verbose            = 0;
-	very_verbose       = 0;
+	port			   = DEFAULT_PORT;
+	verbose			   = 0;
+	very_verbose	   = 0;
 
 	memset((void *) &remote_addr, 0, sizeof(remote_addr));
 	for (i = 0; i < MAX_LOCAL_ADDR; i++) {
-		memset((void *) &local_addr[i],  0, sizeof(local_addr[i]));
-		local_addr[i].sin_family      = AF_INET;
+		memset((void *) &local_addr[i],	 0, sizeof(local_addr[i]));
+		local_addr[i].sin_family	  = AF_INET;
 #ifdef HAVE_SIN_LEN
-		local_addr[i].sin_len         = sizeof(struct sockaddr_in);
+		local_addr[i].sin_len		  = sizeof(struct sockaddr_in);
 #endif
 		local_addr[i].sin_addr.s_addr = htonl(INADDR_ANY);
 	}
@@ -398,12 +398,12 @@ int main(int argc, char **argv)
 		}
 
 	if (optind == argc) {
-		client      = 0;
-		local_port  = port;
+		client		= 0;
+		local_port	= port;
 		remote_port = 0;
 	} else {
-		client      = 1;
-		local_port  = 0;
+		client		= 1;
+		local_port	= 0;
 		remote_port = port;
 	}
 	if (nr_local_addr == 0) {
@@ -413,14 +413,16 @@ int main(int argc, char **argv)
 		local_addr[i].sin_port = htons(local_port);
 	}
 #if defined(SCTP_USERMODE)
-        sctp_init();
-        SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0;
-        SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)=9899;
-        SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;
-        if( !(psock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) ){
-            printf("user_socket() returned NULL\n");
-            exit(1);
-        }
+		sctp_init();
+		SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable)=0; 
+		SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)=9899;
+		/*SCTP_BASE_SYSCTL(sctp_debug_on)=0xffffffff;*/
+
+
+		if( !(psock = userspace_socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) ){
+			printf("user_socket() returned NULL\n");
+			exit(1);
+		}
 #else	
 	if ((fd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		perror("socket");
@@ -429,7 +431,7 @@ int main(int argc, char **argv)
 	for (chunk_number = 0; chunk_number < number_of_chunks_to_auth; chunk_number++) {
 		sac.sauth_chunk = chunk[chunk_number];
 #if defined(SCTP_USERMODE)
-                /* TODO SCTP_AUTH_CHUNK stuff */
+				/* TODO SCTP_AUTH_CHUNK stuff */
 #else
 
 		if (setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_CHUNK, &sac, (socklen_t)sizeof(struct sctp_authchunk)) < 0)
@@ -439,21 +441,21 @@ int main(int argc, char **argv)
 #endif
 
 #if defined(SCTP_USERMODE)
-        /* FIXME? bind vs bindx */
-        if(userspace_bind(psock, (struct sockaddr *) local_addr, sizeof(*local_addr)) == -1) {
-            printf("userspace_bind failed.  exiting...\n");
-            exit(1);
-        }
+		/* FIXME? bind vs bindx */
+		if(userspace_bind(psock, (struct sockaddr *) local_addr, sizeof(*local_addr)) == -1) {
+			printf("userspace_bind failed.	exiting...\n");
+			exit(1);
+		}
 
-        /* TODO SCTP_ADAPTATION_LAYER stuff */
-        /* TODO SO_REUSEADDR stuff */
+		/* TODO SCTP_ADAPTATION_LAYER stuff */
+		/* TODO SO_REUSEADDR stuff */
 #else
 	if (setsockopt(fd, IPPROTO_SCTP, SCTP_ADAPTATION_LAYER, (const void*)&ind, (socklen_t)sizeof(struct sctp_setadaptation)) < 0) {
 		perror("setsockopt");
 	}
 	if (!client)
 		setsockopt(fd, SOL_SOCKET, SO_REUSEADDR, (const void*)&on, (socklen_t)sizeof(on));
-        
+		
 	if (nr_local_addr > 0) {
 		if (sctp_bindx(fd, (struct sockaddr *)local_addr, nr_local_addr, SCTP_BINDX_ADD_ADDR) != 0)
 			perror("bind");
@@ -462,12 +464,12 @@ int main(int argc, char **argv)
 
 	if (!client) {
 #if defined(SCTP_USERMODE)
-                if(userspace_listen(psock, 10) == -1) {
-                    printf("userspace_listen failed.  exiting...\n");
-                    exit(1);        
-                }                            
+				if(userspace_listen(psock, 10) == -1) {
+					printf("userspace_listen failed.  exiting...\n");
+					exit(1);		
+				}							 
 
-                /* TODO rcvbufsize stuff */
+				/* TODO rcvbufsize stuff */
 #else
 		if (listen(fd, 1) < 0)
 			perror("listen");
@@ -487,10 +489,10 @@ int main(int argc, char **argv)
 			addr_len = sizeof(struct sockaddr_in);
 			cfdptr = malloc(sizeof(int));
 #if defined(SCTP_USERMODE)
-            if( (conn_sock = userspace_accept(psock, (struct sockaddr *) &remote_addr, &addr_len))== NULL) {
-                            printf("userspace_accept failed.  exiting...\n");
-                            continue;        
-            }
+			if( (conn_sock = userspace_accept(psock, (struct sockaddr *) &remote_addr, &addr_len))== NULL) {
+				printf("userspace_accept failed.  exiting...\n");
+				continue;		 
+			}
 #else
 			if ((*cfdptr = accept(fd, (struct sockaddr *)&remote_addr, &addr_len)) < 0) {
 				perror("accept");
@@ -502,34 +504,34 @@ int main(int argc, char **argv)
 			pthread_create(&tid, NULL, &handle_connection, (void *) cfdptr);
 		}
 #if defined(SCTP_USERMODE)
-                userspace_close(psock); 
+				userspace_close(psock); 
 #else
 		close(fd);
 #endif
 	} else {
-		remote_addr.sin_family      = AF_INET;
+		remote_addr.sin_family		= AF_INET;
 #ifdef HAVE_SIN_LEN
-		remote_addr.sin_len         = sizeof(struct sockaddr_in);
+		remote_addr.sin_len			= sizeof(struct sockaddr_in);
 #endif
 		remote_addr.sin_addr.s_addr = inet_addr(argv[optind]);
-		remote_addr.sin_port        = htons(remote_port);
+		remote_addr.sin_port		= htons(remote_port);
 
 #if defined(SCTP_USERMODE)
-                /* TODO fragpoint stuff */
-                
-                if( userspace_connect(psock, (struct sockaddr *) &remote_addr, sizeof(struct sockaddr_in)) == -1 ) {
-                    printf("userspace_connect failed.  exiting...\n");
-                    exit(1);        
-                }
+				/* TODO fragpoint stuff */
+				
+				if( userspace_connect(psock, (struct sockaddr *) &remote_addr, sizeof(struct sockaddr_in)) == -1 ) {
+					printf("userspace_connect failed.  exiting...\n");
+					exit(1);		
+				}
 		if (nodelay == 1) {
-                    optval=1;
+					optval=1;
 		} else {
-                    optval=0;
+					optval=0;
 		}
-                sctp_setopt(psock, SCTP_NODELAY, &optval, sizeof(optval), NULL);
+				sctp_setopt(psock, SCTP_NODELAY, &optval, sizeof(optval), NULL);
 
-                /* TODO sndbufsize stuff */
-                
+				/* TODO sndbufsize stuff */
+				
 #else
 		if (fragpoint){
 			av.assoc_id = 0;
@@ -566,7 +568,7 @@ int main(int argc, char **argv)
 #endif
 		buffer = malloc(length);
 		iov[0].iov_base = buffer;
-		iov[0].iov_len  = length;
+		iov[0].iov_len	= length;
 
 		gettimeofday(&start_time, NULL);
 		if (verbose) {
@@ -574,13 +576,13 @@ int main(int argc, char **argv)
 			fflush(stdout);
 		}
 
-		msghdr.msg_name       = NULL;
-		msghdr.msg_namelen    = 0;
-		msghdr.msg_iov        = iov;
-		msghdr.msg_iovlen     = 1;
-		msghdr.msg_control    = NULL;
+		msghdr.msg_name		  = NULL;
+		msghdr.msg_namelen	  = 0;
+		msghdr.msg_iov		  = iov;
+		msghdr.msg_iovlen	  = 1;
+		msghdr.msg_control	  = NULL;
 		msghdr.msg_controllen = 0;
-		msghdr.msg_flags      = 0;
+		msghdr.msg_flags	  = 0;
 
 		i = 0;
 		done = 0;
@@ -595,20 +597,20 @@ int main(int argc, char **argv)
 				printf("Sending message number %lu.\n", i);
 
 #if defined(SCTP_USERMODE)
-                if(userspace_sctp_sendmsg(psock /* struct socket *so */,
-                                                    buffer /* const void *data */,
-                                                    length /* size_t len */,
-                                                    (struct sockaddr *) &remote_addr /* const struct sockaddr *to */,
-                                                    sizeof(struct sockaddr_in) /* socklen_t tolen */,
-                                                    0 /* u_int32_t ppid */,
-                                                    unordered?SCTP_UNORDERED:0 /* u_int32_t flags */,
-                                                    0 /* u_int16_t stream_no */,
-                                                    0 /* u_int32_t timetolive */,
-                                                    0 /* u_int32_t context */)<0)
-                    {
-                        perror("userspace_sctp_sendmsg returned < 0");
-                        exit(1);
-                    }                        
+				if(userspace_sctp_sendmsg(psock /* struct socket *so */,
+													buffer /* const void *data */,
+													length /* size_t len */,
+													(struct sockaddr *) &remote_addr /* const struct sockaddr *to */,
+													sizeof(struct sockaddr_in) /* socklen_t tolen */,
+													0 /* u_int32_t ppid */,
+													unordered?SCTP_UNORDERED:0 /* u_int32_t flags */,
+													0 /* u_int16_t stream_no */,
+													0 /* u_int32_t timetolive */,
+													0 /* u_int32_t context */)<0)
+					{
+						perror("userspace_sctp_sendmsg returned < 0");
+						exit(1);
+					}
 
 #else
 			if (sctp_sendmsg(fd, buffer, length, NULL, 0, 0, unordered?SCTP_UNORDERED:0, 0, 0, 0) < 0) {
@@ -619,37 +621,37 @@ int main(int argc, char **argv)
 		}
 		
 #if defined(SCTP_USERMODE)
-                if((userspace_sctp_sendmsg(psock /* struct socket *so */,
-                                                    buffer /* const void *data */,
-                                                    length /* size_t len */,
-                                                    (struct sockaddr *) &remote_addr /* const struct sockaddr *to */,
-                                                    sizeof(struct sockaddr_in) /* socklen_t tolen */,
-                                                    0 /* u_int32_t ppid */,
-                                                    unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF /* u_int32_t flags */,
-                                                    0 /* u_int16_t stream_no */,
-                                                    0 /* u_int32_t timetolive */,
-                                                    0 /* u_int32_t context */))<0)
-                    {
-                        perror("userspace_sctp_sendmsg returned\n");
-                        exit(1);
-                        
-                    }
+				if((userspace_sctp_sendmsg(psock /* struct socket *so */,
+													buffer /* const void *data */,
+													length /* size_t len */,
+													(struct sockaddr *) &remote_addr /* const struct sockaddr *to */,
+													sizeof(struct sockaddr_in) /* socklen_t tolen */,
+													0 /* u_int32_t ppid */,
+													unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF /* u_int32_t flags */,
+													0 /* u_int16_t stream_no */,
+													0 /* u_int32_t timetolive */,
+													0 /* u_int32_t context */))<0)
+					{
+						perror("userspace_sctp_sendmsg returned\n");
+						exit(1);
+						
+					}
 #else
 		if (sctp_sendmsg(fd, buffer, length, NULL, 0, 0, unordered?SCTP_EOF|SCTP_UNORDERED:SCTP_EOF, 0, 0, 0) < 0) {
 			perror("sctp_sendmsg");
 		}
 #endif
+
 		i++;
 		if (verbose)
 			printf("done.\n");
+		
+#if defined(SCTP_USERMODE)
+				/* TODO SO_LINGER stuff */
+		userspace_close(psock);
+#else
 		linger.l_onoff = 1;
 		linger.l_linger = LINGERTIME;
-#if defined(SCTP_USERMODE)
-                /* TODO SO_LINGER stuff */
-        sleep (2);
-        userspace_close(psock);
-#else
-
 		if (setsockopt(fd, SOL_SOCKET, SO_LINGER,(char*)&linger, sizeof(struct linger))<0)
 			perror("setsockopt");
 
@@ -659,9 +661,13 @@ int main(int argc, char **argv)
 		timersub(&now, &start_time, &diff_time);
 		seconds = diff_time.tv_sec + (double)diff_time.tv_usec/1000000;
 		fprintf(stdout, "%s of %ld messages of length %u took %f seconds.\n",
-		       "Sending", i, length, seconds);
+				"Sending", i, length, seconds);
 		throughput = (double)i * (double)length / seconds;
 		fprintf(stdout, "Throughput was %f Byte/sec.\n", throughput);
 	}
+	sleep(10);
+	#if defined(SCTP_USERMODE)
+		sctp_finish();
+	#endif
 	return 0;
 }
