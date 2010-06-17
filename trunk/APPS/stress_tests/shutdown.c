@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <signal.h>
 
 #define NUMBER_OF_THREADS 1000
 #define RUNTIME 1
