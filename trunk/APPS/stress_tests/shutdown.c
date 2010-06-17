@@ -34,19 +34,12 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
-#include <signal.h>
 
-#define NUMBER_OF_THREADS 1000
 #define RUNTIME 1
+#define NUMBER_OF_MESSAGES 10
 #define BUFFER_SIZE (1452)
 
-static int done;
 static in_port_t port;
-
-void stop_sender(int sig)
-{
-	done = 1;
-}
 
 in_port_t
 sctp_get_local_port(int fd)
@@ -66,6 +59,7 @@ discard_server(void *arg)
 	int lfd, cfd;
 	struct sockaddr_in addr;
 	char *buffer;
+	unsigned int i;
 
 	buffer = (char *)malloc(BUFFER_SIZE);
 
@@ -92,7 +86,7 @@ discard_server(void *arg)
 		perror("accept");
 	}
 	close(lfd);
-	while (!done) {
+	for (i = 0; i < NUMBER_OF_MESSAGES; i++) {
 		recv(cfd, (void *)buffer, BUFFER_SIZE, 0);
 	}
 	if (shutdown(cfd, SHUT_RDWR) < 0) {
@@ -107,6 +101,7 @@ message_generator(void *arg)
 	struct sockaddr_in remote_addr, local_addr;
 	int fd;
 	char *buffer;
+	unsigned long i;
 
 	buffer = (char *)malloc(BUFFER_SIZE);
 	memset(buffer, 'A', BUFFER_SIZE);
@@ -132,8 +127,8 @@ message_generator(void *arg)
 	if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("connect");
 	}
-	while (send(fd, (void *)buffer, BUFFER_SIZE, 0) > 0) {
-	}
+	for (i = 0; send(fd, (void *)buffer, BUFFER_SIZE, 0) > 0; i++);
+	printf("Sent %lu messages.\n", i);
 	if (close(fd) < 0) {
 		perror("close");
 	}
@@ -143,10 +138,6 @@ message_generator(void *arg)
 int
 main(void) {
 	pthread_t server_tid, client_tid;
-
-	done = 0;
-	signal(SIGALRM, stop_sender);
-	alarm(RUNTIME);
 
 	pthread_create(&server_tid, NULL, &discard_server, (void *)NULL);
 	sleep(1);
