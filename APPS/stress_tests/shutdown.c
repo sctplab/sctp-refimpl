@@ -132,8 +132,7 @@ message_generator(void *arg)
 	if (connect(fd, (struct sockaddr *)&remote_addr, sizeof(struct sockaddr_in)) < 0) {
 		perror("connect");
 	}
-	while (!done) {
-		send(fd, (void *)buffer, BUFFER_SIZE, 0);
+	while (send(fd, (void *)buffer, BUFFER_SIZE, 0) > 0) {
 	}
 	if (close(fd) < 0) {
 		perror("close");
