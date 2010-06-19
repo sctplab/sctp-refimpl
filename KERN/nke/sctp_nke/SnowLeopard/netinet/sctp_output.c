@@ -2195,11 +2195,6 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 			   sa_family_t fam)
 {
 	uint8_t dest_is_global=0;
-#if defined(__APPLE__)
-	struct timeval timenow;
-
-	getmicrotime(&timenow);
-#endif
 	/* dest_is_priv is true if destination is a private address */
         /* dest_is_loop is true if destination is a loopback addresses */
 
@@ -2296,12 +2291,6 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 			    sa_family_t fam)
 {
 	uint8_t dest_is_global=0;
-
-#if defined(__APPLE__)
-	struct timeval timenow;
-
-	getmicrotime(&timenow);
-#endif
 
 	/*
 	 * Here we determine if its a acceptable address. A acceptable
