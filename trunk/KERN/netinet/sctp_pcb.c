@@ -1336,7 +1336,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_TCB_UNLOCK(stcb);	
 				goto null_return;
 			}
-			if (sctp_does_stcb_own_this_addr(stcb, local) == 0) {
+			if (!(local && sctp_does_stcb_own_this_addr(stcb, local))) {
 				SCTP_TCB_UNLOCK(stcb);
 				goto null_return;
 			}
@@ -1436,7 +1436,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
-			if (sctp_does_stcb_own_this_addr(stcb, local) == 0) {
+			if (!(local && sctp_does_stcb_own_this_addr(stcb, local))) {
 				SCTP_TCB_UNLOCK(stcb);
 				continue;
 			}
