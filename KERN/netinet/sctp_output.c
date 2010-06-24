@@ -9858,6 +9858,7 @@ send_forward_tsn(struct sctp_tcb *stcb,
         struct sctp_tmit_chunk *chk;
 	struct sctp_forward_tsn_chunk *fwdtsn;
 	uint32_t advance_peer_ack_point;
+
         SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN) {
@@ -9909,8 +9910,8 @@ sctp_fill_in_rest:
 		unsigned int cnt_of_skipped = 0;
 
 		TAILQ_FOREACH(at, &asoc->sent_queue, sctp_next) {
-		if ((at->sent != SCTP_FORWARD_TSN_SKIP) &&
-		    (at->sent != SCTP_DATAGRAM_ACKED)){
+			if ((at->sent != SCTP_FORWARD_TSN_SKIP) &&
+			    (at->sent != SCTP_DATAGRAM_ACKED)) {
 				/* no more to look at */
 				break;
 			}
@@ -9973,7 +9974,8 @@ sctp_fill_in_rest:
 			 * peer ack point
 			 */
 			advance_peer_ack_point = last->rec.data.TSN_seq;
-			space_needed -= (cnt_of_skipped * sizeof(struct sctp_strseq));
+			space_needed = sizeof(struct sctp_forward_tsn_chunk) +
+			               cnt_of_skipped * sizeof(struct sctp_strseq);
 		}
 		chk->send_size = space_needed;
 		/* Setup the chunk */
@@ -9982,8 +9984,6 @@ sctp_fill_in_rest:
 		fwdtsn->ch.chunk_flags = 0;
 		fwdtsn->ch.chunk_type = SCTP_FORWARD_CUM_TSN;
 		fwdtsn->new_cumulative_tsn = htonl(advance_peer_ack_point);
-		chk->send_size = (sizeof(struct sctp_forward_tsn_chunk) +
-		    (cnt_of_skipped * sizeof(struct sctp_strseq)));
 		SCTP_BUF_LEN(chk->data) = chk->send_size;
 		fwdtsn++;
 		/*-
