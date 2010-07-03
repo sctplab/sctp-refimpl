@@ -42,10 +42,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp.h 209289 2010-06-18 09:01:44Z tuexen $
 #endif
 #include <sys/types.h>
 
-#if defined(__Windows__)
-#include <packon.h>
-#endif
-
 #define SCTP_PACKED __attribute__((packed))
 
 /*
@@ -249,6 +245,8 @@ struct sctp_paramhdr {
 #define SCTP_GET_ADDR_LEN               0x0000800b
 /* temporary workaround for Apple listen() issue, no args used */
 #define SCTP_LISTEN_FIX			0x0000800c
+/* workaround for Cygwin on Windows: returns the SOCKET handle */
+#define SCTP_GET_HANDLE			0x0000800d
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00009f00
 
@@ -550,10 +548,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LOG_AT_SEND_2_SCTP             0x04000000
 #define SCTP_LOG_AT_SEND_2_OUTQ             0x08000000
 #define SCTP_LOG_TRY_ADVANCE                0x10000000
-
-#if defined(__Windows__)
-#include <packoff.h>
-#endif
 
 #undef SCTP_PACKED
 
