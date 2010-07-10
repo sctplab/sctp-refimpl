@@ -4,9 +4,9 @@ ARCHTYPE = $(shell uname -p | sed 's/386/486/' | sed 's/amd/x86-/')
 
 # FreeBSD needs -march for gcc atomics, but that breaks 64bit x86 Darwin
 ifeq ($(OSTYPE),FreeBSD)
-CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -DSCTP_SIMPLE_ALLOCATOR -Wall -march=$(ARCHTYPE)
+CFLAGS	= -g $(MYGPROF) -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -DSCTP_SIMPLE_ALLOCATOR -Wall -march=$(ARCHTYPE)
 else
-CFLAGS	= -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -DSCTP_SIMPLE_ALLOCATOR -Wall 
+CFLAGS	= -g $(MYGPROF) -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_$(OSTYPE) -DSCTP_SIMPLE_ALLOCATOR -Wall 
 endif
 # this breaks powerPC builds -march=i486 
 
