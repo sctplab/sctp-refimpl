@@ -979,12 +979,26 @@ union sctp_sockstore {
 /***********************************/
 /* And something for us old timers */
 #ifndef ntohll
+#if defined(__Userspace_os_Linux)
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#include <endian.h>
+#else
 #include <sys/endian.h>
+#endif
 #define ntohll(x) be64toh(x)
 #endif
 
 #ifndef htonll
+#if defined(__Userspace_os_Linux)
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#include <endian.h>
+#else
 #include <sys/endian.h>
+#endif
 #define htonll(x) htobe64(x)
 #endif
 /***********************************/
