@@ -22,7 +22,7 @@ if [ $OSTYPE = FreeBSD ]; then
 
 # build with gmake
     echo "Using gmake ..."
-    make -f allplatform.make MAKE=gmake
+    make -f allplatform.make MAKE=gmake MYGPROF=${MYGPROF}
 
 elif [ $ARCHTYPE = powerpc ]; then
 
@@ -34,7 +34,7 @@ elif [ $ARCHTYPE = powerpc ]; then
 
 # build with make
     echo "Using make ..."
-    make -f allplatform.make
+    make -f allplatform.make MYGPROF=${MYGPROF}
 
 else
 
@@ -46,7 +46,7 @@ else
 
 # build with make
     echo "Using make ..."
-    make -f allplatform.make
+    make -f allplatform.make MYGPROF=${MYGPROF}
 
 fi
 
