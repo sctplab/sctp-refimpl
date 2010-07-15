@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.14 2007/07/24 20:06:01 rrs Exp $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 209709 2010-07-05 03:55:49Z brucec $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -307,7 +307,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			goto out_error;
 		}
 		
-		
+		 sa = (struct sockaddr *)((caddr_t)sa + sz);		
 	}
 	sa = addrs;
 	/* Now if there was a port mentioned, assure that
@@ -809,11 +809,11 @@ sctp_sendmsgx(int sd,
     size_t len,
     struct sockaddr *addrs,
     int addrcnt,
-    u_int32_t ppid,
-    u_int32_t flags,
-    u_int16_t stream_no,
-    u_int32_t timetolive,
-    u_int32_t context)
+    uint32_t ppid,
+    uint32_t flags,
+    uint16_t stream_no,
+    uint32_t timetolive,
+    uint32_t context)
 {
 	struct sctp_sndrcvinfo sinfo;
 
