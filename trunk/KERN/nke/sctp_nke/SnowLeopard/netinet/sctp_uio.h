@@ -975,6 +975,35 @@ union sctp_sockstore {
 	struct sockaddr sa;
 };
 
+
+/***********************************/
+/* And something for us old timers */
+#ifndef ntohll
+#if defined(__Userspace_os_Linux)
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#include <endian.h>
+#else
+#include <sys/endian.h>
+#endif
+#define ntohll(x) be64toh(x)
+#endif
+
+#ifndef htonll
+#if defined(__Userspace_os_Linux)
+#ifndef _BSD_SOURCE
+#define _BSD_SOURCE
+#endif
+#include <endian.h>
+#else
+#include <sys/endian.h>
+#endif
+#define htonll(x) htobe64(x)
+#endif
+/***********************************/
+
+
 struct xsctp_inpcb {
 	uint32_t last;
 	uint32_t flags;
