@@ -3464,11 +3464,11 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 		 * inp. We need to stop that from happening. But
 		 * of course the iterator has a reference on the
 		 * stcb and inp. We can mark it and it will stop.
-		 * 
-		 * If its a single iterator situation, we 
+		 *
+		 * If its a single iterator situation, we
 		 * set the end iterator flag. Otherwise
 		 * we set the iterator to go to the next inp.
-		 * 
+		 *
 		 */
 		if (it->iterator_flags & SCTP_ITERATOR_DO_SINGLE_INP) {
 			sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_STOP_CUR_IT;
@@ -3477,7 +3477,7 @@ sctp_iterator_inp_being_freed(struct sctp_inpcb *inp)
 		}
 	}
 	/* Now go through and remove any single reference to
-	 * our inp that may be still pending on the list 
+	 * our inp that may be still pending on the list
 	 */
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead);
@@ -3602,9 +3602,9 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 				/* Skip guys being freed */
 				cnt_in_sd++;
 				if (asoc->asoc.state & SCTP_STATE_IN_ACCEPT_QUEUE) {
-					/* 
+					/*
 					 * Special case - we did not start a kill
-					 * timer on the asoc due to it was not 
+					 * timer on the asoc due to it was not
 					 * closed. So go ahead and start it now.
 					 */
 					asoc->asoc.state &= ~SCTP_STATE_IN_ACCEPT_QUEUE;
@@ -3855,14 +3855,14 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		SCTP_INP_INFO_WUNLOCK();
 		return;
 	}
-	if (SCTP_INP_LOCK_CONTENDED(inp)) 
+	if (SCTP_INP_LOCK_CONTENDED(inp))
 		being_refed++;
-	if (SCTP_INP_READ_CONTENDED(inp)) 
+	if (SCTP_INP_READ_CONTENDED(inp))
 		being_refed++;
-	if(SCTP_ASOC_CREATE_LOCK_CONTENDED(inp)) 
+	if(SCTP_ASOC_CREATE_LOCK_CONTENDED(inp))
 		being_refed++;
 
-	if ( (inp->refcount) || 
+	if ( (inp->refcount) ||
 	     (being_refed) ||
 	     (inp->sctp_flags & SCTP_PCB_FLAGS_CLOSE_IP)) {
 		(void)SCTP_OS_TIMER_STOP(&inp->sctp_ep.signature_change.timer);
@@ -5135,7 +5135,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	if ((stcb->asoc.refcnt) || (stcb->asoc.state & SCTP_STATE_IN_ACCEPT_QUEUE)) {
 		/* Someone holds a reference OR the socket is unaccepted yet.
 		*/
-		if ((stcb->asoc.refcnt)  || 
+		if ((stcb->asoc.refcnt)  ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 		    (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
 			stcb->asoc.state &= ~SCTP_STATE_IN_ACCEPT_QUEUE;
@@ -5290,8 +5290,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				if (so) {
 					/* Still an open socket - report */
 					sctp_ulp_notify(SCTP_NOTIFY_SPECIAL_SP_FAIL, stcb,
-							SCTP_NOTIFY_DATAGRAM_UNSENT, 
-							(void *)sp, 0);
+					                SCTP_NOTIFY_DATAGRAM_UNSENT,
+					                (void *)sp, 0);
 				}
 				if (sp->data) {
 					sctp_m_freem(sp->data);
@@ -5360,8 +5360,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				if (so) {
 					/* Still a socket? */
 					sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
-							SCTP_NOTIFY_DATAGRAM_UNSENT, chk, 0);
-				} 
+					                SCTP_NOTIFY_DATAGRAM_UNSENT, chk, 0);
+				}
 				if (chk->data) {
 					sctp_m_freem(chk->data);
 					chk->data = NULL;
@@ -5392,8 +5392,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 				if (so) {
 					/* Still a socket? */
 					sctp_ulp_notify(SCTP_NOTIFY_DG_FAIL, stcb,
-							SCTP_NOTIFY_DATAGRAM_SENT, chk, 0);
-				} 
+					                SCTP_NOTIFY_DATAGRAM_SENT, chk, 0);
+				}
 				if (chk->data) {
 					sctp_m_freem(chk->data);
 					chk->data = NULL;
