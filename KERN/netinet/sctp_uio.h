@@ -978,6 +978,7 @@ union sctp_sockstore {
 
 /***********************************/
 /* And something for us old timers */
+#ifndef __APPLE__
 #ifndef ntohll
 #if defined(__Userspace_os_Linux)
 #ifndef _BSD_SOURCE
@@ -1000,6 +1001,7 @@ union sctp_sockstore {
 #include <sys/endian.h>
 #endif
 #define htonll(x) htobe64(x)
+#endif
 #endif
 /***********************************/
 
