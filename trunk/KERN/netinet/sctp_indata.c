@@ -93,8 +93,10 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 * take out what has NOT been put on socket queue and we yet hold
 	 * for putting up.
 	 */
-	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_reasm_queue);
-	calc = sctp_sbspace_sub(calc, (uint32_t) asoc->size_on_all_streams);
+	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_reasm_queue +
+	                                         asoc->cnt_on_reasm_queue * MSIZE));
+	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_all_streams +
+	                                         asoc->cnt_on_all_streams * MSIZE));
 
 	if (calc == 0) {
 		/* out of space */
