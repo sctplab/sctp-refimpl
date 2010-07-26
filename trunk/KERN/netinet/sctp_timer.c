@@ -530,7 +530,7 @@ static void
 sctp_backoff_on_timeout(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int win_probe,
-    int num_marked)
+    int num_marked, int num_abandoned)
 {
 	if (net->RTO == 0) {
 		net->RTO = stcb->asoc.minrto;
@@ -539,7 +539,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 	if (net->RTO > stcb->asoc.maxrto) {
 		net->RTO = stcb->asoc.maxrto;
 	}
-	if ((win_probe == 0) && num_marked) {
+	if ((win_probe == 0) && (num_marked || num_abandoned)) {
 		/* We don't apply penalty to window probe scenarios */
 		/* JRS - Use the congestion control given in the CC module */
 		stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout(stcb,net);
@@ -596,7 +596,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     struct sctp_nets *alt,
     int window_probe,
-    int *num_marked)
+    int *num_marked,
+    int *num_abandoned)
 {
 
 	/*
@@ -605,10 +606,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	 * We only mark chunks that have been outstanding long enough to
 	 * have received feed-back.
 	 */
-	struct sctp_tmit_chunk *chk, *tp2, *could_be_sent = NULL;
+	struct sctp_tmit_chunk *chk, *tp2;
 	struct sctp_nets *lnets;
 	struct timeval now, min_wait, tv;
 	int cur_rtt;
+	int cnt_abandoned;
 	int audit_tf, num_mk, fir;
 	unsigned int cnt_mk;
 	uint32_t orig_flight, orig_tf;
@@ -668,6 +670,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 
 	net->fast_retran_ip = 0;
 	/* Now on to each chunk */
+	cnt_abandoned = 0;
 	num_mk = cnt_mk = 0;
 	tsnfirst = tsnlast = 0;
 #ifndef INVARIANTS
@@ -756,6 +759,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 SCTP_SO_NOT_LOCKED);
+						cnt_abandoned++;
 					}
 					continue;
 				}
@@ -768,6 +772,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 										 chk,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 SCTP_SO_NOT_LOCKED);
+						cnt_abandoned++;
 					}
 					continue;
 				}
@@ -829,9 +834,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1) {
 				chk->no_fr_allowed = 1;
 			}
+#ifdef THIS_SHOULD_NOT_BE_DONE
 		} else if (chk->sent == SCTP_DATAGRAM_ACKED) {
 			/* remember highest acked one */
 			could_be_sent = chk;
+#endif
 		}
 		if (chk->sent == SCTP_DATAGRAM_RESEND) {
 			cnt_mk++;
@@ -859,6 +866,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	}
 #endif
 	*num_marked = num_mk;
+	*num_abandoned = cnt_abandoned;
 	/* Now check for a ECN Echo that may be stranded And
 	 * include the cnt_mk'd to have all resends in the
 	 * control queue.
@@ -879,12 +887,14 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			atomic_add_int(&alt->ref_count, 1);
 		}
 	}
+#ifdef THIS_SHOULD_NOT_BE_DONE
 	if ((stcb->asoc.sent_queue_retran_cnt == 0) && (could_be_sent)) {
 		/* fix it so we retransmit the highest acked anyway */
 		sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 		cnt_mk++;
 		could_be_sent->sent = SCTP_DATAGRAM_RESEND;
 	}
+#endif	
 	if (stcb->asoc.sent_queue_retran_cnt != cnt_mk) {
 #ifdef INVARIANTS
 		SCTP_PRINTF("Local Audit says there are %d for retran asoc cnt:%d we marked:%d this time\n",
@@ -986,7 +996,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
     struct sctp_nets *net)
 {
 	struct sctp_nets *alt;
-	int win_probe, num_mk;
+	int win_probe, num_mk, num_abandoned;
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(0, 0, 0, SCTP_FR_T3_TIMEOUT);
@@ -1046,8 +1056,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	} else {/* CMT is OFF */
 		alt = sctp_find_alternate_net(stcb, net, 0);
 	}
-
-	(void)sctp_mark_all_for_resend(stcb, net, alt, win_probe, &num_mk);
+	num_mk = 0;
+	num_abandoned = 0;
+	(void)sctp_mark_all_for_resend(stcb, net, alt, win_probe, 
+				      &num_mk, &num_abandoned);
 	/* FR Loss recovery just ended with the T3. */
 	stcb->asoc.fast_retran_loss_recovery = 0;
 
@@ -1061,7 +1073,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	stcb->asoc.sat_t3_recovery_tsn = stcb->asoc.sending_seq;
 
 	/* Backoff the timer and cwnd */
-	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk);
+	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk, num_abandoned);
 	if (win_probe == 0) {
 		/* We don't do normal threshold management on window probes */
 		if (sctp_threshold_management(inp, stcb, net,
@@ -1209,7 +1221,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		return (1);
 	}
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 1, 0);
+	sctp_backoff_on_timeout(stcb, stcb->asoc.primary_destination, 1, 0, 0);
 	if (stcb->asoc.initial_init_rto_max < net->RTO) {
 		net->RTO = stcb->asoc.initial_init_rto_max;
 	}
@@ -1290,7 +1302,7 @@ sctp_cookie_timer(struct sctp_inpcb *inp,
 	 * an alternate
 	 */
 	stcb->asoc.dropped_special_cnt = 0;
-	sctp_backoff_on_timeout(stcb, cookie->whoTo, 1, 0);
+	sctp_backoff_on_timeout(stcb, cookie->whoTo, 1, 0, 0);
 	alt = sctp_find_alternate_net(stcb, cookie->whoTo, 0);
 	if (alt != cookie->whoTo) {
 		sctp_free_remote_addr(cookie->whoTo);
@@ -1335,7 +1347,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * cleared theshold management now lets backoff the address & select
 	 * an alternate
 	 */
-	sctp_backoff_on_timeout(stcb, strrst->whoTo, 1, 0);
+	sctp_backoff_on_timeout(stcb, strrst->whoTo, 1, 0, 0);
 	alt = sctp_find_alternate_net(stcb, strrst->whoTo, 0);
 	sctp_free_remote_addr(strrst->whoTo);
 	strrst->whoTo = alt;
@@ -1413,7 +1425,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * cleared threshold management, so now backoff the net and
 		 * select an alternate
 		 */
-		sctp_backoff_on_timeout(stcb, asconf->whoTo, 1, 0);
+		sctp_backoff_on_timeout(stcb, asconf->whoTo, 1, 0, 0);
 		alt = sctp_find_alternate_net(stcb, asconf->whoTo, 0);
 		if (asconf->whoTo != alt) {
 			sctp_free_remote_addr(asconf->whoTo);
@@ -1628,7 +1640,7 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
 			}
-			sctp_backoff_on_timeout(stcb, net, 1, 0);
+			sctp_backoff_on_timeout(stcb, net, 1, 0, 0);
 		}
 		/* Zero PBA, if it needs it */
 		if (net->partial_bytes_acked) {
