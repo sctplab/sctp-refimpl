@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 208855 2010-06-05 21:27:43Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 210495 2010-07-26 09:26:55Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6748,6 +6748,8 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			asoc->ctrl_queue_cnt--;
+			if (chk->rec.chunk_id.id == SCTP_FORWARD_CUM_TSN)
+				asoc->fwd_tsn_cnt--;
 			sctp_free_a_chunk(stcb, chk);
 		} else if (chk->rec.chunk_id.id == SCTP_STREAM_RESET) {
 			/* special handling, we must look into the param */
@@ -7970,7 +7972,7 @@ again_one_more_time:
 			} else
 				omtu = 0;
 			/* Here we do NOT factor the r_mtu */
-			if ((chk->send_size < (int)(mtu - omtu)) ||
+			if ((chk->send_size <= (int)(mtu - omtu)) ||
 			    (chk->flags & CHUNK_FLAGS_FRAGMENT_OK)) {
 				/*
 				 * We probably should glom the mbuf chain
@@ -9726,6 +9728,13 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		}
 
 	}
+	if (asoc->fwd_tsn_cnt) {
+		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
+					     	&reason_code, 1, from_where,
+					     	&now, &now_filled, frag_point,
+						so_locked);
+		goto done;
+	}
 	burst_cnt = 0;
 	do {
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
@@ -9792,6 +9801,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 		sctp_log_cwnd(stcb, NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
 	}
+    done:
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Ok, we have put out %d chunks\n",
 		tot_out);
 
@@ -9879,6 +9889,7 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	if (chk == NULL) {
 		return;
 	}
+	asoc->fwd_tsn_cnt++;
 	chk->copy_by_ref = 0;
 	chk->rec.chunk_id.id = SCTP_FORWARD_CUM_TSN;
 	chk->rec.chunk_id.can_take_data = 0;
