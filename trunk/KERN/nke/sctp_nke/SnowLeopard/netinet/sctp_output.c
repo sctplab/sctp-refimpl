@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 210495 2010-07-26 09:26:55Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 210599 2010-07-29 11:37:04Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -9728,13 +9728,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		}
 
 	}
-	if (asoc->fwd_tsn_cnt) {
-		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
-					     	&reason_code, 1, from_where,
-					     	&now, &now_filled, frag_point,
-						so_locked);
-		goto done;
-	}
 	burst_cnt = 0;
 	do {
 		error = sctp_med_chunk_output(inp, stcb, asoc, &num_out,
@@ -9801,7 +9794,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 		sctp_log_cwnd(stcb, NULL, tot_out, SCTP_SEND_NOW_COMPLETES);
 	}
-    done:
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Ok, we have put out %d chunks\n",
 		tot_out);
 
@@ -9921,8 +9913,7 @@ sctp_fill_in_rest:
 		unsigned int cnt_of_skipped = 0;
 
 		TAILQ_FOREACH(at, &asoc->sent_queue, sctp_next) {
-			if ((at->sent != SCTP_FORWARD_TSN_SKIP) &&
-			    (at->sent != SCTP_DATAGRAM_ACKED)) {
+			if (at->sent != SCTP_FORWARD_TSN_SKIP) {
 				/* no more to look at */
 				break;
 			}
