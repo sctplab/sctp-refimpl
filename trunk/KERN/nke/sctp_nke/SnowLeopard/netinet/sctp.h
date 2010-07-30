@@ -32,17 +32,18 @@
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp.h 209289 2010-06-18 09:01:44Z tuexen $");
-
 #endif
+
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
-
 #if (defined(__APPLE__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Darwin))
 #include <stdint.h>
 #endif
+
 #include <sys/types.h>
 
 #define SCTP_PACKED __attribute__((packed))
+
 
 /*
  * SCTP protocol - RFC2960.
@@ -245,8 +246,10 @@ struct sctp_paramhdr {
 #define SCTP_GET_ADDR_LEN               0x0000800b
 /* temporary workaround for Apple listen() issue, no args used */
 #define SCTP_LISTEN_FIX			0x0000800c
+#if defined(__Windows__)
 /* workaround for Cygwin on Windows: returns the SOCKET handle */
 #define SCTP_GET_HANDLE			0x0000800d
+#endif
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00009f00
 
@@ -548,6 +551,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LOG_AT_SEND_2_SCTP             0x04000000
 #define SCTP_LOG_AT_SEND_2_OUTQ             0x08000000
 #define SCTP_LOG_TRY_ADVANCE                0x10000000
+
 
 #undef SCTP_PACKED
 
