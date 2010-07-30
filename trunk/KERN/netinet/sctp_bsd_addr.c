@@ -136,6 +136,7 @@ sctp_iterator_thread(void *v)
 #endif
 #else
 			thread_terminate(current_thread());
+			panic("Hmm. thread_terminate() continues...");
 #endif
 		}
 #elif defined(__Userspace__)
