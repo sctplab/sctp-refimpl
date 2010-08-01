@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 210599 2010-07-29 11:37:04Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 210714 2010-08-01 08:06:59Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2198,7 +2198,7 @@ sctp_is_ifa_addr_preferred(struct sctp_ifa *ifa,
 	/* dest_is_priv is true if destination is a private address */
         /* dest_is_loop is true if destination is a loopback addresses */
 
-	/*
+	/**
 	 * Here we determine if its a preferred address. A preferred address
 	 * means it is the same scope or higher scope then the destination.
 	 * L = loopback, P = private, G = global
