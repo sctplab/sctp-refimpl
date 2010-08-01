@@ -2774,6 +2774,15 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 		}
 #endif
 		if (stcb) {
+			if (sctp_is_address_in_scope(ifa,
+			                             stcb->asoc.ipv4_addr_legal,
+			                             stcb->asoc.ipv6_addr_legal,
+			                             stcb->asoc.loopback_scope,
+			                             stcb->asoc.ipv4_local_scope,
+			                             stcb->asoc.local_scope,
+			                             stcb->asoc.site_scope, 0) == 0) {
+				continue;
+			}
 			if (((non_asoc_addr_ok == 0) &&
 			     (sctp_is_addr_restricted(stcb, sifa))) ||
 			    (non_asoc_addr_ok &&
@@ -2817,6 +2826,15 @@ sctp_count_num_preferred_boundall(struct sctp_ifn *ifn,
 			continue;
 		}
 		if (stcb) {
+			if (sctp_is_address_in_scope(ifa,
+			                             stcb->asoc.ipv4_addr_legal,
+			                             stcb->asoc.ipv6_addr_legal,
+			                             stcb->asoc.loopback_scope,
+			                             stcb->asoc.ipv4_local_scope,
+			                             stcb->asoc.local_scope,
+			                             stcb->asoc.site_scope, 0) == 0) {
+				continue;
+			}
 			if (((non_asoc_addr_ok == 0) &&
 			     (sctp_is_addr_restricted(stcb, sifa))) ||
 			    (non_asoc_addr_ok &&
@@ -2996,6 +3014,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		if (sifa == NULL)
 			continue;
 		if (stcb) {
+			if (sctp_is_address_in_scope(sifa,
+			                             stcb->asoc.ipv4_addr_legal,
+			                             stcb->asoc.ipv6_addr_legal,
+			                             stcb->asoc.loopback_scope,
+			                             stcb->asoc.ipv4_local_scope,
+			                             stcb->asoc.local_scope,
+			                             stcb->asoc.site_scope, 0) == 0) {
+				continue;
+			}
 			if (((non_asoc_addr_ok == 0) &&
 			     (sctp_is_addr_restricted(stcb, sifa))) ||
 			    (non_asoc_addr_ok &&
@@ -3039,6 +3066,15 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			if (sifa == NULL)
 				continue;
 			if (stcb) {
+				if (sctp_is_address_in_scope(sifa,
+				                             stcb->asoc.ipv4_addr_legal,
+				                             stcb->asoc.ipv6_addr_legal,
+				                             stcb->asoc.loopback_scope,
+				                             stcb->asoc.ipv4_local_scope,
+				                             stcb->asoc.local_scope,
+				                             stcb->asoc.site_scope, 0) == 0) {
+					continue;
+				}
 				if (((non_asoc_addr_ok == 0) &&
 				     (sctp_is_addr_restricted(stcb, sifa))) ||
 				    (non_asoc_addr_ok &&
