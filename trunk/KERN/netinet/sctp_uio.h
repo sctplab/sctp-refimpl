@@ -1119,31 +1119,6 @@ struct sctp_log {
  */
 #if defined(_KERNEL) || defined(__Userspace__)
 int
-sctp_lower_sosend(struct socket *so,
-    struct sockaddr *addr,
-    struct uio *uio,
-#if defined(__Panda__)
-    pakhandle_type i_pak,
-    pakhandle_type i_control,
-#else
-    struct mbuf *i_pak,
-    struct mbuf *control,
-#endif
-    int flags,
-    int use_rcvinfo,
-    struct sctp_sndrcvinfo *srcv
-#if !(defined(__Panda__) || defined (__Userspace__))
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-    ,struct thread *p
-#elif defined(__Windows__)
-    , PKTHREAD p
-#else
-    ,struct proc *p
-#endif
-#endif
-);
-
-int
 sctp_sorecvmsg(struct socket *so,
     struct uio *uio,
 #if defined(__Panda__)
