@@ -12557,8 +12557,136 @@ out_now:
 	return (sp);
 }
 
- 
-static int
+
+ /*
+ * sctp_sosend() is a wrapper around sctp_lower_sosend().
+ * It makes sure that if an addr is provided it is
+ * not a mapped IPv4 address and the length indicated
+ * is correct.
+ */
+
+int
+sctp_sosend(struct socket *so,
+            struct sockaddr *addr,
+            struct uio *uio,
+#ifdef __Panda__
+            pakhandle_type top,
+            pakhandle_type icontrol,
+#else
+            struct mbuf *top,
+            struct mbuf *control,
+#endif
+#if defined(__APPLE__) || defined(__Panda__)
+            int flags
+#else
+            int flags,
+#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
+            struct thread *p
+#elif defined(__Windows__)
+            PKTHREAD p
+#else
+#if defined(__Userspace__)
+            /*
+	     * proc is a dummy in __Userspace__ and will not be passed
+	     * to sctp_lower_sosend
+	     */
+#endif
+            struct proc *p
+#endif
+#endif
+)
+{
+#ifdef __Panda__
+	struct mbuf *control=NULL;
+#endif
+#if defined(__APPLE__)
+	struct proc *p = current_proc();
+#endif
+	struct sctp_inpcb *inp;
+	int error, use_rcvinfo = 0;
+	struct sctp_sndrcvinfo srcv;
+	struct sockaddr *addr_to_use;
+#if defined(INET) && defined(INET6)
+	struct sockaddr_in sin;
+#endif
+
+	inp = (struct sctp_inpcb *)so->so_pcb;
+#if defined(__APPLE__)
+	SCTP_SOCKET_LOCK(so, 1);
+#endif
+#ifdef __Panda__
+	control = SCTP_HEADER_TO_CHAIN(icontrol);
+#endif
+	if (control) {
+		/* process cmsg snd/rcv info (maybe a assoc-id) */
+		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
+		    sizeof(srcv))) {
+			/* got one */
+			use_rcvinfo = 1;
+		}
+	}
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	if (addr) {
+		switch (addr->sa_family) {
+#if defined(INET)
+		case AF_INET:
+			if (addr->sa_len != sizeof(struct sockaddr_in)) {
+				error = EINVAL;
+				goto out;
+			}
+			break;
+#endif
+#if defined(INET6)
+		case AF_INET6:
+			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+				error = EINVAL;
+				goto out;
+			}
+			break;
+#endif
+		default:
+			error = EINVAL;
+			goto out;
+		}
+	}
+#endif
+	addr_to_use = addr;
+#if defined(__Userspace__)
+	/* TODO port in6_sin6_2_sin */
+#else
+#if defined(INET) && defined(INET6)
+	if ((addr) && (addr->sa_family == AF_INET6)) {
+		struct sockaddr_in6 *sin6;
+
+		sin6 = (struct sockaddr_in6 *)addr;
+		if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
+			in6_sin6_2_sin(&sin, sin6);
+			addr_to_use = (struct sockaddr *)&sin;
+		}
+	}
+#endif
+#endif
+	error = sctp_lower_sosend(so, addr_to_use, uio, top,
+#ifdef __Panda__
+				  icontrol,
+#else
+				  control,
+#endif
+				  flags,
+				  use_rcvinfo, &srcv
+#if !( defined(__Panda__) || defined(__Userspace__) )
+				  , p
+#endif
+		);
+out:
+#if defined(__APPLE__)
+	SCTP_SOCKET_UNLOCK(so, 1);
+#endif
+	return (error);
+}
+
+
+int
 sctp_lower_sosend(struct socket *so,
                   struct sockaddr *addr,
                   struct uio *uio,
@@ -14056,133 +14184,6 @@ out_unlocked:
 	if (control) {
 		sctp_m_freem(control);
 	}
-	return (error);
-}
-
-/*
- * sctp_sosend() is a wrapper around sctp_lower_sosend().
- * It makes sure that if an addr is provided it is
- * not a mapped IPv4 address and the length indicated
- * is correct.
- */
-
-int
-sctp_sosend(struct socket *so,
-            struct sockaddr *addr,
-            struct uio *uio,
-#ifdef __Panda__
-            pakhandle_type top,
-            pakhandle_type icontrol,
-#else
-            struct mbuf *top,
-            struct mbuf *control,
-#endif
-#if defined(__APPLE__) || defined(__Panda__)
-            int flags
-#else
-            int flags,
-#if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-            struct thread *p
-#elif defined(__Windows__)
-            PKTHREAD p
-#else
-#if defined(__Userspace__)
-            /*
-	     * proc is a dummy in __Userspace__ and will not be passed
-	     * to sctp_lower_sosend
-	     */
-#endif
-            struct proc *p
-#endif
-#endif
-)
-{
-#ifdef __Panda__
-	struct mbuf *control=NULL;
-#endif
-#if defined(__APPLE__)
-	struct proc *p = current_proc();
-#endif
-	struct sctp_inpcb *inp;
-	int error, use_rcvinfo = 0;
-	struct sctp_sndrcvinfo srcv;
-	struct sockaddr *addr_to_use;
-#if defined(INET) && defined(INET6)
-	struct sockaddr_in sin;
-#endif
-
-	inp = (struct sctp_inpcb *)so->so_pcb;
-#if defined(__APPLE__)
-	SCTP_SOCKET_LOCK(so, 1);
-#endif
-#ifdef __Panda__
-	control = SCTP_HEADER_TO_CHAIN(icontrol);
-#endif
-	if (control) {
-		/* process cmsg snd/rcv info (maybe a assoc-id) */
-		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
-		    sizeof(srcv))) {
-			/* got one */
-			use_rcvinfo = 1;
-		}
-	}
-#if defined(__FreeBSD__) || defined(__APPLE__)
-	if (addr) {
-		switch (addr->sa_family) {
-#if defined(INET)
-		case AF_INET:
-			if (addr->sa_len != sizeof(struct sockaddr_in)) {
-				error = EINVAL;
-				goto out;
-			}
-			break;
-#endif
-#if defined(INET6)
-		case AF_INET6:
-			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
-				error = EINVAL;
-				goto out;
-			}
-			break;
-#endif
-		default:
-			error = EINVAL;
-			goto out;
-		}
-	}
-#endif
-	addr_to_use = addr;
-#if defined(__Userspace__)
-	/* TODO port in6_sin6_2_sin */
-#else
-#if defined(INET) && defined(INET6)
-	if ((addr) && (addr->sa_family == AF_INET6)) {
-		struct sockaddr_in6 *sin6;
-
-		sin6 = (struct sockaddr_in6 *)addr;
-		if (IN6_IS_ADDR_V4MAPPED(&sin6->sin6_addr)) {
-			in6_sin6_2_sin(&sin, sin6);
-			addr_to_use = (struct sockaddr *)&sin;
-		}
-	}
-#endif
-#endif
-	error = sctp_lower_sosend(so, addr_to_use, uio, top,
-#ifdef __Panda__
-				  icontrol,
-#else
-				  control,
-#endif
-				  flags,
-				  use_rcvinfo, &srcv
-#if !( defined(__Panda__) || defined(__Userspace__) )
-				  , p
-#endif
-		);
-out:
-#if defined(__APPLE__)
-	SCTP_SOCKET_UNLOCK(so, 1);
-#endif
 	return (error);
 }
 
