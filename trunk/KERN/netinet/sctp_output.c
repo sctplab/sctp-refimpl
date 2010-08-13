@@ -12557,7 +12557,7 @@ out_now:
 	return (sp);
 }
 
-
+ 
 static int
 sctp_lower_sosend(struct socket *so,
                   struct sockaddr *addr,
@@ -12687,25 +12687,6 @@ sctp_lower_sosend(struct socket *so,
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "Send called addr:%p send length %d\n",
 		addr,
 	        sndlen);
-#if !( defined(__Windows__) || defined(__Userspace_os_Linux) )
-	/*-
-	 * Pre-screen address, if one is given the sin-len
-	 * must be set correctly!
-	 */
-	if (addr) {
-		if ((addr->sa_family == AF_INET) &&
-		    (addr->sa_len != sizeof(struct sockaddr_in))) {
-			SCTP_LTRACE_ERR_RET(inp, stcb,net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
-			error = EINVAL;
-			goto out_unlocked;
-		} else if ((addr->sa_family == AF_INET6) &&
-		           (addr->sa_len != sizeof(struct sockaddr_in6))) {
-			SCTP_LTRACE_ERR_RET(inp, stcb,net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
-			error = EINVAL;
-			goto out_unlocked;
-		}
-	}
-#endif
 #ifdef __Panda__
 	if (i_control) {
 		control = SCTP_HEADER_TO_CHAIN(i_control);
@@ -14078,6 +14059,12 @@ out_unlocked:
 	return (error);
 }
 
+/*
+ * sctp_sosend() is a wrapper around sctp_lower_sosend().
+ * It makes sure that if an addr is provided it is
+ * not a mapped IPv4 address and the length indicated
+ * is correct.
+ */
 
 int
 sctp_sosend(struct socket *so,
@@ -14100,7 +14087,10 @@ sctp_sosend(struct socket *so,
             PKTHREAD p
 #else
 #if defined(__Userspace__)
-            /* proc is a dummy in __Userspace__ and will not be passed to sctp_lower_sosend */
+            /*
+	     * proc is a dummy in __Userspace__ and will not be passed
+	     * to sctp_lower_sosend
+	     */
 #endif
             struct proc *p
 #endif
@@ -14136,8 +14126,36 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
+#if defined(__FreeBSD__) || defined(__APPLE__)
+	if (addr) {
+		switch (addr->sa_family) {
+#if defined(INET)
+		case AF_INET:
+			if (addr->sa_len != sizeof(struct sockaddr_in)) {
+				error = EINVAL;
+				goto out;
+			}
+			break;
+#endif
+#if defined(INET6)
+		case AF_INET6:
+			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+				error = EINVAL;
+				goto out;
+			}
+			break;
+#endif
+		default:
+			error = EINVAL;
+			goto out;
+		}
+	}
+#endif
 	addr_to_use = addr;
-#if defined(INET6)  && !defined(__Userspace__) /* TODO port in6_sin6_2_sin */
+#if defined(__Userspace__)
+	/* TODO port in6_sin6_2_sin */
+#else
+#if defined(INET6)
 	if ((addr) && (addr->sa_family == AF_INET6)) {
 		struct sockaddr_in6 *sin6;
 
@@ -14147,6 +14165,7 @@ sctp_sosend(struct socket *so,
 			addr_to_use = (struct sockaddr *)&sin;
 		}
 	}
+#endif
 #endif
 	error = sctp_lower_sosend(so, addr_to_use, uio, top,
 #ifdef __Panda__
@@ -14160,6 +14179,7 @@ sctp_sosend(struct socket *so,
 				  , p
 #endif
 		);
+out:
 #if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
