@@ -9845,7 +9845,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 
 
 int
-sctp_output (inp, m, addr, control, p, flags)
+sctp_output(inp, m, addr, control, p, flags)
 	struct sctp_inpcb *inp;
 #if defined(__Panda__)
 	pakhandle_type m;
@@ -14107,7 +14107,7 @@ sctp_sosend(struct socket *so,
 	int error, use_rcvinfo = 0;
 	struct sctp_sndrcvinfo srcv;
 	struct sockaddr *addr_to_use;
-#ifdef INET6
+#if defined(INET) && defined(INET6)
 	struct sockaddr_in sin;
 #endif
 
@@ -14155,7 +14155,7 @@ sctp_sosend(struct socket *so,
 #if defined(__Userspace__)
 	/* TODO port in6_sin6_2_sin */
 #else
-#if defined(INET6)
+#if defined(INET) && defined(INET6)
 	if ((addr) && (addr->sa_family == AF_INET6)) {
 		struct sockaddr_in6 *sin6;
 
