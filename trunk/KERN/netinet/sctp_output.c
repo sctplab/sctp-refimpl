@@ -9845,7 +9845,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 
 
 int
-sctp_output (inp, m, addr, control, p, flags)
+sctp_output(inp, m, addr, control, p, flags)
 	struct sctp_inpcb *inp;
 #if defined(__Panda__)
 	pakhandle_type m;
