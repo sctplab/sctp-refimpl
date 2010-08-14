@@ -12558,13 +12558,6 @@ out_now:
 }
 
 
- /*
- * sctp_sosend() is a wrapper around sctp_lower_sosend().
- * It makes sure that if an addr is provided it is
- * not a mapped IPv4 address and the length indicated
- * is correct.
- */
-
 int
 sctp_sosend(struct socket *so,
             struct sockaddr *addr,
@@ -12625,31 +12618,6 @@ sctp_sosend(struct socket *so,
 			use_rcvinfo = 1;
 		}
 	}
-#if defined(__FreeBSD__) || defined(__APPLE__)
-	if (addr) {
-		switch (addr->sa_family) {
-#if defined(INET)
-		case AF_INET:
-			if (addr->sa_len != sizeof(struct sockaddr_in)) {
-				error = EINVAL;
-				goto out;
-			}
-			break;
-#endif
-#if defined(INET6)
-		case AF_INET6:
-			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
-				error = EINVAL;
-				goto out;
-			}
-			break;
-#endif
-		default:
-			error = EINVAL;
-			goto out;
-		}
-	}
-#endif
 	addr_to_use = addr;
 #if defined(__Userspace__)
 	/* TODO port in6_sin6_2_sin */
@@ -12678,7 +12646,6 @@ sctp_sosend(struct socket *so,
 				  , p
 #endif
 		);
-out:
 #if defined(__APPLE__)
 	SCTP_SOCKET_UNLOCK(so, 1);
 #endif
@@ -12820,7 +12787,37 @@ sctp_lower_sosend(struct socket *so,
 		control = SCTP_HEADER_TO_CHAIN(i_control);
 	}
 #endif
-
+	/*
+	 * Pre-screen address, if one is given the sin-len
+	 * must be set correctly!
+	 */
+	if (addr) {
+		switch (addr->sa_family) {
+#if defined(INET)
+		case AF_INET:
+#if defined(__FreeBSD__) || defined(__APPLE__)
+			if (addr->sa_len != sizeof(struct sockaddr_in)) {
+				error = EINVAL;
+				goto out_unlocked;
+			}
+#endif
+			break;
+#endif
+#if defined(INET6)
+		case AF_INET6:
+#if defined(__FreeBSD__) || defined(__APPLE__)
+			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+				error = EINVAL;
+				goto out_unlocked;
+			}
+#endif
+			break;
+#endif
+		default:
+			error = EAFNOSUPPORT;
+			goto out_unlocked;
+		}
+	}
 	hold_tcblock = 0;
 
 	if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
