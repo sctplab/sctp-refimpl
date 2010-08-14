@@ -12787,7 +12787,7 @@ sctp_lower_sosend(struct socket *so,
 		control = SCTP_HEADER_TO_CHAIN(i_control);
 	}
 #endif
-	/*
+	/**
 	 * Pre-screen address, if one is given the sin-len
 	 * must be set correctly!
 	 */
