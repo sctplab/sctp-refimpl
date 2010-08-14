@@ -12797,6 +12797,7 @@ sctp_lower_sosend(struct socket *so,
 		case AF_INET:
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			if (addr->sa_len != sizeof(struct sockaddr_in)) {
+				SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 				error = EINVAL;
 				goto out_unlocked;
 			}
@@ -12807,6 +12808,7 @@ sctp_lower_sosend(struct socket *so,
 		case AF_INET6:
 #if defined(__FreeBSD__) || defined(__APPLE__)
 			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+				SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 				error = EINVAL;
 				goto out_unlocked;
 			}
@@ -12814,6 +12816,7 @@ sctp_lower_sosend(struct socket *so,
 			break;
 #endif
 		default:
+			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EAFNOSUPPORT);
 			error = EAFNOSUPPORT;
 			goto out_unlocked;
 		}
