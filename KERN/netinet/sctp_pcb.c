@@ -2544,6 +2544,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->sctp_associd_counter = 1;
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
+	inp->sctp_cmt_on_off = SCTP_BASE_SYSCTL(sctp_cmt_on_off);
 	/* init the small hash table we use to track asocid <-> tcb */
 	inp->sctp_asocidhash = SCTP_HASH_INIT(SCTP_STACK_VTAG_HASH_SIZE, &inp->hashasocidmark);
 	if (inp->sctp_asocidhash == NULL) {
@@ -4691,11 +4692,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	head = &SCTP_BASE_INFO(sctp_asochash)[SCTP_PCBHASH_ASOC(stcb->asoc.my_vtag, SCTP_BASE_INFO(hashasocmark))];
 	/* put it in the bucket in the vtag hash of assoc's for the system */
 	LIST_INSERT_HEAD(head, stcb, sctp_asocs);
-#if defined(__APPLE__)
-#ifdef MICHAELS_EXPERIMENT
-	sctp_delete_from_timewait(stcb->asoc.my_vtag, inp->sctp_lport, stcb->rport);
-#endif
-#endif
 	SCTP_INP_INFO_WUNLOCK();
 
 	if ((err = sctp_add_remote_addr(stcb, firstaddr, SCTP_DO_SETSCOPE, SCTP_ALLOC_ASOC))) {
@@ -6823,10 +6819,7 @@ goto add_it_now6;
 					stcb->asoc.peer_supports_pktdrop = 1;
 					break;
 				case SCTP_NR_SELECTIVE_ACK:
-					if (SCTP_BASE_SYSCTL(sctp_nr_sack_on_off))
-						stcb->asoc.peer_supports_nr_sack = 1;
-					else
-						stcb->asoc.peer_supports_nr_sack = 0;
+					stcb->asoc.peer_supports_nr_sack = 1;
 					break;
 				case SCTP_STREAM_RESET:
 					stcb->asoc.peer_supports_strreset = 1;
@@ -7139,22 +7132,6 @@ sctp_is_vtag_good(struct sctp_inpcb *inp, uint32_t tag, uint16_t lport, uint16_t
 		}
 	}
 	SCTP_INP_INFO_RUNLOCK();
-#if defined(__APPLE__)
-#ifdef MICHAELS_EXPERIMENT
-	/*-
-	 * Not found, ok to use the tag, add it to the time wait hash
-	 * as well this will prevent two sucessive cookies from getting
-	 * the same tag or two inits sent quickly on multi-processors.
-	 * We only keep the tag for the life of a cookie and when we
-	 * add this tag to the assoc hash we need to purge it from
-	 * the t-wait hash.
-	 */
-	SCTP_INP_INFO_WLOCK();
-	if (save_in_twait)
-	       sctp_add_vtag_to_timewait(tag, TICKS_TO_SEC(inp->sctp_ep.def_cookie_life, lport, rport));
-	SCTP_INP_INFO_WUNLOCK();
-#endif
-#endif
 	return (1);
 }
 
