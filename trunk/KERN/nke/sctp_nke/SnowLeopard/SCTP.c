@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007 Michael Tuexen, tuexen@fh-muenster.de
+ * Copyright (C) 2004-2010 Michael Tuexen, tuexen@fh-muenster.de
  *
  * All rights reserved.
  *
