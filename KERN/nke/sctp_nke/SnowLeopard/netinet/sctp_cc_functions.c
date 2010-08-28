@@ -72,7 +72,8 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) ||
+		    (asoc->sctp_cmt_on_off == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -231,11 +232,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			if ((asoc->sctp_cmt_on_off == 1) &&
+			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
+				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -255,7 +256,9 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
+		if (asoc->fast_retran_loss_recovery &&
+		    (will_exit == 0) &&
+		    (asoc->sctp_cmt_on_off == 0)) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -266,7 +269,8 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
+		if (accum_moved ||
+		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -693,7 +697,8 @@ sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) ||
+		    (asoc->sctp_cmt_on_off == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -844,11 +849,11 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			if ((asoc->sctp_cmt_on_off == 1) &&
+			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
+				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -868,7 +873,9 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
+		 if (asoc->fast_retran_loss_recovery &&
+		     (will_exit == 0) &&
+		     (asoc->sctp_cmt_on_off == 0)) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -879,7 +886,8 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
+		if (accum_moved ||
+		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -1323,11 +1331,11 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) &&
-			    SCTP_BASE_SYSCTL(sctp_cmt_pf) &&
+			if ((asoc->sctp_cmt_on_off == 1) &&
+			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * SCTP_BASE_SYSCTL(sctp_cmt_pf);
+				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -1347,7 +1355,9 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		*/
 #endif
 
-		 if (asoc->fast_retran_loss_recovery && will_exit == 0 && SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0) {
+		if (asoc->fast_retran_loss_recovery &&
+		    will_exit == 0 &&
+		    (asoc->sctp_cmt_on_off == 0)) {
 			/*
 			 * If we are in loss recovery we skip any cwnd
 			 * update
@@ -1358,7 +1368,8 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
 		 */
-		if (accum_moved || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && net->new_pseudo_cumack)) {
+		if (accum_moved ||
+		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
 			htcp_cong_avoid(stcb, net);
 			measure_achieved_throughput(stcb, net);
 		} else {
@@ -1398,7 +1409,8 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((asoc->fast_retran_loss_recovery == 0) || (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 1)) {
+		if ((asoc->fast_retran_loss_recovery == 0) ||
+		    (asoc->sctp_cmt_on_off == 1)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*

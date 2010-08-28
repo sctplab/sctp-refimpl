@@ -2466,7 +2466,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
 			    ) {
 
-			if ((SCTP_BASE_SYSCTL(sctp_cmt_on_off))&&
+			if ((stcb->asoc.sctp_cmt_on_off == 1)&&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
 			    (stcb->asoc.send_sack == 0) &&
 			    (stcb->asoc.numduptsns == 0) &&
@@ -3254,7 +3254,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 
 	/* CMT DAC algo: finding out if SACK is a mixed SACK */
-	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
+	if ((asoc->sctp_cmt_on_off == 1) &&
+	    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			if (net->saw_newack)
 				num_dests_sacked++;
@@ -3373,7 +3374,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
+			if ((asoc->sctp_cmt_on_off == 1) &&
+			    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
 				 * 0, then lowest_newack test will not pass
@@ -3396,7 +3398,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					tp1->sent++;
 				}
 			}
-		} else if ((tp1->rec.data.doing_fast_retransmit) && (SCTP_BASE_SYSCTL(sctp_cmt_on_off) == 0)) {
+		} else if ((tp1->rec.data.doing_fast_retransmit) &&
+		           (asoc->sctp_cmt_on_off == 0)) {
 			/*
 			 * For those that have done a FR we must take
 			 * special consideration if we strike. I.e the
@@ -3436,7 +3439,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						tp1->sent++;
 					}
 					strike_flag = 1;
-					if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
+					if ((asoc->sctp_cmt_on_off == 1) &&
+					    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 						/*
 						 * CMT DAC algorithm: If
 						 * SACK flag is set to 0,
@@ -3492,7 +3496,8 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
+			if ((asoc->sctp_cmt_on_off == 1) &&
+			    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
 				 * 0, then lowest_newack test will not pass
@@ -3568,7 +3573,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				SCTP_STAT_INCR(sctps_sendmultfastretrans);
 			}
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-			if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+			if (asoc->sctp_cmt_on_off == 1) {
 				/*
 				 * CMT: Using RTX_SSTHRESH policy for CMT.
 				 * If CMT is being used, then pick dest with
@@ -3577,7 +3582,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				tp1->no_fr_allowed = 1;
 				alt = tp1->whoTo;
 				/*sa_ignore NO_NULL_CHK*/
-				if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_pf)) {
+				if (asoc->sctp_cmt_pf > 0) {
 					/* JRS 5/18/07 - If CMT PF is on, use the PF version of find_alt_net() */
 					alt = sctp_find_alternate_net(stcb, alt, 2);
 				} else {
@@ -4777,7 +4782,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	/*******************************************/
 	/* cancel ALL T3-send timer if accum moved */
 	/*******************************************/
-	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
+	if (asoc->sctp_cmt_on_off == 1) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			if (net->new_pseudo_cumack)
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
@@ -5077,7 +5082,9 @@ done_with_it:
 	 * to be done. Setting this_sack_lowest_newack to the cum_ack will
 	 * automatically ensure that.
 	 */
-	if (SCTP_BASE_SYSCTL(sctp_cmt_on_off) && SCTP_BASE_SYSCTL(sctp_cmt_use_dac) && (cmt_dac_flag == 0)) {
+	if ((asoc->sctp_cmt_on_off == 1) &&
+	    SCTP_BASE_SYSCTL(sctp_cmt_use_dac) &&
+	    (cmt_dac_flag == 0)) {
 		this_sack_lowest_newack = cum_ack;
 	}
 	if ((num_seg > 0) || (num_nr_seg > 0)) {
