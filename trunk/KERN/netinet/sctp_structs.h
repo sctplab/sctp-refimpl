@@ -1104,16 +1104,16 @@ struct sctp_association {
 	 * trailing locactions out.  If I get a TSN above the array
 	 * mappingArraySz, I discard the datagram and let retransmit happen.
 	 */
-	 uint32_t marked_retrans;
-	 uint32_t timoinit;
-	 uint32_t timodata;
-	 uint32_t timosack;
-	 uint32_t timoshutdown;
-	 uint32_t timoheartbeat;
-	 uint32_t timocookie;
-	 uint32_t timoshutdownack;
-	 struct timeval start_time;
-	 struct timeval discontinuity_time;
+	uint32_t marked_retrans;
+	uint32_t timoinit;
+	uint32_t timodata;
+	uint32_t timosack;
+	uint32_t timoshutdown;
+	uint32_t timoheartbeat;
+	uint32_t timocookie;
+	uint32_t timoshutdownack;
+	struct timeval start_time;
+	struct timeval discontinuity_time;
 };
 
 #endif
