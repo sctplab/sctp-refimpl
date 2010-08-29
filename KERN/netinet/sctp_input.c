@@ -5877,6 +5877,7 @@ sctp_input(i_pak, va_alist)
 	}
 #endif
 	check = sh->checksum;	/* save incoming checksum */
+#if !(defined(__FreeBSD__) && __FreeBSD_version >= 800000)
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
 	     (SCTP_IS_IT_LOOPBACK(m)))
@@ -5884,6 +5885,7 @@ sctp_input(i_pak, va_alist)
 		SCTP_STAT_INCR(sctps_recvnocrc);
 		goto sctp_skip_csum_4;
 	}
+#endif
 	sh->checksum = 0;	/* prepare for calc */
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	sh->checksum = check;
