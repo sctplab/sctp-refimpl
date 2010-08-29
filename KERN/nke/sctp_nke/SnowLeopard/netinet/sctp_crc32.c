@@ -788,21 +788,15 @@ sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
 	base = sctp_finalize_crc32c(base);
 	return (base);
 }
-
-#else
-
-uint32_t
-sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
-{
-	return (0);
-}
-
 #endif				/* !defined(SCTP_WITH_NO_CSUM) */
 
 
 void
 sctp_delayed_cksum(struct mbuf *m, uint32_t offset)
 {
+#if defined(SCTP_WITH_NO_CSUM)
+	panic("sctp_delayed_cksum() called when using no SCTP CRC.");
+#else
 	struct ip *ip;
 	uint32_t checksum;
 
@@ -823,5 +817,6 @@ sctp_delayed_cksum(struct mbuf *m, uint32_t offset)
 		return;
 	}
 	*(uint32_t *) (m->m_data + offset) = checksum;
+#endif
 }
 
