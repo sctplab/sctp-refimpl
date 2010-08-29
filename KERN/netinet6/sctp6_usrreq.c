@@ -139,7 +139,6 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	struct sctp_inpcb *in6p = NULL;
 	struct sctp_nets *net;
 	int refcount_up = 0;
-	uint32_t check, calc_check;
 	uint32_t vrf_id = 0;
 	struct inpcb *in6p_ip;
 	struct sctp_chunkhdr *ch;
@@ -147,6 +146,9 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	uint8_t ecn_bits;
 	struct sctp_tcb *stcb = NULL;
 	int pkt_len = 0;
+#if !defined(SCTP_WITH_NO_CSUM)
+	uint32_t check, calc_check;
+#endif
 #ifndef __Panda__
 	int off = *offp;
 #else
@@ -267,11 +269,10 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	}
 #endif
 #endif
-	check = sh->checksum;	/* save incoming checksum */
 #if defined(SCTP_WITH_NO_CSUM)
-	calc_check = 0;
 	SCTP_STAT_INCR(sctps_recvnocrc);
 #else
+	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))) {
 		SCTP_STAT_INCR(sctps_recvnocrc);
@@ -280,7 +281,6 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	sh->checksum = 0;	/* prepare for calc */
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
-#endif
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
 			calc_check, check, m, iphlen);
@@ -306,6 +306,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	sh->checksum = calc_check;
 
  sctp_skip_csum:
+#endif
 	net = NULL;
 	/*
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
