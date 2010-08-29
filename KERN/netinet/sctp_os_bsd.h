@@ -485,7 +485,7 @@ typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = IP_RAWOUTPUT; \
-	struct sctp_tcp *local_stcb = stcb; \
+	struct sctp_tcb *local_stcb = stcb; \
 	if (local_stcb && \
 	    local_stcb->sctp_ep && \
 	    local_stcb->sctp_ep->sctp_socket) \
@@ -495,7 +495,7 @@ typedef struct rtentry	sctp_rtentry_t;
 
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
-	struct sctp_tcp *local_stcb = stcb; \
+	struct sctp_tcb *local_stcb = stcb; \
 	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
 				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
