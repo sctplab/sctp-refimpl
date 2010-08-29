@@ -260,12 +260,18 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		m->m_pkthdr.csum_flags);
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if !defined(SCTP_WITH_NO_CSUM)
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum;
 	}
 #endif
+#endif
 	check = sh->checksum;	/* save incoming checksum */
+#if defined(SCTP_WITH_NO_CSUM)
+	calc_check = 0;
+	SCTP_STAT_INCR(sctps_recvnocrc);
+#else
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))) {
 		SCTP_STAT_INCR(sctps_recvnocrc);
@@ -274,6 +280,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	sh->checksum = 0;	/* prepare for calc */
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	SCTP_STAT_INCR(sctps_recvswcrc);
+#endif
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
 			calc_check, check, m, iphlen);
