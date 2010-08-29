@@ -489,7 +489,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	if (local_stcb && \
 	    local_stcb->sctp_ep && \
 	    local_stcb->sctp_ep->sctp_socket) \
-		o_flgs |= stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
 	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
 }
 
