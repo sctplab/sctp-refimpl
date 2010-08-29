@@ -3799,6 +3799,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -3807,8 +3810,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -3823,6 +3830,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 		}
 		/* send it out.  table id is taken from stcb */
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4180,6 +4188,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, m, packet_length);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -4188,6 +4199,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 #if defined(__Windows__)
 			udp->uh_sum = 0;
 #elif !defined(__Userspace__)
@@ -4196,6 +4208,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			}
 #endif
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -4210,6 +4225,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 		}
 		/* send it out. table id is taken from stcb */
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -10773,10 +10789,17 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			sctp_packet_log(mout, mlen);
 #endif
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 			SCTP_ENABLE_UDP_CSUM(mout);
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0;
@@ -10784,6 +10807,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #else
 			comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 #endif
 		}
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
@@ -10818,6 +10842,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, mlen);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -10826,6 +10853,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 #if defined(__Windows__)
 			udp->uh_sum = 0;
 #elif !defined(__Userspace__)
@@ -10834,6 +10862,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			}
 #endif
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -10848,6 +10879,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
@@ -11896,10 +11928,17 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0;
@@ -11907,6 +11946,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #else
 			abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 #endif
 		}
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
@@ -11946,6 +11986,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -11954,6 +11997,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 #if defined(__Windows__)
 			udp->uh_sum = 0;
 #elif !defined(__Userspace__)
@@ -11962,6 +12006,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			}
 #endif
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -11976,6 +12023,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
@@ -12175,10 +12223,17 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 			SCTP_ENABLE_UDP_CSUM(o_pak);
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0;
@@ -12186,6 +12241,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #else
 			sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 #endif
 		}
 		SCTP_IP_OUTPUT(ret, o_pak, &ro, stcb, vrf_id);
@@ -12223,6 +12279,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #endif
 		SCTP_ATTACH_CHAIN(o_pak, mout, len);
 		if (port) {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -12231,6 +12290,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 #if defined(__Windows__)
 			udp->uh_sum = 0;
 #elif !defined(__Userspace__)
@@ -12239,6 +12299,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			}
 #endif
 		} else {
+#if defined(SCTP_WITH_NO_CSUM)
+			SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
@@ -12253,6 +12316,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 		}
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, stcb, vrf_id);
 
