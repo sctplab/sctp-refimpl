@@ -5736,13 +5736,14 @@ sctp_input(i_pak, va_alist)
 	struct ip *ip;
 	struct sctphdr *sh;
 	struct sctp_inpcb *inp = NULL;
-
-	uint32_t check, calc_check;
 	struct sctp_nets *net;
 	struct sctp_tcb *stcb = NULL;
 	struct sctp_chunkhdr *ch;
 	int refcount_up = 0;
 	int length, mlen, offset;
+#if !defined(SCTP_WITH_NO_CSUM)
+	uint32_t check, calc_check;
+#endif
 #if !(defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__) || defined (__Userspace__))
 	uint16_t port = 0;
 #endif
@@ -5874,11 +5875,10 @@ sctp_input(i_pak, va_alist)
 	}
 #endif
 #endif
-	check = sh->checksum;	/* save incoming checksum */
 #if defined(SCTP_WITH_NO_CSUM)
-	calc_check = 0;
 	SCTP_STAT_INCR(sctps_recvnocrc);
 #else
+	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    ((ip->ip_src.s_addr == ip->ip_dst.s_addr) ||
 	     (SCTP_IS_IT_LOOPBACK(m)))
@@ -5890,7 +5890,6 @@ sctp_input(i_pak, va_alist)
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	sh->checksum = check;
 	SCTP_STAT_INCR(sctps_recvswcrc);
-#endif
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
 			calc_check, check, m, mlen, iphlen);
@@ -5916,6 +5915,7 @@ sctp_input(i_pak, va_alist)
 		goto bad;
 	}
  sctp_skip_csum_4:
+#endif
 	/* destination port of 0 is illegal, based on RFC2960. */
 	if (sh->dest_port == 0) {
 		SCTP_STAT_INCR(sctps_hdrops);
