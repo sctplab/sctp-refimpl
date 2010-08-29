@@ -261,17 +261,15 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		m->m_pkthdr.rcvif->if_xname,
 		m->m_pkthdr.csum_flags);
 #endif
+#if defined(SCTP_WITH_NO_CSUM)
+	SCTP_STAT_INCR(sctps_recvnocrc);
+#else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
-#if !defined(SCTP_WITH_NO_CSUM)
 	if (m->m_pkthdr.csum_flags & CSUM_SCTP_VALID) {
 		SCTP_STAT_INCR(sctps_recvhwcrc);
 		goto sctp_skip_csum;
 	}
 #endif
-#endif
-#if defined(SCTP_WITH_NO_CSUM)
-	SCTP_STAT_INCR(sctps_recvnocrc);
-#else
 	check = sh->checksum;	/* save incoming checksum */
 	if ((check == 0) && (SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback)) &&
 	    (IN6_ARE_ADDR_EQUAL(&ip6->ip6_src, &ip6->ip6_dst))) {
