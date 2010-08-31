@@ -978,6 +978,7 @@ union sctp_sockstore {
 
 /***********************************/
 /* And something for us old timers */
+/***********************************/
 #ifndef __APPLE__
 #ifndef ntohll
 #if defined(__Userspace_os_Linux)
