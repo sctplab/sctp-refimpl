@@ -466,6 +466,9 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 
 	if (mnet == NULL) {
 		mnet = TAILQ_FIRST(&stcb->asoc.nets);
+		if (mnet == NULL) {
+			return (NULL);
+		}
 	}
 	do {
 		alt = TAILQ_NEXT(mnet, sctp_next);
@@ -476,6 +479,9 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				break;
 			}
 			alt = TAILQ_FIRST(&stcb->asoc.nets);
+			if (alt == NULL) {
+				return (NULL);
+			}
 		}
 		if (alt->ro.ro_rt == NULL) {
 			if (alt->ro._s_addr) {
@@ -502,6 +508,9 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		once = 0;
 		mnet = net;
 		do {
+			if (mnet == NULL) {
+				return(TAILQ_FIRST(&stcb->asoc.nets));
+			}
 			alt = TAILQ_NEXT(mnet, sctp_next);
 			if (alt == NULL) {
 				once++;
