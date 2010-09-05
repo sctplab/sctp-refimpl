@@ -12867,7 +12867,8 @@ sctp_lower_sosend(struct socket *so,
 			error = EAFNOSUPPORT;
 			goto out_unlocked;
 		}
-	}
+	} else
+		port = 0;
 
 	if (srcv) {
 		sinfo_flags = srcv->sinfo_flags;
