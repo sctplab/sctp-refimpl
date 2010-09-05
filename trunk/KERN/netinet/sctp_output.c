@@ -12981,10 +12981,8 @@ sctp_lower_sosend(struct socket *so,
 			/* UDP style, we must go ahead and start the INIT process */
 			uint32_t vrf_id;
 
-			if ((srcv) &&
-			    ((srcv->sinfo_flags & SCTP_ABORT) ||
-			     ((srcv->sinfo_flags & SCTP_EOF) &&
-			      (sndlen == 0)))) {
+			if ((sinfo_flags & SCTP_ABORT) ||
+			    ((sinfo_flags & SCTP_EOF) && (sndlen == 0)))) {
 				/*-
 				 * User asks to abort a non-existant assoc,
 				 * or EOF a non-existant assoc with no data
