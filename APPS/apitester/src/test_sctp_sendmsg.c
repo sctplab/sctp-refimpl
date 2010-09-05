@@ -241,7 +241,7 @@ DEFINE_APITEST(sctp_sendmsg, c_p_w_a_over)
 	close(fd[1]);
 
 	if (n < 0) {
-		NULL;
+		return NULL;
 	} else {
 		return "sctp_sendmsg() was successful";
 	}
