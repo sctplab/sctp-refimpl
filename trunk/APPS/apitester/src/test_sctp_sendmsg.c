@@ -700,7 +700,7 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a bad port/bad address
  * TEST-DESCR: with override.
- * TEST-DESCR: Validate it succeeds.
+ * TEST-DESCR: Validate it fails.
  */
 DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 {
@@ -723,9 +723,12 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 	close(fd[1]);
 
 	if (n < 0) {
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	} else {
-		return NULL;
+		return "sctp_sendmsg was successful";
 	}
 }
 
@@ -739,18 +742,9 @@ DEFINE_APITEST(sctp_sendmsg, non_null_zero_over)
 DEFINE_APITEST(sctp_sendmsg, null_zero)
 {
 	int fd[2], n;
-	struct sockaddr_in addr;
-	socklen_t size;
 
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-
-	size = (socklen_t)sizeof(struct sockaddr_in);
-	memset((void *)&addr, 0, size);
-	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-
-	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
-	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, 0, 0, 0, 0, 0, 0);
 	close(fd[0]);
@@ -768,32 +762,26 @@ DEFINE_APITEST(sctp_sendmsg, null_zero)
  * TEST-DESCR: On a 1-1 socket, create an
  * TEST-DESCR: association. Send to a null address with 0 length
  * TEST-DESCR: with override.
- * TEST-DESCR: Validate it succeeds.
+ * TEST-DESCR: Validate it fails.
  */
 DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 {
 	int fd[2], n;
-	struct sockaddr_in addr;
-	socklen_t size;
 
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-
-	size = (socklen_t)sizeof(struct sockaddr_in);
-	memset((void *)&addr, 0, size);
-	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-
-	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
-	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, 0, 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
 	close(fd[1]);
 
 	if (n < 0) {
-		return strerror(errno);
+		if (errno == EINVAL)
+			return NULL;
+		else
+			return strerror(errno);
 	} else {
-		return NULL;
+		return "sctp_sendmsg was successful";
 	}
 }
 
@@ -807,18 +795,9 @@ DEFINE_APITEST(sctp_sendmsg, null_zero_over)
 DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 {
 	int fd[2], n;
-	struct sockaddr_in addr;
-	socklen_t size;
 
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-
-	size = (socklen_t)sizeof(struct sockaddr_in);
-	memset((void *)&addr, 0, size);
-	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-
-	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
-	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, sizeof(struct sockaddr_in), 0, 0, 0, 0, 0);
 	close(fd[0]);
@@ -841,18 +820,9 @@ DEFINE_APITEST(sctp_sendmsg, null_non_zero)
 DEFINE_APITEST(sctp_sendmsg, null_non_zero_over)
 {
 	int fd[2], n;
-	struct sockaddr_in addr;
-	socklen_t size;
 
 	if (sctp_socketpair(fd, 0) < 0)
 		return strerror(errno);
-
-	size = (socklen_t)sizeof(struct sockaddr_in);
-	memset((void *)&addr, 0, size);
-	(void)getsockname(fd[1], (struct sockaddr *)&addr, &size);
-
-	addr.sin_addr.s_addr = inet_addr("1.1.1.1");
-	addr.sin_port        = htons(1);
 
 	n = sctp_sendmsg(fd[0], "Hello", 5, (struct sockaddr *)NULL, sizeof(struct sockaddr_in), 0, SCTP_ADDR_OVER, 0, 0, 0);
 	close(fd[0]);
