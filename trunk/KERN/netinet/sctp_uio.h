@@ -1132,7 +1132,6 @@ sctp_lower_sosend(struct socket *so,
     struct mbuf *control,
 #endif
     int flags,
-    int use_rcvinfo,
     struct sctp_sndrcvinfo *srcv
 #if !(defined(__Panda__) || defined (__Userspace__)) 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
