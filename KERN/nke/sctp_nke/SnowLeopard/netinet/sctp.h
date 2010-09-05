@@ -42,8 +42,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp.h 211944 2010-08-28 17:59:51Z tuexen $
 
 #include <sys/types.h>
 
-#define SCTP_PACKED __attribute__((packed))
 
+#define SCTP_PACKED __attribute__((packed))
 
 /*
  * SCTP protocol - RFC2960.
