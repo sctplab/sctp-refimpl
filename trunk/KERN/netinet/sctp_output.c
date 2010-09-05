@@ -12982,7 +12982,7 @@ sctp_lower_sosend(struct socket *so,
 			uint32_t vrf_id;
 
 			if ((sinfo_flags & SCTP_ABORT) ||
-			    ((sinfo_flags & SCTP_EOF) && (sndlen == 0)))) {
+			    ((sinfo_flags & SCTP_EOF) && (sndlen == 0))) {
 				/*-
 				 * User asks to abort a non-existant assoc,
 				 * or EOF a non-existant assoc with no data
