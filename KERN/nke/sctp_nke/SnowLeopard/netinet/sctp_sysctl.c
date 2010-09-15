@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 211969 2010-08-29 18:50:30Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 212704 2010-09-15 21:08:57Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -230,8 +230,6 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 		ipv4_addr_legal = 1;
 		ipv6_addr_legal = 0;
 	}
-
-	error = 0;
 
 	/* neither Mac OS X nor FreeBSD support mulitple routing functions */
 	if ((vrf = sctp_find_vrf(inp->def_vrf_id)) == NULL) {
