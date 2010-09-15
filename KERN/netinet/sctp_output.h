@@ -131,6 +131,8 @@ void sctp_toss_old_asconf(struct sctp_tcb *);
 
 void sctp_fix_ecn_echo(struct sctp_association *);
 
+void sctp_move_chunks_from_net(struct sctp_tcb *stcb, struct sctp_nets *net);
+
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 int
 sctp_output(struct sctp_inpcb *, struct mbuf *, struct sockaddr *,
