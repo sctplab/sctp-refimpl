@@ -507,7 +507,6 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 #if defined(__Userspace__)
         return;
 #else
-	struct sctp_ifa *ifap=NULL;
 	uint32_t ifa_flags=0;
 	/* BSD only has one VRF, if this changes
 	 * we will need to hook in the right
@@ -549,14 +548,14 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 		return;
 	}
 	if (cmd == RTM_ADD) {
-		ifap = sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
-		                            ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
+		(void)sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID, (void *)ifa->ifa_ifp,
+		                           ifa->ifa_ifp->if_index, ifa->ifa_ifp->if_type,
 #ifdef __APPLE__
-		                            ifa->ifa_ifp->if_name,
+		                           ifa->ifa_ifp->if_name,
 #else
-		                            ifa->ifa_ifp->if_xname,
+		                           ifa->ifa_ifp->if_xname,
 #endif
-		                            (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
+		                           (void *)ifa, ifa->ifa_addr, ifa_flags, 1);
 	} else {
 
 		sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, ifa->ifa_addr,
