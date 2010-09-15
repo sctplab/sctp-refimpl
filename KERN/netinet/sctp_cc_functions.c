@@ -44,7 +44,7 @@
 #include <netinet/sctp_cc_functions.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 211944 2010-08-28 17:59:51Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 212702 2010-09-15 20:53:20Z tuexen $");
 #endif
 void
 sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
