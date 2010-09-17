@@ -135,6 +135,7 @@ sctp_iterator_thread(void *v)
 			kthread_exit();
 #endif
 #else
+			thread_deallocate(sctp_it_ctl.thread_proc);
 			thread_terminate(current_thread());
 			panic("Hmm. thread_terminate() continues...");
 #endif
@@ -176,7 +177,6 @@ sctp_startup_iterator(void)
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
         (void) kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
-        thread_deallocate(sctp_it_ctl.thread_proc);
 #elif defined(__Userspace__)
                              /* TODO pthread_create or alternative to create a thread? */
 #endif
