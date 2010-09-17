@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 212714 2010-09-15 23:56:25Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 212799 2010-09-17 16:20:29Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -7639,7 +7639,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
 	if (stcb->sctp_socket)
-		max_send_per_dest = (SCTP_SB_LIMIT_SND(stcb->sctp_socket)) / asoc->numnets;
+		max_send_per_dest = SCTP_SB_LIMIT_SND(stcb->sctp_socket) / asoc->numnets;
 	else
 		max_send_per_dest = 0;
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
@@ -8213,7 +8213,6 @@ again_one_more_time:
 		}
 		if ((asoc->sctp_cmt_on_off == 1) &&
 		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_RECV_BUFFER_SPLITTING) &&
-		    (max_rwnd_per_dest > 0) &&
 		    (net->flight_size > max_rwnd_per_dest)) {
 			goto no_data_fill;
 		}
@@ -8225,6 +8224,7 @@ again_one_more_time:
 		 */
 		if ((asoc->sctp_cmt_on_off == 1) &&
 		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_SEND_BUFFER_SPLITTING) &&
+		    (max_send_per_dest > 0) &&
 		    (net->flight_size > max_send_per_dest)) {
 			goto no_data_fill;
 		}
