@@ -991,6 +991,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 208879 2010-06-06 20:34:17
  */
 #define SCTP_TIME_WAIT 60
 
+#define SCTP_SEND_BUFFER_SPLITTING 0x00000001
+#define SCTP_RECV_BUFFER_SPLITTING 0x00000002
+
 /* The system retains a cache of free chunks such to
  * cut down on calls the memory allocation system. There
  * is a per association limit of free items and a overall

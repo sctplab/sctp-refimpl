@@ -7572,7 +7572,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	/* temp arrays for unlinking */
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	int no_fragmentflg, error;
-	unsigned int max_rwnd_per_dest;
+	unsigned int max_rwnd_per_dest, max_send_per_dest;
 	int one_chunk, hbflag, skip_data_for_this_net;
 	int asconf, cookie, no_out_cnt;
 	int bundle_at, ctl_cnt, no_data_chunks, eeor_mode;
@@ -7638,6 +7638,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
+	max_send_per_dest = (SCTP_SB_LIMIT_SND(SCTP_INP_SO(inp))) / asoc->numnets;
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
@@ -8208,7 +8209,19 @@ again_one_more_time:
 			goto no_data_fill;
 		}
 		if ((asoc->sctp_cmt_on_off == 1) &&
+		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_RECV_BUFFER_SPLITTING) &&
 		    (net->flight_size > max_rwnd_per_dest)) {
+			goto no_data_fill;
+		}
+		/*
+		 * We need a specific accounting for the usage of the
+		 * send buffer. We also need to check the number of messages
+		 * per net. For now, this is better than nothing and it
+		 * disabled by default...
+		 */
+		if ((asoc->sctp_cmt_on_off == 1) &&
+		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_SEND_BUFFER_SPLITTING) &&
+		    (net->flight_size > max_send_per_dest)) {
 			goto no_data_fill;
 		}
 		/*********************/
