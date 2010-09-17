@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 212799 2010-09-17 16:20:29Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 212800 2010-09-17 18:53:07Z tuexen $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -114,6 +114,7 @@ struct sctp_sysctl {
 	uint32_t sctp_enable_sack_immediately;
 	uint32_t sctp_vtag_time_wait;
 	uint32_t sctp_buffer_splitting;
+	uint32_t sctp_initial_cwnd;
 #if defined(SCTP_DEBUG)
 	uint32_t sctp_debug_on;
 #endif
@@ -508,6 +509,12 @@ struct sctp_sysctl {
 #define SCTPCTL_BUFFER_SPLITTING_MIN		0
 #define SCTPCTL_BUFFER_SPLITTING_MAX		0x3
 #define SCTPCTL_BUFFER_SPLITTING_DEFAULT	SCTPCTL_BUFFER_SPLITTING_MIN
+
+/* Initial congestion window in MTU */
+#define SCTPCTL_INITIAL_CWND_DESC	"Initial congestion window in MTU"
+#define SCTPCTL_INITIAL_CWND_MIN	2
+#define SCTPCTL_INITIAL_CWND_MAX	0xffffffff
+#define SCTPCTL_INITIAL_CWND_DEFAULT	3
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
