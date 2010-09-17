@@ -116,6 +116,7 @@ sctp_init_sysctls()
 	SCTP_BASE_SYSCTL(sctp_mobility_base) = SCTPCTL_MOBILITY_BASE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_mobility_fasthandoff) = SCTPCTL_MOBILITY_FASTHANDOFF_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_vtag_time_wait) = SCTPCTL_TIME_WAIT_DEFAULT;
+	SCTP_BASE_SYSCTL(sctp_buffer_splitting) = SCTPCTL_BUFFER_SPLITTING_DEFAULT;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	/* On Windows, the resource for global variables is limited. */
@@ -733,7 +734,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_default_cc_module), SCTPCTL_DEFAULT_CC_MODULE_MIN, SCTPCTL_DEFAULT_CC_MODULE_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_default_frag_interleave), SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MIN, SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_vtag_time_wait), SCTPCTL_TIME_WAIT_MIN, SCTPCTL_TIME_WAIT_MAX);
-
+		RANGECHK(SCTP_BASE_SYSCTL(sctp_buffer_splitting), SCTPCTL_BUFFER_SPLITTING_MIN, SCTPCTL_BUFFER_SPLITTING_MAX);
 #if defined(__FreeBSD__)
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_mobility_base), SCTPCTL_MOBILITY_BASE_MIN, SCTPCTL_MOBILITY_BASE_MAX);
 #elif defined(SCTP_APPLE_MOBILITY_BASE)
@@ -1222,6 +1223,10 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, vtag_time_wait, CTLTYPE_INT|CTLFLAG_RW,
 	    &SCTP_BASE_SYSCTL(sctp_vtag_time_wait), 0, sysctl_sctp_check, "IU",
 	    SCTPCTL_TIME_WAIT_DESC);
 
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, buffer_splitting, CTLTYPE_INT|CTLFLAG_RW,
+	    &SCTP_BASE_SYSCTL(sctp_buffer_splitting), 0, sysctl_sctp_check, "IU",
+	    SCTPCTL_BUFFER_SPLITTING_DESC);
+
 #ifdef SCTP_DEBUG
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, debug, CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_debug_on), 0, sysctl_sctp_check, "IU",
@@ -1518,6 +1523,14 @@ void sysctl_setup_sctp(void)
 	sysctl_add_oid(&sysctl_oid_top, "nat_friendly_init", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly), 0, sysctl_sctp_check,
 	    SCTPCTL_NAT_FRIENDLY_DESC);
+
+	sysctl_add_oid(&sysctl_oid_top, "vtag_time_wait", CTLTYPE_INT|CTLFLAG_RW,
+            &SCTP_BASE_SYSCTL(sctp_vtag_time_wait), 0, sysctl_sctp_check,
+	    SCTPCTL_TIME_WAIT_DESC);
+
+	sysctl_add_oid(&sysctl_oid_top, "buffer_splitting", CTLTYPE_INT|CTLFLAG_RW,
+            &SCTP_BASE_SYSCTL(sctp_buffer_splitting), 0, sysctl_sctp_check,
+	    SCTPCTL_BUFFER_SPLITTING_DESC);
 
 #ifdef SCTP_DEBUG
 	sysctl_add_oid(&sysctl_oid_top, "debug", CTLTYPE_INT|CTLFLAG_RW,
