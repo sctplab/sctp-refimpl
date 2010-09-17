@@ -8213,7 +8213,6 @@ again_one_more_time:
 		}
 		if ((asoc->sctp_cmt_on_off == 1) &&
 		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_RECV_BUFFER_SPLITTING) &&
-		    (max_rwnd_per_dest > 0) &&
 		    (net->flight_size > max_rwnd_per_dest)) {
 			goto no_data_fill;
 		}
@@ -8225,6 +8224,7 @@ again_one_more_time:
 		 */
 		if ((asoc->sctp_cmt_on_off == 1) &&
 		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_SEND_BUFFER_SPLITTING) &&
+		    (max_send_per_dest > 0) &&
 		    (net->flight_size > max_send_per_dest)) {
 			goto no_data_fill;
 		}
