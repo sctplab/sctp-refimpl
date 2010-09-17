@@ -3289,16 +3289,11 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (stcb->asoc.peer_supports_prsctp) {
 			if ((PR_SCTP_TTL_ENABLED(tp1->flags)) && tp1->sent < SCTP_DATAGRAM_ACKED) {
 				/* Is it expired? */
-				if (
-					/* TODO sctp_constants.h needs alternative time macros when
-					 *  _KERNEL is undefined.
-					 */
 #ifndef __FreeBSD__
-					(timercmp(&now, &tp1->rec.data.timetodrop, >))
+				if (timercmp(&now, &tp1->rec.data.timetodrop, >)) {
 #else
-					(timevalcmp(&now, &tp1->rec.data.timetodrop, >))
+				if (timevalcmp(&now, &tp1->rec.data.timetodrop, >)) {
 #endif
-					) {
 					/* Yes so drop it */
 					if (tp1->data != NULL) {
 						(void)sctp_release_pr_sctp_chunk(stcb, tp1,
@@ -3732,11 +3727,10 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 * now up?
 			 */
 #ifndef __FreeBSD__
-			if (timercmp(&now, &tp1->rec.data.timetodrop, >))
+			if (timercmp(&now, &tp1->rec.data.timetodrop, >)) {
 #else
-			if (timevalcmp(&now, &tp1->rec.data.timetodrop, >))
+			if (timevalcmp(&now, &tp1->rec.data.timetodrop, >)) {
 #endif
-			{
 				/* Yes so drop it */
 				if (tp1->data) {
 					(void)sctp_release_pr_sctp_chunk(stcb, tp1,

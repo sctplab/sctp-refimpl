@@ -760,9 +760,11 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			}
 			if (stcb->asoc.peer_supports_prsctp && PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
-				if ((now.tv_sec > chk->rec.data.timetodrop.tv_sec) ||
-				    ((chk->rec.data.timetodrop.tv_sec == now.tv_sec) &&
-				     (now.tv_usec > chk->rec.data.timetodrop.tv_usec))) {
+#ifndef __FreeBSD__
+				if (timercmp(&now, &chk->rec.data.timetodrop, >)) {
+#else
+				if (timevalcmp(&now, &chk->rec.data.timetodrop, >)) {
+#endif
 					/* Yes so drop it */
 					if (chk->data) {
 						(void)sctp_release_pr_sctp_chunk(stcb,
