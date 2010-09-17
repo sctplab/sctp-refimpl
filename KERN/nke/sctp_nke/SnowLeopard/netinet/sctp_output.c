@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 212799 2010-09-17 16:20:29Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 212801 2010-09-17 19:20:39Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5902,7 +5902,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 		while (chk) {
 			nchk = TAILQ_NEXT(chk, sctp_next);
 			/* Here we must move to the sent queue and mark */
-			if (PR_SCTP_TTL_ENABLED(chk->flags)) {
+			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 				if (chk->rec.data.timetodrop.tv_sec >= (long)srcv->sinfo_timetolive) {
 					if (chk->data) {
 						/*
