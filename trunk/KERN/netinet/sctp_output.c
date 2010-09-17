@@ -7639,7 +7639,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
 	if (stcb->sctp_socket)
-		max_send_per_dest = (SCTP_SB_LIMIT_SND(stcb->sctp_socket)) / asoc->numnets;
+		max_send_per_dest = SCTP_SB_LIMIT_SND(stcb->sctp_socket) / asoc->numnets;
 	else
 		max_send_per_dest = 0;
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
