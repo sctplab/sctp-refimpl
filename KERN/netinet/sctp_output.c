@@ -7638,7 +7638,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		}
 	}
 	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
-	max_send_per_dest = (SCTP_SB_LIMIT_SND(SCTP_INP_SO(inp))) / asoc->numnets;
+	if (stcb->sctp_socket)
+		max_send_per_dest = (SCTP_SB_LIMIT_SND(stcb->sctp_socket)) / asoc->numnets;
+	else
+		max_send_per_dest = 0;
 	if ((no_data_chunks == 0) && (!TAILQ_EMPTY(&asoc->out_wheel))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
@@ -8210,6 +8213,7 @@ again_one_more_time:
 		}
 		if ((asoc->sctp_cmt_on_off == 1) &&
 		    (SCTP_BASE_SYSCTL(sctp_buffer_splitting) & SCTP_RECV_BUFFER_SPLITTING) &&
+		    (max_rwnd_per_dest > 0) &&
 		    (net->flight_size > max_rwnd_per_dest)) {
 			goto no_data_fill;
 		}
