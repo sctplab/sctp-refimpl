@@ -30,7 +30,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 212800 2010-09-17 18:53:07Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 212851 2010-09-19 11:57:21Z tuexen $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -511,8 +511,8 @@ struct sctp_sysctl {
 #define SCTPCTL_BUFFER_SPLITTING_DEFAULT	SCTPCTL_BUFFER_SPLITTING_MIN
 
 /* Initial congestion window in MTU */
-#define SCTPCTL_INITIAL_CWND_DESC	"Initial congestion window in MTU"
-#define SCTPCTL_INITIAL_CWND_MIN	2
+#define SCTPCTL_INITIAL_CWND_DESC	"Initial congestion window in MTUs"
+#define SCTPCTL_INITIAL_CWND_MIN	1
 #define SCTPCTL_INITIAL_CWND_MAX	0xffffffff
 #define SCTPCTL_INITIAL_CWND_DEFAULT	3
 
