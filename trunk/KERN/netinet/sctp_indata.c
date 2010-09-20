@@ -1581,7 +1581,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		/* now is it in the mapping array of what we have accepted? */
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN) &&
-			compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+		    compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			/* Nope not in the valid range dump it */
 			sctp_set_rwnd(stcb, asoc);
 			if ((asoc->cnt_on_all_streams +
@@ -5692,7 +5692,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	/*******************************************************/
 	/* 3. Update the PR-stream re-ordering queues and fix  */
-    /*    delivery issues as needed.                       */
+	/*    delivery issues as needed.                       */
 	/*******************************************************/
 	fwd_sz -= sizeof(*fwd);
 	if (m && fwd_sz) {
