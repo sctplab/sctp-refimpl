@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 212801 2010-09-17 19:20:39Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 212897 2010-09-20 12:19:11Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1581,7 +1581,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		/* now is it in the mapping array of what we have accepted? */
 		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_map, MAX_TSN) &&
-			compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+		    compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
 			/* Nope not in the valid range dump it */
 			sctp_set_rwnd(stcb, asoc);
 			if ((asoc->cnt_on_all_streams +
@@ -1770,6 +1770,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (control == NULL) {
 			goto failed_express_del;
 		}
+		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
+			asoc->highest_tsn_inside_nr_map = tsn;
+		}
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		                  control, &stcb->sctp_socket->so_rcv,
 		                  1, SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
@@ -1785,10 +1789,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		control = NULL;
 
-		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
-		if (compare_with_wrap(tsn, asoc->highest_tsn_inside_nr_map, MAX_TSN)) {
-			asoc->highest_tsn_inside_nr_map = tsn;
-		}
 		goto finish_express_del;
 	}
 failed_express_del:
@@ -5692,7 +5692,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	}
 	/*******************************************************/
 	/* 3. Update the PR-stream re-ordering queues and fix  */
-    /*    delivery issues as needed.                       */
+	/*    delivery issues as needed.                       */
 	/*******************************************************/
 	fwd_sz -= sizeof(*fwd);
 	if (m && fwd_sz) {
