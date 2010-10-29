@@ -2836,10 +2836,10 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	 * and not suck up any kernel memory in that.
 	 */
 	if (stcb->asoc.in_asocid_hash) {
-	    struct sctpasochead *lhd;
-	    lhd = &new_inp->sctp_asocidhash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
-		     new_inp->hashasocidmark)];
-	    LIST_INSERT_HEAD(lhd, stcb, sctp_tcbasocidhash);
+		struct sctpasochead *lhd;
+		lhd = &new_inp->sctp_asocidhash[SCTP_PCBHASH_ASOC(stcb->asoc.assoc_id,
+			new_inp->hashasocidmark)];
+		LIST_INSERT_HEAD(lhd, stcb, sctp_tcbasocidhash);
 	}
 	/* Ok. Let's restart timer. */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
