@@ -3418,13 +3418,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	}
 	/* find the bucket */
 	if (port_reuse_active)  {
-	  /* Put it into tcp 1-2-1 hash */
-	  head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport),
-								      SCTP_BASE_INFO(hashtcpmark))];
-	  inp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
+		/* Put it into tcp 1-2-1 hash */
+		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport),
+		                       SCTP_BASE_INFO(hashtcpmark))];
+		inp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
 	}  else {
-	  head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport,
-								   SCTP_BASE_INFO(hashmark))];
+		head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport,
+		                       SCTP_BASE_INFO(hashmark))];
 	}
 	/* put it in the bucket */
 	LIST_INSERT_HEAD(head, inp, sctp_hash);
@@ -6076,7 +6076,7 @@ sctp_pcb_init()
 			  SCTP_BASE_SYSCTL(sctp_chunkscale));
 #endif
 #endif
-        SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((SCTP_BASE_SYSCTL(sctp_hashtblsize) * 31),
+	SCTP_BASE_INFO(sctp_asochash) = SCTP_HASH_INIT((SCTP_BASE_SYSCTL(sctp_hashtblsize) * 31),
 						   &SCTP_BASE_INFO(hashasocmark));
 	SCTP_BASE_INFO(sctp_ephash) = SCTP_HASH_INIT(SCTP_BASE_SYSCTL(sctp_hashtblsize),
 						 &SCTP_BASE_INFO(hashmark));
