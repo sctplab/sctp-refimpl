@@ -42,6 +42,7 @@
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_cc_functions.h>
+#include <sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 212800 2010-09-17 18:53:07Z tuexen $");
@@ -64,7 +65,10 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 		cwnd_in_mtu = assoc->max_burst;
 	net->cwnd = (net->mtu - sizeof(struct sctphdr)) * cwnd_in_mtu;
 	net->ssthresh = assoc->peers_rwnd;
-
+	
+	SDT_PROBE(sctp, cwnd, net, val, 
+		  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
+		  0, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &
 	    (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
@@ -99,6 +103,9 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 					net->ssthresh = 2 * net->mtu;
 				}
 				net->cwnd = net->ssthresh;
+				SDT_PROBE(sctp, cwnd, net, val, 
+					  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
+					  old_cwnd, net->cwnd);
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 					sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 						SCTP_CWND_LOG_FROM_FR);
@@ -156,6 +163,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
+	int old_cwnd;
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/
@@ -245,7 +253,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
+				old_cwnd = net->cwnd;
 				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
+				SDT_PROBE(sctp, cwnd, net, val, 
+					  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
+					  old_cwnd, net->cwnd);
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
@@ -285,14 +297,27 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				/* We are in slow start */
 				if (net->flight_size + net->net_ack >= net->cwnd) {
 					if (net->net_ack > (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable))) {
+						old_cwnd = net->cwnd;
 						net->cwnd += (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable));
+						SDT_PROBE(sctp, cwnd, net, val, 
+							  stcb->asoc.my_vtag, 
+							  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+							  net, 
+							  old_cwnd, net->cwnd);
 						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 							sctp_log_cwnd(stcb, net, net->mtu,
 								SCTP_CWND_LOG_FROM_SS);
 						}
 
 					} else {
+						old_cwnd = net->cwnd;
 						net->cwnd += net->net_ack;
+						SDT_PROBE(sctp, cwnd, net, val, 
+							  stcb->asoc.my_vtag, 
+							  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+							  net, 
+							  old_cwnd, net->cwnd);
+
 						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 							sctp_log_cwnd(stcb, net, net->net_ack,
 								SCTP_CWND_LOG_FROM_SS);
@@ -315,7 +340,13 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				if ((net->flight_size + net->net_ack >= net->cwnd) &&
                                     (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
+					old_cwnd = net->cwnd;
 					net->cwnd += net->mtu;
+					SDT_PROBE(sctp, cwnd, net, val, 
+						  stcb->asoc.my_vtag, 
+						  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+						  net, 
+						  old_cwnd, net->cwnd);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
 								SCTP_CWND_LOG_FROM_CA);
@@ -362,7 +393,11 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 	net->ssthresh = max(net->cwnd / 2, 4 * net->mtu);
 	net->cwnd = net->mtu;
 	net->partial_bytes_acked = 0;
-
+	SDT_PROBE(sctp, cwnd, net, val, 
+		  stcb->asoc.my_vtag, 
+		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+		  net, 
+		  old_cwnd, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, net->cwnd - old_cwnd, SCTP_CWND_LOG_FROM_RTX);
 	}
@@ -381,6 +416,11 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net)
 		net->RTO <<= 1;
 	}
 	net->cwnd = net->ssthresh;
+	SDT_PROBE(sctp, cwnd, net, val, 
+		  stcb->asoc.my_vtag, 
+		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+		  net, 
+		  old_cwnd, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
 	}
@@ -487,8 +527,14 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 		/* We always have 1 MTU */
 		net->cwnd = net->mtu;
 	}
+
 	if (net->cwnd - old_cwnd != 0) {
 		/* log only changes */
+		SDT_PROBE(sctp, cwnd, net, val, 
+			  stcb->asoc.my_vtag, 
+			  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+			  net, 
+			  old_cwnd, net->cwnd);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd),
 				SCTP_CWND_LOG_FROM_SAT);
@@ -498,14 +544,18 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 
 void
 sctp_cwnd_update_after_output(struct sctp_tcb *stcb,
-	struct sctp_nets *net, int burst_limit)
+			      struct sctp_nets *net, int burst_limit)
 {
 	int old_cwnd = net->cwnd;
 
 	if (net->ssthresh < net->cwnd)
 		net->ssthresh = net->cwnd;
 	net->cwnd = (net->flight_size + (burst_limit * net->mtu));
-
+	SDT_PROBE(sctp, cwnd, net, val, 
+		  stcb->asoc.my_vtag, 
+		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+		  net, 
+		  old_cwnd, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
 	}
@@ -527,6 +577,11 @@ sctp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 	if (net->cwnd < net->ssthresh)
 		/* still in SS move to CA */
 		net->ssthresh = net->cwnd - 1;
+	SDT_PROBE(sctp, cwnd, net, val, 
+		  stcb->asoc.my_vtag, 
+		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+		  net, 
+		  old_cwnd, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
 	}

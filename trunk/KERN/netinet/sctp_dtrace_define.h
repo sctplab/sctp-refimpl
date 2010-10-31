@@ -18,7 +18,7 @@ SDT_PROBE_ARGTYPE(sctp, cwnd, net, val, val, 0, "uint32_t");
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, val, val, 1, "uint32_t");
 /* The pointer to the struct sctp_nets * changing */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, val, val, 2, "uintptr_t");
-/* The up/down amount */
+/* The old value of the cwnd  */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, val, val, 3, "int");
 /* The new value of the cwnd */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, val, val, 4, "int");
