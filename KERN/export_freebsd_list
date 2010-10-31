@@ -10,6 +10,8 @@ netinet/sctp_cc_functions.c
 netinet/sctp_cc_functions.h
 netinet/sctp_crc32.c
 netinet/sctp_crc32.h
+netinet/sctp_dtrace_declare.h
+netinet/sctp_dtrace_define.h
 netinet/sctp_header.h
 netinet/sctp_indata.c
 netinet/sctp_indata.h
