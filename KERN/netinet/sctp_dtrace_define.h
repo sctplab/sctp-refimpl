@@ -63,11 +63,11 @@ SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 0, "uint32_t");
 /* The port number of the local side << 16 | port number of remote 
  * in network byte order.
  */
-SDT_PROBE_ARGTYPE(sctp, flightsize, net, assoc, 1, "uint32_t");
+SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 1, "uint32_t");
 /* The up/down amount */
-SDT_PROBE_ARGTYPE(sctp, flightsize, net, assoc, 2, "int");
+SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 2, "int");
 /* The new value of the cwnd */
-SDT_PROBE_ARGTYPE(sctp, flightsize, net, assoc, 3, "int");
+SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 3, "int");
 
 #endif
 #endif
