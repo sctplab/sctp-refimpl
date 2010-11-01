@@ -10,7 +10,20 @@ SDT_PROVIDER_DECLARE(sctp);
 /* The probes we have so far: */
 
 /* One to track a net's cwnd */
-SDT_PROBE_DECLARE(sctp, cwnd, net, val);
+/* initial */
+SDT_PROBE_DECLARE(sctp, cwnd, net, init);
+/* update at a ack -- increase */
+SDT_PROBE_DECLARE(sctp, cwnd, net, ack);
+/* update at a fast retransmit -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, fr);
+/* update at a time-out -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, to);
+/* update at a burst-limit -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, bl);
+/* update at a ECN -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, ecn);
+/* update at a Packet-Drop -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, pd);
 
 /* One to track an associations rwnd */
 SDT_PROBE_DECLARE(sctp, rwnd, assoc, val);
