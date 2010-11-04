@@ -10298,6 +10298,14 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		}
 	}
 
+	if (((type == SCTP_SELECTIVE_ACK) &&
+	     (((asoc->mapping_array[0]|asoc->nr_mapping_array[0]) & 0x01) == 0x00)) ||
+	    ((type == SCTP_NR_SELECTIVE_ACK) &&
+	     ((asoc->mapping_array[0] & 0x01) == 0x00))) {
+		sel_start = 0;
+	} else {
+		sel_start = 1;
+	}
 	if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 		offset = 1;
 		/*-
@@ -10308,7 +10316,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		 * is 1. Our table is built for this case.
 		 */
 		starting_index = 0;
-		sel_start = 0;
 	} else {
 		/*-
 		 * we skip the first selector  when the cum-ack is at or above the
@@ -10337,7 +10344,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		}
 		/* We need a negative offset in our table */
 		offset *= -1;
-		sel_start = 1;
 	}
 	if (((type == SCTP_SELECTIVE_ACK) &&
 	     compare_with_wrap(highest_tsn, asoc->cumulative_tsn, MAX_TSN)) ||
@@ -10407,20 +10413,23 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		else
 			siz = (((MAX_TSN - asoc->mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_nr_map + 7) / 8;
 
+		if ((asoc->nr_mapping_array[0] & 0x01) == 0x00) {
+			sel_start = 0;
+		} else {
+			sel_start = 1;
+		}
 		if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 			offset = 1;
 			/*-
 			* cum-ack behind the mapping array, so we start and use all
 			* entries.
 			*/
-			sel_start = 0;
 		} else {
 			offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn;
 			/*-
 			* we skip the first one when the cum-ack is at or above the
 			* mapping array base. Note this only works if
 			*/
-			sel_start = 1;
 		}
 		if (compare_with_wrap(asoc->highest_tsn_inside_nr_map, asoc->cumulative_tsn, MAX_TSN)) {
 			/* we have a gap .. maybe */
