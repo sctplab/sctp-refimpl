@@ -10132,7 +10132,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (chk->rec.chunk_id.id == type) {
 			/* Hmm, found a sack already on queue, remove it */
 			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);
-			asoc->ctrl_queue_cnt++;
+			asoc->ctrl_queue_cnt--;
 			a_chk = chk;
 			if (a_chk->data) {
 				sctp_m_freem(a_chk->data);
