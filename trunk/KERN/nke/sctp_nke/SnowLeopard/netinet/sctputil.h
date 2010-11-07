@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 206137 2010-04-03 15:40:14Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 214939 2010-11-07 18:50:35Z tuexen $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -123,7 +123,8 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 
 void sctp_iterator_worker(void);
 
-int find_next_best_mtu(int);
+uint32_t sctp_get_prev_mtu(uint32_t);
+uint32_t sctp_get_next_mtu(struct sctp_inpcb *, uint32_t);
 
 void
 sctp_timeout_handler(void *);
