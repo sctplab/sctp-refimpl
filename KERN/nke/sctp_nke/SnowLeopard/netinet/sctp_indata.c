@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 212897 2010-09-20 12:19:11Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 214918 2010-11-07 14:39:40Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4347,7 +4347,7 @@ again:
 			SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 			sctp_send_shutdown_ack(stcb,
 					       stcb->asoc.primary_destination);
-
+			sctp_stop_timers_for_shutdown(stcb);
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
 		}
@@ -5058,7 +5058,7 @@ done_with_it:
 			SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 			sctp_send_shutdown_ack(stcb,
 			                       stcb->asoc.primary_destination);
-
+			sctp_stop_timers_for_shutdown(stcb);
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK,
 			                 stcb->sctp_ep, stcb, asoc->primary_destination);
 			return;
