@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 214933 2010-11-07 17:50:56Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 214939 2010-11-07 18:50:35Z tuexen $");
 #endif
 
 #define _IP_VHL
@@ -1659,46 +1659,6 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
-#define SCTP_NUMBER_OF_MTU_SIZES 18
-static uint32_t mtu_sizes[] = {
-	68,
-	296,
-	508,
-	512,
-	544,
-	576,
-	1006,
-	1492,
-	1500,
-	1536,
-	2002,
-	2048,
-	4352,
-	4464,
-	8166,
-	17914,
-	32000,
-	65535
-};
-
-
-static uint32_t
-sctp_getnext_mtu(struct sctp_inpcb *inp, uint32_t cur_mtu)
-{
-	/* select another MTU that is just bigger than this one */
-	int i;
-
-	for (i = 0; i < SCTP_NUMBER_OF_MTU_SIZES; i++) {
-		if (cur_mtu < mtu_sizes[i]) {
-			/* no max_mtu is bigger than this one */
-			return (mtu_sizes[i]);
-		}
-	}
-	/* here return the highest allowable */
-	return (cur_mtu);
-}
-
-
 void
 sctp_pathmtu_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
@@ -1706,7 +1666,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 {
 	uint32_t next_mtu, mtu;
 
-	next_mtu = sctp_getnext_mtu(inp, net->mtu);
+	next_mtu = sctp_get_next_mtu(inp, net->mtu);
 
 	if ((next_mtu > net->mtu) && (net->port == 0)) {
 		if ((net->src_addr_selected == 0) ||
