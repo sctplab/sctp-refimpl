@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 214928 2010-11-07 17:44:04Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 214933 2010-11-07 17:50:56Z tuexen $");
 #endif
 
 #define _IP_VHL
@@ -1657,30 +1657,6 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 	}
 	return (0);
-}
-
-int
-sctp_is_hb_timer_running(struct sctp_tcb *stcb)
-{
-	if (SCTP_OS_TIMER_PENDING(&stcb->asoc.hb_timer.timer)) {
-		/* its running */
-		return (1);
-	} else {
-		/* nope */
-		return (0);
-	}
-}
-
-int
-sctp_is_sack_timer_running(struct sctp_tcb *stcb)
-{
-	if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
-		/* its running */
-		return (1);
-	} else {
-		/* nope */
-		return (0);
-	}
 }
 
 #define SCTP_NUMBER_OF_MTU_SIZES 18
