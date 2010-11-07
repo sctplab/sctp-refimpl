@@ -294,6 +294,10 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	return (0);
 }
 
+/* 
+ * sctp_find_alternate_net() returns a non-NULL pointer as long
+ * the argument net is non-NULL.
+ */
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *stcb,
     struct sctp_nets *net,
@@ -321,7 +325,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		TAILQ_FOREACH(mnet, &stcb->asoc.nets, sctp_next) {
 			/* JRS 5/14/07 - If the destination is unreachable or unconfirmed, skip it. */
 			if (((mnet->dest_state & SCTP_ADDR_REACHABLE) != SCTP_ADDR_REACHABLE) ||
-			 	(mnet->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			    (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 				continue;
 			}
 			/*
@@ -424,8 +428,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 	else if (mode == 1) {
 		TAILQ_FOREACH(mnet, &stcb->asoc.nets, sctp_next) {
 			if (((mnet->dest_state & SCTP_ADDR_REACHABLE) != SCTP_ADDR_REACHABLE) ||
-			    (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)
-			    ) {
+			    (mnet->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 				/*
 				 * will skip ones that are not-reachable or
 				 * unconfirmed
@@ -490,12 +493,10 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 			}
 			alt->src_addr_selected = 0;
 		}
-		if (
-		    ((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
+		/*sa_ignore NO_NULL_CHK*/
+		if (((alt->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE) &&
 		    (alt->ro.ro_rt != NULL) &&
-            /*sa_ignore NO_NULL_CHK*/
-		    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))
-		    ) {
+		    (!(alt->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 			/* Found a reachable address */
 			break;
 		}
@@ -509,7 +510,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 		mnet = net;
 		do {
 			if (mnet == NULL) {
-				return(TAILQ_FIRST(&stcb->asoc.nets));
+				return (TAILQ_FIRST(&stcb->asoc.nets));
 			}
 			alt = TAILQ_NEXT(mnet, sctp_next);
 			if (alt == NULL) {
@@ -519,7 +520,7 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 				}
 				alt = TAILQ_FIRST(&stcb->asoc.nets);
 			}
-            /*sa_ignore NO_NULL_CHK*/
+			/*sa_ignore NO_NULL_CHK*/
 			if ((!(alt->dest_state & SCTP_ADDR_UNCONFIRMED)) &&
 			    (alt != net)) {
 				/* Found an alternate address */
@@ -534,14 +535,15 @@ sctp_find_alternate_net(struct sctp_tcb *stcb,
 	return (alt);
 }
 
-
-
 static void
 sctp_backoff_on_timeout(struct sctp_tcb *stcb,
     struct sctp_nets *net,
     int win_probe,
     int num_marked, int num_abandoned)
 {
+	if (net == NULL) {
+		return;
+	}
 	if (net->RTO == 0) {
 		net->RTO = stcb->asoc.minrto;
 	}
@@ -552,7 +554,7 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
 	if ((win_probe == 0) && (num_marked || num_abandoned)) {
 		/* We don't apply penalty to window probe scenarios */
 		/* JRS - Use the congestion control given in the CC module */
-		stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout(stcb,net);
+		stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout(stcb, net);
 	}
 }
 
@@ -1015,8 +1017,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 * If CMT is being used, then pick dest with
 		 * largest ssthresh for any retransmission.
 		 */
-		alt = net;
-		alt = sctp_find_alternate_net(stcb, alt, 1);
+		alt = sctp_find_alternate_net(stcb, net, 1);
 		/*
 		 * CUCv2: If a different dest is picked for
 		 * the retransmission, then new
@@ -1205,7 +1206,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 		struct sctp_nets *alt;
 
 		alt = sctp_find_alternate_net(stcb, stcb->asoc.primary_destination, 0);
-		if ((alt != NULL) && (alt != stcb->asoc.primary_destination)) {
+		if (alt != stcb->asoc.primary_destination) {
 			sctp_move_chunks_from_net(stcb, stcb->asoc.primary_destination);
 			stcb->asoc.primary_destination = alt;
 		}
@@ -1472,6 +1473,7 @@ sctp_delete_prim_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
  * For the shutdown and shutdown-ack, we do not keep one around on the
  * control queue. This means we must generate a new one and call the general
  * chunk output routine, AFTER having done threshold management.
+ * It is assumed that net is non-NULL.
  */
 int
 sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
@@ -1484,18 +1486,13 @@ sctp_shutdown_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Assoc is over */
 		return (1);
 	}
+	sctp_backoff_on_timeout(stcb, net, 1, 0, 0);
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net, 0);
 
 	/* third generate a shutdown into the queue for out net */
-	if (alt) {
-		sctp_send_shutdown(stcb, alt);
-	} else {
-		/*
-		 * if alt is NULL, there is no dest to send to??
-		 */
-		return (0);
-	}
+	sctp_send_shutdown(stcb, alt);
+
 	/* fourth restart timer */
 	sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, inp, stcb, alt);
 	return (0);
@@ -1512,6 +1509,7 @@ sctp_shutdownack_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		/* Assoc is over */
 		return (1);
 	}
+	sctp_backoff_on_timeout(stcb, net, 1, 0, 0);
 	/* second select an alternative */
 	alt = sctp_find_alternate_net(stcb, net, 0);
 
