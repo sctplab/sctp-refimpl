@@ -541,9 +541,6 @@ sctp_backoff_on_timeout(struct sctp_tcb *stcb,
     int win_probe,
     int num_marked, int num_abandoned)
 {
-	if (net == NULL) {
-		return;
-	}
 	if (net->RTO == 0) {
 		net->RTO = stcb->asoc.minrto;
 	}
