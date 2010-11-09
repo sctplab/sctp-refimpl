@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 212850 2010-09-19 11:42:16Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 215039 2010-11-09 16:18:32Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -49,6 +49,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 212850 2010-09-19 11:42:16Z tuex
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_dtrace_define.h>
 #include <netinet/udp.h>
 
 #if defined(__APPLE__)
@@ -163,7 +164,7 @@ sctp_fill_pcbinfo(struct sctp_pcbinfo *spcb)
  *    ...   +--ifa-> ifa -> ifa
  *   vrf
  *
- * We keep these seperate lists since the SCTP subsystem will
+ * We keep these separate lists since the SCTP subsystem will
  * point to these from its source address selection nets structure.
  * When an address is deleted it does not happen right away on
  * the SCTP side, it gets scheduled. What we do when a
@@ -248,7 +249,7 @@ sctp_find_ifn(void *ifn, uint32_t ifn_index)
 	struct sctp_ifnlist *hash_ifn_head;
 
 	/* We assume the lock is held for the addresses
-	 * if thats wrong problems could occur :-)
+	 * if that's wrong problems could occur :-)
 	 */
 	hash_ifn_head = &SCTP_BASE_INFO(vrf_ifn_hash)[(ifn_index & SCTP_BASE_INFO(vrf_ifn_hashmark))];
 	LIST_FOREACH(sctp_ifnp, hash_ifn_head, next_bucket) {
@@ -380,7 +381,7 @@ sctp_mark_ifa_addr_down(uint32_t vrf_id, struct sockaddr *addr,
 		len1 = strlen(if_name);
 		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
 		if (len1 != len2) {
-			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different lenght %d vs %d - ignored\n",
+			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %d vs %d - ignored\n",
 				len1, len2);
 			goto out;
 		}
@@ -431,7 +432,7 @@ sctp_mark_ifa_addr_up(uint32_t vrf_id, struct sockaddr *addr,
 		len1 = strlen(if_name);
 		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
 		if (len1 != len2) {
-			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different lenght %d vs %d - ignored\n",
+			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %d vs %d - ignored\n",
 				len1, len2);
 			goto out;
 		}
@@ -617,7 +618,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 		} else {
 			if (sctp_ifap->ifn_p) {
 				/*
-				 * The last IFN gets the address, removee the
+				 * The last IFN gets the address, remove the
 				 * old one
 				 */
 				SCTPDBG(SCTP_DEBUG_PCB4, "Moving ifa %p from %s (0x%x) to %s (0x%x)\n",
@@ -903,7 +904,7 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 	} else {
 		return NULL;
 	}
-	ephead = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport), SCTP_BASE_INFO(hashtcpmark))];
+	ephead = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport | rport), SCTP_BASE_INFO(hashtcpmark))];
 	/*
 	 * Ok now for each of the guys in this bucket we must look and see:
 	 * - Does the remote port match. - Does there single association's
@@ -1611,7 +1612,7 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #endif
 	int  fnd;
 	/*
-	 * Endpoing probe expects that the INP_INFO is locked.
+	 * Endpoint probe expects that the INP_INFO is locked.
 	 */
 	sin = NULL;
 #ifdef INET6
@@ -1897,6 +1898,7 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	int lport;
+	unsigned int i;
 
 	if (nam->sa_family == AF_INET) {
 		sin = (struct sockaddr_in *)nam;
@@ -1923,17 +1925,22 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 
 	/*
 	 * If the TCP model exists it could be that the main listening
-	 * endpoint is gone but there exists a connected socket for this guy
-	 * yet. If so we can return the first one that we find. This may NOT
-	 * be the correct one so the caller should be wary on the return INP.
-	 * Currently the onlyc caller that sets this flag is in bindx where
+	 * endpoint is gone but there still exists a connected socket for this
+	 * guy. If so we can return the first one that we find. This may NOT
+	 * be the correct one so the caller should be wary on the returned INP.
+	 * Currently the only caller that sets find_tcp_pool is in bindx where
 	 * we are verifying that a user CAN bind the address. He either
 	 * has bound it already, or someone else has, or its open to bind,
 	 * so this is good enough.
 	 */
 	if (inp == NULL && find_tcp_pool) {
-		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(lport,SCTP_BASE_INFO(hashtcpmark))];
-		inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
+		for (i = 0; i < SCTP_BASE_INFO(hashtcpmark) + 1; i++) {
+			head = &SCTP_BASE_INFO(sctp_tcpephash)[i];
+			inp = sctp_endpoint_probe(nam, head, lport, vrf_id);
+			if (inp) {
+				break;
+			}
+		}
 	}
 	if (inp) {
 		SCTP_INP_INCR_REF(inp);
@@ -2134,7 +2141,7 @@ sctp_findassoc_by_vtag(struct sockaddr *from, struct sockaddr *to, uint32_t vtag
 				continue;
 			}
 			if (remote_tag) {
-				/* If we have both vtags thats all we match on */
+				/* If we have both vtags that's all we match on */
 				if (stcb->asoc.peer_vtag == remote_tag) {
 					/* If both tags match we consider it conclusive
 					 * and check NO source/destination addresses
@@ -2338,7 +2345,7 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 			 * association that is linked to an existing
 			 * association that is under the TCP pool (i.e. no
 			 * listener exists). The endpoint finding routine
-			 * will always find a listner before examining the
+			 * will always find a listener before examining the
 			 * TCP pool.
 			 */
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) {
@@ -2821,8 +2828,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 		LIST_REMOVE(stcb, sctp_tcbasocidhash);
 	}
 	/* Now insert the new_inp into the TCP connected hash */
-	head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport),
-	    SCTP_BASE_INFO(hashtcpmark))];
+	head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport | rport), SCTP_BASE_INFO(hashtcpmark))];
 
 	LIST_INSERT_HEAD(head, new_inp, sctp_hash);
 	/* Its safe to access */
@@ -3419,12 +3425,10 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 	/* find the bucket */
 	if (port_reuse_active)  {
 		/* Put it into tcp 1-2-1 hash */
-		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR((lport),
-		                       SCTP_BASE_INFO(hashtcpmark))];
+		head = &SCTP_BASE_INFO(sctp_tcpephash)[SCTP_PCBHASH_ALLADDR(lport, SCTP_BASE_INFO(hashtcpmark))];
 		inp->sctp_flags |= SCTP_PCB_FLAGS_IN_TCPPOOL;
 	}  else {
-		head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport,
-		                       SCTP_BASE_INFO(hashmark))];
+		head = &SCTP_BASE_INFO(sctp_ephash)[SCTP_PCBHASH_ALLADDR(lport, SCTP_BASE_INFO(hashmark))];
 	}
 	/* put it in the bucket */
 	LIST_INSERT_HEAD(head, inp, sctp_hash);
@@ -3886,7 +3890,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	SCTP_ASOC_CREATE_UNLOCK(inp);
 	SCTP_INP_INFO_WUNLOCK();
 	/* Now we release all locks. Since this INP
-	 * cannot be found anymore except possbily by the
+	 * cannot be found anymore except possibly by the
 	 * kill timer that might be running. We call
 	 * the drain function here. It should hit the case
 	 * were it sees the ACTIVE flag cleared and exit
@@ -4109,7 +4113,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 {
 	/*
 	 * The following is redundant to the same lines in the
-	 * sctp_aloc_assoc() but is needed since other's call the add
+	 * sctp_aloc_assoc() but is needed since others call the add
 	 * address function
 	 */
 	struct sctp_nets *net, *netfirst;
@@ -4461,7 +4465,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if ((net != stcb->asoc.primary_destination) &&
 	    (stcb->asoc.primary_destination)) {
 		/* first one on the list is NOT the primary
-		 * sctp_cmpaddr() is much more efficent if
+		 * sctp_cmpaddr() is much more efficient if
 		 * the primary is the first on the list, make it
 		 * so.
 		 */
@@ -4613,7 +4617,7 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_UNBOUND) {
 		/*
 		 * If you have not performed a bind, then we need to do the
-		 * ephemerial bind for you.
+		 * ephemeral bind for you.
 		 */
 		if ((err = sctp_inpcb_bind(inp->sctp_socket,
 		    (struct sockaddr *)NULL,
@@ -5614,7 +5618,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			 */
 			SCTP_INP_RUNLOCK(inp);
 			/* This will start the kill timer (if we are
-			 * the lastone) since we hold an increment yet. But
+			 * the last one) since we hold an increment yet. But
 			 * this is the only safe way to do this
 			 * since otherwise if the socket closes
 			 * at the same time we are here we might
@@ -7038,7 +7042,7 @@ sctp_set_primary_addr(struct sctp_tcb *stcb, struct sockaddr *sa,
 		net = TAILQ_FIRST(&stcb->asoc.nets);
 		if (net != stcb->asoc.primary_destination) {
 			/* first one on the list is NOT the primary
-			 * sctp_cmpaddr() is much more efficent if
+			 * sctp_cmpaddr() is much more efficient if
 			 * the primary is the first on the list, make it
 			 * so.
 			 */
@@ -7253,7 +7257,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 	}
 	/*
 	 * Another issue, in un-setting the TSN's in the mapping array we
-	 * DID NOT adjust the higest_tsn marker.  This will cause one of two
+	 * DID NOT adjust the highest_tsn marker.  This will cause one of two
 	 * things to occur. It may cause us to do extra work in checking for
 	 * our mapping array movement. More importantly it may cause us to
 	 * SACK every datagram. This may not be a bad thing though since we
