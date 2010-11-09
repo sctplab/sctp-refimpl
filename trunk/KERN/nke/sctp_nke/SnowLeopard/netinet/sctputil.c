@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 214939 2010-11-07 18:50:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 215035 2010-11-09 12:00:39Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2864,6 +2864,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 			}
 		}
 #endif
+		socantrcvmore(stcb->sctp_socket);
 		sorwakeup(stcb->sctp_socket);
 		sowwakeup(stcb->sctp_socket);
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
