@@ -10315,7 +10315,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			if (i == 0) {
 				/*
 				 * Clear all bits corresponding to TSNs 
-				 * smaller or equal to the cumulatve TSN.
+				 * smaller or equal to the cumulative TSN.
 				 */
 				tsn_map &= (~0 << (1 - offset));
 			}
@@ -10389,7 +10389,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				if (i == 0) {
 					/*
 					 * Clear all bits corresponding to TSNs 
-					 * smaller or equal to the cumulatve TSN.
+					 * smaller or equal to the cumulative TSN.
 					 */
 					tsn_map &= (~0 << (1 - offset));
 				}
