@@ -10112,7 +10112,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	uint32_t highest_tsn;
 	uint8_t flags;
 	uint8_t type;
-	uint8_t bitmap;
+	uint8_t tsn_map;
 
 	if ((stcb->asoc.sctp_nr_sack_on_off == 1) &&
 	    (stcb->asoc.peer_supports_nr_sack == 1)) {
@@ -10314,7 +10314,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			}
 			if (i == 0) {
 				/*
-				 * Clear out all bits corresponding to TSNs 
+				 * Clear all bits corresponding to TSNs 
 				 * smaller or equal to the cumulatve TSN.
 				 */
 				tsn_map &= (~0 << (1 - offset));
@@ -10388,7 +10388,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				tsn_map = asoc->nr_mapping_array[i];
 				if (i == 0) {
 					/*
-					 * Clear out all bits corresponding to TSNs 
+					 * Clear all bits corresponding to TSNs 
 					 * smaller or equal to the cumulatve TSN.
 					 */
 					tsn_map &= (~0 << (1 - offset));
