@@ -10105,13 +10105,14 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	caddr_t limit;
 	uint32_t *dup;
 	int limit_reached = 0;
-	unsigned int i, sel_start, siz, j;
+	unsigned int i, siz, j;
 	unsigned int num_gap_blocks = 0, num_nr_gap_blocks = 0, space;
 	int num_dups = 0;
 	int space_req;
 	uint32_t highest_tsn;
 	uint8_t flags;
 	uint8_t type;
+	uint8_t bitmap;
 
 	if ((stcb->asoc.sctp_nr_sack_on_off == 1) &&
 	    (stcb->asoc.peer_supports_nr_sack == 1)) {
@@ -10301,24 +10302,24 @@ sctp_send_sack(struct sctp_tcb *stcb)
 	} else {
 		offset = asoc->mapping_array_base_tsn - asoc->cumulative_tsn;
 	}
-	if ((offset == 1) ||
-	    ((type == SCTP_NR_SELECTIVE_ACK) &&
-	     ((asoc->mapping_array[0] & (1 << (1 - offset))) == 0))) {
-		sel_start = 0;
-	} else {
-		sel_start = 1;
-	}
 	if (((type == SCTP_SELECTIVE_ACK) &&
 	     compare_with_wrap(highest_tsn, asoc->cumulative_tsn, MAX_TSN)) ||
 	    ((type == SCTP_NR_SELECTIVE_ACK) &&
 	     compare_with_wrap(asoc->highest_tsn_inside_map, asoc->cumulative_tsn, MAX_TSN))) {
 		/* we have a gap .. maybe */
 		for (i = 0; i < siz; i++) {
+			tsn_map = asoc->mapping_array[i];
 			if (type == SCTP_SELECTIVE_ACK) {
-				selector = &sack_array[asoc->mapping_array[i]|asoc->nr_mapping_array[i]];
-			} else {
-				selector = &sack_array[asoc->mapping_array[i]];
+				tsn_map |= asoc->nr_mapping_array[i];
 			}
+			if (i == 0) {
+				/*
+				 * Clear out all bits corresponding to TSNs 
+				 * smaller or equal to the cumulatve TSN.
+				 */
+				tsn_map &= (~0 << (1 - offset));
+			}
+			selector = &sack_array[tsn_map];
 			if (mergeable && selector->right_edge) {
 				/*
 				 * Backup, left and right edges were ok to
@@ -10330,7 +10331,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			if (selector->num_entries == 0)
 				mergeable = 0;
 			else {
-				for (j = sel_start; j < selector->num_entries; j++) {
+				for (j = 0; j < selector->num_entries; j++) {
 					if (mergeable && selector->right_edge) {
 						/*
 						 * do a merge by NOT setting
@@ -10362,7 +10363,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				/* Reached the limit stop */
 				break;
 			}
-			sel_start = 0;
 			offset += 8;
 		}
 	}
@@ -10377,11 +10377,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 			siz = (((MAX_TSN - asoc->mapping_array_base_tsn) + 1) + asoc->highest_tsn_inside_nr_map + 7) / 8;
 		}
 
-		if ((asoc->nr_mapping_array[0] & (1 << (1 - offset))) == 0) {
-			sel_start = 0;
-		} else {
-			sel_start = 1;
-		}
 		if (compare_with_wrap(asoc->mapping_array_base_tsn, asoc->cumulative_tsn, MAX_TSN)) {
 			offset = 1;
 		} else {
@@ -10390,7 +10385,15 @@ sctp_send_sack(struct sctp_tcb *stcb)
 		if (compare_with_wrap(asoc->highest_tsn_inside_nr_map, asoc->cumulative_tsn, MAX_TSN)) {
 			/* we have a gap .. maybe */
 			for (i = 0; i < siz; i++) {
-				selector = &sack_array[asoc->nr_mapping_array[i]];
+				tsn_map = asoc->nr_mapping_array[i];
+				if (i == 0) {
+					/*
+					 * Clear out all bits corresponding to TSNs 
+					 * smaller or equal to the cumulatve TSN.
+					 */
+					tsn_map &= (~0 << (1 - offset));
+				}
+				selector = &sack_array[tsn_map];
 				if (mergeable && selector->right_edge) {
 					/*
 					* Backup, left and right edges were ok to
@@ -10402,7 +10405,7 @@ sctp_send_sack(struct sctp_tcb *stcb)
 				if (selector->num_entries == 0)
 					mergeable = 0;
 				else {
-					for (j = sel_start; j < selector->num_entries; j++) {
+					for (j = 0; j < selector->num_entries; j++) {
 						if (mergeable && selector->right_edge) {
 							/*
 							* do a merge by NOT setting
@@ -10434,7 +10437,6 @@ sctp_send_sack(struct sctp_tcb *stcb)
 					/* Reached the limit stop */
 					break;
 				}
-				sel_start = 0;
 				offset += 8;
 			}
 		}
