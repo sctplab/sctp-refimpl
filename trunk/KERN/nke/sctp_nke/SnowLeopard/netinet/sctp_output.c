@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 215198 2010-11-12 20:45:21Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 215305 2010-11-14 16:44:18Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4208,20 +4208,20 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_WITH_NO_CSUM)
 			SCTP_STAT_INCR(sctps_sendnocrc);
 #else
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+			m->m_pkthdr.csum_flags = CSUM_SCTP;
+			m->m_pkthdr.csum_data = 0;
+			SCTP_STAT_INCR(sctps_sendhwcrc);
+#else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
 			     (stcb) &&
 			     (stcb->asoc.loopback_scope))) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
-				m->m_pkthdr.csum_flags = CSUM_SCTP;
-				m->m_pkthdr.csum_data = 0;
-				SCTP_STAT_INCR(sctps_sendhwcrc);
-#else
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr));
 				SCTP_STAT_INCR(sctps_sendswcrc);
-#endif
 			} else {
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
+#endif
 #endif
 		}
 		/* send it out. table id is taken from stcb */
