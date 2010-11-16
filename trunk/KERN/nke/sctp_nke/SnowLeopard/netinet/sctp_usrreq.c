@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 214939 2010-11-07 18:50:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 215410 2010-11-16 22:16:38Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2774,6 +2774,29 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			SCTP_INP_RUNLOCK(inp);
 		}
 		*optsize = sizeof(*srto);
+	}
+	break;
+	case SCTP_TIMEOUTS:
+	{
+		struct sctp_timeouts *stimo;
+
+		SCTP_CHECK_AND_CAST(stimo, optval, struct sctp_timeouts, *optsize);
+		SCTP_FIND_STCB(inp, stcb, stimo->stimo_assoc_id);
+
+		if (stcb) {
+			stimo->stimo_init= stcb->asoc.timoinit;
+			stimo->stimo_data= stcb->asoc.timodata;
+			stimo->stimo_sack= stcb->asoc.timosack;
+			stimo->stimo_shutdown= stcb->asoc.timoshutdown;
+			stimo->stimo_heartbeat= stcb->asoc.timoheartbeat;
+			stimo->stimo_cookie= stcb->asoc.timocookie;
+			stimo->stimo_shutdownack= stcb->asoc.timoshutdownack;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+			error = EINVAL;
+		}
+		*optsize = sizeof(*stimo);
 	}
 	break;
 	case SCTP_ASSOCINFO:

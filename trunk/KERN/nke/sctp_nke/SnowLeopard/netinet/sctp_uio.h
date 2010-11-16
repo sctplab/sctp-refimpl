@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 215034 2010-11-09 10:59:09Z brucec $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 215410 2010-11-16 22:16:38Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -588,6 +588,17 @@ struct sctp_sack_info {
 	sctp_assoc_t sack_assoc_id;
 	uint32_t sack_delay;
 	uint32_t sack_freq;
+};
+
+struct sctp_timeouts {
+	sctp_assoc_t stimo_assoc_id;
+	uint32_t stimo_init;
+	uint32_t stimo_data;
+	uint32_t stimo_sack;
+	uint32_t stimo_shutdown;
+	uint32_t stimo_heartbeat;
+	uint32_t stimo_cookie;
+	uint32_t stimo_shutdownack;
 };
 
 struct sctp_cwnd_args {

@@ -31,7 +31,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 215034 2010-11-09 10:59:09Z brucec $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 215410 2010-11-16 22:16:38Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -128,6 +128,7 @@ struct sctp_paramhdr {
 #define SCTP_LOCAL_AUTH_CHUNKS 		0x00000103
 #define SCTP_GET_ASSOC_NUMBER           0x00000104 /* ro */
 #define SCTP_GET_ASSOC_ID_LIST          0x00000105 /* ro */
+#define SCTP_TIMEOUTS                   0x00000106
 
 /*
  * user socket options: BSD implementation specific
