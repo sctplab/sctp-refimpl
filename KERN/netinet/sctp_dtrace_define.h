@@ -166,6 +166,12 @@ SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 1, "uint32_t");
 SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 2, "int");
 /* The new value of the cwnd */
 SDT_PROBE_ARGTYPE(sctp, flightsize, assoc, val, 3, "int");
+#else /* to #if Freebsd */
+/* All other platforms not defining dtrace probes */
+#ifndef SDT_PROBE
+#define SDT_PROBE(a, b, c, d, e, f, g, h, i) 
+#endif
 
 #endif
-#endif
+
+#endif 
