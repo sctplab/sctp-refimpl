@@ -34,10 +34,12 @@ SDT_PROBE_DECLARE(sctp, flightsize, net, val);
 /* One to track an associations flight size */ 
 SDT_PROBE_DECLARE(sctp, flightsize, assoc, val);
 
-
-
-
-
+#else
+/* All other platforms not defining dtrace probes */
+#ifndef SDT_PROBE
+#define SDT_PROBE(a, b, c, d, e, f, g, h, i) 
+#endif
 
 #endif
+
 #endif
