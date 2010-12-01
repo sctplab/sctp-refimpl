@@ -3074,8 +3074,10 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	int non_revocable;
 	uint16_t frag_start, frag_end, prev_frag_end;
 
+	prev_frag_end = 0;
+	tp = TAILQ_FIRST(&asoc->sent_queue);
 	for (i = 0; i < (num_seg + num_nr_seg); i++) {
-		if ((i == 0) || (i == num_seg)) {
+		if (i == num_seg) {
 			prev_frag_end = 0;
 			tp = TAILQ_FIRST(&asoc->sent_queue);
 		}
