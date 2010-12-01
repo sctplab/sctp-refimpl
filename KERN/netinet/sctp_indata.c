@@ -378,7 +378,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 			/* Now free the address and data */
 			sctp_free_a_chunk(stcb, chk);
-            /*sa_ignore FREED_MEMORY*/
+            		/*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
@@ -740,7 +740,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
  * all of the message is ready or a 0 back if the message is still incomplete
  */
 static int
-sctp_is_all_msg_on_reasm(struct sctp_association *asoc, uint32_t * t_size)
+sctp_is_all_msg_on_reasm(struct sctp_association *asoc, uint32_t *t_size)
 {
 	struct sctp_tmit_chunk *chk;
 	uint32_t tsn;
@@ -1527,10 +1527,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * Check to see about the GONE flag, duplicates would cause a sack
 	 * to be sent up above
 	 */
-	if (((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
-	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
-	     (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET))
-		) {
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
+	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
+	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
 		/*
 		 * wait a minute, this guy is gone, there is no longer a
 		 * receiver. Send peer an ABORT!
@@ -1653,10 +1652,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
 	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
 	asoc->in_tsnlog[asoc->tsn_in_at].sz = chk_length;
-	asoc->in_tsnlog[asoc->tsn_in_at].flgs =  chunk_flags;
-	asoc->in_tsnlog[asoc->tsn_in_at].stcb =  (void *)stcb;
-	asoc->in_tsnlog[asoc->tsn_in_at].in_pos =  asoc->tsn_in_at;
-	asoc->in_tsnlog[asoc->tsn_in_at].in_out =  1;
+	asoc->in_tsnlog[asoc->tsn_in_at].flgs = chunk_flags;
+	asoc->in_tsnlog[asoc->tsn_in_at].stcb = (void *)stcb;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_pos = asoc->tsn_in_at;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_out = 1;
 	asoc->tsn_in_at++;
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
@@ -2850,13 +2849,14 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 {
 	struct sctp_tmit_chunk *tp1;
 	unsigned int theTSN;
-	int j, wake_him=0, circled=0;
+	int j, wake_him = 0, circled = 0;
+
 	/* Recover the tp1 we last saw */
-	tp1 =  *p_tp1;
+	tp1 = *p_tp1;
 	if (tp1 == NULL) {
 		tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 	}
-	for (j=frag_strt ; j<=frag_end; j++) {
+	for (j = frag_strt; j <= frag_end; j++) {
 		theTSN = j + last_tsn;
 		while (tp1) {
 			if (tp1->rec.data.doing_fast_retransmit)
@@ -3045,16 +3045,16 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			if ((tp1 == NULL) && (circled == 0)) {
-			  circled++;
-			  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+				circled++;
+				tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			}
 		}	/* end while (tp1) */
 		if (tp1 == NULL) {
-		  circled = 0;
-		  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+			circled = 0;
+			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 		}
 		/* In case the fragments were not in order we must reset */
-	}/* end for (j = fragStart */
+	} /* end for (j = fragStart */
 	*p_tp1 = tp1;
 	return (wake_him);	/* Return value only used for nr-sack */
 }
@@ -3067,79 +3067,49 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 		     int num_seg, int num_nr_seg, int *ecn_seg_sums)
 {
 	struct sctp_gap_ack_block *frag, block;
-	struct sctp_tmit_chunk *tp1;
+	struct sctp_tmit_chunk *tp;
 	int i;
 	int num_frs = 0;
-	int chunk_freed;
+	int chunk_freed = 0;
 	int non_revocable;
-	uint16_t frag_strt, frag_end;
-	uint32_t last_frag_high;
-
-	tp1 = NULL;
-	last_frag_high = 0;
-	chunk_freed = 0;
+	uint16_t frag_start, frag_end, prev_frag_end;
 
 	for (i = 0; i < (num_seg + num_nr_seg); i++) {
+		if ((i == 0) || (i == num_seg)) {
+			prev_frag_end = 0;
+			tp = TAILQ_FIRST(&asoc->sent_queue);
+		}
 		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
 		*offset += sizeof(block);
 		if (frag == NULL) {
 			return (chunk_freed);
 		}
-		frag_strt = ntohs(frag->start);
+		frag_start = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
-		/* some sanity checks on the fragment offsets */
-		if (frag_strt > frag_end) {
-			/* this one is malformed, skip */
+
+		if (frag_start > frag_end) {
+			/* This gap report is malformed, skip it. */
 			continue;
 		}
-		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-		                      MAX_TSN))
-			*biggest_tsn_acked = frag_end + last_tsn;
-
-		/* mark acked dgs and find out the highestTSN being acked */
-		if (tp1 == NULL) {
-			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			/* save the locations of the last frags */
-			last_frag_high = frag_end + last_tsn;
-		} else {
-			/*
-			 * now lets see if we need to reset the queue due to
-			 * a out-of-order SACK fragment
-			 */
-			if (compare_with_wrap(frag_strt + last_tsn,
-					      last_frag_high, MAX_TSN)) {
-				/*
-				 * if the new frag starts after the last TSN
-				 * frag covered, we are ok and this one is
-				 * beyond the last one
-				 */
-				;
-			} else {
-				/*
-				 * ok, they have reset us, so we need to
-				 * reset the queue this will cause extra
-				 * hunting but hey, they chose the
-				 * performance hit when they failed to order
-				 * their gaps
-				 */
-				tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			}
-			last_frag_high = frag_end + last_tsn;
+		if (frag_start <= prev_frag_end) {
+			/* This gap report is not in order, so restart. */
+			 tp = TAILQ_FIRST(&asoc->sent_queue);
+		}
+		if (compare_with_wrap((last_tsn + frag_end), *biggest_tsn_acked, MAX_TSN)) {
+			*biggest_tsn_acked = last_tsn + frag_end;
 		}
 		if (i < num_seg) {
 			non_revocable = 0;
 		} else {
 			non_revocable = 1;
 		}
-		if (i == num_seg) {
-			tp1 = NULL;
-		}
-		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
+		if (sctp_process_segment_range(stcb, &tp, last_tsn, frag_start, frag_end,
 		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
 		                               this_sack_lowest_newack, ecn_seg_sums)) {
 			chunk_freed = 1;
 		}
+		prev_frag_end = frag_end;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		if (num_frs)
@@ -3155,12 +3125,11 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 		       struct sctp_association *asoc, uint32_t cumack,
 		       uint32_t biggest_tsn_acked)
 {
-	struct sctp_tmit_chunk *tp1;
+	struct sctp_tmit_chunk *tp;
 	int tot_revoked = 0;
 
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	while (tp1) {
-		if (compare_with_wrap(tp1->rec.data.TSN_seq, cumack,
+	TAILQ_FOREACH(tp, &asoc->sent_queue, sctp_next) {
+		if (compare_with_wrap(tp->rec.data.TSN_seq, cumack,
 				      MAX_TSN)) {
 			/*
 			 * ok this guy is either ACK or MARKED. If it is
@@ -3168,48 +3137,47 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 			 * time i.e. revoked.  If it is MARKED it was ACK'ed
 			 * again.
 			 */
-			if (compare_with_wrap(tp1->rec.data.TSN_seq, biggest_tsn_acked,
+			if (compare_with_wrap(tp->rec.data.TSN_seq, biggest_tsn_acked,
 					      MAX_TSN))
 				break;
 
 
-			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
+			if (tp->sent == SCTP_DATAGRAM_ACKED) {
 				/* it has been revoked */
-				tp1->sent = SCTP_DATAGRAM_SENT;
-				tp1->rec.data.chunk_was_revoked = 1;
+				tp->sent = SCTP_DATAGRAM_SENT;
+				tp->rec.data.chunk_was_revoked = 1;
 				/* We must add this stuff back in to
 				 * assure timers and such get started.
 				 */
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 					sctp_misc_ints(SCTP_FLIGHT_LOG_UP_REVOKE,
-						       tp1->whoTo->flight_size,
-						       tp1->book_size,
-						       (uintptr_t)tp1->whoTo,
-						       tp1->rec.data.TSN_seq);
+						       tp->whoTo->flight_size,
+						       tp->book_size,
+						       (uintptr_t)tp->whoTo,
+						       tp->rec.data.TSN_seq);
 				}
-				sctp_flight_size_increase(tp1);
-				sctp_total_flight_increase(stcb, tp1);
+				sctp_flight_size_increase(tp);
+				sctp_total_flight_increase(stcb, tp);
 				/* We inflate the cwnd to compensate for our
 				 * artificial inflation of the flight_size.
 				 */
-				tp1->whoTo->cwnd += tp1->book_size;
+				tp->whoTo->cwnd += tp->book_size;
 				tot_revoked++;
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_SACK_LOGGING_ENABLE) {
 					sctp_log_sack(asoc->last_acked_seq,
 						      cumack,
-						      tp1->rec.data.TSN_seq,
+						      tp->rec.data.TSN_seq,
 						      0,
 						      0,
 						      SCTP_LOG_TSN_REVOKED);
 				}
-			} else if (tp1->sent == SCTP_DATAGRAM_MARKED) {
+			} else if (tp->sent == SCTP_DATAGRAM_MARKED) {
 				/* it has been re-acked in this SACK */
-				tp1->sent = SCTP_DATAGRAM_ACKED;
+				tp->sent = SCTP_DATAGRAM_ACKED;
 			}
 		}
-		if (tp1->sent == SCTP_DATAGRAM_UNSENT)
+		if (tp->sent == SCTP_DATAGRAM_UNSENT)
 			break;
-		tp1 = TAILQ_NEXT(tp1, sctp_next);
 	}
 	if (tot_revoked > 0) {
 		/*
@@ -3219,11 +3187,11 @@ sctp_check_for_revoked(struct sctp_tcb *stcb,
 		 * sync and must wait until we get back in sync with the
 		 * peer to check ECN bits.
 		 */
-		tp1 = TAILQ_FIRST(&asoc->send_queue);
-		if (tp1 == NULL) {
+		tp = TAILQ_FIRST(&asoc->send_queue);
+		if (tp == NULL) {
 			asoc->nonce_resync_tsn = asoc->sending_seq;
 		} else {
-			asoc->nonce_resync_tsn = tp1->rec.data.TSN_seq;
+			asoc->nonce_resync_tsn = tp->rec.data.TSN_seq;
 		}
 		asoc->nonce_wait_for_ecne = 0;
 		asoc->nonce_sum_check = 0;
@@ -3265,12 +3233,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (stcb->asoc.peer_supports_prsctp) {
 		(void)SCTP_GETTIME_TIMEVAL(&now);
 	}
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	while (tp1) {
+	TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 		strike_flag = 0;
 		if (tp1->no_fr_allowed) {
 			/* this one had a timeout or something */
-			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		}
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
@@ -3300,7 +3266,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 										 (SCTP_RESPONSE_TO_USER_REQ | SCTP_NOTIFY_DATAGRAM_SENT),
 										 SCTP_SO_NOT_LOCKED);
 					}
-					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
 				}
 			}
@@ -3318,7 +3283,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* Continue strikin FWD-TSN chunks */
 				tp1->rec.data.fwd_tsn_cnt++;
 			}
-			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		}
 		/*
@@ -3331,7 +3295,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * CMT, no data sent to this dest can be marked for
 			 * FR using this SACK.
 			 */
-			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		} else if (tp1->whoTo && compare_with_wrap(tp1->rec.data.TSN_seq,
 							   tp1->whoTo->this_sack_highest_newack, MAX_TSN)) {
@@ -3343,7 +3306,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * this SACK. This step covers part of the DAC algo
 			 * and the HTNA algo as well.
 			 */
-			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			continue;
 		}
 		/*
@@ -3555,7 +3517,6 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					}
 					/* Make sure to flag we had a FR */
 					tp1->whoTo->net_ack++;
-					tp1 = TAILQ_NEXT(tp1, sctp_next);
 					continue;
 				}
 			}			
@@ -3662,8 +3623,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				atomic_add_int(&alt->ref_count, 1);
 			}
 		}
-		tp1 = TAILQ_NEXT(tp1, sctp_next);
-	}			/* while (tp1) */
+	}
 
 	if (tot_retrans > 0) {
 		/*
@@ -3688,8 +3648,7 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 	if (asoc->peer_supports_prsctp == 0) {
 		return (NULL);
 	}
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	while (tp1) {
+	TAILQ_FOREACH_SAFE(tp1, &asoc->sent_queue, sctp_next, tp2) {
 		if (tp1->sent != SCTP_FORWARD_TSN_SKIP &&
 		    tp1->sent != SCTP_DATAGRAM_RESEND) {
 			/* no chance to advance, out of here */
@@ -3713,7 +3672,6 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			(void)SCTP_GETTIME_TIMEVAL(&now);
 			now_filled = 1;
 		}
-		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		/*
 		 * now we got a chunk which is marked for another
 		 * retransmission to a PR-stream but has run out its chances
@@ -3769,11 +3727,6 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 			 */
 			break;
 		}
-		/*
-		 * If we hit here we just dumped tp1, move to next tsn on
-		 * sent queue.
-		 */
-		tp1 = tp2;
 	}
 	return (a_adv);
 }
@@ -3966,10 +3919,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 	stcb->asoc.overall_error_count = 0;
 	if (compare_with_wrap(cumack, asoc->last_acked_seq, MAX_TSN)) {
-		/* process the new consecutive TSN first */
-		tp1 = TAILQ_FIRST(&asoc->sent_queue);
-		while (tp1) {
-			tp2 = TAILQ_NEXT(tp1, sctp_next);
+		/* process the new consecutive TSNs first */
+		TAILQ_FOREACH_SAFE(tp1, &asoc->sent_queue, sctp_next, tp2) {
 			if (compare_with_wrap(cumack, tp1->rec.data.TSN_seq,
 					      MAX_TSN) ||
 			    cumack == tp1->rec.data.TSN_seq) {
@@ -4069,7 +4020,6 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				tp1->data = NULL;
 				asoc->sent_queue_cnt--;
 				sctp_free_a_chunk(stcb, tp1);
-				tp1 = tp2;
 			} else {
 				break;
 			}
@@ -4613,8 +4563,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		net->will_exit_fast_recovery = 0;
 	}
 	/* process the new consecutive TSN first */
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	while (tp1) {
+	TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
 		if (compare_with_wrap(last_tsn, tp1->rec.data.TSN_seq,
 				      MAX_TSN) ||
 		    last_tsn == tp1->rec.data.TSN_seq) {
@@ -4726,7 +4675,6 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		} else {
 			break;
 		}
-		tp1 = TAILQ_NEXT(tp1, sctp_next);
 	}
 	biggest_tsn_newly_acked = biggest_tsn_acked = last_tsn;
 	/* always set this up to cum-ack */
@@ -4794,14 +4742,11 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		}
 	}
 	/********************************************/
-	/* drop the acked chunks from the sendqueue */
+	/* drop the acked chunks from the sentqueue */
 	/********************************************/
 	asoc->last_acked_seq = cum_ack;
 
-	tp1 = TAILQ_FIRST(&asoc->sent_queue);
-	if (tp1 == NULL)
-		goto done_with_it;
-	do {
+	TAILQ_FOREACH_SAFE(tp1, &asoc->sent_queue, sctp_next, tp2) {
 		if (compare_with_wrap(tp1->rec.data.TSN_seq, cum_ack,
 		                      MAX_TSN)) {
 			break;
@@ -4811,7 +4756,6 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			printf("Warning, tp1->sent == %d and its now acked?\n",
 			       tp1->sent);
 		}
-		tp2 = TAILQ_NEXT(tp1, sctp_next);
 		TAILQ_REMOVE(&asoc->sent_queue, tp1, sctp_next);
 		if (tp1->pr_sctp_on) {
 			if (asoc->pr_sctp_cnt != 0)
@@ -4832,6 +4776,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			/* sa_ignore NO_NULL_CHK */
 			sctp_free_bufspace(stcb, asoc, tp1, 1);
 			sctp_m_freem(tp1->data);
+			tp1->data = NULL;
 			if (asoc->peer_supports_prsctp && PR_SCTP_BUF_ENABLED(tp1->flags)) {
 				asoc->sent_queue_cnt_removeable--;
 			}
@@ -4844,14 +4789,11 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			              0,
 			              SCTP_LOG_FREE_SENT);
 		}
-		tp1->data = NULL;
 		asoc->sent_queue_cnt--;
 		sctp_free_a_chunk(stcb, tp1);
 		wake_him++;
-		tp1 = tp2;
-	} while (tp1 != NULL);
+	}
 
-done_with_it:
 	/* sa_ignore NO_NULL_CHK */
 	if ((wake_him) && (stcb->sctp_socket)) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4903,48 +4845,46 @@ done_with_it:
 	 * we had some before and now we have NONE.
 	 */
 
-	if (num_seg)
+	if (num_seg) {
 		sctp_check_for_revoked(stcb, asoc, cum_ack, biggest_tsn_acked);
-	else if (asoc->saw_sack_with_frags) {
+		asoc->saw_sack_with_frags = 1;
+	} else if (asoc->saw_sack_with_frags) {
 		int cnt_revoked = 0;
 
-		tp1 = TAILQ_FIRST(&asoc->sent_queue);
-		if (tp1 != NULL) {
-			/* Peer revoked all dg's marked or acked */
-			TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
-				if (tp1->sent == SCTP_DATAGRAM_ACKED) {
-					tp1->sent = SCTP_DATAGRAM_SENT;
-					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
-						sctp_misc_ints(SCTP_FLIGHT_LOG_UP_REVOKE,
-						               tp1->whoTo->flight_size,
-						               tp1->book_size,
-						               (uintptr_t)tp1->whoTo,
-						               tp1->rec.data.TSN_seq);
-					}
-					sctp_flight_size_increase(tp1);
-					sctp_total_flight_increase(stcb, tp1);
-					tp1->rec.data.chunk_was_revoked = 1;
-					/*
-					 * To ensure that this increase in
-					 * flightsize, which is artificial,
-					 * does not throttle the sender, we
-					 * also increase the cwnd
-					 * artificially.
-					 */
-					tp1->whoTo->cwnd += tp1->book_size;
-					cnt_revoked++;
+		/* Peer revoked all dg's marked or acked */
+		TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
+			if (tp1->sent == SCTP_DATAGRAM_ACKED) {
+				tp1->sent = SCTP_DATAGRAM_SENT;
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
+					sctp_misc_ints(SCTP_FLIGHT_LOG_UP_REVOKE,
+							tp1->whoTo->flight_size,
+							tp1->book_size,
+							(uintptr_t)tp1->whoTo,
+							tp1->rec.data.TSN_seq);
 				}
+				sctp_flight_size_increase(tp1);
+				sctp_total_flight_increase(stcb, tp1);
+				tp1->rec.data.chunk_was_revoked = 1;
+				/*
+				 * To ensure that this increase in
+				 * flightsize, which is artificial,
+				 * does not throttle the sender, we
+				 * also increase the cwnd
+				 * artificially.
+				 */
+				tp1->whoTo->cwnd += tp1->book_size;
+				cnt_revoked++;
 			}
-			if (cnt_revoked) {
-				reneged_all = 1;
-			}
+		}
+		if (cnt_revoked) {
+			reneged_all = 1;
 		}
 		asoc->saw_sack_with_frags = 0;
 	}
-	if (num_seg || num_nr_seg)
-		asoc->saw_sack_with_frags = 1;
+	if (num_nr_seg > 0)
+		asoc->saw_sack_with_nr_frags = 1;
 	else
-		asoc->saw_sack_with_frags = 0;
+		asoc->saw_sack_with_nr_frags = 0;
 
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, accum_moved, reneged_all, will_exit_fast_recovery);
@@ -5351,9 +5291,7 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 	 * First deliver anything prior to and including the stream no that
 	 * came in
 	 */
-	ctl = TAILQ_FIRST(&strmin->inqueue);
-	while (ctl) {
-		nctl = TAILQ_NEXT(ctl, next);
+	TAILQ_FOREACH_SAFE(ctl, &strmin->inqueue, next, nctl) {
 		if (compare_with_wrap(tt, ctl->sinfo_ssn, MAX_SEQ) ||
 		    (tt == ctl->sinfo_ssn)) {
 			/* this is deliverable now */
@@ -5372,16 +5310,13 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 			/* no more delivery now. */
 			break;
 		}
-		ctl = nctl;
 	}
 	/*
 	 * now we must deliver things in queue the normal way  if any are
 	 * now ready.
 	 */
 	tt = strmin->last_sequence_delivered + 1;
-	ctl = TAILQ_FIRST(&strmin->inqueue);
-	while (ctl) {
-		nctl = TAILQ_NEXT(ctl, next);
+	TAILQ_FOREACH_SAFE(ctl, &strmin->inqueue, next, nctl) {
 		if (tt == ctl->sinfo_ssn) {
 			/* this is deliverable now */
 			TAILQ_REMOVE(&strmin->inqueue, ctl, next);
@@ -5401,7 +5336,6 @@ sctp_kick_prsctp_reorder_queue(struct sctp_tcb *stcb,
 		} else {
 			break;
 		}
-		ctl = nctl;
 	}
 }
 
