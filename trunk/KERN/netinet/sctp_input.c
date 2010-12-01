@@ -4648,6 +4648,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
 				     (cum_ack == stcb->asoc.last_acked_seq)) &&
 				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (stcb->asoc.saw_sack_with_nr_frags == 0) &&
 				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))
 					) {
 					/* We have a SIMPLE sack having no prior segments and
@@ -4734,6 +4735,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
 				     (cum_ack == stcb->asoc.last_acked_seq)) &&
 				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (stcb->asoc.saw_sack_with_nr_frags == 0) &&
 				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 					/*
 					 * We have a SIMPLE sack having no
