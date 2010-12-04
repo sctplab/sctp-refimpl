@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 214918 2010-11-07 14:39:40Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 216188 2010-12-04 19:29:49Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -378,7 +378,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			}
 			/* Now free the address and data */
 			sctp_free_a_chunk(stcb, chk);
-            /*sa_ignore FREED_MEMORY*/
+        		/*sa_ignore FREED_MEMORY*/
 			chk = TAILQ_FIRST(&asoc->reasmqueue);
 		}
 		return;
@@ -740,7 +740,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb, struct sctp_association *asoc,
  * all of the message is ready or a 0 back if the message is still incomplete
  */
 static int
-sctp_is_all_msg_on_reasm(struct sctp_association *asoc, uint32_t * t_size)
+sctp_is_all_msg_on_reasm(struct sctp_association *asoc, uint32_t *t_size)
 {
 	struct sctp_tmit_chunk *chk;
 	uint32_t tsn;
@@ -1653,10 +1653,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	asoc->in_tsnlog[asoc->tsn_in_at].strm = strmno;
 	asoc->in_tsnlog[asoc->tsn_in_at].seq = strmseq;
 	asoc->in_tsnlog[asoc->tsn_in_at].sz = chk_length;
-	asoc->in_tsnlog[asoc->tsn_in_at].flgs =  chunk_flags;
-	asoc->in_tsnlog[asoc->tsn_in_at].stcb =  (void *)stcb;
-	asoc->in_tsnlog[asoc->tsn_in_at].in_pos =  asoc->tsn_in_at;
-	asoc->in_tsnlog[asoc->tsn_in_at].in_out =  1;
+	asoc->in_tsnlog[asoc->tsn_in_at].flgs = chunk_flags;
+	asoc->in_tsnlog[asoc->tsn_in_at].stcb = (void *)stcb;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_pos = asoc->tsn_in_at;
+	asoc->in_tsnlog[asoc->tsn_in_at].in_out = 1;
 	asoc->tsn_in_at++;
 #endif
 	if ((chunk_flags & SCTP_DATA_FIRST_FRAG) &&
@@ -2850,13 +2850,14 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 {
 	struct sctp_tmit_chunk *tp1;
 	unsigned int theTSN;
-	int j, wake_him=0, circled=0;
+	int j, wake_him = 0, circled = 0;
+
 	/* Recover the tp1 we last saw */
-	tp1 =  *p_tp1;
+	tp1 = *p_tp1;
 	if (tp1 == NULL) {
 		tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 	}
-	for (j=frag_strt ; j<=frag_end; j++) {
+	for (j = frag_strt; j <= frag_end; j++) {
 		theTSN = j + last_tsn;
 		while (tp1) {
 			if (tp1->rec.data.doing_fast_retransmit)
@@ -3045,16 +3046,16 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 
 			tp1 = TAILQ_NEXT(tp1, sctp_next);
 			if ((tp1 == NULL) && (circled == 0)) {
-			  circled++;
-			  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+				circled++;
+				tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 			}
 		}	/* end while (tp1) */
 		if (tp1 == NULL) {
-		  circled = 0;
-		  tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
+			circled = 0;
+			tp1 = TAILQ_FIRST(&stcb->asoc.sent_queue);
 		}
 		/* In case the fragments were not in order we must reset */
-	}/* end for (j = fragStart */
+	} /* end for (j = fragStart */
 	*p_tp1 = tp1;
 	return (wake_him);	/* Return value only used for nr-sack */
 }
@@ -3072,14 +3073,17 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 	int num_frs = 0;
 	int chunk_freed;
 	int non_revocable;
-	uint16_t frag_strt, frag_end;
-	uint32_t last_frag_high;
+	uint16_t frag_strt, frag_end, prev_frag_end;
 
-	tp1 = NULL;
-	last_frag_high = 0;
+	tp1 = TAILQ_FIRST(&asoc->sent_queue);
+	prev_frag_end = 0;
 	chunk_freed = 0;
 
 	for (i = 0; i < (num_seg + num_nr_seg); i++) {
+		if (i == num_seg) {
+			prev_frag_end = 0;
+			tp1 = TAILQ_FIRST(&asoc->sent_queue);
+		}
 		frag = (struct sctp_gap_ack_block *)sctp_m_getptr(m, *offset,
 		                                                  sizeof(struct sctp_gap_ack_block), (uint8_t *) &block);
 		*offset += sizeof(block);
@@ -3088,58 +3092,29 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 		}
 		frag_strt = ntohs(frag->start);
 		frag_end = ntohs(frag->end);
-		/* some sanity checks on the fragment offsets */
+
 		if (frag_strt > frag_end) {
-			/* this one is malformed, skip */
+			/* This gap report is malformed, skip it. */
 			continue;
 		}
-		if (compare_with_wrap((frag_end + last_tsn), *biggest_tsn_acked,
-		                      MAX_TSN))
-			*biggest_tsn_acked = frag_end + last_tsn;
-
-		/* mark acked dgs and find out the highestTSN being acked */
-		if (tp1 == NULL) {
-			tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			/* save the locations of the last frags */
-			last_frag_high = frag_end + last_tsn;
-		} else {
-			/*
-			 * now lets see if we need to reset the queue due to
-			 * a out-of-order SACK fragment
-			 */
-			if (compare_with_wrap(frag_strt + last_tsn,
-					      last_frag_high, MAX_TSN)) {
-				/*
-				 * if the new frag starts after the last TSN
-				 * frag covered, we are ok and this one is
-				 * beyond the last one
-				 */
-				;
-			} else {
-				/*
-				 * ok, they have reset us, so we need to
-				 * reset the queue this will cause extra
-				 * hunting but hey, they chose the
-				 * performance hit when they failed to order
-				 * their gaps
-				 */
-				tp1 = TAILQ_FIRST(&asoc->sent_queue);
-			}
-			last_frag_high = frag_end + last_tsn;
+		if (frag_strt <= prev_frag_end) {
+			/* This gap report is not in order, so restart. */
+			 tp1 = TAILQ_FIRST(&asoc->sent_queue);
+		}
+		if (compare_with_wrap((last_tsn + frag_end), *biggest_tsn_acked, MAX_TSN)) {
+			*biggest_tsn_acked = last_tsn + frag_end;
 		}
 		if (i < num_seg) {
 			non_revocable = 0;
 		} else {
 			non_revocable = 1;
 		}
-		if (i == num_seg) {
-			tp1 = NULL;
-		}
 		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
 		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
 		                               this_sack_lowest_newack, ecn_seg_sums)) {
 			chunk_freed = 1;
 		}
+		prev_frag_end = frag_end;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		if (num_frs)
@@ -4794,7 +4769,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		}
 	}
 	/********************************************/
-	/* drop the acked chunks from the sendqueue */
+	/* drop the acked chunks from the sentqueue */
 	/********************************************/
 	asoc->last_acked_seq = cum_ack;
 
@@ -4903,9 +4878,10 @@ done_with_it:
 	 * we had some before and now we have NONE.
 	 */
 
-	if (num_seg)
+	if (num_seg) {
 		sctp_check_for_revoked(stcb, asoc, cum_ack, biggest_tsn_acked);
-	else if (asoc->saw_sack_with_frags) {
+		asoc->saw_sack_with_frags = 1;
+	} else if (asoc->saw_sack_with_frags) {
 		int cnt_revoked = 0;
 
 		tp1 = TAILQ_FIRST(&asoc->sent_queue);
@@ -4941,10 +4917,10 @@ done_with_it:
 		}
 		asoc->saw_sack_with_frags = 0;
 	}
-	if (num_seg || num_nr_seg)
-		asoc->saw_sack_with_frags = 1;
+	if (num_nr_seg > 0)
+		asoc->saw_sack_with_nr_frags = 1;
 	else
-		asoc->saw_sack_with_frags = 0;
+		asoc->saw_sack_with_nr_frags = 0;
 
 	/* JRS - Use the congestion control given in the CC module */
 	asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, accum_moved, reneged_all, will_exit_fast_recovery);

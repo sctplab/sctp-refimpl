@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 214918 2010-11-07 14:39:40Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216188 2010-12-04 19:29:49Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4648,6 +4648,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
 				     (cum_ack == stcb->asoc.last_acked_seq)) &&
 				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (stcb->asoc.saw_sack_with_nr_frags == 0) &&
 				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))
 					) {
 					/* We have a SIMPLE sack having no prior segments and
@@ -4734,6 +4735,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				    ((compare_with_wrap(cum_ack, stcb->asoc.last_acked_seq, MAX_TSN)) ||
 				     (cum_ack == stcb->asoc.last_acked_seq)) &&
 				    (stcb->asoc.saw_sack_with_frags == 0) &&
+				    (stcb->asoc.saw_sack_with_nr_frags == 0) &&
 				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 					/*
 					 * We have a SIMPLE sack having no
