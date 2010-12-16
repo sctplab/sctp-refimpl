@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 216188 2010-12-04 19:29:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 216480 2010-12-16 09:49:16Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1748,7 +1748,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	    asoc->fragmented_delivery_inprogress == 0 &&
 	    TAILQ_EMPTY(&asoc->resetHead) &&
 	    ((ordered == 0) ||
-	    ((asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
+	    ((uint16_t)(asoc->strmin[strmno].last_sequence_delivered + 1) == strmseq &&
 	    TAILQ_EMPTY(&asoc->strmin[strmno].inqueue)))) {
 		/* Candidate for express delivery */
 		/*
