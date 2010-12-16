@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216188 2010-12-04 19:29:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216495 2010-12-16 21:01:02Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5651,13 +5651,15 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		 */
 	}
 	if ((data_processed == 0) && (fwd_tsn_seen)) {
-		int was_a_gap = 0;
+		int was_a_gap;
+		uint32_t highest_tsn;
 
-		if (compare_with_wrap(stcb->asoc.highest_tsn_inside_map,
-		    stcb->asoc.cumulative_tsn, MAX_TSN)) {
-			/* there was a gap before this data was processed */
-			was_a_gap = 1;
+		if (compare_with_wrap(stcb->asoc.highest_tsn_inside_nr_map, stcb->asoc.highest_tsn_inside_map, MAX_TSN)) {
+			highest_tsn = stcb->asoc.highest_tsn_inside_nr_map;
+		} else {
+			highest_tsn = stcb->asoc.highest_tsn_inside_map;
 		}
+		was_a_gap = compare_with_wrap(highest_tsn, stcb->asoc.cumulative_tsn, MAX_TSN);
 		stcb->asoc.send_sack = 1;
 		sctp_sack_check(stcb, was_a_gap, &abort_flag);
 		if (abort_flag) {
