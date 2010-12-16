@@ -1601,36 +1601,36 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	    ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
 	    ((ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) ||
 	     (asoc->peer_vtag == 0)))) {
-	  /* Special case - Peer's support nat. We may have
-	   * two init's that we gave out the same tag on since
-	   * one was not established.. i.e. we get INIT from host-1
-	   * behind the nat and we respond tag-a, we get a INIT from
-	   * host-2 behind the nat and we get tag-a again. Then we
-	   * bring up host-1 (or 2's) assoc, Then comes the cookie
-	   * from hsot-2 (or 1). Now we have colliding state. We must
-	   * send an abort here with colliding state indication.
-	   */
-	   op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
-					  0, M_DONTWAIT, 1, MT_DATA);
-	   if (op_err == NULL) {
-	     /* FOOBAR */
-	     return (NULL);
-	   }
-	   /* pre-reserve some space */
- #ifdef INET6
-	   SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
- #else
-	   SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
- #endif
-	   SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-	   SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
-	   /* Set the len */
-	   SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
-	   ph = mtod(op_err, struct sctp_paramhdr *);
-	   ph->param_type = htons(SCTP_CAUSE_NAT_COLLIDING_STATE);
-	   ph->param_length = htons(sizeof(struct sctp_paramhdr));
-	   sctp_send_abort(m, iphlen,  sh, 0, op_err, vrf_id, port);
-	   return (NULL);
+		/* Special case - Peer's support nat. We may have
+		 * two init's that we gave out the same tag on since
+		 * one was not established.. i.e. we get INIT from host-1
+		 * behind the nat and we respond tag-a, we get a INIT from
+		 * host-2 behind the nat and we get tag-a again. Then we
+		 * bring up host-1 (or 2's) assoc, Then comes the cookie
+		 * from hsot-2 (or 1). Now we have colliding state. We must
+		 * send an abort here with colliding state indication.
+		 */
+		op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+		                               0, M_DONTWAIT, 1, MT_DATA);
+		if (op_err == NULL) {
+			/* FOOBAR */
+			return (NULL);
+		}
+		/* pre-reserve some space */
+#ifdef INET6
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+#else
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+#endif
+		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+		SCTP_BUF_RESV_UF(op_err,  sizeof(struct sctp_chunkhdr));
+		/* Set the len */
+		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr);
+		ph = mtod(op_err, struct sctp_paramhdr *);
+		ph->param_type = htons(SCTP_CAUSE_NAT_COLLIDING_STATE);
+		ph->param_length = htons(sizeof(struct sctp_paramhdr));
+		sctp_send_abort(m, iphlen,  sh, 0, op_err, vrf_id, port);
+		return (NULL);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
 	    ((ntohl(init_cp->init.initiate_tag) != asoc->peer_vtag) ||
@@ -5606,7 +5606,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 					 vrf_id, port);
 			SCTP_TCB_UNLOCK(stcb);
 			goto out_now;
-            /*sa_ignore NOTREACHED*/
+			/*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_EMPTY:	/* should not happen */
 		case SCTP_STATE_INUSE:	/* should not happen */
@@ -5615,7 +5615,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		default:
 			SCTP_TCB_UNLOCK(stcb);
 			goto out_now;
-            /*sa_ignore NOTREACHED*/
+			/*sa_ignore NOTREACHED*/
 			break;
 		case SCTP_STATE_OPEN:
 		case SCTP_STATE_SHUTDOWN_SENT:
