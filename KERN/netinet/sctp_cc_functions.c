@@ -81,12 +81,12 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 {
 	struct sctp_nets *net;
 	/*-
-	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
+	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off > 0) &&
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if ((asoc->fast_retran_loss_recovery == 0) ||
-		    (asoc->sctp_cmt_on_off == 1)) {
+		    (asoc->sctp_cmt_on_off > 0)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -249,7 +249,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if ((asoc->sctp_cmt_on_off == 1) &&
+			if ((asoc->sctp_cmt_on_off > 0) &&
 			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
@@ -270,7 +270,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                 /* CMT fast recovery code
 		 */
 		/*
-		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		     @@@ Do something
 		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
@@ -291,7 +291,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * moved.
 		 */
 		if (accum_moved ||
-		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
+		    ((asoc->sctp_cmt_on_off > 0) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -756,12 +756,12 @@ sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
 {
 	struct sctp_nets *net;
 		/*
-	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
+	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off > 0) &&
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if ((asoc->fast_retran_loss_recovery == 0) ||
-		    (asoc->sctp_cmt_on_off == 1)) {
+		    (asoc->sctp_cmt_on_off > 0)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
@@ -912,7 +912,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if ((asoc->sctp_cmt_on_off == 1) &&
+			if ((asoc->sctp_cmt_on_off > 0) &&
 			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
@@ -929,7 +929,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
                 /* CMT fast recovery code
 		 */
 		/*
-		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		    @@@ Do something
 		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
@@ -950,7 +950,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * moved.
 		 */
 		if (accum_moved ||
-		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
+		    ((asoc->sctp_cmt_on_off > 0) && net->new_pseudo_cumack)) {
 			/* If the cumulative ack moved we can proceed */
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
@@ -1394,7 +1394,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 *
 			 *  Should we stop any running T3 timer here?
 			 */
-			if ((asoc->sctp_cmt_on_off == 1) &&
+			if ((asoc->sctp_cmt_on_off > 0) &&
 			    (asoc->sctp_cmt_pf > 0) &&
 			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 				net->dest_state &= ~SCTP_ADDR_PF;
@@ -1411,7 +1411,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                 /* CMT fast recovery code
 		 */
 		/*
-		if (sctp_cmt_on_off == 1 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
 		    @@@ Do something
 		 }
 		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
@@ -1432,7 +1432,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 * moved.
 		 */
 		if (accum_moved ||
-		    ((asoc->sctp_cmt_on_off == 1) && net->new_pseudo_cumack)) {
+		    ((asoc->sctp_cmt_on_off > 0) && net->new_pseudo_cumack)) {
 			htcp_cong_avoid(stcb, net);
 			measure_achieved_throughput(stcb, net);
 		} else {
@@ -1468,12 +1468,12 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 {
 	struct sctp_nets *net;
 		/*
-	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off == 1) &&
+	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off > 0) &&
 	 * (net->fast_retran_loss_recovery == 0)))
 	 */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		if ((asoc->fast_retran_loss_recovery == 0) ||
-		    (asoc->sctp_cmt_on_off == 1)) {
+		    (asoc->sctp_cmt_on_off > 0)) {
 			/* out of a RFC2582 Fast recovery window? */
 			if (net->net_ack > 0) {
 				/*
