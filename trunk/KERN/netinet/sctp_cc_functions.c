@@ -68,11 +68,18 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 			cwnd_in_mtu = assoc->max_burst;
 		net->cwnd = (net->mtu - sizeof(struct sctphdr)) * cwnd_in_mtu;
 	}
+	if (stcb->asoc.sctp_cmt_on_off == 2) {
+		/* In case of resource pooling initialize appropriately */
+		net->cwnd /= assoc->numnets;
+		if (net->cwnd < (net->mtu - sizeof(struct sctphdr))) {
+			net->cwnd = net->mtu - sizeof(struct sctphdr);
+		}
+	}
 	net->ssthresh = assoc->peers_rwnd;
 
-	SDT_PROBE(sctp, cwnd, net, init, 
-		  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
-		  0, net->cwnd);
+	SDT_PROBE(sctp, cwnd, net, init,
+	          stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net,
+	          0, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) &
 	    (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 		sctp_log_cwnd(stcb, net, 0, SCTP_CWND_INITIALIZATION);
@@ -84,6 +91,18 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 		struct sctp_association *asoc)
 {
 	struct sctp_nets *net;
+	uint32_t t_ssthresh, t_cwnd;
+
+	/* MT FIXME: Don't compute this over and over again */
+	t_ssthresh = 0;
+	t_cwnd = 0;
+	if (asoc->sctp_cmt_on_off == 2) {
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+			t_ssthresh += net->ssthresh;
+			t_cwnd += net->cwnd;
+		}
+	}
+
 	/*-
 	 * CMT fast recovery code. Need to debug. ((sctp_cmt_on_off > 0) &&
 	 * (net->fast_retran_loss_recovery == 0)))
@@ -102,9 +121,23 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 				struct sctp_tmit_chunk *lchk;
 				int old_cwnd = net->cwnd;
 
-				net->ssthresh = net->cwnd / 2;
-				if (net->ssthresh < (net->mtu * 2)) {
-					net->ssthresh = 2 * net->mtu;
+				if (asoc->sctp_cmt_on_off == 2) {
+					net->ssthresh = (uint32_t)(((uint64_t)4 *
+					                            (uint64_t)net->mtu *
+					                            (uint64_t)net->ssthresh) /
+					                           (uint64_t)t_ssthresh);
+					if ((net->cwnd > t_cwnd / 2) &&
+					    (net->ssthresh < net->cwnd - t_cwnd / 2)) {
+						net->ssthresh = net->cwnd - t_cwnd / 2;
+					}
+					if (net->ssthresh < net->mtu) {
+						net->ssthresh = net->mtu;
+					}
+				} else {
+					net->ssthresh = net->cwnd / 2;
+					if (net->ssthresh < (net->mtu * 2)) {
+						net->ssthresh = 2 * net->mtu;
+					}
 				}
 				net->cwnd = net->ssthresh;
 				SDT_PROBE(sctp, cwnd, net, fr, 
@@ -168,6 +201,18 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 {
 	struct sctp_nets *net;
 	int old_cwnd;
+	uint32_t t_ssthresh, t_cwnd, incr;
+
+	/* MT FIXME: Don't compute this over and over again */
+	t_ssthresh = 0;
+	t_cwnd = 0;
+	if (stcb->asoc.sctp_cmt_on_off == 2) {
+		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+			t_ssthresh += net->ssthresh;
+			t_cwnd += net->cwnd;
+		}
+	}
+
 	/******************************/
 	/* update cwnd and Early FR   */
 	/******************************/
@@ -300,34 +345,41 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			if (net->cwnd <= net->ssthresh) {
 				/* We are in slow start */
 				if (net->flight_size + net->net_ack >= net->cwnd) {
-					if (net->net_ack > (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable))) {
-						old_cwnd = net->cwnd;
-						net->cwnd += (net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable));
-						SDT_PROBE(sctp, cwnd, net, ack, 
-							  stcb->asoc.my_vtag, 
-							  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-							  net, 
-							  old_cwnd, net->cwnd);
-						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-							sctp_log_cwnd(stcb, net, net->mtu,
-								SCTP_CWND_LOG_FROM_SS);
+					old_cwnd = net->cwnd;
+					if (stcb->asoc.sctp_cmt_on_off == 2) {
+						uint32_t limit;
+			
+						limit = (uint32_t)(((uint64_t)net->mtu *
+						                    (uint64_t)SCTP_BASE_SYSCTL(sctp_L2_abc_variable) *
+						                    (uint64_t)net->ssthresh) /
+						                   (uint64_t)t_ssthresh);
+						/* FIXME MT: Is this correct? */
+						if (net->net_ack > limit) {
+							incr = limit;
+						} else {
+							incr = (uint32_t)(((uint64_t)net->net_ack *
+							                   (uint64_t)net->ssthresh) /
+							                  (uint64_t)t_ssthresh);
 						}
-
+						if (incr == 0) {
+							incr = 1;
+						}
 					} else {
-						old_cwnd = net->cwnd;
-						net->cwnd += net->net_ack;
-						SDT_PROBE(sctp, cwnd, net, ack, 
-							  stcb->asoc.my_vtag, 
-							  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-							  net, 
-							  old_cwnd, net->cwnd);
-
-						if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-							sctp_log_cwnd(stcb, net, net->net_ack,
-								SCTP_CWND_LOG_FROM_SS);
+						incr = net->net_ack;
+						if (incr > net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable)) {
+							incr = net->mtu * SCTP_BASE_SYSCTL(sctp_L2_abc_variable);
 						}
-
 					}
+					net->cwnd += incr;
+					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
+						sctp_log_cwnd(stcb, net, incr,
+						              SCTP_CWND_LOG_FROM_SS);
+					}
+					SDT_PROBE(sctp, cwnd, net, ack,
+					          stcb->asoc.my_vtag,
+					          ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)),
+					          net,
+					          old_cwnd, net->cwnd);
 				} else {
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
@@ -336,6 +388,8 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				}
 			} else {
 				/* We are in congestion avoidance */
+				uint32_t incr;
+
 				/*
 				 * Add to pba
 				 */
@@ -345,11 +399,21 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                                     (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
 					old_cwnd = net->cwnd;
-					net->cwnd += net->mtu;
-					SDT_PROBE(sctp, cwnd, net, ack, 
-						  stcb->asoc.my_vtag, 
-						  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-						  net, 
+					if (asoc->sctp_cmt_on_off == 2) {
+						incr = (uint32_t)(((uint64_t)net->mtu *
+						                   (uint64_t)net->ssthresh) /
+						                  (uint64_t)t_ssthresh);
+						if (incr == 0) {
+							incr = 1;
+						}
+					} else {
+						incr = net->mtu;
+					}
+					net->cwnd += incr;
+					SDT_PROBE(sctp, cwnd, net, ack,
+						  stcb->asoc.my_vtag,
+						  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)),
+						  net,
 						  old_cwnd, net->cwnd);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
@@ -393,14 +457,38 @@ void
 sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	int old_cwnd = net->cwnd;
+	uint32_t t_ssthresh, t_cwnd;
 
-	net->ssthresh = max(net->cwnd / 2, 4 * net->mtu);
+	/* MT FIXME: Don't compute this over and over again */
+	t_ssthresh = 0;
+	t_cwnd = 0;
+	if (stcb->asoc.sctp_cmt_on_off == 2) {
+		struct sctp_nets *lnet;
+
+		TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
+			t_ssthresh += lnet->ssthresh;
+			t_cwnd += lnet->cwnd;
+		}
+		net->ssthresh = (uint32_t)(((uint64_t)4 *
+		                            (uint64_t)net->mtu *
+		                            (uint64_t)net->ssthresh) /
+		                           (uint64_t)t_ssthresh);
+		if ((net->cwnd > t_cwnd / 2) &&
+		    (net->ssthresh < net->cwnd - t_cwnd / 2)) {
+			net->ssthresh = net->cwnd - t_cwnd / 2;
+		}
+		if (net->ssthresh < net->mtu) {
+			net->ssthresh = net->mtu;
+		}
+	} else {
+		net->ssthresh = max(net->cwnd / 2, 4 * net->mtu);
+	}
 	net->cwnd = net->mtu;
 	net->partial_bytes_acked = 0;
-	SDT_PROBE(sctp, cwnd, net, to, 
-		  stcb->asoc.my_vtag, 
-		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-		  net, 
+	SDT_PROBE(sctp, cwnd, net, to,
+		  stcb->asoc.my_vtag,
+		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)),
+		  net,
 		  old_cwnd, net->cwnd);
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 		sctp_log_cwnd(stcb, net, net->cwnd - old_cwnd, SCTP_CWND_LOG_FROM_RTX);
