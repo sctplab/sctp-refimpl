@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216502 2010-12-17 15:39:55Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216669 2010-12-22 17:59:38Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -630,7 +630,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	 *  MTU's based on whether PF1 or PF2 is being used. If a T3 timer is running,
 	 *  for the destination, stop the timer because a PF-heartbeat was received.
 	 */
-	if ((stcb->asoc.sctp_cmt_on_off == 1) &&
+	if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 	    (stcb->asoc.sctp_cmt_pf > 0) &&
 	    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 		if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {

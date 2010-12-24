@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 215410 2010-11-16 22:16:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 215817 2010-11-25 13:39:55Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -943,7 +943,7 @@ struct sctpstat {
 	uint32_t  sctps_slowpath_sack;    /* Sacks the slow way */
 	uint32_t  sctps_wu_sacks_sent;	/* Window Update only sacks sent */
 	uint32_t  sctps_sends_with_flags; /* number of sends with sinfo_flags !=0 */
-	uint32_t  sctps_sends_with_unord;	/* number of unordered sends */
+	uint32_t  sctps_sends_with_unord; /* number of unordered sends */
 	uint32_t  sctps_sends_with_eof; 	/* number of sends with EOF flag set */
 	uint32_t  sctps_sends_with_abort; /* number of sends with ABORT flag set */
 	uint32_t  sctps_protocol_drain_calls;	/* number of times protocol drain called */

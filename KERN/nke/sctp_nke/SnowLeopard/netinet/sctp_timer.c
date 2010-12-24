@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 214939 2010-11-07 18:50:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 216669 2010-12-22 17:59:38Z tuexen $");
 #endif
 
 #define _IP_VHL
@@ -218,7 +218,7 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				 */
 				/* Add debug message here if destination is not in PF state. */
 				/* Stop any running T3 timers here? */
-				if ((stcb->asoc.sctp_cmt_on_off == 1) &&
+				if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 				    (stcb->asoc.sctp_cmt_pf > 0)) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					SCTPDBG(SCTP_DEBUG_TIMER4, "Destination %p moved from PF to unreachable.\n",
@@ -842,7 +842,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			}
 			/* CMT: Do not allow FRs on retransmitted TSNs.
 			 */
-			if (stcb->asoc.sctp_cmt_on_off == 1) {
+			if (stcb->asoc.sctp_cmt_on_off > 0) {
 				chk->no_fr_allowed = 1;
 			}
 #ifdef THIS_SHOULD_NOT_BE_DONE
@@ -999,7 +999,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	 * In addition, find an alternate destination with PF-based
 	 * find_alt_net().
 	 */
-	if ((stcb->asoc.sctp_cmt_on_off == 1) &&
+	if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 	    (stcb->asoc.sctp_cmt_pf > 0)) {
 		if ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF) {
 			net->dest_state |= SCTP_ADDR_PF;
@@ -1008,7 +1008,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				net);
 		}
 		alt = sctp_find_alternate_net(stcb, net, 2);
-	} else if (stcb->asoc.sctp_cmt_on_off == 1) {
+	} else if (stcb->asoc.sctp_cmt_on_off > 0) {
 	        /*
 		 * CMT: Using RTX_SSTHRESH policy for CMT.
 		 * If CMT is being used, then pick dest with
@@ -1122,7 +1122,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
 			}
 		}
-	} else if ((stcb->asoc.sctp_cmt_on_off == 1) &&
+	} else if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 	           (stcb->asoc.sctp_cmt_pf > 0) &&
 	           ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
 		/*
