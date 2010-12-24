@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 216495 2010-12-16 21:01:02Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 216669 2010-12-22 17:59:38Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2467,7 +2467,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
 			    ) {
 
-			if ((stcb->asoc.sctp_cmt_on_off == 1)&&
+			if ((stcb->asoc.sctp_cmt_on_off > 0)&&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
 			    (stcb->asoc.send_sack == 0) &&
 			    (stcb->asoc.numduptsns == 0) &&
@@ -3232,7 +3232,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 
 	/* CMT DAC algo: finding out if SACK is a mixed SACK */
-	if ((asoc->sctp_cmt_on_off == 1) &&
+	if ((asoc->sctp_cmt_on_off > 0) &&
 	    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			if (net->saw_newack)
@@ -3347,7 +3347,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
-			if ((asoc->sctp_cmt_on_off == 1) &&
+			if ((asoc->sctp_cmt_on_off > 0) &&
 			    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
@@ -3412,7 +3412,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 						tp1->sent++;
 					}
 					strike_flag = 1;
-					if ((asoc->sctp_cmt_on_off == 1) &&
+					if ((asoc->sctp_cmt_on_off > 0) &&
 					    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 						/*
 						 * CMT DAC algorithm: If
@@ -3469,7 +3469,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (tp1->sent < SCTP_DATAGRAM_RESEND) {
 				tp1->sent++;
 			}
-			if ((asoc->sctp_cmt_on_off == 1) &&
+			if ((asoc->sctp_cmt_on_off > 0) &&
 			    SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) {
 				/*
 				 * CMT DAC algorithm: If SACK flag is set to
@@ -3546,7 +3546,7 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				SCTP_STAT_INCR(sctps_sendmultfastretrans);
 			}
 			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-			if (asoc->sctp_cmt_on_off == 1) {
+			if (asoc->sctp_cmt_on_off > 0) {
 				/*
 				 * CMT: Using RTX_SSTHRESH policy for CMT.
 				 * If CMT is being used, then pick dest with
@@ -4754,7 +4754,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	/*******************************************/
 	/* cancel ALL T3-send timer if accum moved */
 	/*******************************************/
-	if (asoc->sctp_cmt_on_off == 1) {
+	if (asoc->sctp_cmt_on_off > 0) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			if (net->new_pseudo_cumack)
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
@@ -5047,7 +5047,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	 * to be done. Setting this_sack_lowest_newack to the cum_ack will
 	 * automatically ensure that.
 	 */
-	if ((asoc->sctp_cmt_on_off == 1) &&
+	if ((asoc->sctp_cmt_on_off > 0) &&
 	    SCTP_BASE_SYSCTL(sctp_cmt_use_dac) &&
 	    (cmt_dac_flag == 0)) {
 		this_sack_lowest_newack = cum_ack;
