@@ -353,13 +353,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 						                    (uint64_t)SCTP_BASE_SYSCTL(sctp_L2_abc_variable) *
 						                    (uint64_t)net->ssthresh) /
 						                   (uint64_t)t_ssthresh);
-						/* FIXME MT: Is this correct? */
-						if (net->net_ack > limit) {
+						incr = (uint32_t)(((uint64_t)net->net_ack *
+						                   (uint64_t)net->ssthresh) /
+						                  (uint64_t)t_ssthresh);
+						if (incr > limit) {
 							incr = limit;
-						} else {
-							incr = (uint32_t)(((uint64_t)net->net_ack *
-							                   (uint64_t)net->ssthresh) /
-							                  (uint64_t)t_ssthresh);
 						}
 						if (incr == 0) {
 							incr = 1;
