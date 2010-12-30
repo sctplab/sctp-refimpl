@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 212707 2010-09-15 21:19:54Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 216822 2010-12-30 16:56:20Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -81,8 +81,9 @@ static int __sctp_thread_based_iterator_started = 0;
 static void
 sctp_cleanup_itqueue(void)
 {
-	struct sctp_iterator *it;
-	while ((it = TAILQ_FIRST(&sctp_it_ctl.iteratorhead)) != NULL) {
+	struct sctp_iterator *it, *nit;
+	
+	TAILQ_FOREACH_SAFE(it, &sctp_it_ctl.iteratorhead, sctp_nxt_itr, nit) {
 		if (it->function_atend != NULL) {
 			(*it->function_atend) (it->pointer, it->val);
 		}
