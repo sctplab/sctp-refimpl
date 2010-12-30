@@ -401,6 +401,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 	case SCTP_LOCAL_AUTH_CHUNKS:
 		((struct sctp_authchunks *)arg)->gauth_assoc_id = id;
 		break;
+	case SCTP_TIMEOUTS:
+		((struct sctp_timeouts *)arg)->stimo_assoc_id = id;
+		break;
 	default:
 		break;
 	}
