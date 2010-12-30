@@ -3755,7 +3755,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			 * for this feature and this peer, not the
 			 * socket request in general.
 			 */
-		    SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EPROTONOSUPPORT);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EPROTONOSUPPORT);
 			error = EPROTONOSUPPORT;
 			SCTP_TCB_UNLOCK(stcb);
 			break;
@@ -3798,7 +3798,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			if ((stcb->asoc.strm_realoutsize - stcb->asoc.streamoutcnt) < addstrmcnt) {
 				/* Need to allocate more */
 				struct sctp_stream_out *oldstream;
-				struct sctp_stream_queue_pending *sp;
+				struct sctp_stream_queue_pending *sp, *nsp;
 				int removed;
 				
 				oldstream = stcb->asoc.strmout;
@@ -3815,42 +3815,41 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				 * initializing the new stuff.
 				 */
 				SCTP_TCB_SEND_LOCK(stcb);
-				for (i=0; i< stcb->asoc.streamoutcnt; i++ ) {
-				  TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
-				  stcb->asoc.strmout[i].next_sequence_sent = oldstream[i].next_sequence_sent;
-				  stcb->asoc.strmout[i].last_msg_incomplete = oldstream[i].last_msg_incomplete;
-				  stcb->asoc.strmout[i].stream_no = i;
-				  if (oldstream[i].next_spoke.tqe_next) {
-					sctp_remove_from_wheel(stcb, &stcb->asoc, &oldstream[i], 1);
-					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
-					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
-					removed = 1;
-				  } else {
-					/* not on out wheel */
-					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
-					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
-					removed = 0;
-				  }
-				  /* now anything on those queues? */
-				  while (TAILQ_EMPTY(&oldstream[i].outqueue) == 0) {
-					sp = TAILQ_FIRST(&oldstream[i].outqueue);
-					TAILQ_REMOVE(&oldstream[i].outqueue, sp, next);
-					TAILQ_INSERT_TAIL(&stcb->asoc.strmout[i].outqueue, sp, next);
-				  }
-				  /* Did we disrupt the wheel? */
-				  if (removed) {
-					sctp_insert_on_wheel(stcb,
-										 &stcb->asoc,
-										 &stcb->asoc.strmout[i],
-										 1);
-				  }
-				  /* Now move assoc pointers too */
-				  if (stcb->asoc.last_out_stream == &oldstream[i]) {
-					stcb->asoc.last_out_stream = &stcb->asoc.strmout[i];
-				  }
-				  if (stcb->asoc.locked_on_sending == &oldstream[i]) {
-					stcb->asoc.locked_on_sending = &stcb->asoc.strmout[i];
-				  }
+				for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
+					TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
+					stcb->asoc.strmout[i].next_sequence_sent = oldstream[i].next_sequence_sent;
+					stcb->asoc.strmout[i].last_msg_incomplete = oldstream[i].last_msg_incomplete;
+					stcb->asoc.strmout[i].stream_no = i;
+					if (oldstream[i].next_spoke.tqe_next) {
+						sctp_remove_from_wheel(stcb, &stcb->asoc, &oldstream[i], 1);
+						stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
+						stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+						removed = 1;
+					} else {
+						/* not on out wheel */
+						stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
+						stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+						removed = 0;
+					}
+					/* now anything on those queues? */
+					TAILQ_FOREACH_SAFE(sp, &oldstream[i].outqueue, next, nsp) {
+						TAILQ_REMOVE(&oldstream[i].outqueue, sp, next);
+						TAILQ_INSERT_TAIL(&stcb->asoc.strmout[i].outqueue, sp, next);
+					}
+					/* Did we disrupt the wheel? */
+					if (removed) {
+						sctp_insert_on_wheel(stcb,
+						                     &stcb->asoc,
+						                     &stcb->asoc.strmout[i],
+						                     1);
+					}
+					/* Now move assoc pointers too */
+					if (stcb->asoc.last_out_stream == &oldstream[i]) {
+						stcb->asoc.last_out_stream = &stcb->asoc.strmout[i];
+					}
+					if (stcb->asoc.locked_on_sending == &oldstream[i]) {
+						stcb->asoc.locked_on_sending = &stcb->asoc.strmout[i];
+					}
 				}
 				/* now the new streams */
 				for (i = stcb->asoc.streamoutcnt; i < (stcb->asoc.streamoutcnt+addstrmcnt); i++) {
