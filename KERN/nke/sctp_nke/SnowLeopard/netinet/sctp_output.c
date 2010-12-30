@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 216669 2010-12-22 17:59:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 216822 2010-12-30 16:56:20Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5898,9 +5898,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 			}	/* if chunk has enabled */
 		}		/* tailqforeach */
 
-		chk = TAILQ_FIRST(&asoc->send_queue);
-		while (chk) {
-			nchk = TAILQ_NEXT(chk, sctp_next);
+		TAILQ_FOREACH_SAFE(chk, &asoc->send_queue, sctp_next, nchk) {
 			/* Here we must move to the sent queue and mark */
 			if (PR_SCTP_BUF_ENABLED(chk->flags)) {
 				if (chk->rec.data.timetodrop.tv_sec >= (long)srcv->sinfo_timetolive) {
@@ -5922,8 +5920,7 @@ sctp_prune_prsctp(struct sctp_tcb *stcb,
 					}	/* end if chk->data */
 				}	/* end if right class */
 			}	/* end if chk pr-sctp */
-			chk = nchk;
-		}		/* end while (chk) */
+		}		/* tailqforeachsafe (chk) */
 	}			/* if enabled in asoc */
 }
 
@@ -6622,9 +6619,7 @@ sctp_toss_old_cookies(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
 
-	chk = TAILQ_FIRST(&asoc->control_send_queue);
-	while (chk) {
-		nchk = TAILQ_NEXT(chk, sctp_next);
+	TAILQ_FOREACH_SAFE(chk, &asoc->control_send_queue, sctp_next, nchk) {
 		if (chk->rec.chunk_id.id == SCTP_COOKIE_ECHO) {
 			TAILQ_REMOVE(&asoc->control_send_queue, chk, sctp_next);
 			if (chk->data) {
@@ -6634,7 +6629,6 @@ sctp_toss_old_cookies(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			asoc->ctrl_queue_cnt--;
 			sctp_free_a_chunk(stcb, chk);
 		}
-		chk = nchk;
 	}
 }
 
@@ -6642,19 +6636,16 @@ void
 sctp_toss_old_asconf(struct sctp_tcb *stcb)
 {
 	struct sctp_association *asoc;
-	struct sctp_tmit_chunk *chk, *chk_tmp;
+	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_asconf_chunk *acp;
 
 	asoc = &stcb->asoc;
-	for (chk = TAILQ_FIRST(&asoc->asconf_send_queue); chk != NULL;
-	    chk = chk_tmp) {
-		/* get next chk */
-		chk_tmp = TAILQ_NEXT(chk, sctp_next);
+	TAILQ_FOREACH_SAFE(chk, &asoc->asconf_send_queue, sctp_next, nchk) {
 		/* find SCTP_ASCONF chunk in queue */
 		if (chk->rec.chunk_id.id == SCTP_ASCONF) {
 			if (chk->data) {
 				acp = mtod(chk->data, struct sctp_asconf_chunk *);
-				if (compare_with_wrap(ntohl(acp->serial_number), stcb->asoc.asconf_seq_out_acked, MAX_SEQ)) {
+				if (compare_with_wrap(ntohl(acp->serial_number), asoc->asconf_seq_out_acked, MAX_TSN)) {
 					/* Not Acked yet */
 					break;
 				}
@@ -6766,9 +6757,7 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
 
-	for (chk = TAILQ_FIRST(&asoc->control_send_queue);
-	    chk; chk = nchk) {
-		nchk = TAILQ_NEXT(chk, sctp_next);
+	TAILQ_FOREACH_SAFE(chk, &asoc->control_send_queue, sctp_next, nchk) {
 		if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
 		    (chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK) ||	/* EY */
 		    (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) ||
@@ -7804,9 +7793,7 @@ again_one_more_time:
 		/* ASCONF transmission */
 		/************************/
 		/* Now first lets go through the asconf queue */
-		for (chk = TAILQ_FIRST(&asoc->asconf_send_queue);
-		    chk; chk = nchk) {
-			nchk = TAILQ_NEXT(chk, sctp_next);
+		TAILQ_FOREACH_SAFE(chk, &asoc->asconf_send_queue, sctp_next, nchk) {
 			if (chk->rec.chunk_id.id != SCTP_ASCONF) {
 				continue;
 			}
@@ -7984,9 +7971,7 @@ again_one_more_time:
 		/* Control transmission */
 		/************************/
 		/* Now first lets go through the control queue */
-		for (chk = TAILQ_FIRST(&asoc->control_send_queue);
-		    chk; chk = nchk) {
-			nchk = TAILQ_NEXT(chk, sctp_next);
+		TAILQ_FOREACH_SAFE(chk, &asoc->control_send_queue, sctp_next, nchk) {
 			if (chk->whoTo != net) {
 				/*
 				 * No, not sent to the network we are
@@ -8266,7 +8251,7 @@ again_one_more_time:
 		if ((((asoc->state & SCTP_STATE_OPEN) == SCTP_STATE_OPEN) &&
 		     (skip_data_for_this_net == 0)) ||
 		    (cookie)) {
-			for (chk = TAILQ_FIRST(&asoc->send_queue); chk; chk = nchk) {
+			TAILQ_FOREACH_SAFE(chk, &asoc->send_queue, sctp_next, nchk) {
 				if (no_data_chunks) {
 					/* let only control go out */
 					*reason_code = 1;
@@ -8277,7 +8262,6 @@ again_one_more_time:
 					*reason_code = 2;
 					break;
 				}
-				nchk = TAILQ_NEXT(chk, sctp_next);
 				if ((chk->whoTo != NULL) &&
 				    (chk->whoTo != net)) {
 					/* Don't send the chunk on this net */
