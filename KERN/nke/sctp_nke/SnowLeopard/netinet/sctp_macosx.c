@@ -752,7 +752,7 @@ sctp_vtag_watchdog()
 void
 sctp_slowtimo()
 {
-	struct inpcb *inp, *inp_next;
+	struct inpcb *inp, *ninp;
 	struct socket *so;
 	static uint32_t sctp_addr_watchdog_cnt = 0;
 	static uint32_t sctp_vtag_watchdog_cnt = 0;
@@ -772,9 +772,7 @@ sctp_slowtimo()
 	}
 
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
-	inp = LIST_FIRST(&SCTP_BASE_INFO(inplisthead));
-	while (inp) {
-		inp_next = LIST_NEXT(inp, inp_list);
+	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		n++;
 #endif
@@ -793,7 +791,6 @@ sctp_slowtimo()
 				SCTP_DECR_EP_COUNT();
 			}
 		}
-		inp = inp_next;
 	}
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
