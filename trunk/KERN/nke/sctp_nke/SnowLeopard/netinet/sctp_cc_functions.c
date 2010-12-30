@@ -222,15 +222,12 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
-                    if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) ||
-                         (asoc->last_acked_seq == net->fast_recovery_tsn) ||
-		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
-		          net->will_exit_fast_recovery = 1;
-                    }
-		 }
+		if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
+			if (SCTP_TSN_GE(asoc->last_acked_seq, net->fast_recovery_tsn) ||
+			    SCTP_TSN_GE(net->pseudo_cumack,net->fast_recovery_tsn)) {
+				net->will_exit_fast_recovery = 1;
+			}
+		}
 #endif
 		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
@@ -926,15 +923,12 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
-                    if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) ||
-                         (asoc->last_acked_seq == net->fast_recovery_tsn) ||
-		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
-		          net->will_exit_fast_recovery = 1;
-                    }
-		 }
+		if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
+			if (SCTP_TSN_GE(asoc->last_acked_seq, net->fast_recovery_tsn) ||
+			    SCTP_TSN_GE(net->pseudo_cumack,net->fast_recovery_tsn)) {
+				net->will_exit_fast_recovery = 1;
+			}
+		}
 #endif
 		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
@@ -1408,15 +1402,12 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/*
 		 * CMT fast recovery code. Need to debug.
 		 */
-		 if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
-                    if (compare_with_wrap(asoc->last_acked_seq,
-		        net->fast_recovery_tsn, MAX_TSN) ||
-                         (asoc->last_acked_seq == net->fast_recovery_tsn) ||
-		         compare_with_wrap(net->pseudo_cumack,net->fast_recovery_tsn, MAX_TSN) ||
-                         (net->pseudo_cumack == net->fast_recovery_tsn)) {
-		          net->will_exit_fast_recovery = 1;
-                    }
-		 }
+		if (net->fast_retran_loss_recovery && net->new_pseudo_cumack) {
+			if (SCTP_TSN_GE(asoc->last_acked_seq, net->fast_recovery_tsn) ||
+			    SCTP_TSN_GE(net->pseudo_cumack,net->fast_recovery_tsn)) {
+				net->will_exit_fast_recovery = 1;
+			}
+		}
 #endif
 		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
 			/*
