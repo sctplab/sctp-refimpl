@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 215817 2010-11-25 13:39:55Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 216878 2011-01-01 22:22:57Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -444,7 +444,7 @@ union sctp_notification {
 #define SCTP_AUTHENTICATION_EVENT		0x0008
 #define SCTP_STREAM_RESET_EVENT			0x0009
 #define SCTP_SENDER_DRY_EVENT			0x000a
-#define SCTP__NOTIFICATIONS_STOPPED_EVENT	0x000b /* we don't send this*/
+#define SCTP_NOTIFICATIONS_STOPPED_EVENT	0x000b /* we don't send this*/
 /*
  * socket option structs
  */
