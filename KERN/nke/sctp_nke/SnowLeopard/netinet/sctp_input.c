@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216825 2010-12-30 21:32:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 216887 2011-01-02 10:27:27Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2304,6 +2304,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	int notification = 0;
 	struct sctp_nets *netl;
 	int had_a_existing_tcb = 0;
+	int send_int_conf = 0;
 
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_cookie: handling COOKIE-ECHO\n");
@@ -2631,8 +2632,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			netl->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 			(void)sctp_set_primary_addr((*stcb), (struct sockaddr *)NULL,
 			    netl);
-			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
-			    (*stcb), 0, (void *)netl, SCTP_SO_NOT_LOCKED);
+			send_int_conf = 1;
 		}
 	}
 	if (*stcb) {
@@ -2656,6 +2656,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				 * socket, no need to do anything. I THINK!!
 				 */
 				sctp_ulp_notify(notification, *stcb, 0, (void *)&sac_restart_id, SCTP_SO_NOT_LOCKED);
+				if (send_int_conf) {
+					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
+			    		                (*stcb), 0, (void *)netl, SCTP_SO_NOT_LOCKED);
+				}
 				return (m);
 			}
 			oso = (*inp_p)->sctp_socket;
@@ -2788,6 +2792,10 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			/* Switch over to the new guy */
 			*inp_p = inp;
 			sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
+			if (send_int_conf) {
+				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
+				                (*stcb), 0, (void *)netl, SCTP_SO_NOT_LOCKED);
+			}
 
 			/* Pull it from the incomplete queue and wake the guy */
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -2804,8 +2812,14 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			return (m);
 		}
 	}
-	if ((notification) && ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE)) {
-		sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
+	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_UDPTYPE) {
+		if (notification) {
+			sctp_ulp_notify(notification, *stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
+		}
+		if (send_int_conf) {
+			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
+			                (*stcb), 0, (void *)netl, SCTP_SO_NOT_LOCKED);
+		}
 	}
 	return (m);
 }
