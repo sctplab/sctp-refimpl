@@ -52,7 +52,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 216822 2010-12-30 16:56:20Z tuex
 #include <netinet/sctp_indata.h>/* for sctp_deliver_data() */
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_asconf.h>
-#include <netinet/sctp_cc_functions.h>
 #include <netinet/sctp_bsd_addr.h>
 
 #if defined(__APPLE__)
@@ -69,6 +68,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 216822 2010-12-30 16:56:20Z tuex
 #define KTR_SCTP KTR_SUBSYS
 #endif
 #endif
+
+extern struct sctp_cc_functions sctp_cc_functions[];
 
 void
 sctp_sblog(struct sockbuf *sb,
@@ -1056,67 +1057,17 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 
 	asoc->sctp_autoclose_ticks = m->sctp_ep.auto_close_time;
 
-	/*
-	 * JRS - Pick the default congestion control module
-	 * based on the sysctl.
-	 */
-	switch(m->sctp_ep.sctp_default_cc_module) {
-		/* JRS - Standard TCP congestion control */
-		case SCTP_CC_RFC2581:
-		{
-			stcb->asoc.congestion_control_module = SCTP_CC_RFC2581;
-			stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_set_initial_cc_param;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_cwnd_update_after_sack;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_cwnd_update_after_fr;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_cwnd_update_after_timeout;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_cwnd_update_after_ecn_echo;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_cwnd_update_after_fr_timer;
-			break;
-		}
-		/* JRS - High Speed TCP congestion control (Floyd) */
-		case SCTP_CC_HSTCP:
-		{
-			stcb->asoc.congestion_control_module = SCTP_CC_HSTCP;
-			stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_set_initial_cc_param;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_hs_cwnd_update_after_sack;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_hs_cwnd_update_after_fr;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_cwnd_update_after_timeout;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_cwnd_update_after_ecn_echo;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_cwnd_update_after_fr_timer;
-			break;
-		}
-		/* JRS - HTCP congestion control */
-		case SCTP_CC_HTCP:
-		{
-			stcb->asoc.congestion_control_module = SCTP_CC_HTCP;
-			stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_htcp_set_initial_cc_param;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_htcp_cwnd_update_after_sack;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_htcp_cwnd_update_after_fr;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_htcp_cwnd_update_after_timeout;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_htcp_cwnd_update_after_ecn_echo;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_htcp_cwnd_update_after_fr_timer;
-			break;
-		}
-		/* JRS - By default, use RFC2581 */
-		default:
-		{
-			stcb->asoc.congestion_control_module = SCTP_CC_RFC2581;
-			stcb->asoc.cc_functions.sctp_set_initial_cc_param = &sctp_set_initial_cc_param;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_sack = &sctp_cwnd_update_after_sack;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr = &sctp_cwnd_update_after_fr;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_timeout = &sctp_cwnd_update_after_timeout;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo = &sctp_cwnd_update_after_ecn_echo;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_packet_dropped = &sctp_cwnd_update_after_packet_dropped;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_output = &sctp_cwnd_update_after_output;
-			stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer = &sctp_cwnd_update_after_fr_timer;
-			break;
-		}
+	switch (m->sctp_ep.sctp_default_cc_module) {
+	case SCTP_CC_RFC2581:
+	case SCTP_CC_HSTCP:
+	case SCTP_CC_HTCP:
+		stcb->asoc.congestion_control_module = m->sctp_ep.sctp_default_cc_module;
+		stcb->asoc.cc_functions = sctp_cc_functions[m->sctp_ep.sctp_default_cc_module];
+		break;
+	default:
+		stcb->asoc.congestion_control_module = SCTP_CC_RFC2581;
+		stcb->asoc.cc_functions = sctp_cc_functions[SCTP_CC_RFC2581];
+		break;
 	}
 
 	/*
