@@ -536,10 +536,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 216825 2010-12-30 21:32:35
 #define SCTP_ADDR_UNCONFIRMED		0x200
 #define SCTP_ADDR_REQ_PRIMARY           0x400
 
-#define SCTP_ACTIVE                     SCTP_ADDR_REACHABLE
-#define SCTP_INACTIVE                   SCTP_ADDR_NOT_REACHABLE
-#define SCTP_UNCONFIRMED                SCTP_ADDR_UNCONFIRMED
-
 /* JRS 5/13/07 - Added potentially failed state for CMT PF */
 #define SCTP_ADDR_PF            0x800
 #define SCTP_REACHABLE_MASK		0x203
