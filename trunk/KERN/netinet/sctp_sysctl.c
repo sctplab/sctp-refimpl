@@ -972,6 +972,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, auto_asconf, CTLTYPE_UINT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_auto_asconf), 0, sysctl_sctp_check, "IU",
             SCTPCTL_AUTOASCONF_DESC);
 #endif
+
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, ecn_enable, CTLTYPE_UINT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_ecn_enable), 0, sysctl_sctp_check, "IU",
             SCTPCTL_ECN_ENABLE_DESC);
@@ -1042,7 +1043,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, heartbeat_interval, CTLTYPE_UINT|CTLFLAG_R
             &SCTP_BASE_SYSCTL(sctp_heartbeat_interval_default), 0, sysctl_sctp_check, "IU",
             SCTPCTL_HEARTBEAT_INTERVAL_DESC);
 
-SYSCTL_PROC(_net_inet_sctp, OID_AUTO, pmtu_raise_time, CTLTYPE_INT|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, pmtu_raise_time, CTLTYPE_UINT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_pmtu_raise_time_default), 0, sysctl_sctp_check, "IU",
             SCTPCTL_PMTU_RAISE_TIME_DESC);
 
@@ -1097,6 +1098,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, outgoing_streams, CTLTYPE_UINT|CTLFLAG_RW,
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, cmt_on_off, CTLTYPE_UINT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_cmt_on_off), 0, sysctl_sctp_check, "IU",
             SCTPCTL_CMT_ON_OFF_DESC);
+
 /* EY */
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, nr_sack_on_off, CTLTYPE_UINT | CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_nr_sack_on_off), 0, sysctl_sctp_check, "IU",
@@ -1203,7 +1205,7 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
               &SCTP_BASE_SYSCTL(sctp_log), sctp_log,
               "SCTP logging (struct sctp_log)");
 
-SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_OPAQUE|CTLFLAG_RW,
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_UINT | CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_log), 0, sysctl_sctp_cleartrace, "IU",
             "Clear SCTP Logging buffer");
 
@@ -1276,7 +1278,7 @@ SYSCTL_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
               "SCTP statistics (struct sctp_stat)");
 #endif
 
-SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_RD,
+SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLTYPE_OPAQUE | CTLFLAG_RD,
             0, 0, sctp_assoclist,
             "S,xassoc", "List of active SCTP associations");
 
