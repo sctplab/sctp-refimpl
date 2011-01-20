@@ -2665,8 +2665,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if ((stcb) && (net)) {
 			if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				/* Its unconfirmed */
 				paddri->spinfo_state = SCTP_UNCONFIRMED;
 			} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+				/* The Active */
 				paddri->spinfo_state = SCTP_ACTIVE;
 			} else {
 				/* It's Inactive */
@@ -2752,8 +2754,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		 * for what the state of the network is.
 		 */
 		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+			/* It's unconfirmed */
 			sstat->sstat_primary.spinfo_state = SCTP_UNCONFIRMED;
 		} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+			/* Its active */
 			sstat->sstat_primary.spinfo_state = SCTP_ACTIVE;
 		} else {
 			/* It's Inactive */
