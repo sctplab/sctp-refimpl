@@ -2664,7 +2664,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 
 		if ((stcb) && (net)) {
-			paddri->spinfo_state = net->dest_state & (SCTP_REACHABLE_MASK | SCTP_ADDR_NOHB);
+			if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				/* Its unconfirmed */
+				paddri->spinfo_state = SCTP_UNCONFIRMED;
+			} else {
+				/* The unreach/reachable map to active/inactive */
+				paddri->spinfo_state = net->dest_state & SCTP_REACHABLE_MASK;
+			}
 			paddri->spinfo_cwnd = net->cwnd;
 			paddri->spinfo_srtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 			paddri->spinfo_rto = net->RTO;
