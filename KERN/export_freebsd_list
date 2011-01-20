@@ -7,7 +7,6 @@ netinet/sctp_bsd_addr.c
 netinet/sctp_bsd_addr.h
 netinet/sctp_constants.h
 netinet/sctp_cc_functions.c
-netinet/sctp_cc_functions.h
 netinet/sctp_crc32.c
 netinet/sctp_crc32.h
 netinet/sctp_dtrace_declare.h
