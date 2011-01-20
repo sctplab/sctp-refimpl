@@ -2664,7 +2664,14 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 
 		if ((stcb) && (net)) {
-			paddri->spinfo_state = net->dest_state & (SCTP_REACHABLE_MASK | SCTP_ADDR_NOHB);
+			if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				paddri->spinfo_state = SCTP_UNCONFIRMED;
+			} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+				paddri->spinfo_state = SCTP_ACTIVE;
+			} else {
+				/* It's Inactive */
+				paddri->spinfo_state = SCTP_INACTIVE;
+			}
 			paddri->spinfo_cwnd = net->cwnd;
 			paddri->spinfo_srtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
 			paddri->spinfo_rto = net->RTO;
@@ -2744,7 +2751,14 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		 * Again the user can get info from sctp_constants.h
 		 * for what the state of the network is.
 		 */
-		sstat->sstat_primary.spinfo_state = net->dest_state & SCTP_REACHABLE_MASK;
+		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+			sstat->sstat_primary.spinfo_state = SCTP_UNCONFIRMED;
+		} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+			sstat->sstat_primary.spinfo_state = SCTP_ACTIVE;
+		} else {
+			/* It's Inactive */
+			sstat->sstat_primary.spinfo_state = SCTP_INACTIVE;
+		}
 		sstat->sstat_primary.spinfo_cwnd = net->cwnd;
 		sstat->sstat_primary.spinfo_srtt = net->lastsa;
 		sstat->sstat_primary.spinfo_rto = net->RTO;
