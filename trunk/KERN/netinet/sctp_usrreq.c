@@ -2665,13 +2665,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if ((stcb) && (net)) {
 			if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
-				/* Its unconfirmed */
+				/* It's unconfirmed */
 				paddri->spinfo_state = SCTP_UNCONFIRMED;
 			} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
-				/* The Active */
+				/* It's active */
 				paddri->spinfo_state = SCTP_ACTIVE;
 			} else {
-				/* It's Inactive */
+				/* It's inactive */
 				paddri->spinfo_state = SCTP_INACTIVE;
 			}
 			paddri->spinfo_cwnd = net->cwnd;
@@ -2757,10 +2757,10 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			/* It's unconfirmed */
 			sstat->sstat_primary.spinfo_state = SCTP_UNCONFIRMED;
 		} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
-			/* Its active */
+			/* It's active */
 			sstat->sstat_primary.spinfo_state = SCTP_ACTIVE;
 		} else {
-			/* It's Inactive */
+			/* It's inactive */
 			sstat->sstat_primary.spinfo_state = SCTP_INACTIVE;
 		}
 		sstat->sstat_primary.spinfo_cwnd = net->cwnd;
