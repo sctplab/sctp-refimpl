@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 217611 2011-01-19 22:10:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 217638 2011-01-20 13:53:34Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2665,11 +2665,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if ((stcb) && (net)) {
 			if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+				/* It's unconfirmed */
 				paddri->spinfo_state = SCTP_UNCONFIRMED;
 			} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+				/* It's active */
 				paddri->spinfo_state = SCTP_ACTIVE;
 			} else {
-				/* It's Inactive */
+				/* It's inactive */
 				paddri->spinfo_state = SCTP_INACTIVE;
 			}
 			paddri->spinfo_cwnd = net->cwnd;
@@ -2752,11 +2754,13 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		 * for what the state of the network is.
 		 */
 		if (net->dest_state & SCTP_ADDR_UNCONFIRMED) {
+			/* It's unconfirmed */
 			sstat->sstat_primary.spinfo_state = SCTP_UNCONFIRMED;
 		} else if (net->dest_state & SCTP_ADDR_REACHABLE) {
+			/* It's active */
 			sstat->sstat_primary.spinfo_state = SCTP_ACTIVE;
 		} else {
-			/* It's Inactive */
+			/* It's inactive */
 			sstat->sstat_primary.spinfo_state = SCTP_INACTIVE;
 		}
 		sstat->sstat_primary.spinfo_cwnd = net->cwnd;
