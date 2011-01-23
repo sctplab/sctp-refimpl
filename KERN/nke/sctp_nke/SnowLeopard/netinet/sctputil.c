@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 217611 2011-01-19 22:10:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 217742 2011-01-23 07:27:35Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1057,18 +1057,8 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 
 	asoc->sctp_autoclose_ticks = m->sctp_ep.auto_close_time;
 
-	switch (m->sctp_ep.sctp_default_cc_module) {
-	case SCTP_CC_RFC2581:
-	case SCTP_CC_HSTCP:
-	case SCTP_CC_HTCP:
-		stcb->asoc.congestion_control_module = m->sctp_ep.sctp_default_cc_module;
-		stcb->asoc.cc_functions = sctp_cc_functions[m->sctp_ep.sctp_default_cc_module];
-		break;
-	default:
-		stcb->asoc.congestion_control_module = SCTP_CC_RFC2581;
-		stcb->asoc.cc_functions = sctp_cc_functions[SCTP_CC_RFC2581];
-		break;
-	}
+	stcb->asoc.congestion_control_module = m->sctp_ep.sctp_default_cc_module;
+	stcb->asoc.cc_functions = sctp_cc_functions[m->sctp_ep.sctp_default_cc_module];
 
 	/*
 	 * Now the stream parameters, here we allocate space for all streams
