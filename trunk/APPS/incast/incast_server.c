@@ -18,52 +18,6 @@
 #include <sys/queue.h>
 #include <incast_fmt.h>
 
-#ifndef timespecsub
-#define timespecsub(vvp, uvp)						\
-	do {								\
-		(vvp)->tv_sec -= (uvp)->tv_sec;				\
-		(vvp)->tv_nsec -= (uvp)->tv_nsec;			\
-		if ((vvp)->tv_nsec < 0) {				\
-			(vvp)->tv_sec--;				\
-			(vvp)->tv_nsec += 1000000000;			\
-		}							\
-	} while (0)
-#endif
-
-int
-translate_ip_address(char *host, struct sockaddr_in *sa)
-{
-	struct hostent *hp;
-	int len, cnt, i;
-
-	if (sa == NULL) {
-		return (-1);
-	}
-	len = strlen(host);
-	cnt = 0;
-	for (i = 0; i < len; i++) {
-		if (host[i] == '.')
-			cnt++;
-	}
-	if (cnt < 3) {
-		/* make it treat it like a host name */
-		sa->sin_addr.s_addr = 0xffffffff;
-	}
-	sa->sin_len = sizeof(struct sockaddr_in);
-	sa->sin_family = AF_INET;
-	if (sa->sin_addr.s_addr == 0xffffffff) {
-		hp = gethostbyname(host);
-		if (hp == NULL) {
-			return (htonl(strtoul(host, NULL, 0)));
-		}
-		memcpy(&sa->sin_addr, hp->h_addr_list[0], sizeof(sa->sin_addr));
-	} else {
-		sa->sin_addr.s_addr = htonl(inet_network(host));
-	}
-	return (0);
-}
-
-
 
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
@@ -159,6 +113,7 @@ main(int argc, char **argv)
 				printf("Sorry backlog must be 1 or more - using default\n");
 				backlog = 4;
 			}
+			break;
 		case 'b':
 			bindto = optarg;
 			break;
