@@ -29,9 +29,12 @@
 		50BAFF2B1073C8950005425A /* sctp_timer.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE64107390EC0005425A /* sctp_timer.c */; };
 		50C2D1631077EF950088259C /* SCTP.c in Sources */ = {isa = PBXBuildFile; fileRef = 50C2D1621077EF950088259C /* SCTP.c */; };
 		50C2D18510787EE30088259C /* sctp_macosx.c in Sources */ = {isa = PBXBuildFile; fileRef = 50C2D18410787EE30088259C /* sctp_macosx.c */; };
+		E06F9B92128D71A800401138 /* sctp_ss_functions.c in Sources */ = {isa = PBXBuildFile; fileRef = E06F9AD8128BF43700401138 /* sctp_ss_functions.c */; };
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		504A6B8A12C4D2A600C90FAB /* sctp_dtrace_declare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_declare.h; path = netinet/sctp_dtrace_declare.h; sourceTree = "<group>"; };
+		504A6B8B12C4D2A600C90FAB /* sctp_dtrace_define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_define.h; path = netinet/sctp_dtrace_define.h; sourceTree = "<group>"; };
 		50BAFE42107390EC0005425A /* sctp_asconf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_asconf.c; path = netinet/sctp_asconf.c; sourceTree = "<group>"; };
 		50BAFE43107390EC0005425A /* sctp_asconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_asconf.h; path = netinet/sctp_asconf.h; sourceTree = "<group>"; };
 		50BAFE44107390EC0005425A /* sctp_auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_auth.c; path = netinet/sctp_auth.c; sourceTree = "<group>"; };
@@ -41,7 +44,6 @@
 		50BAFE48107390EC0005425A /* sctp_callout.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_callout.c; path = netinet/sctp_callout.c; sourceTree = "<group>"; };
 		50BAFE49107390EC0005425A /* sctp_callout.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_callout.h; path = netinet/sctp_callout.h; sourceTree = "<group>"; };
 		50BAFE4A107390EC0005425A /* sctp_cc_functions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_cc_functions.c; path = netinet/sctp_cc_functions.c; sourceTree = "<group>"; };
-		50BAFE4B107390EC0005425A /* sctp_cc_functions.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_cc_functions.h; path = netinet/sctp_cc_functions.h; sourceTree = "<group>"; };
 		50BAFE4C107390EC0005425A /* sctp_constants.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_constants.h; path = netinet/sctp_constants.h; sourceTree = "<group>"; };
 		50BAFE4D107390EC0005425A /* sctp_crc32.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_crc32.c; path = netinet/sctp_crc32.c; sourceTree = "<group>"; };
 		50BAFE4E107390EC0005425A /* sctp_crc32.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_crc32.h; path = netinet/sctp_crc32.h; sourceTree = "<group>"; };
@@ -120,6 +122,7 @@
 		50C2D1A210789C180088259C /* proc_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = proc_internal.h; path = sys/proc_internal.h; sourceTree = "<group>"; };
 		50C2D1A310789C180088259C /* systm.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = systm.h; path = sys/systm.h; sourceTree = "<group>"; };
 		D2AAC0630554660B00DB518D /* libsctp.dylib */ = {isa = PBXFileReference; explicitFileType = "compiled.mach-o.dylib"; includeInIndex = 0; path = libsctp.dylib; sourceTree = BUILT_PRODUCTS_DIR; };
+		E06F9AD8128BF43700401138 /* sctp_ss_functions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_ss_functions.c; path = netinet/sctp_ss_functions.c; sourceTree = "<group>"; };
 /* End PBXFileReference section */
 
 /* Begin PBXFrameworksBuildPhase section */
@@ -190,7 +193,8 @@
 				50BAFE48107390EC0005425A /* sctp_callout.c */,
 				50BAFE49107390EC0005425A /* sctp_callout.h */,
 				50BAFE4A107390EC0005425A /* sctp_cc_functions.c */,
-				50BAFE4B107390EC0005425A /* sctp_cc_functions.h */,
+				504A6B8A12C4D2A600C90FAB /* sctp_dtrace_declare.h */,
+				504A6B8B12C4D2A600C90FAB /* sctp_dtrace_define.h */,
 				50BAFE4C107390EC0005425A /* sctp_constants.h */,
 				50BAFE4D107390EC0005425A /* sctp_crc32.c */,
 				50BAFE4E107390EC0005425A /* sctp_crc32.h */,
@@ -209,6 +213,7 @@
 				50BAFE5C107390EC0005425A /* sctp_pcb.h */,
 				50BAFE5D107390EC0005425A /* sctp_peeloff.c */,
 				50BAFE5E107390EC0005425A /* sctp_peeloff.h */,
+				E06F9AD8128BF43700401138 /* sctp_ss_functions.c */,
 				50BAFE61107390EC0005425A /* sctp_structs.h */,
 				50BAFE62107390EC0005425A /* sctp_sysctl.c */,
 				50BAFE63107390EC0005425A /* sctp_sysctl.h */,
@@ -340,7 +345,11 @@
 			isa = PBXProject;
 			buildConfigurationList = 1DEB914E08733D8E0010E9CD /* Build configuration list for PBXProject "SCTP" */;
 			compatibilityVersion = "Xcode 3.1";
+			developmentRegion = English;
 			hasScannedForEncodings = 1;
+			knownRegions = (
+				en,
+			);
 			mainGroup = 08FB7794FE84155DC02AAC07 /* SCTP */;
 			projectDirPath = "";
 			projectRoot = "";
@@ -384,6 +393,7 @@
 				50BAFF2B1073C8950005425A /* sctp_timer.c in Sources */,
 				50C2D1631077EF950088259C /* SCTP.c in Sources */,
 				50C2D18510787EE30088259C /* sctp_macosx.c in Sources */,
+				E06F9B92128D71A800401138 /* sctp_ss_functions.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -437,6 +447,7 @@
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				ONLY_ACTIVE_ARCH = YES;
 				PREBINDING = NO;
 				SDKROOT = macosx10.6;
@@ -450,6 +461,7 @@
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
 				GCC_WARN_UNUSED_VARIABLE = YES;
+				MACOSX_DEPLOYMENT_TARGET = 10.6;
 				PREBINDING = NO;
 				SDKROOT = macosx10.6;
 			};
@@ -466,7 +478,6 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					SCTP_LOCAL_TRACE_BUF,
 					SCTP_DEBUG,
 					SCTP_APPLE_AUTO_ASCONF,
 					HAVE_SCTP_PEELOFF_SOCKOPT,
@@ -480,6 +491,7 @@
 					KERNEL,
 					KERNEL_PRIVATE,
 					APPLE_SNOWLEOPARD,
+					SCTP_LOCAL_TRACE_BUF,
 				);
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				INFOPLIST_FILE = "SCTP-Info.plist";
@@ -505,7 +517,6 @@
 				GCC_ENABLE_FIX_AND_CONTINUE = NO;
 				GCC_MODEL_TUNING = G5;
 				GCC_PREPROCESSOR_DEFINITIONS = (
-					SCTP_DEBUG,
 					SCTP_APPLE_AUTO_ASCONF,
 					HAVE_SCTP_PEELOFF_SOCKOPT,
 					SCTP_EMBEDDED_V6_SCOPE,
