@@ -198,9 +198,9 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 int
 sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 {
-	int unsent_data=0;
-	struct sctp_stream_queue_pending *sp, *nsp;
-	struct sctp_stream_out *strq;
+	int unsent_data = 0;
+	unsigned int i;
+	struct sctp_stream_queue_pending *sp;
 	struct sctp_association *asoc;
 
 	/* This function returns the number of streams that have
@@ -210,9 +210,15 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 	 */
  	asoc = &stcb->asoc;
 	SCTP_TCB_SEND_LOCK(stcb);
-	TAILQ_FOREACH(strq, &asoc->out_wheel, next_spoke) {
-		/*sa_ignore FREED_MEMORY*/
-		TAILQ_FOREACH_SAFE(sp, &strq->outqueue, next, nsp) {
+	if (!stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc)) {
+		/* Check to see if some data queued */
+		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
+		is_there_another:
+			/*sa_ignore FREED_MEMORY*/
+			sp = TAILQ_FIRST(&stcb->asoc.strmout[i].outqueue);
+			if (sp == NULL) {
+				continue;
+			}
 			if ((sp->msg_is_complete) &&
 			    (sp->length == 0)  &&
 			    (sp->sender_all_done)) {
@@ -228,8 +234,8 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 					            sp->msg_is_complete,
 					            sp->put_last_out);
 				}
-				atomic_subtract_int(&asoc->stream_queue_cnt, 1);
-				TAILQ_REMOVE(&strq->outqueue, sp, next);
+				atomic_subtract_int(&stcb->asoc.stream_queue_cnt, 1);
+				TAILQ_REMOVE(&stcb->asoc.strmout[i].outqueue, sp, next);
 				if (sp->net) {
 					sctp_free_remote_addr(sp->net);
 					sp->net = NULL;
@@ -952,7 +958,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
 	/* are the queues empty? */
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
-	    !TAILQ_EMPTY(&asoc->out_wheel)) {
+	    !stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc)) {
 		sctp_report_all_outbound(stcb, 0, SCTP_SO_NOT_LOCKED);
 	}
 	/* stop the timer */
@@ -3046,7 +3052,7 @@ sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
 		/* are the queues empty? they should be */
 		if (!TAILQ_EMPTY(&asoc->send_queue) ||
 		    !TAILQ_EMPTY(&asoc->sent_queue) ||
-		    !TAILQ_EMPTY(&asoc->out_wheel)) {
+		    !stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc)) {
 			sctp_report_all_outbound(stcb, 0, SCTP_SO_NOT_LOCKED);
 		}
 	}

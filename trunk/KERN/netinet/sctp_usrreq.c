@@ -66,6 +66,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 217638 2011-01-20 13:53:34Z t
 #endif
 
 extern struct sctp_cc_functions sctp_cc_functions[];
+extern struct sctp_ss_functions sctp_ss_functions[];
 
 void
 sctp_init(void)
@@ -2073,6 +2074,44 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		*optsize = sizeof(*av);
 	}
 	break;
+	/* RS - Get socket option for pluggable stream scheduling */
+	case SCTP_PLUGGABLE_SS:
+	{
+		struct sctp_assoc_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if (stcb) {
+			av->assoc_value = stcb->asoc.stream_scheduling_module;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			av->assoc_value = inp->sctp_ep.sctp_default_ss_module;
+		}
+		*optsize = sizeof(*av);
+	}
+	break;
+	case SCTP_SS_VALUE:
+	{
+		struct sctp_stream_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_stream_value, *optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if (stcb) {
+			if (stcb->asoc.ss_functions.sctp_ss_get_value(stcb, &stcb->asoc, &stcb->asoc.strmout[av->stream_id],
+			                                              &av->stream_value) < 0) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+			} else {
+				*optsize = sizeof(*av);
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			/* Can't get stream value without association */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
+		}
+	}
+	break;
 	case SCTP_GET_ADDR_LEN:
 	{
 		struct sctp_assoc_value *av;
@@ -3243,7 +3282,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
 		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 		if (stcb) {
-			switch(av->assoc_value) {
+			switch (av->assoc_value) {
 			case SCTP_CC_RFC2581:
 			case SCTP_CC_HSTCP:
 			case SCTP_CC_HTCP:
@@ -3257,7 +3296,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
-			switch(av->assoc_value) {
+			switch (av->assoc_value) {
 			case SCTP_CC_RFC2581:
 			case SCTP_CC_HSTCP:
 			case SCTP_CC_HTCP:
@@ -3269,7 +3308,73 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 				error = EINVAL;
 				break;
-			};
+			}
+		}
+	}
+	break;
+	/* RS - Set socket option for pluggable stream scheduling */
+	case SCTP_PLUGGABLE_SS:
+	{
+		struct sctp_assoc_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if (stcb) {
+			switch (av->assoc_value) {
+			case SCTP_SS_DEFAULT:
+			case SCTP_SS_ROUND_ROBIN:
+			case SCTP_SS_ROUND_ROBIN_PACKET:
+			case SCTP_SS_PRIORITY:
+			case SCTP_SS_FAIR_BANDWITH:
+			case SCTP_SS_FIRST_COME:
+				stcb->asoc.ss_functions.sctp_ss_clear(stcb, &stcb->asoc, 1, 1);
+				stcb->asoc.ss_functions = sctp_ss_functions[av->assoc_value];
+				stcb->asoc.stream_scheduling_module = av->assoc_value;
+				stcb->asoc.ss_functions.sctp_ss_init(stcb, &stcb->asoc, 1);
+				break;
+			default:
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+				break;
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			switch (av->assoc_value) {
+			case SCTP_SS_DEFAULT:
+			case SCTP_SS_ROUND_ROBIN:
+			case SCTP_SS_ROUND_ROBIN_PACKET:
+			case SCTP_SS_PRIORITY:
+			case SCTP_SS_FAIR_BANDWITH:
+			case SCTP_SS_FIRST_COME:
+				SCTP_INP_WLOCK(inp);
+				inp->sctp_ep.sctp_default_ss_module = av->assoc_value;
+				SCTP_INP_WUNLOCK(inp);
+				break;
+			default:
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+				break;
+			}
+		}
+	}
+	break;
+	case SCTP_SS_VALUE:
+	{
+		struct sctp_stream_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_stream_value, optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+		if (stcb) {
+			if (stcb->asoc.ss_functions.sctp_ss_set_value(stcb, &stcb->asoc, &stcb->asoc.strmout[av->stream_id],
+			                                              av->stream_value) < 0) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			/* Can't set stream value without association */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
 		}
 	}
 	break;
@@ -3594,7 +3699,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 		found = 0;
-		for (i=0; i<hmaclist->num_algo; i++) {
+		for (i = 0; i < hmaclist->num_algo; i++) {
 			if (hmaclist->hmac[i] == SCTP_AUTH_HMAC_ID_SHA1) {
 				/* already in list */
 				found = 1;
@@ -3777,7 +3882,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				/* Need to allocate more */
 				struct sctp_stream_out *oldstream;
 				struct sctp_stream_queue_pending *sp, *nsp;
-				int removed;
 				
 				oldstream = stcb->asoc.strmout;
 				/* get some more */
@@ -3793,33 +3897,17 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				 * initializing the new stuff.
 				 */
 				SCTP_TCB_SEND_LOCK(stcb);
-				for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
+				stcb->asoc.ss_functions.sctp_ss_clear(stcb, &stcb->asoc, 0, 1);
+				for (i = 0; i < stcb->asoc.streamoutcnt; i++ ) {
 					TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
 					stcb->asoc.strmout[i].next_sequence_sent = oldstream[i].next_sequence_sent;
 					stcb->asoc.strmout[i].last_msg_incomplete = oldstream[i].last_msg_incomplete;
 					stcb->asoc.strmout[i].stream_no = i;
-					if (oldstream[i].next_spoke.tqe_next) {
-						sctp_remove_from_wheel(stcb, &stcb->asoc, &oldstream[i], 1);
-						stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
-						stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
-						removed = 1;
-					} else {
-						/* not on out wheel */
-						stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
-						stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
-						removed = 0;
-					}
+					stcb->asoc.ss_functions.sctp_ss_init_stream(&oldstream[i]);
 					/* now anything on those queues? */
 					TAILQ_FOREACH_SAFE(sp, &oldstream[i].outqueue, next, nsp) {
 						TAILQ_REMOVE(&oldstream[i].outqueue, sp, next);
 						TAILQ_INSERT_TAIL(&stcb->asoc.strmout[i].outqueue, sp, next);
-					}
-					/* Did we disrupt the wheel? */
-					if (removed) {
-						sctp_insert_on_wheel(stcb,
-						                     &stcb->asoc,
-						                     &stcb->asoc.strmout[i],
-						                     1);
 					}
 					/* Now move assoc pointers too */
 					if (stcb->asoc.last_out_stream == &oldstream[i]) {
@@ -3830,13 +3918,13 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					}
 				}
 				/* now the new streams */
-				for (i = stcb->asoc.streamoutcnt; i < (stcb->asoc.streamoutcnt+addstrmcnt); i++) {
+				stcb->asoc.ss_functions.sctp_ss_init(stcb, &stcb->asoc, 1);
+				for (i = stcb->asoc.streamoutcnt; i < (stcb->asoc.streamoutcnt + addstrmcnt); i++) {
 					stcb->asoc.strmout[i].next_sequence_sent = 0x0;
 					TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
 					stcb->asoc.strmout[i].stream_no = i;
 					stcb->asoc.strmout[i].last_msg_incomplete = 0;
-					stcb->asoc.strmout[i].next_spoke.tqe_next = NULL;
-					stcb->asoc.strmout[i].next_spoke.tqe_prev = NULL;
+					stcb->asoc.ss_functions.sctp_ss_init_stream(&stcb->asoc.strmout[i]);
 				}
 				stcb->asoc.strm_realoutsize = stcb->asoc.streamoutcnt + addstrmcnt;
 				SCTP_FREE(oldstream, SCTP_M_STRMO);
@@ -4564,7 +4652,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		SCTP_CHECK_AND_CAST(ss, optval, union sctp_sockstore, optsize);
 		/* SUPER USER CHECK? */
 #ifdef SCTP_MVRF
-		for (i=0;i<inp->num_vrfs; i++) {
+		for (i = 0; i < inp->num_vrfs; i++) {
 			if (vrf_id == inp->m_vrf_ids[i]) {
 				fnd = 1;
 				break;
