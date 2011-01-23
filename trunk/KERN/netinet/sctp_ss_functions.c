@@ -55,7 +55,7 @@ static void
 sctp_ss_default_init(struct sctp_tcb *stcb, struct sctp_association *asoc,
                      int holds_lock)
 {
-	int i;
+	uint16_t i;
 
 	TAILQ_INIT(&asoc->ss_data.out_wheel);
 	for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
@@ -72,7 +72,7 @@ static void
 sctp_ss_default_clear(struct sctp_tcb *stcb, struct sctp_association *asoc,
                       int clear_values, int holds_lock)
 {
-	int i;
+	uint16_t i;
 
 	for (i = 0; i < stcb->asoc.streamoutcnt; i++ ) {
 		if (!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
@@ -407,7 +407,7 @@ static void
 sctp_ss_prio_clear(struct sctp_tcb *stcb, struct sctp_association *asoc,
                    int clear_values, int holds_lock)
 {
-	unsigned int i;
+	uint16_t i;
 
 	for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
 		if (!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
@@ -572,7 +572,7 @@ static void
 sctp_ss_fb_clear(struct sctp_tcb *stcb, struct sctp_association *asoc,
                    int clear_values, int holds_lock)
 {
-	unsigned int i;
+	uint16_t i;
 
 	for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
 		if (!TAILQ_EMPTY(&stcb->asoc.strmout[i].outqueue)) {
@@ -711,8 +711,9 @@ static void
 sctp_ss_fcfs_init(struct sctp_tcb *stcb, struct sctp_association *asoc,
                   int holds_lock)
 {
-	int i, x, element = 0, add_more = 1;
+	int x, element = 0, add_more = 1;
 	struct sctp_stream_queue_pending *sp;
+	uint16_t i;
 
 	TAILQ_INIT(&asoc->ss_data.out_list);
 	while (add_more) {
