@@ -737,7 +737,7 @@ sctp_ss_fcfs_init(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			sp = TAILQ_FIRST(&asoc->ss_data.out_list);
 			x = element;
 			while (sp != NULL && x > 0) {
-				TAILQ_NEXT(sp, next);
+				sp = TAILQ_NEXT(sp, next);
 			}
 			if (sp != NULL) {
 				sctp_ss_default_add(stcb, &stcb->asoc, &stcb->asoc.strmout[i], NULL, holds_lock);
@@ -803,8 +803,9 @@ sctp_ss_fcfs_remove(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
-	if (sp && (sp->next.tqe_next != NULL) ||
-	    (sp->next.tqe_prev != NULL)) {
+	if (sp && 
+	    ((sp->next.tqe_next != NULL) ||
+	     (sp->next.tqe_prev != NULL)) {
 		TAILQ_REMOVE(&asoc->ss_data.out_list, sp, next);
 	}
 	if (holds_lock == 0) {
