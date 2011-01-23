@@ -789,10 +789,11 @@ sctp_ss_fcfs_add(struct sctp_tcb *stcb, struct sctp_association *asoc,
 static int
 sctp_ss_fcfs_is_empty(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	if (TAILQ_EMPTY(&asoc->ss_data.out_list))
+	if (TAILQ_EMPTY(&asoc->ss_data.out_list)) {
 		return (1);
-	else
+	} else {
 		return (0);
+	}
 }
 
 static void
@@ -805,7 +806,7 @@ sctp_ss_fcfs_remove(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if (sp && 
 	    ((sp->next.tqe_next != NULL) ||
-	     (sp->next.tqe_prev != NULL)) {
+	     (sp->next.tqe_prev != NULL))) {
 		TAILQ_REMOVE(&asoc->ss_data.out_list, sp, next);
 	}
 	if (holds_lock == 0) {
