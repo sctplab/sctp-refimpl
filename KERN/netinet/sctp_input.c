@@ -208,12 +208,11 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 	 * it will clean up any places that have old data that
 	 * has been sent but left at top of stream queue.
 	 */
- 	asoc = &stcb->asoc;
+	asoc = &stcb->asoc;
 	SCTP_TCB_SEND_LOCK(stcb);
 	if (!stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc)) {
 		/* Check to see if some data queued */
 		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
-		is_there_another:
 			/*sa_ignore FREED_MEMORY*/
 			sp = TAILQ_FIRST(&stcb->asoc.strmout[i].outqueue);
 			if (sp == NULL) {
