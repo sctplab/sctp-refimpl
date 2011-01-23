@@ -160,11 +160,6 @@ sctp_output(struct sctp_inpcb *,
     struct proc *, int);
 #endif
 
-void
-sctp_insert_on_wheel(struct sctp_tcb *stcb,
-    struct sctp_association *asoc,
-    struct sctp_stream_out *strq, int holdslock);
-
 void sctp_chunk_output(struct sctp_inpcb *, struct sctp_tcb *, int, int
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
