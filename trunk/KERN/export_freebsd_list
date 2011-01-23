@@ -26,6 +26,7 @@ netinet/sctp_peeloff.h
 netinet/sctp_os.h
 netinet/sctp_os_bsd.h
 netinet/sctp_structs.h
+netinet/sctp_ss_functions.c
 netinet/sctp_sysctl.c
 netinet/sctp_sysctl.h
 netinet/sctp_timer.c
