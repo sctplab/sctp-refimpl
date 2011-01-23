@@ -115,6 +115,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_min_residual;
 extern struct sysctl_oid sysctl__net_inet_sctp_max_retran_chunk;
 extern struct sysctl_oid sysctl__net_inet_sctp_log_level;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_cc_module;
+extern struct sysctl_oid sysctl__net_inet_sctp_default_ss_module;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_frag_interleave;
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 extern struct sysctl_oid sysctl__net_inet_sctp_mobility_base;
@@ -398,6 +399,7 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_max_retran_chunk);
 	sysctl_register_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_register_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_base);
@@ -523,6 +525,7 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_retran_chunk);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_base);
