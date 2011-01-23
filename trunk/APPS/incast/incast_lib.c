@@ -57,6 +57,20 @@ translate_ip_address(char *host, struct sockaddr_in *sa)
 void 
 incast_run_clients(struct incast_control *ctrl)
 {
+	/*
+	 * 1) Open kqueue and initialize completed count.
+	 * 2) while pass count is greater than 0.
+	 *   a) create connections to each server adding kqueue entry's
+	 *      we place the pointer to the peer in kqueue info fid.
+	 *   b) LIST_FOREACH send all servers the request and set the state. 
+	 *   c) loop checking kqueue for reading.. when a server responds
+	 *      read the data and add to cnt, if finished close connection
+	 *      delete kqueue entry and increment completed count.
+	 *   d) If completed count reaches all servers break out of kqueue
+         *      read loop and increment pass count.
+	 */
+
+
 	return;
 }
 

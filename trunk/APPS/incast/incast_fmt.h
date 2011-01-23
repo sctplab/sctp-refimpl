@@ -39,6 +39,7 @@ struct incast_control {
 	int size;    /* size of each send */
 	int cnt_req; /* number of size ele requested */
 	int byte_cnt_req; /* how much total */
+	int completed_server_cnt; /* How many servers are done with pass */
 };
 
 #ifndef timespecsub
