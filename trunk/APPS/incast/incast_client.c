@@ -109,6 +109,11 @@ parse_config_file(char *configfile)
 			buffer[olen-1] = 0;
 			olen--;
 		}
+		if (buffer[0] == '#') {
+			/* commented out */
+			linecnt++;
+			continue;
+		}
 		/* tokenize the token and body */
 		token = strtok(buffer, ":");
 		if (token == NULL) {
