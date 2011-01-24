@@ -36,9 +36,11 @@ incast_add_peer(char *body, int linecnt)
 		int x;
 		x = strtol(portstr, NULL, 0);
 		if ((x < 1) || (x > 65535)) {
-			printf("Invalid port number %d - using default\n",
-			       x);
-			peer->addr.sin_port = htons(DEFAULT_SVR_PORT);			
+			if (port) {
+				printf("Invalid port number %d - using default\n",
+				       x);
+			}
+			peer->addr.sin_port = htons(DEFAULT_SVR_PORT); 
 		} else {
 			peer->addr.sin_port = htons(x);
 		}
