@@ -79,6 +79,9 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			printf("%d rec of %d in %ld.%9.9ld (tot_out:%d)\n",
 			       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec, tot_out);
 		}
+	} else if (tot_out < (cnt * sz)) {
+		printf("--tot_out was %d but cnt:%d * sz:%d == %d\n",
+		       tot_out, cnt, sz, (cnt * sz));
 	}
 out:
 	close(sd);
