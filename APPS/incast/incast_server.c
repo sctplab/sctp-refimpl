@@ -13,7 +13,7 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	int no_clock_s, no_clock_e, i;
 	socklen_t optlen;
 	int optval;
-	ssize_t readin, sendout;
+	ssize_t readin, sendout, tot_out=0;
 	if (verbose) {
 		if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tvs))
 			no_clock_s = 1;
@@ -42,8 +42,8 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			       (long int)sizeof(inrec), (long int)readin, errno);
 		goto out;
 	}
-	cnt = htonl(inrec.number_of_packets);
-	sz = htonl(inrec.size);
+	cnt = ntohl(inrec.number_of_packets);
+	sz = ntohl(inrec.size);
 	/* How big must the socket buffer be? */
 	optlen = sizeof(optval);
 	optval = (cnt * sz) + 1;
@@ -63,12 +63,10 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	for(i=0; i<cnt; i++) {
 		sendout = send(sd, buffer, sz, 0);
 		if (sendout < sz) {
-			if ((errno != ECONNRESET) && 
-			    (errno != EPIPE )){
-				printf("Error sending %d\n", errno);	
-			}
+			printf("Error sending %d sz:%d sendout:%d\n", errno, sz, sendout);	
 			goto out;
 		}
+		tot_out += sendout;
 		*p = *p + 1;
 	}
 	if (verbose) {
@@ -78,8 +76,8 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			no_clock_e = 0;
 		if ((no_clock_e == 0) && (no_clock_s == 0)) {
 			timespecsub(&tve, &tvs);
-			printf("%d rec of %d in %ld.%9.9ld\n",
-			       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec);
+			printf("%d rec of %d in %ld.%9.9ld (tot_out:%d)\n",
+			       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec, tot_out);
 		}
 	}
 out:
