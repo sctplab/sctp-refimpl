@@ -187,6 +187,7 @@ main(int argc, char **argv)
 		nsd = accept(sd, (struct sockaddr *)&bsin, &slen);
 		process_a_child(nsd, &bsin, use_sctp);
 	}
+	printf("All done\n");
 	return (0);
 }
 
