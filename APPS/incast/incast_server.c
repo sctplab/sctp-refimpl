@@ -85,18 +85,38 @@ out:
 	close(sd);
 }
 
+int use_sctp=0;
+int sd;
+void *
+execute_forever(void *notused)
+{
+	struct sockaddr_in sin;
+	socklen_t slen;
+	int nsd;
+	while(1) {
+		slen = sizeof(sin);
+		nsd = accept(sd, (struct sockaddr *)&sin, &slen);
+		process_a_child(nsd, &sin, use_sctp);
+	}
+}
+
+
 int
 main(int argc, char **argv)
 {
 	struct sockaddr_in lsin, bsin;
-	int sd, nsd, i, temp;
+	pthread_t *thread_list;
+	int thrd_cnt=3;
+	int i, temp;
 	uint16_t port = htons(DEFAULT_SVR_PORT);
-	int use_sctp=0;
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
-	while ((i = getopt(argc, argv, "B:b:tsp:?v")) != EOF) {
+	while ((i = getopt(argc, argv, "B:b:tsp:?vT:")) != EOF) {
 		switch (i) {
+		case 'T':
+			thrd_cnt = strtol(optarg, NULL, 0);
+			break;
 		case 'v':
 			verbose = 1;
 			break;
@@ -183,11 +203,22 @@ main(int argc, char **argv)
 		exit(-1);
 	}
 	/* Loop forever processing connections */
-	while(1) {
-		slen = sizeof(bsin);
-		nsd = accept(sd, (struct sockaddr *)&bsin, &slen);
-		process_a_child(nsd, &bsin, use_sctp);
+	if (thrd_cnt) {
+		thread_list = malloc((sizeof(pthread_t) * thrd_cnt));
+		if (thread_list == NULL) {
+			printf("Can't malloc %d pthread_t array\n",
+			       thrd_cnt);
+			exit(0);
+		}
 	}
+	for (i=0; i<thrd_cnt; i++) {
+		if (pthread_create(&thread_list[i], NULL, 
+				   execute_forever, (void *)NULL)) {
+			printf("Can't start thread %d\n", i);
+			exit(0);
+		}
+	}
+	execute_forever(NULL);
 	printf("All done\n");
 	return (0);
 }
