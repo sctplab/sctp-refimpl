@@ -340,11 +340,15 @@ display_results(struct incast_control *ctrl, int pass)
 			       pass, peer->state);
 		} else {
 			timespecsub(&peer->end, &peer->start);
-			printf("Peer:%d(", peerno);
-			print_an_address((struct sockaddr *)&peer->addr, 0);
-			printf(") Pass:%d %ld.%9.9ld\n",
-			       pass, (long int)peer->end.tv_sec, 
-			       peer->end.tv_nsec);
+			if ((peer->end.tv_sec) ||
+			    (peer->end.tv_nsec > 300000000)) {
+				/* More than 300ms */
+				printf("Peer:%d(", peerno);
+				print_an_address((struct sockaddr *)&peer->addr, 0);
+				printf(") Pass:%d %ld.%9.9ld\n",
+				       pass, (long int)peer->end.tv_sec, 
+				       peer->end.tv_nsec);
+			}
 		}
 	}
 }
