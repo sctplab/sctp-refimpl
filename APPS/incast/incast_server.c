@@ -100,6 +100,10 @@ execute_forever(void *notused)
 	}
 }
 
+void byebye()
+{
+	printf("All done?? errno:%d\n", errno);
+}
 
 int
 main(int argc, char **argv)
@@ -211,6 +215,7 @@ main(int argc, char **argv)
 			exit(0);
 		}
 	}
+	atexit(byebye);
 	for (i=0; i<thrd_cnt; i++) {
 		if (pthread_create(&thread_list[i], NULL, 
 				   execute_forever, (void *)NULL)) {
@@ -219,7 +224,6 @@ main(int argc, char **argv)
 		}
 	}
 	execute_forever(NULL);
-	printf("All done\n");
 	return (0);
 }
 
