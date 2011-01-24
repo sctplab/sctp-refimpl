@@ -225,7 +225,7 @@ again:
 	}
 	r_ret = recv(peer->sd, buf, read_am, 0);
 	if (r_ret < 1) {
-		printf("Error in socket read err:%d\n", errno);
+		printf("Error in socket read err:%d (r_ret:%d sd:%d)\n", errno, r_ret, peer->sd);
 		return;
 	}
 	if (peer->state == SRV_STATE_REQ_SENT) {
@@ -300,7 +300,8 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 			} else  if ((peer->state != SRV_STATE_ERROR) &&
 				    (peer->state != SRV_STATE_COMPLETE)){
 				/* peer closes without any data coming in? */
-				printf("Peer EV_EOF and no data?\n");
+				printf("Peer EV_EOF and no data? state:%d ke.data:%d\n", 
+				       peer->state, ke.data);
 				peer->state = SRV_STATE_ERROR;
 			}
 		} else {
