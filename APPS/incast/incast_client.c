@@ -205,7 +205,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s config-file\n", argv[0]);
+			printf("Use %s -c config-file\n", argv[0]);
 			return (-1);
 			break;
 		};

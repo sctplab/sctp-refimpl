@@ -1,0 +1,8 @@
+tcp:on
+peer:10.1.5.15:0
+peer:10.1.5.24:0
+peer:10.1.5.23:0
+times:1
+sends:1448
+sendc:6
+bind:10.15.14
