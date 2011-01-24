@@ -35,7 +35,7 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	readin = recv(sd, &inrec, sizeof(inrec), 0);
 	if(readin != sizeof(inrec)) {
 		printf("Did not get %ld bytes got:%ld err:%d\n",
-		       sizeof(inrec), readin, errno);
+		       (long int)sizeof(inrec), (long int)readin, errno);
 		goto out;
 	}
 	cnt = htonl(inrec.number_of_packets);
@@ -71,7 +71,7 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	if ((no_clock_e == 0) && (no_clock_s == 0)) {
 		timespecsub(&tve, &tvs);
 		printf("%d rec of %d in %ld.%9.9ld\n",
-		       cnt, sz, tve.tv_sec, tve.tv_nsec);
+		       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec);
 	}
     out:
 	close(sd);
