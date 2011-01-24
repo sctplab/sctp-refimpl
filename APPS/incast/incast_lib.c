@@ -7,14 +7,15 @@
 #endif
 
 void
-print_an_address(struct sockaddr *a)
+print_an_address(struct sockaddr *a, int cr)
 {
 	char stringToPrint[STRING_BUF_SZ];
 	u_short prt;
 	char *srcaddr, *txt;
 
 	if (a == NULL) {
-		printf("NULL\n");
+		printf("NULL");
+		if (cr) printf("\n");
 		return;
 	}
 	if (a->sa_family == AF_INET) {
@@ -48,22 +49,25 @@ print_an_address(struct sockaddr *a)
 			if (i < (dl->sdl_alen - 1))
 				printf(":");
 		}
-		printf("\n");
+		if (cr) printf("\n");
 		return;
 	} else {
 		return;
 	}
 	if (inet_ntop(a->sa_family, srcaddr, stringToPrint, sizeof(stringToPrint))) {
 		if (a->sa_family == AF_INET6) {
-			printf("%s%s:%d scope:%d\n",
+			printf("%s%s:%d scope:%d",
 			    txt, stringToPrint, prt,
 			    ((struct sockaddr_in6 *)a)->sin6_scope_id);
+			if (cr) printf("\n");
 		} else {
-			printf("%s%s:%d\n", txt, stringToPrint, prt);
+			printf("%s%s:%d", txt, stringToPrint, prt);
+			if (cr) printf("\n");
 		}
 
 	} else {
-		printf("%s unprintable?\n", txt);
+		printf("%s unprintable?", txt);
+		if (cr) printf("\n");
 	}
 }
 
@@ -118,7 +122,7 @@ send_req_to_servers(struct incast_control *ctrl)
 	LIST_FOREACH(peer, &ctrl->master_list, next) {
 		if(send(peer->sd, (void *)&req, sizeof(req), 0) < sizeof(req)) {
 			printf("Send error:%d to", errno);
-			print_an_address((struct sockaddr *)&peer->addr);
+			print_an_address((struct sockaddr *)&peer->addr, 1);
 			return (-1);
 		}
 		peer->state = SRV_STATE_REQ_SENT;
@@ -172,7 +176,7 @@ build_conn_into_kq(int kq, struct incast_control *ctrl)
 		if(connect(peer->sd, (struct sockaddr *)&peer->addr,
 			   optlen)) {
 			printf("Connect err:%d for address", errno);
-			print_an_address((struct sockaddr *)&peer->addr);
+			print_an_address((struct sockaddr *)&peer->addr, 1);
 			return (-1);
 		}
 	}
@@ -184,7 +188,7 @@ build_conn_into_kq(int kq, struct incast_control *ctrl)
 			printf("Failed to add kqueue event for peer err:%d\n",
 				errno);
 			printf("Peer ");
-			print_an_address((struct sockaddr *)&peer->addr);
+			print_an_address((struct sockaddr *)&peer->addr, 1);
 			return(-1);
 		}
 	}
@@ -326,14 +330,20 @@ display_results(struct incast_control *ctrl, int pass)
 	LIST_FOREACH(peer, &ctrl->master_list, next) {
 		peerno++;
 		if(peer->state == SRV_STATE_ERROR) {
-			printf("Peer:%d Pass:%d - Peer Error\n", peerno, pass);
+			printf("Peer:%d(", peerno);
+			print_an_address((struct sockaddr *)&peer->addr, 0);
+			printf(") Pass:%d - Peer Error\n", pass);
 		} else if (peer->state != SRV_STATE_COMPLETE) {
-			printf("Peer:%d Pass:%d - Peer left in state:%d?\n", 
-			       peerno, pass, peer->state);
+			printf("Peer:%d(", peerno);
+			print_an_address((struct sockaddr *)&peer->addr, 0);
+			printf(") Pass:%d - Peer left in state:%d?\n", 
+			       pass, peer->state);
 		} else {
 			timespecsub(&peer->end, &peer->start);
-			printf("Peer:%d Pass:%d %ld.%9.9ld\n",
-			       peerno, pass, (long int)peer->end.tv_sec, 
+			printf("Peer:%d(", peerno);
+			print_an_address((struct sockaddr *)&peer->addr, 0);
+			printf(") Pass:%d %ld.%9.9ld\n",
+			       pass, (long int)peer->end.tv_sec, 
 			       peer->end.tv_nsec);
 		}
 	}
