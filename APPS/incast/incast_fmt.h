@@ -1,8 +1,28 @@
 #ifndef __incast_fmt_h__
 #define __incast_fmt_h__
+#include <sys/types.h>
+#include <stdio.h>
+#include <sys/socket.h>
+#include <sys/errno.h>
+#include <sys/event.h>
+#include <unistd.h>
+#include <stdlib.h>
+#include <net/if.h>
+#include <getopt.h>
+#include <time.h>
+#include <sys/time.h>
+#include <string.h>
+#include <net/route.h>
+#include <netinet/in.h>
+#include <netinet/sctp.h>
+#include <netinet/tcp.h>
+#include <arpa/inet.h>
+#include <netdb.h>
+#include <sys/queue.h>
 
 #define MAX_SINGLE_MSG 9000 /* Largest 1 mtu normally 1448*/
-#define DEFAULT_MSG_SIZE 1448 /* TCP header and TS and IP hdr - 1500 */
+#define DEFAULT_MSG_SIZE 1448 /* TCP header and TS and IP 
+hdr - 1500 */
 #define DEFAULT_NUMBER_SENDS 3 /* default to TCP IW */
 
 struct incast_msg_req {
@@ -14,11 +34,13 @@ struct incast_msg_req {
 
 #define SRV_STATE_NEW       1
 #define SRV_STATE_REQ_SENT  2
-#define SRV_STATE_COMPLETE  3
+#define SRV_STATE_READING   3
+#define SRV_STATE_COMPLETE  4
+#define SRV_STATE_ERROR     5
 
 struct incast_peer {
 	LIST_ENTRY(incast_peer) next; /* Next list element */
-	int fd;
+	int sd;
 	int state;
 	struct timespec start; /* first read/kqueue wake */
 	struct timespec end;   /* When last byte read */
@@ -56,5 +78,5 @@ struct incast_control {
 
 int translate_ip_address(char *host, struct sockaddr_in *sa);
 void incast_run_clients(struct incast_control *ctrl);
-
+void print_an_address(struct sockaddr *a);
 #endif
