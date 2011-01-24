@@ -1,21 +1,3 @@
-#include <sys/types.h>
-#include <stdio.h>
-#include <sys/socket.h>
-#include <sys/errno.h>
-#include <unistd.h>
-#include <stdlib.h>
-#include <net/if.h>
-#include <getopt.h>
-#include <time.h>
-#include <sys/time.h>
-#include <string.h>
-#include <net/route.h>
-#include <netinet/in.h>
-#include <netinet/sctp.h>
-#include <netinet/tcp.h>
-#include <arpa/inet.h>
-#include <netdb.h>
-#include <sys/queue.h>
 #include <incast_fmt.h>
 
 
