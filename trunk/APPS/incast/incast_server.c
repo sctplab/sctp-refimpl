@@ -1,5 +1,5 @@
 #include <incast_fmt.h>
-
+#include <pthread.h>
 int verbose=0;
 
 void
@@ -63,7 +63,8 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	for(i=0; i<cnt; i++) {
 		sendout = send(sd, buffer, sz, 0);
 		if (sendout < sz) {
-			if (errno != ECONNRESET) {
+			if ((errno != ECONNRESET) && 
+			    (errno != EPIPE )){
 				printf("Error sending %d\n", errno);	
 			}
 			goto out;

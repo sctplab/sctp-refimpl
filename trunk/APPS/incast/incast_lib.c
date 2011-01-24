@@ -205,6 +205,8 @@ clean_up_conn(struct incast_control *ctrl)
 			peer->sd =-1;
 		}
 		peer->state = SRV_STATE_NEW;
+		peer->msg_cnt = 0; 
+		peer->byte_cnt = 0;
 	}
 }
 
@@ -341,13 +343,18 @@ display_results(struct incast_control *ctrl, int pass)
 		} else {
 			timespecsub(&peer->end, &peer->start);
 			if ((peer->end.tv_sec) ||
-			    (peer->end.tv_nsec > 300000000)) {
+			    (peer->end.tv_nsec > 300000000) ||
+			    ctrl->verbose) {
 				/* More than 300ms */
 				printf("Peer:%d(", peerno);
 				print_an_address((struct sockaddr *)&peer->addr, 0);
 				printf(") Pass:%d %ld.%9.9ld\n",
 				       pass, (long int)peer->end.tv_sec, 
 				       peer->end.tv_nsec);
+			}
+			if (ctrl->verbose) {
+				printf(" -- read_cnt:%d byte_cnt:%d\n",
+				       peer->msg_cnt, peer->byte_cnt);
 			}
 		}
 	}

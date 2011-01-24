@@ -201,9 +201,13 @@ main(int argc, char **argv)
 {
 	int i;
 	char *configfile=NULL;
+	memset(&ctrl, 0, sizeof(ctrl));
 	
-	while ((i = getopt(argc, argv, "c:?")) != EOF) {
+	while ((i = getopt(argc, argv, "c:v?")) != EOF) {
 		switch (i) {
+		case 'v':
+			ctrl.verbose = 1;
+			break;
 		case 'c':
 			configfile = optarg;
 			break;
@@ -220,7 +224,6 @@ main(int argc, char **argv)
 		goto use;
 	}
 	/* Setup our list and init things */
-	memset(&ctrl, 0, sizeof(ctrl));
 	LIST_INIT(&ctrl.master_list);
 	ctrl.decrement_amm = 1;
 	ctrl.cnt_of_times = 1;
