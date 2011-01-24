@@ -1,5 +1,6 @@
 #include <incast_fmt.h>
 
+int verbose=0;
 
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
@@ -13,10 +14,12 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	socklen_t optlen;
 	int optval;
 	ssize_t readin, sendout;
-	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tvs))
-		no_clock_s = 1;
-	else 
-		no_clock_s = 0;
+	if (verbose) {
+		if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tvs))
+			no_clock_s = 1;
+		else 
+			no_clock_s = 0;
+	}
 	optval = 1;
 	optlen = sizeof(optval);
 	if (use_sctp) {
@@ -59,21 +62,25 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	for(i=0; i<cnt; i++) {
 		sendout = send(sd, buffer, sz, 0);
 		if (sendout < sz) {
-			printf("Error sending %d\n", errno);	
+			if (errno != ECONNRESET) {
+				printf("Error sending %d\n", errno);	
+			}
 			goto out;
 		}
 		*p = *p + 1;
 	}
-	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tve))
-		no_clock_e = 1;
-	else 
-		no_clock_e = 0;
-	if ((no_clock_e == 0) && (no_clock_s == 0)) {
-		timespecsub(&tve, &tvs);
-		printf("%d rec of %d in %ld.%9.9ld\n",
-		       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec);
+	if (verbose) {
+		if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tve))
+			no_clock_e = 1;
+		else 
+			no_clock_e = 0;
+		if ((no_clock_e == 0) && (no_clock_s == 0)) {
+			timespecsub(&tve, &tvs);
+			printf("%d rec of %d in %ld.%9.9ld\n",
+			       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec);
+		}
 	}
-    out:
+out:
 	close(sd);
 }
 
@@ -87,8 +94,11 @@ main(int argc, char **argv)
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
-	while ((i = getopt(argc, argv, "B:b:tsp:?")) != EOF) {
+	while ((i = getopt(argc, argv, "B:b:tsp:?v")) != EOF) {
 		switch (i) {
+		case 'v':
+			verbose = 1;
+			break;
 		case 'B':
 			backlog = strtol(optarg, NULL, 0);
 			if (backlog < 1) {
