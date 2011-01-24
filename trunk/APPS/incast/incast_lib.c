@@ -289,6 +289,7 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 			if (peer->state == SRV_STATE_READING) {
 				if(clock_gettime(CLOCK_MONOTONIC_PRECISE, 
 						 &peer->end)) {
+					printf("Clock get fails\n");
 					peer->state = SRV_STATE_ERROR;
 				} else {
 					if (peer->byte_cnt >= read_cmpl) {
@@ -310,6 +311,7 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 				peer->state = SRV_STATE_COMPLETE;
 				if(clock_gettime(CLOCK_MONOTONIC_PRECISE, 
 						 &peer->end)) {
+					printf("Clock get fails\n");
 					peer->state = SRV_STATE_ERROR;
 				}
 				close(peer->sd);
@@ -336,11 +338,15 @@ display_results(struct incast_control *ctrl, int pass)
 			printf("Peer:%d(", peerno);
 			print_an_address((struct sockaddr *)&peer->addr, 0);
 			printf(") Pass:%d - Peer Error\n", pass);
+			printf(" -- read_cnt:%d byte_cnt:%d\n",
+			       peer->msg_cnt, peer->byte_cnt);
 		} else if (peer->state != SRV_STATE_COMPLETE) {
 			printf("Peer:%d(", peerno);
 			print_an_address((struct sockaddr *)&peer->addr, 0);
 			printf(") Pass:%d - Peer left in state:%d?\n", 
 			       pass, peer->state);
+			printf(" -- read_cnt:%d byte_cnt:%d\n",
+			       peer->msg_cnt, peer->byte_cnt);
 		} else {
 			timespecsub(&peer->end, &peer->start);
 			if ((peer->end.tv_sec) ||
