@@ -333,7 +333,7 @@ display_results(struct incast_control *ctrl, int pass)
 		} else {
 			timespecsub(&peer->end, &peer->start);
 			printf("Peer:%d Pass:%d %ld.%9.9ld\n",
-			       peerno, pass, peer->end.tv_sec, 
+			       peerno, pass, (long int)peer->end.tv_sec, 
 			       peer->end.tv_nsec);
 		}
 	}
