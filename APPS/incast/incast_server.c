@@ -37,8 +37,9 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	errno = 0;
 	readin = recv(sd, &inrec, sizeof(inrec), 0);
 	if(readin != sizeof(inrec)) {
-		printf("Did not get %ld bytes got:%ld err:%d\n",
-		       (long int)sizeof(inrec), (long int)readin, errno);
+		if (readin) 
+			printf("Did not get %ld bytes got:%ld err:%d\n",
+			       (long int)sizeof(inrec), (long int)readin, errno);
 		goto out;
 	}
 	cnt = htonl(inrec.number_of_packets);
