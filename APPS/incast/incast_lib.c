@@ -327,7 +327,7 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 	return (0);
 }
 void
-display_results(struct incast_control *ctrl, int pass)
+display_results(struct incast_control *ctrl, int pass, int no_time)
 {
 	int peerno;
 	struct incast_peer *peer;
@@ -349,17 +349,19 @@ display_results(struct incast_control *ctrl, int pass)
 			       peer->msg_cnt, peer->byte_cnt);
 		} else {
 			timespecsub(&peer->end, &peer->start);
-			if ((peer->end.tv_sec) ||
-			    (peer->end.tv_nsec > 300000000) ||
-			    ctrl->verbose) {
+			if ((no_time == 0) && ((peer->end.tv_sec) || (peer->end.tv_nsec > 300000000))) {
 				/* More than 300ms */
 				printf("Peer:%d(", peerno);
 				print_an_address((struct sockaddr *)&peer->addr, 0);
 				printf(") Pass:%d %ld.%9.9ld\n",
 				       pass, (long int)peer->end.tv_sec, 
 				       peer->end.tv_nsec);
-			}
-			if (ctrl->verbose) {
+			} else 	if (ctrl->verbose) {
+				printf("Peer:%d(", peerno);
+				print_an_address((struct sockaddr *)&peer->addr, 0);
+				printf(") Pass:%d %ld.%9.9ld\n",
+				       pass, (long int)peer->end.tv_sec, 
+				       peer->end.tv_nsec);
 				printf(" -- read_cnt:%d byte_cnt:%d\n",
 				       peer->msg_cnt, peer->byte_cnt);
 			}
@@ -403,7 +405,7 @@ incast_run_clients(struct incast_control *ctrl)
 		}
 
 		/* Display results */
-		display_results(ctrl, pass);
+		display_results(ctrl, pass, 0);
 
 		/* Now assure everyone is back to the new state */
 		clean_up_conn(ctrl);
@@ -527,7 +529,7 @@ elephant_run_clients(struct incast_control *ctrl)
 		distribute_to_each_peer(ctrl);
 
 		/* Display results */
-		display_results(ctrl, pass);
+		display_results(ctrl, pass, 1);
 
 		/* Clean up everything */
 		clean_up_conn(ctrl);
