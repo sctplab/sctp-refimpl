@@ -1,0 +1,6 @@
+#! /bin/sh
+export CFLAGS="-g -Werror -Wall"
+aclocal
+autoconf
+automake --foreign --add-missing --copy
+./configure 

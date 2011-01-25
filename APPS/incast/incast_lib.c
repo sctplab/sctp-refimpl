@@ -219,7 +219,7 @@ incast_read_from(struct incast_control *ctrl,
 	tot_read = 0;
 again:
 	if ((to_read-tot_read) > MAX_SINGLE_MSG) {
-		to_read = MAX_SINGLE_MSG;
+		read_am = MAX_SINGLE_MSG;
 	} else {
 		read_am = (to_read-tot_read);
 	}
@@ -302,7 +302,7 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 				    (peer->state != SRV_STATE_COMPLETE)){
 				/* peer closes without any data coming in? */
 				printf("Peer EV_EOF and no data? state:%d ke.data:%d\n", 
-				       peer->state, ke.data);
+				       peer->state, (int)ke.data);
 				peer->state = SRV_STATE_ERROR;
 			}
 		} else {
@@ -407,6 +407,14 @@ incast_run_clients(struct incast_control *ctrl)
 
 		/* Now assure everyone is back to the new state */
 		clean_up_conn(ctrl);
+		
+		/* Now did the user specify a quiet time? */
+		if (ctrl->nap_time) {
+			struct timespec nap;
+			nap.tv_sec = 0;
+			nap.tv_nsec = ctrl->nap_time;
+			nanosleep(&nap, NULL);
+		}
 	}
 	close(kq);
 	return;

@@ -203,8 +203,17 @@ main(int argc, char **argv)
 	char *configfile=NULL;
 	memset(&ctrl, 0, sizeof(ctrl));
 	
-	while ((i = getopt(argc, argv, "c:v?")) != EOF) {
+	while ((i = getopt(argc, argv, "c:vS:?")) != EOF) {
 		switch (i) {
+		case 'S':
+			ctrl.nap_time = strtol(optarg, NULL, 0);
+			if (ctrl.nap_time < 0) 
+				ctrl.nap_time = 0;
+			if (ctrl.nap_time >= 1000000000) {
+				/* 1 ns shy of 1 sec */
+				ctrl.nap_time = 999999999;
+			}
+			break;
 		case 'v':
 			ctrl.verbose = 1;
 			break;
