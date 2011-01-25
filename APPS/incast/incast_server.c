@@ -65,7 +65,7 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 		sendout = send(sd, buffer, sz, 0);
 		if (sendout < sz) {
 			printf("Error sending %d sz:%d sendout:%ld\n", 
-			       errno, sz, sendout);	
+			       errno, sz, (long int)sendout);	
 			goto out;
 		}
 		tot_out += sendout;
@@ -80,11 +80,11 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			timespecsub(&tve, &tvs);
 			printf("%d rec of %d in %ld.%9.9ld (tot_out:%ld)\n",
 			       cnt, sz, (long int)tve.tv_sec, 
-			       tve.tv_nsec, tot_out);
+			       tve.tv_nsec, (long int)tot_out);
 		}
 	} else if (tot_out < (cnt * sz)) {
 		printf("--tot_out was %ld but cnt:%d * sz:%d == %d\n",
-		       tot_out, cnt, sz, (cnt * sz));
+		       (long int)tot_out, cnt, sz, (cnt * sz));
 	}
 out:
 	if (nap_time) {
