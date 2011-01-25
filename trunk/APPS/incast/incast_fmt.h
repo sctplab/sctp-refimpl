@@ -63,6 +63,7 @@ struct incast_control {
 	int byte_cnt_req; /* how much total */
 	int completed_server_cnt; /* How many servers are done with pass */
 	int verbose;
+	int nap_time;
 };
 
 #ifndef timespecsub

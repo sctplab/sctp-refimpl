@@ -1,6 +1,7 @@
 #include <incast_fmt.h>
 #include <pthread.h>
 int verbose=0;
+int nap_time=0;
 
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
@@ -10,7 +11,7 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	char buffer[MAX_SINGLE_MSG];
 	struct timespec tvs, tve;
 	struct incast_msg_req inrec;
-	int no_clock_s, no_clock_e, i;
+	int no_clock_s=1, no_clock_e=1, i;
 	socklen_t optlen;
 	int optval;
 	ssize_t readin, sendout, tot_out=0;
@@ -63,7 +64,8 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 	for(i=0; i<cnt; i++) {
 		sendout = send(sd, buffer, sz, 0);
 		if (sendout < sz) {
-			printf("Error sending %d sz:%d sendout:%d\n", errno, sz, sendout);	
+			printf("Error sending %d sz:%d sendout:%ld\n", 
+			       errno, sz, sendout);	
 			goto out;
 		}
 		tot_out += sendout;
@@ -76,14 +78,21 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			no_clock_e = 0;
 		if ((no_clock_e == 0) && (no_clock_s == 0)) {
 			timespecsub(&tve, &tvs);
-			printf("%d rec of %d in %ld.%9.9ld (tot_out:%d)\n",
-			       cnt, sz, (long int)tve.tv_sec, tve.tv_nsec, tot_out);
+			printf("%d rec of %d in %ld.%9.9ld (tot_out:%ld)\n",
+			       cnt, sz, (long int)tve.tv_sec, 
+			       tve.tv_nsec, tot_out);
 		}
 	} else if (tot_out < (cnt * sz)) {
-		printf("--tot_out was %d but cnt:%d * sz:%d == %d\n",
+		printf("--tot_out was %ld but cnt:%d * sz:%d == %d\n",
 		       tot_out, cnt, sz, (cnt * sz));
 	}
 out:
+	if (nap_time) {
+		struct timespec nap;
+		nap.tv_sec = 0;
+		nap.tv_nsec = nap_time;
+		nanosleep(&nap, NULL);
+	}
 	close(sd);
 }
 
@@ -118,8 +127,18 @@ main(int argc, char **argv)
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
-	while ((i = getopt(argc, argv, "B:b:tsp:?vT:")) != EOF) {
+	while ((i = getopt(argc, argv, "S:B:b:tsp:?vT:")) != EOF) {
 		switch (i) {
+		case 'S':
+			nap_time = strtol(optarg, NULL, 0);
+			if (nap_time < 0) 
+				nap_time = 0;
+			if (nap_time >= 1000000000) {
+				/* 1 ns shy of 1 sec */
+				nap_time = 999999999;
+			}
+
+			break;
 		case 'T':
 			thrd_cnt = strtol(optarg, NULL, 0);
 			break;
