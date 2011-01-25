@@ -514,8 +514,8 @@ elephant_run_clients(struct incast_control *ctrl)
 		 * we need a number between 1Meg - 100Meg
 		 */
 	choose_again:
-		randval = (random() & 0x5ffffff);
-		if (randval < 1000000) {
+		randval = (random() & 0x1fffffff);
+		if (randval < 100000000) {
 			goto choose_again;
 		} else {
 			ctrl->byte_cnt_req = randval;
