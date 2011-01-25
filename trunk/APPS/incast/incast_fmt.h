@@ -30,7 +30,8 @@ struct incast_msg_req {
 	int size;
 };
 
-#define DEFAULT_SVR_PORT 9902
+#define DEFAULT_SVR_PORT 9902       /* Where mice/rats are */
+#define DEFAULT_ELEPHANT_PORT 10902 /* Where elephants are */
 
 #define SRV_STATE_NEW       1
 #define SRV_STATE_REQ_SENT  2
@@ -80,5 +81,6 @@ struct incast_control {
 
 int translate_ip_address(char *host, struct sockaddr_in *sa);
 void incast_run_clients(struct incast_control *ctrl);
+void  elephant_run_clients(struct incast_control *ctrl);
 void print_an_address(struct sockaddr *a, int cr);
 #endif

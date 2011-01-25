@@ -74,7 +74,7 @@ main(int argc, char **argv)
 	pthread_t *thread_list;
 	int thrd_cnt=2;
 	int i, temp;
-	uint16_t port = htons(DEFAULT_SVR_PORT);
+	uint16_t port = htons(DEFAULT_ELEPHANT_PORT);
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
