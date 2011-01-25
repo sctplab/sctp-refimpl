@@ -402,7 +402,7 @@ incast_run_clients(struct incast_control *ctrl)
 			break;
 		}
 
-		/* Dispaly results */
+		/* Display results */
 		display_results(ctrl, pass);
 
 		/* Now assure everyone is back to the new state */
@@ -417,6 +417,129 @@ incast_run_clients(struct incast_control *ctrl)
 		}
 	}
 	close(kq);
+	return;
+}
+
+static int
+distribute_to_each_peer(struct incast_control *ctrl)
+{
+	int proto, sockopt;
+	struct incast_peer *peer;
+	int i, *p, ret;
+	socklen_t optlen;
+	char buffer[MAX_SINGLE_MSG];
+	
+	/* prepare the buffer */
+	p = (int *)buffer;
+	for(i=0; i<(MAX_SINGLE_MSG/4); i++) {
+		*p = (i);
+		p++;
+	}
+	LIST_FOREACH(peer, &ctrl->master_list, next) {
+		/* Get the right socket */
+		if (ctrl->sctp_on) {
+			proto = IPPROTO_SCTP;
+			sockopt = SCTP_NODELAY;
+		} else {
+			proto = IPPROTO_TCP;
+			sockopt = TCP_NODELAY;
+		}
+		peer->sd = socket(AF_INET, SOCK_STREAM, proto);
+		if (peer->sd == -1) {
+			printf("Can't open a socket for a peer err:%d\n",
+			       errno);
+			
+			return (-1);
+		}
+		/* bind */
+		optlen = sizeof(struct sockaddr_in);
+		if (bind(peer->sd, (struct sockaddr *)&ctrl->bind_addr, 
+			 optlen)) {
+			printf("Can't bind err:%d\n", errno);
+			return (-1);
+		}
+		
+		/* connect */
+		if(connect(peer->sd, (struct sockaddr *)&peer->addr,
+			   optlen)) {
+			printf("Connect err:%d for address", errno);
+			print_an_address((struct sockaddr *)&peer->addr, 1);
+			return (-1);
+		}
+		/* grab the time */
+		if(clock_gettime(CLOCK_MONOTONIC_PRECISE, 
+				 &peer->start)) {
+			printf("Warning start time not gotten\n");
+		}
+
+		/* send it all */
+		for(i=0; i<ctrl->cnt_req; i++) {
+			if((ret = send(peer->sd, buffer, ctrl->size, 0)) < 1) {
+				printf("Send failed err:%d ret:%d peer ", errno, ret);
+				print_an_address((struct sockaddr *)&peer->addr, 1);
+				break;
+			}
+		}
+		/* close */
+		peer->state = SRV_STATE_COMPLETE;
+		close(peer->sd);
+		peer->sd = -1;
+
+		/* grab the time */
+		if(clock_gettime(CLOCK_MONOTONIC_PRECISE, 
+				 &peer->end)) {
+			printf("Warning start time not gotten\n");
+		}
+	}
+	return (0);
+}
+
+void 
+elephant_run_clients(struct incast_control *ctrl)
+{
+	struct timespec ts;
+	long randval;
+	int pass;
+	
+	/* Seed the random number generator */
+	clock_gettime(CLOCK_MONOTONIC_PRECISE, &ts);
+	srandom((unsigned long)ts.tv_nsec);
+	
+	pass = 0;
+	while (ctrl->cnt_of_times > 0) {
+		ctrl->cnt_of_times -= ctrl->decrement_amm;
+		pass++;
+
+		/* Select some number of bytes to send 
+		 * we need a number between 1Meg - 100Meg
+		 */
+	choose_again:
+		randval = (random() & 0x5ffffff);
+		if (randval < 1000000) {
+			goto choose_again;
+		} else {
+			ctrl->byte_cnt_req = randval;
+		}
+		ctrl->size = DEFAULT_MSG_SIZE;
+		ctrl->cnt_req = (ctrl->byte_cnt_req/ctrl->size) + 1;
+
+		/* Now for each peer we must connect, send and close */
+		distribute_to_each_peer(ctrl);
+
+		/* Display results */
+		display_results(ctrl, pass);
+
+		/* Clean up everything */
+		clean_up_conn(ctrl);
+
+		/* Now did the user specify a quiet time? */
+		if (ctrl->nap_time) {
+			struct timespec nap;
+			nap.tv_sec = 0;
+			nap.tv_nsec = ctrl->nap_time;
+			nanosleep(&nap, NULL);
+		}
+	}
 	return;
 }
 
