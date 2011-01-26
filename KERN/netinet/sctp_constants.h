@@ -681,7 +681,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 217635 2011-01-20 12:40:09
 
 #define SCTP_RTO_UPPER_BOUND	(60000)	/* 60 sec in ms */
 #define SCTP_RTO_UPPER_BOUND_SEC 60	/* for the init timer */
-#define SCTP_RTO_LOWER_BOUND	(1000)	/* 1 sec in ms */
+#define SCTP_RTO_LOWER_BOUND	(30)	/* 30 ms - to match TCP */
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
