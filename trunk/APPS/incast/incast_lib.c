@@ -427,7 +427,7 @@ distribute_to_each_peer(struct incast_control *ctrl)
 {
 	int proto, sockopt;
 	struct incast_peer *peer;
-	int i, *p, ret;
+	int i, *p, ret, optval;
 	socklen_t optlen;
 	char buffer[MAX_SINGLE_MSG];
 	
