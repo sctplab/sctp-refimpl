@@ -373,7 +373,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 217635 2011-01-20 12:40:09
  */
 #define SCTP_NO_FR_UNLESS_SEGMENT_SMALLER 1
 
-/* default max I can burst out after a fast retransmit */
+/* default max I can burst out after a fast retransmit, 0 disables it */
 #define SCTP_DEF_MAX_BURST 0
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
 #define SCTP_FIRST_MBUF_RESV 68
@@ -680,8 +680,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 217635 2011-01-20 12:40:09
 #define SCTP_DEFAULT_SECRET_LIFE_SEC 3600
 
 #define SCTP_RTO_UPPER_BOUND	(60000)	/* 60 sec in ms */
-#define SCTP_RTO_UPPER_BOUND_SEC 60	/* for the init timer */
-#define SCTP_RTO_LOWER_BOUND	(300)	/* 300ms as a minimum */
+#define SCTP_RTO_LOWER_BOUND	(300)	/* 0.3 sec is ms */
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
