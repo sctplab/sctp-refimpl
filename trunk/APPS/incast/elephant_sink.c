@@ -44,9 +44,12 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 		no_clock_e = 0;
 	if ((no_clock_e == 0) && (no_clock_s == 0)) {
 		timespecsub(&tve, &tvs);
-		printf("Read %ld times for %ld bytes in %ld.%9.9ld from ",
-		       (long int)cnt, (long int)sz, (long int)tve.tv_sec, 
-		       tve.tv_nsec);
+		double bw, timeof;
+		timeof = (tve.tv_sec * 1.0) + (1.0 / (tve.tv_nsec * 1.0));
+		bw = (sz * 1.0)/timeof;
+		printf("%ld:%ld.%9.9ld:%f:",
+		       (long int)sz,
+		       (long int)tve.tv_sec, tve.tv_nsec, bw);
 		print_an_address((struct sockaddr *)sin, 1);
 	}
 	close(sd);
