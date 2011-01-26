@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 217760 2011-01-23 19:36:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 217895 2011-01-26 19:55:54Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2294,20 +2294,43 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	break;
 	case SCTP_MAX_BURST:
 	{
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 		uint8_t *value;
 
 		SCTP_CHECK_AND_CAST(value, optval, uint8_t, *optsize);
 
 		SCTP_INP_RLOCK(inp);
-		*value = inp->sctp_ep.max_burst;
+		if (inp->sctp_ep.max_burst < 256) {
+			*value = inp->sctp_ep.max_burst;
+		} else {
+			*value = 255;
+		}
 		SCTP_INP_RUNLOCK(inp);
 		*optsize = sizeof(uint8_t);
+#else
+		struct sctp_assoc_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+
+		if (stcb) {
+			av->assoc_value = stcb->asoc.max_burst;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			SCTP_INP_RLOCK(inp);
+			av->assoc_value = inp->sctp_ep.max_burst;
+			SCTP_INP_RUNLOCK(inp);
+		}
+		*optsize = sizeof(struct sctp_assoc_value);
+		
+#endif
 	}
 	break;
 	case SCTP_MAXSEG:
 	{
 		struct sctp_assoc_value *av;
 		int ovh;
+
 		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, *optsize);
 		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
 
@@ -4040,15 +4063,29 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	break;
 	case SCTP_MAX_BURST:
 	{
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 		uint8_t *burst;
 
 		SCTP_CHECK_AND_CAST(burst, optval, uint8_t, optsize);
 
 		SCTP_INP_WLOCK(inp);
-		if (*burst) {
-			inp->sctp_ep.max_burst = *burst;
-		}
+		inp->sctp_ep.max_burst = *burst;
 		SCTP_INP_WUNLOCK(inp);
+#else
+		struct sctp_assoc_value *av;
+
+		SCTP_CHECK_AND_CAST(av, optval, struct sctp_assoc_value, optsize);
+		SCTP_FIND_STCB(inp, stcb, av->assoc_id);
+
+		if (stcb) {
+			stcb->asoc.max_burst = av->assoc_value;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			SCTP_INP_WLOCK(inp);
+			inp->sctp_ep.max_burst = av->assoc_value;
+			SCTP_INP_WUNLOCK(inp);
+		}
+#endif
 	}
 	break;
 	case SCTP_MAXSEG:
