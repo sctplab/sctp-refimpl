@@ -1,8 +1,14 @@
 #!/bin/sh
 if test $# -lt 1 
 then
-echo "$0 version [600000, 601000, 602000, 700000, 701000, 800000]"
+echo "$0 version [600000, 601000, 602000, 700000, 701000, 800000 900000]"
 exit
+fi
+if test $1 -eq "800000"
+then
+    ver=900001
+    echo "using ver:$ver"
+    prepare_script="freebsd_prepare"
 fi
 if test $1 -eq "800000"
 then
