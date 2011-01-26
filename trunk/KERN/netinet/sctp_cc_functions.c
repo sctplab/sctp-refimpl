@@ -44,7 +44,7 @@
 #include <netinet/sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 217611 2011-01-19 22:10:35Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 217894 2011-01-26 19:49:03Z tuexen $");
 #endif
 
 static void
