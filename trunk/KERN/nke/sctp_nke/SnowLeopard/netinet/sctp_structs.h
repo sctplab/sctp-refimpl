@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 217760 2011-01-23 19:36:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 217894 2011-01-26 19:49:03Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -1084,7 +1084,7 @@ struct sctp_association {
 	uint8_t send_sack;
 
 	/* max burst after fast retransmit completes */
-	uint8_t max_burst;
+	uint32_t max_burst;
 
 	uint8_t sat_network;	/* RTT is in range of sat net or greater */
 	uint8_t sat_network_lockout;	/* lockout code */
