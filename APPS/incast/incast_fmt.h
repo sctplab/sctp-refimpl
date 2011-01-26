@@ -50,6 +50,12 @@ struct incast_peer {
 	int byte_cnt; /* byte cnt rcvd */
 };
 
+struct peer_record {
+	struct timespec timeof;
+	int byte_cnt;
+	int msg_cnt;
+};
+
 LIST_HEAD(incast_list, incast_peer);
 
 struct incast_control {
