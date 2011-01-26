@@ -2294,7 +2294,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	break;
 	case SCTP_MAX_BURST:
 	{
-#if defined(__FreeBSD__) && (__FreeBSD_version < 900000)
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 		uint8_t *value;
 
 		SCTP_CHECK_AND_CAST(value, optval, uint8_t, *optsize);
@@ -4063,7 +4063,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	break;
 	case SCTP_MAX_BURST:
 	{
-#if defined(__FreeBSD__) && (__FreeBSD_version < 900000)
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 		uint8_t *burst;
 
 		SCTP_CHECK_AND_CAST(burst, optval, uint8_t, optsize);
