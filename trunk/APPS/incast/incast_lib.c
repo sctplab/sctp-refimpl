@@ -453,6 +453,14 @@ distribute_to_each_peer(struct incast_control *ctrl)
 			
 			return (-1);
 		}
+		/* Set no delay */
+		optval = 1;
+		optlen = sizeof(optval);
+		if (setsockopt(peer->sd, proto, sockopt, 
+			       &optval, optlen) == -1) {
+			printf("Can't set no-delay err:%d\n", errno);
+			return (-1);
+		}
 		/* bind */
 		optlen = sizeof(struct sockaddr_in);
 		if (bind(peer->sd, (struct sockaddr *)&ctrl->bind_addr, 
