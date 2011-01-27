@@ -1,4 +1,5 @@
 #include <incast_fmt.h>
+#include <sys/signal.h>
 
 struct incast_control ctrl;
 
@@ -233,6 +234,7 @@ main(int argc, char **argv)
 		goto use;
 	}
 	/* Setup our list and init things */
+	signal(SIGPIPE, SIG_IGN);
 	LIST_INIT(&ctrl.master_list);
 	ctrl.decrement_amm = 1;
 	ctrl.cnt_of_times = 1;
