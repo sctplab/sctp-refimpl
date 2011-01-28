@@ -50,10 +50,11 @@ int main(int argc, char *argv[])
 	struct xsctp_laddr *xladdr;
 	struct xsctp_raddr *xraddr;
 	char buffer[ADDRSTRLEN];
+	char giant_buffer[20480];
 	sa_family_t family;
 	void *addr;
 	struct sctpstat stat;
-	size_t len = sizeof(struct sctpstat);
+	size_t len = sizeof(giant_buffer);
 	unsigned int cnt = 0;
 	int no_stats=0;
 	union sctp_sockstore primary_addr;
@@ -65,9 +66,16 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (sysctlbyname("net.inet.sctp.stats", &stat, &len, NULL, 0) < 0) {
+	if (sysctlbyname("net.inet.sctp.stats", giant_buffer, 
+			 &len, NULL, 0) < 0) {
 		printf("Error %d (%s) could not get the stat\n", errno, strerror(errno));
 		return(0);
+	}
+	memcpy(&stat, giant_buffer, sizeof(stat));
+	if (sizeof(stat) != len) {
+		printf("Warning - mis-aligned? retlen:%ld statlen:%ld\n",
+		       (unsigned long)len, (unsigned long)sizeof(stat));
+		       
 	}
 
 #define p(f, n)                                                        \
