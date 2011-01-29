@@ -2927,12 +2927,12 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 
 static void
 sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
-    struct sctp_tcb *stcb)
+		     struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
 	struct sctp_tmit_chunk *lchk;
 	struct sctp_ecne_chunk bkup;
-	int override_bit=0;
+	uint8_t override_bit=0;
 	uint32_t tsn, window_data_tsn;
 	int len;
 	int pkt_cnt;
@@ -2990,30 +2990,38 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		 * ago and you lost the response.
 		 */
 		net = TAILQ_FIRST(&stcb->asoc.nets);
-		override_bit = 1;
+		override_bit = SCTP_CWR_REDUCE_OVERRIDE;
 	}
 	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn)) {
 		/* JRS - Use the congestion control given in the pluggable CC module */
+		int ocwnd;
+		ocwnd = net->cwnd;
 		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb,net);
 		/*
 		 * We reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the window_data_tsn
 		 */
+		printf("CWR - old cwnd:%d new cwnd:%d flight:%d\n", 
+		       ocwnd, net->cwnd, net->flight_size);
 		net->cwr_window_tsn = window_data_tsn;
 		net->ecn_ce_pkt_cnt += pkt_cnt;
 		net->lost_cnt = pkt_cnt;
 		net->last_cwr_tsn = tsn;
-	} else if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
-		/* 
-		 * Another loss in the same window update how 
-		 * man marks we have had
-		 */
-		if (pkt_cnt > net->lost_cnt) {
-			/* Should be the case */
-			net->ecn_ce_pkt_cnt += (pkt_cnt - net->lost_cnt);
-			net->lost_cnt = pkt_cnt;
+	} else {
+		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
+		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
+			/* 
+			 * Another loss in the same window update how 
+			 * man marks we have had
+			 */
+
+			if (pkt_cnt > net->lost_cnt) {
+				/* Should be the case */
+				net->ecn_ce_pkt_cnt += (pkt_cnt - net->lost_cnt);
+				net->lost_cnt = pkt_cnt;
+			}
+			net->last_cwr_tsn = tsn;
 		}
-		net->last_cwr_tsn = tsn;
 	}
 	/*
 	 * We always send a CWR this way if our previous one was lost our
