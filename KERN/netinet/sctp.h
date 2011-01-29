@@ -428,6 +428,7 @@ struct sctp_error_unrecognized_chunk {
 
 /* Flag for ECN -CWR */
 #define SCTP_CWR_REDUCE_OVERRIDE 0x01
+#define SCTP_CWR_IN_SAME_WINDOW  0x02
 
 #define SCTP_SAT_NETWORK_MIN	400	/* min ms for RTT to set satellite
 					 * time */
