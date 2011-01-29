@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 217760 2011-01-23 19:36:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 218039 2011-01-28 21:05:21Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -983,7 +983,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
         asoc->last_net_cmt_send_started = NULL;
 
 	/* This will need to be adjusted */
-	asoc->last_cwr_tsn = asoc->init_seq_number - 1;
 	asoc->last_acked_seq = asoc->init_seq_number - 1;
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 	asoc->asconf_seq_in = asoc->last_acked_seq;
@@ -2545,6 +2544,14 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/************************/
 	/* get the current time */
 	(void)SCTP_GETTIME_TIMEVAL(&now);
+
+	/* 
+	 * Record the real time of the last RTT for
+	 * use in DC-CC.
+	 */
+	net->last_measured_rtt = now;
+	timevalsub(&net->last_measured_rtt, old);
+
 	/* compute the RTT value */
 	if ((u_long)now.tv_sec > (u_long)old->tv_sec) {
 		calc_time = ((u_long)now.tv_sec - (u_long)old->tv_sec) * 1000;
