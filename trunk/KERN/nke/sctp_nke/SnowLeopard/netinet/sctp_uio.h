@@ -31,7 +31,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 217760 2011-01-23 19:36:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 218037 2011-01-28 20:49:15Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -940,8 +940,8 @@ struct sctpstat {
 	uint32_t  sctps_send_burst_avoid; /* Unused */
 	uint32_t  sctps_send_cwnd_avoid;  /* Send cwnd full  avoidance, already max burst inflight to net */
 	uint32_t  sctps_fwdtsn_map_over;  /* number of map array over-runs via fwd-tsn's */
-
-	uint32_t  sctps_reserved[32];     /* Future ABI compat - remove int's from here when adding new */
+	uint32_t  sctps_queue_upd_ecne;  /* Number of times we queued or updated an ECN chunk on send queue */
+	uint32_t  sctps_reserved[31];     /* Future ABI compat - remove int's from here when adding new */
 };
 
 #define SCTP_STAT_INCR(_x) SCTP_STAT_INCR_BY(_x,1)
