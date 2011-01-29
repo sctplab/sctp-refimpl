@@ -7502,10 +7502,12 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		no_data_chunks = 0;
 
 	/* Nothing to possible to send? */
-	if (TAILQ_EMPTY(&asoc->control_send_queue) &&
+	if ((TAILQ_EMPTY(&asoc->control_send_queue) ||
+	     (asoc->ctrl_queue_cnt == stcb->asoc.ecn_echo_cnt_onq)) &&
 	    TAILQ_EMPTY(&asoc->asconf_send_queue) &&
 	    TAILQ_EMPTY(&asoc->send_queue) &&
 	    stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc)) {
+	nothing_to_send:
 		*reason_code = 9;
 		return (0);
 	}
@@ -7519,6 +7521,11 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	}
 	if (stcb->asoc.ecn_echo_cnt_onq) {
 		/* Record where a sack goes, if any */
+		if (no_data_chunks && 
+		    (asoc->ctrl_queue_cnt == stcb->asoc.ecn_echo_cnt_onq)) {
+			/* Nothing but ECNe to send - we don't do that */
+			goto nothing_to_send;
+		}
 		TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 			if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
 			    (chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK)) {
