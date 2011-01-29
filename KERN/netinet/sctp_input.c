@@ -2954,7 +2954,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	/* Also we make sure we disable the nonce_wait */
 	lchk = TAILQ_LAST(&stcb->asoc.send_queue, sctpchunk_listhead);
 	if (lchk == NULL) {
-		window_data_tsn = stcb->asoc.nonce_resync_tsn = stcb->asoc.sending_seq;
+		window_data_tsn = stcb->asoc.nonce_resync_tsn = stcb->asoc.sending_seq - 1;
 	} else {
 		window_data_tsn = stcb->asoc.nonce_resync_tsn = lchk->rec.data.TSN_seq;
 	}
@@ -2992,6 +2992,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		net = TAILQ_FIRST(&stcb->asoc.nets);
 		override_bit = SCTP_CWR_REDUCE_OVERRIDE;
 	}
+out:
 	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn)) {
 		/* JRS - Use the congestion control given in the pluggable CC module */
 		int ocwnd;
@@ -3001,13 +3002,15 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		 * We reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the window_data_tsn
 		 */
-		printf("CWR - old cwnd:%d new cwnd:%d flight:%d\n", 
-		       ocwnd, net->cwnd, net->flight_size);
+		printf("CWR - old cwnd:%d new cwnd:%d flight:%d win_end:%x tsn:%x\n", 
+		       ocwnd, net->cwnd, net->flight_size, window_data_tsn, tsn);
 		net->cwr_window_tsn = window_data_tsn;
 		net->ecn_ce_pkt_cnt += pkt_cnt;
 		net->lost_cnt = pkt_cnt;
 		net->last_cwr_tsn = tsn;
 	} else {
+		printf("SWD CWR - cwnd:%d flight:%d win_end:%x tsn:%x\n", 
+		       net->cwnd, net->flight_size, window_data_tsn, tsn);
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
 		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
 			/* 
@@ -3029,7 +3032,6 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	 * still get the cwr to the peer. Note we set the override when we
 	 * could not find the TSN on the chunk or the destination network.
 	 */
-out:
 	sctp_send_cwr(stcb, net, net->last_cwr_tsn, override_bit);
 }
 
