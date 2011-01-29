@@ -3009,8 +3009,9 @@ out:
 		net->lost_cnt = pkt_cnt;
 		net->last_cwr_tsn = tsn;
 	} else {
-		printf("SWD CWR - cwnd:%d flight:%d win_end:%x tsn:%x\n", 
-		       net->cwnd, net->flight_size, window_data_tsn, tsn);
+		printf("SWD CWR - cwnd:%d flight:%d win_end:%x tsn:%x winTSN:%x\n", 
+		       net->cwnd, net->flight_size, window_data_tsn, tsn,
+			net->cwr_window_tsn);
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
 		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
 			/* 
