@@ -11239,7 +11239,7 @@ jump_out:
 }
 
 void
-sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, int override)
+sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, uint8_t override)
 {
 	struct sctp_association *asoc;
 	struct sctp_cwr_chunk *cwr;
@@ -11270,11 +11270,7 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, i
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	cwr = mtod(chk->data, struct sctp_cwr_chunk *);
 	cwr->ch.chunk_type = SCTP_ECN_CWR;
-	if (override) {
-		cwr->ch.chunk_flags = SCTP_CWR_REDUCE_OVERRIDE;
-	} else {
-		cwr->ch.chunk_flags = 0;
-	}
+	cwr->ch.chunk_flags = override;
 	cwr->ch.chunk_length = htons(sizeof(struct sctp_cwr_chunk));
 	cwr->tsn = htonl(high_tsn);
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
