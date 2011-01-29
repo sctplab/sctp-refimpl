@@ -7425,16 +7425,16 @@ sctp_move_chunks_from_net(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
-    struct sctp_tcb *stcb,
-    struct sctp_association *asoc,
-    int *num_out,
-    int *reason_code,
-    int control_only, int from_where,
-    struct timeval *now, int *now_filled, int frag_point, int so_locked
+		      struct sctp_tcb *stcb,
+		      struct sctp_association *asoc,
+		      int *num_out,
+		      int *reason_code,
+		      int control_only, int from_where,
+		      struct timeval *now, int *now_filled, int frag_point, int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
-    SCTP_UNUSED
+		      SCTP_UNUSED
 #endif
-    )
+	)
 {
 	/*
 	 * Ok this is the generic chunk service queue. we must do the
@@ -7445,7 +7445,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	 * fomulate and send the low level chunks. Making sure to combine
 	 * any control in the control chunk queue also.
 	 */
-	struct sctp_nets *net, *start_at, *old_start_at=NULL;
+	struct sctp_nets *net, *start_at, *sack_goes_to=NULL, *old_start_at=NULL;
 	struct mbuf *outchain, *endoutchain;
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -7464,7 +7464,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int override_ok = 1;
 	int data_auth_reqd = 0;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
-		the destination. */
+	   the destination. */
 	int pf_hbflag = 0;
 	int quit_now = 0;
 
@@ -7515,6 +7515,16 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		if (asoc->total_flight > 0) {
 			/* we are allowed one chunk in flight */
 			no_data_chunks = 1;
+		}
+	}
+	if (stcb->asoc.ecn_echo_cnt_onq) {
+		/* Record where a sack goes, if any */
+		TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
+			if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
+			    (chk->rec.chunk_id.id == SCTP_NR_SELECTIVE_ACK)) {
+				sack_goes_to = chk->whoTo;
+				break;
+			}
 		}
 	}
 	max_rwnd_per_dest = ((asoc->peers_rwnd + asoc->total_flight) / asoc->numnets);
@@ -7713,7 +7723,7 @@ again_one_more_time:
 			 */
 			if ((auth == NULL) &&
 			    sctp_auth_is_required_chunk(chk->rec.chunk_id.id,
-			    stcb->asoc.peer_auth_chunks)) {
+							stcb->asoc.peer_auth_chunks)) {
 				omtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 			} else
 				omtu = 0;
@@ -7738,11 +7748,11 @@ again_one_more_time:
 				    (sctp_auth_is_required_chunk(chk->rec.chunk_id.id,
 								 stcb->asoc.peer_auth_chunks))) {
 					outchain = sctp_add_auth_chunk(outchain,
-					    &endoutchain,
-					    &auth,
-					    &auth_offset,
-					    stcb,
-					    chk->rec.chunk_id.id);
+								       &endoutchain,
+								       &auth,
+								       &auth_offset,
+								       stcb,
+								       chk->rec.chunk_id.id);
 					SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 				}
 				outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain,
@@ -7864,6 +7874,21 @@ again_one_more_time:
 		/************************/
 		/* Now first lets go through the control queue */
 		TAILQ_FOREACH_SAFE(chk, &asoc->control_send_queue, sctp_next, nchk) {
+			if ((sack_goes_to) && 
+			    (chk->rec.chunk_id.id == SCTP_ECN_ECHO) && 
+			    (chk->whoTo != sack_goes_to)) {
+				/* 
+				 * if we have a sack in queue, and we are looking at an
+				 * ecn echo that is NOT queued to where the sack is going..
+				 */
+				if (chk->whoTo == net) {
+					/* Don't transmit it to where its going (current net) */
+					continue;
+				} else if (sack_goes_to == net) {
+					/* But do transmit it to this address */
+					goto skip_net_check;
+				}
+			}
 			if (chk->whoTo != net) {
 				/*
 				 * No, not sent to the network we are
@@ -7871,6 +7896,7 @@ again_one_more_time:
 				 */
 				continue;
 			}
+		skip_net_check:
 			if (chk->data == NULL) {
 				continue;
 			}
@@ -7892,7 +7918,7 @@ again_one_more_time:
 			 */
 			if ((auth == NULL) &&
 			    sctp_auth_is_required_chunk(chk->rec.chunk_id.id,
-			    stcb->asoc.peer_auth_chunks)) {
+							stcb->asoc.peer_auth_chunks)) {
 				omtu = sctp_get_auth_chunk_len(stcb->asoc.peer_hmac_id);
 			} else
 				omtu = 0;
@@ -7917,11 +7943,11 @@ again_one_more_time:
 				    (sctp_auth_is_required_chunk(chk->rec.chunk_id.id,
 								 stcb->asoc.peer_auth_chunks))) {
 					outchain = sctp_add_auth_chunk(outchain,
-					    &endoutchain,
-					    &auth,
-					    &auth_offset,
-					    stcb,
-					    chk->rec.chunk_id.id);
+								       &endoutchain,
+								       &auth,
+								       &auth_offset,
+								       stcb,
+								       chk->rec.chunk_id.id);
 					SCTP_STAT_INCR_COUNTER64(sctps_outcontrolchunks);
 				}
 				outchain = sctp_copy_mbufchain(chk->data, outchain, &endoutchain,
@@ -7969,7 +7995,7 @@ again_one_more_time:
 						/* turn off the timer */
 						if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-							    inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1 );
+									inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1 );
 						}
 					}
 					ctl_cnt++;
@@ -10973,7 +10999,7 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net)
 
 void
 sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
-    uint32_t high_tsn)
+		   uint32_t high_tsn)
 {
 	struct sctp_association *asoc;
 	struct sctp_ecne_chunk *ecne;
@@ -10982,11 +11008,18 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
-		if (chk->rec.chunk_id.id == SCTP_ECN_ECHO) {
+		if ((chk->rec.chunk_id.id == SCTP_ECN_ECHO) && (net == chk->whoTo)) {
 			/* found a previous ECN_ECHO update it if needed */
+			uint32_t cnt, ctsn;
 			ecne = mtod(chk->data, struct sctp_ecne_chunk *);
-			ecne->tsn = htonl(high_tsn);
-			SCTP_STAT_INCR(sctps_queue_upd_ecne);
+			ctsn = ntohl(ecne->tsn);
+			if (SCTP_TSN_GT(high_tsn, ctsn)) {
+				ecne->tsn = htonl(high_tsn);
+				cnt = ntohl(ecne->num_pkts_since_cwr);
+				cnt++;
+				ecne->num_pkts_since_cwr = htonl(cnt);
+				SCTP_STAT_INCR(sctps_queue_upd_ecne);
+			}
 			return;
 		}
 	}
@@ -11018,7 +11051,8 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	ecne->ch.chunk_flags = 0;
 	ecne->ch.chunk_length = htons(sizeof(struct sctp_ecne_chunk));
 	ecne->tsn = htonl(high_tsn);
-	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
+	ecne->num_pkts_since_cwr = htonl(1);
+	TAILQ_INSERT_HEAD(&stcb->asoc.control_send_queue, chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 }
 
@@ -11205,7 +11239,7 @@ jump_out:
 }
 
 void
-sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
+sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, int override)
 {
 	struct sctp_association *asoc;
 	struct sctp_cwr_chunk *cwr;
@@ -11213,17 +11247,7 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
-		if (chk->rec.chunk_id.id == SCTP_ECN_CWR) {
-			/* found a previous ECN_CWR update it if needed */
-			cwr = mtod(chk->data, struct sctp_cwr_chunk *);
-			if (SCTP_TSN_GT(high_tsn, ntohl(cwr->tsn))) {
-				cwr->tsn = htonl(high_tsn);
-			}
-			return;
-		}
-	}
-	/* nope could not find one to update so we must build one */
+
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
@@ -11246,7 +11270,11 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn)
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	cwr = mtod(chk->data, struct sctp_cwr_chunk *);
 	cwr->ch.chunk_type = SCTP_ECN_CWR;
-	cwr->ch.chunk_flags = 0;
+	if (override) {
+		cwr->ch.chunk_flags = SCTP_CWR_REDUCE_OVERRIDE;
+	} else {
+		cwr->ch.chunk_flags = 0;
+	}
 	cwr->ch.chunk_length = htons(sizeof(struct sctp_cwr_chunk));
 	cwr->tsn = htonl(high_tsn);
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
