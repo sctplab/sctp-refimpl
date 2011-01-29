@@ -426,6 +426,9 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_BADCRC		0x02
 #define SCTP_PACKET_TRUNCATED	0x04
 
+/* Flag for ECN -CWR */
+#define SCTP_CWR_REDUCE_OVERRIDE 0x01
+
 #define SCTP_SAT_NETWORK_MIN	400	/* min ms for RTT to set satellite
 					 * time */
 #define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
