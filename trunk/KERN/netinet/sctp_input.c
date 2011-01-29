@@ -3002,16 +3002,11 @@ out:
 		 * We reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the window_data_tsn
 		 */
-		printf("CWR - old cwnd:%d new cwnd:%d flight:%d win_end:%x tsn:%x\n", 
-		       ocwnd, net->cwnd, net->flight_size, window_data_tsn, tsn);
 		net->cwr_window_tsn = window_data_tsn;
 		net->ecn_ce_pkt_cnt += pkt_cnt;
 		net->lost_cnt = pkt_cnt;
 		net->last_cwr_tsn = tsn;
 	} else {
-		printf("SWD CWR - cwnd:%d flight:%d win_end:%x tsn:%x winTSN:%x\n", 
-		       net->cwnd, net->flight_size, window_data_tsn, tsn,
-			net->cwr_window_tsn);
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
 		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
 			/* 
