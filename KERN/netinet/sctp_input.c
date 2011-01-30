@@ -2997,7 +2997,7 @@ out:
 		/* JRS - Use the congestion control given in the pluggable CC module */
 		int ocwnd;
 		ocwnd = net->cwnd;
-		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb,net);
+		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb, net, 0, pkt_cnt);
 		/*
 		 * We reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the window_data_tsn
@@ -3008,18 +3008,25 @@ out:
 		net->last_cwr_tsn = tsn;
 	} else {
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
-		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
+		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn) && 
+		    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
 			/* 
 			 * Another loss in the same window update how 
-			 * man marks we have had
+			 * many marks/packets lost we have had.
 			 */
-
+			int cnt = 1;
 			if (pkt_cnt > net->lost_cnt) {
 				/* Should be the case */
-				net->ecn_ce_pkt_cnt += (pkt_cnt - net->lost_cnt);
-				net->lost_cnt = pkt_cnt;
+				cnt = (pkt_cnt - net->lost_cnt);
+				net->ecn_ce_pkt_cnt += cnt;
 			}
+			net->lost_cnt = pkt_cnt;
 			net->last_cwr_tsn = tsn;
+			/*
+			 * Most CC functions will ignore this call, since we are in-window
+			 * yet of the initial CE the peer saw.
+			 */
+			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb, net, 1, cnt);
 		}
 	}
 	/*

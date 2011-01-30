@@ -490,25 +490,28 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 }
 
 static void
-sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net)
+sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
+	int in_window, int num_pkt_lost)
 {
 	int old_cwnd = net->cwnd;
 
-	SCTP_STAT_INCR(sctps_ecnereducedcwnd);
-	net->ssthresh = net->cwnd / 2;
-	if (net->ssthresh < net->mtu) {
-		net->ssthresh = net->mtu;
-		/* here back off the timer as well, to slow us down */
-		net->RTO <<= 1;
-	}
-	net->cwnd = net->ssthresh;
-	SDT_PROBE(sctp, cwnd, net, ecn, 
-		  stcb->asoc.my_vtag, 
-		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-		  net, 
-		  old_cwnd, net->cwnd);
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+	if (in_window == 0) {
+		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
+		net->ssthresh = net->cwnd / 2;
+		if (net->ssthresh < net->mtu) {
+			net->ssthresh = net->mtu;
+			/* here back off the timer as well, to slow us down */
+			net->RTO <<= 1;
+		}
+		net->cwnd = net->ssthresh;
+		SDT_PROBE(sctp, cwnd, net, ecn, 
+			  stcb->asoc.my_vtag, 
+			  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
+			  net, 
+			  old_cwnd, net->cwnd);
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
+			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		}
 	}
 }
 
@@ -1664,23 +1667,25 @@ sctp_htcp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 
 static void
 sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
-	struct sctp_nets *net)
+		struct sctp_nets *net, int in_window, int num_pkt_lost)
 {
 	int old_cwnd;
 	old_cwnd = net->cwnd;
 
 	/* JRS - reset hctp as if state changed */
-	htcp_reset(&net->htcp_ca);
-	SCTP_STAT_INCR(sctps_ecnereducedcwnd);
-	net->ssthresh = htcp_recalc_ssthresh(stcb, net);
-	if (net->ssthresh < net->mtu) {
-		net->ssthresh = net->mtu;
-		/* here back off the timer as well, to slow us down */
-		net->RTO <<= 1;
-	}
-	net->cwnd = net->ssthresh;
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-		sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+	if (in_window == 0) {
+		htcp_reset(&net->htcp_ca);
+		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
+		net->ssthresh = htcp_recalc_ssthresh(stcb, net);
+		if (net->ssthresh < net->mtu) {
+			net->ssthresh = net->mtu;
+			/* here back off the timer as well, to slow us down */
+			net->RTO <<= 1;
+		}
+		net->cwnd = net->ssthresh;
+		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
+			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
+		}
 	}
 }
 
