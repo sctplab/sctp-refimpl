@@ -635,7 +635,7 @@ struct sctp_cc_functions {
 	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
 			struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_ecn_echo)(struct sctp_tcb *stcb,
-			struct sctp_nets *net);
+			struct sctp_nets *net, int in_window, int num_pkt_lost);
 	void (*sctp_cwnd_update_after_packet_dropped)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, struct sctp_pktdrop_chunk *cp,
 			uint32_t *bottle_bw, uint32_t *on_queue);
