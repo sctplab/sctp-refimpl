@@ -2993,7 +2993,8 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		override_bit = SCTP_CWR_REDUCE_OVERRIDE;
 	}
 out:
-	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn)) {
+	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn) &&
+	    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
 		/* JRS - Use the congestion control given in the pluggable CC module */
 		int ocwnd;
 		ocwnd = net->cwnd;
