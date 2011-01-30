@@ -3001,10 +3001,10 @@ out:
 		net->last_cwr_tsn = tsn;
 	} else {
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
-		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn) && 
+		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn) &&
 		    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
-			/* 
-			 * Another loss in the same window update how 
+			/*
+			 * Another loss in the same window update how
 			 * many marks/packets lost we have had.
 			 */
 			int cnt = 1;
@@ -4659,7 +4659,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * attention to a sack sent in to us since
 					 * we don't care anymore.
 					 */
- 					break;
+					break;
 				}
 				sack = (struct sctp_sack_chunk *)ch;
 				flags = ch->chunk_flags;
@@ -4775,7 +4775,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * with no missing segments to go
 					 * this way too.
 					 */
-					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, 
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd,
 					                         &abort_now);
 				} else {
 					if (netp && *netp)

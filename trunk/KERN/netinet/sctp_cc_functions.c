@@ -497,10 +497,10 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 			net->RTO <<= 1;
 		}
 		net->cwnd = net->ssthresh;
-		SDT_PROBE(sctp, cwnd, net, ecn, 
-			  stcb->asoc.my_vtag, 
-			  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-			  net, 
+		SDT_PROBE(sctp, cwnd, net, ecn,
+			  stcb->asoc.my_vtag,
+			  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)),
+			  net,
 			  old_cwnd, net->cwnd);
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_SAT);
