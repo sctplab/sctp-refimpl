@@ -10951,11 +10951,11 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 			ctsn = ntohl(ecne->tsn);
 			if (SCTP_TSN_GT(high_tsn, ctsn)) {
 				ecne->tsn = htonl(high_tsn);
-				cnt = ntohl(ecne->num_pkts_since_cwr);
-				cnt++;
-				ecne->num_pkts_since_cwr = htonl(cnt);
 				SCTP_STAT_INCR(sctps_queue_upd_ecne);
 			}
+			cnt = ntohl(ecne->num_pkts_since_cwr);
+			cnt++;
+			ecne->num_pkts_since_cwr = htonl(cnt);
 			return;
 		}
 	}
