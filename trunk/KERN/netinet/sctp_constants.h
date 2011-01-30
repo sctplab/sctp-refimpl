@@ -441,8 +441,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 217913 2011-01-26 21:38:17
 
 /*************0x8000 series*************/
 #define SCTP_ECN_CAPABLE		0x8000
-/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
-#define SCTP_ECN_NONCE_SUPPORTED	0x8001
+
 /* draft-ietf-tsvwg-auth-xxx */
 #define SCTP_RANDOM			0x8002
 #define SCTP_CHUNK_LIST			0x8003

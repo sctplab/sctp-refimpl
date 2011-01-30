@@ -171,13 +171,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 					net->fast_recovery_tsn = lchk->rec.data.TSN_seq - 1;
 				}
 
-				/*
-				 * Disable Nonce Sum Checking and store the
-				 * resync tsn
-				 */
-				asoc->nonce_sum_check = 0;
-				asoc->nonce_resync_tsn = asoc->fast_recovery_tsn + 1;
-
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND,
 						stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INDATA+SCTP_LOC_32 );
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
@@ -891,13 +884,6 @@ sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
 					net->fast_recovery_tsn = lchk->rec.data.TSN_seq - 1;
 				}
 
-				/*
-				 * Disable Nonce Sum Checking and store the
-				 * resync tsn
-				 */
-				asoc->nonce_sum_check = 0;
-				asoc->nonce_resync_tsn = asoc->fast_recovery_tsn + 1;
-
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND,
 						stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INDATA+SCTP_LOC_32 );
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND,
@@ -1603,13 +1589,6 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 				} else {
 					net->fast_recovery_tsn = lchk->rec.data.TSN_seq - 1;
 				}
-
-				/*
-				 * Disable Nonce Sum Checking and store the
-				 * resync tsn
-				 */
-				asoc->nonce_sum_check = 0;
-				asoc->nonce_resync_tsn = asoc->fast_recovery_tsn + 1;
 
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND,
 						stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INDATA+SCTP_LOC_32 );
