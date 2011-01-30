@@ -6715,10 +6715,6 @@ goto add_it_now6;
 
 				}
 			}
-		} else if (ptype == SCTP_ECN_NONCE_SUPPORTED) {
-			/* Peer supports ECN-nonce */
-			stcb->asoc.peer_supports_ecn_nonce = 1;
-			stcb->asoc.ecn_nonce_allowed = 1;
 		} else if (ptype == SCTP_RANDOM) {
 			if (plen > sizeof(random_store))
 				break;

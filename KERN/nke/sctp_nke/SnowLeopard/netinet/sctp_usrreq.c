@@ -183,8 +183,8 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 			}
 			if (chk->sent != SCTP_DATAGRAM_RESEND) {
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
+				chk->sent = SCTP_DATAGRAM_RESEND;
 			}
-			chk->sent = SCTP_DATAGRAM_RESEND;
 			chk->rec.data.doing_fast_retransmit = 0;
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FLIGHT_LOGGING_ENABLE) {
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,

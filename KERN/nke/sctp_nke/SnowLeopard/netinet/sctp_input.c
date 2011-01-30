@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 217760 2011-01-23 19:36:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218072 2011-01-29 19:55:29Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -268,11 +268,13 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	/* save off parameters */
 	asoc->peer_vtag = ntohl(init->initiate_tag);
 	asoc->peers_rwnd = ntohl(init->a_rwnd);
+	/* init tsn's */
+	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
+
 	if (!TAILQ_EMPTY(&asoc->nets)) {
 		/* update any ssthresh's that may have a default */
 		TAILQ_FOREACH(lnet, &asoc->nets, sctp_next) {
 			lnet->ssthresh = asoc->peers_rwnd;
-
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_CWND_MONITOR_ENABLE|SCTP_CWND_LOGGING_ENABLE)) {
 				sctp_log_cwnd(stcb, lnet, 0, SCTP_CWND_INITIALIZATION);
 			}
@@ -333,8 +335,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	}
 	SCTP_TCB_SEND_UNLOCK(stcb);
 	asoc->strm_realoutsize = asoc->streamoutcnt = asoc->pre_open_streams;
-	/* init tsn's */
-	asoc->highest_tsn_inside_map = asoc->asconf_seq_in = ntohl(init->initial_tsn) - 1;
+
 	/* EY - nr_sack: initialize highest tsn in nr_mapping_array */
 	asoc->highest_tsn_inside_nr_map = asoc->highest_tsn_inside_map;
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
@@ -345,7 +346,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 	
 	asoc->mapping_array_base_tsn = ntohl(init->initial_tsn);
 	asoc->tsn_last_delivered = asoc->cumulative_tsn = asoc->asconf_seq_in;
-	asoc->last_echo_tsn = asoc->asconf_seq_in;
+
 	asoc->advanced_peer_ack_point = asoc->last_acked_seq;
 	/* open the requested streams */
 
@@ -1039,11 +1040,6 @@ sctp_process_unrecog_param(struct sctp_tcb *stcb, struct sctp_paramhdr *phdr)
 	case SCTP_HAS_NAT_SUPPORT:
 	        stcb->asoc.peer_supports_nat = 0;
 	        break;
-	case SCTP_ECN_NONCE_SUPPORTED:
-		stcb->asoc.peer_supports_ecn_nonce = 0;
-		stcb->asoc.ecn_nonce_allowed = 0;
-		stcb->asoc.ecn_allowed = 0;
-		break;
 	case SCTP_ADD_IP_ADDRESS:
 	case SCTP_DEL_IP_ADDRESS:
 	case SCTP_SET_PRIM_ADDR:
@@ -2950,16 +2946,12 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	SCTP_STAT_INCR(sctps_recvecne);
 	tsn = ntohl(cp->tsn);
 	pkt_cnt = ntohl(cp->num_pkts_since_cwr);
-	/* ECN Nonce stuff: need a resync and disable the nonce sum check */
-	/* Also we make sure we disable the nonce_wait */
 	lchk = TAILQ_LAST(&stcb->asoc.send_queue, sctpchunk_listhead);
 	if (lchk == NULL) {
-		window_data_tsn = stcb->asoc.nonce_resync_tsn = stcb->asoc.sending_seq - 1;
+		window_data_tsn = stcb->asoc.sending_seq - 1;
 	} else {
-		window_data_tsn = stcb->asoc.nonce_resync_tsn = lchk->rec.data.TSN_seq;
+		window_data_tsn = lchk->rec.data.TSN_seq;
 	}
-	stcb->asoc.nonce_wait_for_ecne = 0;
-	stcb->asoc.nonce_sum_check = 0;
 
 	/* Find where it was sent to if possible. */
 	net = NULL;
@@ -2993,11 +2985,12 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		override_bit = SCTP_CWR_REDUCE_OVERRIDE;
 	}
 out:
-	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn)) {
+	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn) &&
+	    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
 		/* JRS - Use the congestion control given in the pluggable CC module */
 		int ocwnd;
 		ocwnd = net->cwnd;
-		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb,net);
+		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb, net, 0, pkt_cnt);
 		/*
 		 * We reduce once every RTT. So we will only lower cwnd at
 		 * the next sending seq i.e. the window_data_tsn
@@ -3008,18 +3001,25 @@ out:
 		net->last_cwr_tsn = tsn;
 	} else {
 		override_bit |= SCTP_CWR_IN_SAME_WINDOW;
-		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn)) {
-			/* 
-			 * Another loss in the same window update how 
-			 * man marks we have had
+		if (SCTP_TSN_GT(tsn, net->last_cwr_tsn) &&
+		    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
+			/*
+			 * Another loss in the same window update how
+			 * many marks/packets lost we have had.
 			 */
-
+			int cnt = 1;
 			if (pkt_cnt > net->lost_cnt) {
 				/* Should be the case */
-				net->ecn_ce_pkt_cnt += (pkt_cnt - net->lost_cnt);
-				net->lost_cnt = pkt_cnt;
+				cnt = (pkt_cnt - net->lost_cnt);
+				net->ecn_ce_pkt_cnt += cnt;
 			}
+			net->lost_cnt = pkt_cnt;
 			net->last_cwr_tsn = tsn;
+			/*
+			 * Most CC functions will ignore this call, since we are in-window
+			 * yet of the initial CE the peer saw.
+			 */
+			stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb, net, 1, cnt);
 		}
 	}
 	/*
@@ -3196,11 +3196,6 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 					}
 				}
 			}
-			/*
-			 * We zero out the nonce so resync not
-			 * needed
-			 */
-			tp1->rec.data.ect_nonce = 0;
 
 			if (tp1->do_rtt) {
 				/*
@@ -4647,7 +4642,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				uint16_t num_seg, num_dup;
 				uint8_t flags;
 				int offset_seg, offset_dup;
-				int nonce_sum_flag;
 
 				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SACK\n");
 				SCTP_STAT_INCR(sctps_recvsacks);
@@ -4665,11 +4659,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * attention to a sack sent in to us since
 					 * we don't care anymore.
 					 */
- 					break;
+					break;
 				}
 				sack = (struct sctp_sack_chunk *)ch;
 				flags = ch->chunk_flags;
-				nonce_sum_flag = flags & SCTP_SACK_NONCE_SUM;
 				cum_ack = ntohl(sack->sack.cum_tsn_ack);
 				num_seg = ntohs(sack->sack.num_gap_ack_blks);
 				num_dup = ntohs(sack->sack.num_dup_tsns);
@@ -4697,8 +4690,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * path sack processing. We also allow window update
 					 * sacks with no missing segments to go this way too.
 					 */
-					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag,
-					                         &abort_now);
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, &abort_now);
 				} else {
 					if (netp && *netp)
 						sctp_handle_sack(m, offset_seg, offset_dup,
@@ -4727,7 +4719,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				uint16_t num_seg, num_nr_seg, num_dup;
 				uint8_t flags;
 				int offset_seg, offset_dup;
-				int nonce_sum_flag;
 
 				SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_NR_SACK\n");
 				SCTP_STAT_INCR(sctps_recvsacks);
@@ -4753,8 +4744,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				}
 				nr_sack = (struct sctp_nr_sack_chunk *)ch;
 				flags = ch->chunk_flags;
-				nonce_sum_flag = flags & SCTP_SACK_NONCE_SUM;
-				
 				cum_ack = ntohl(nr_sack->nr_sack.cum_tsn_ack);
 				num_seg = ntohs(nr_sack->nr_sack.num_gap_ack_blks);
 				num_nr_seg = ntohs(nr_sack->nr_sack.num_nr_gap_ack_blks);
@@ -4786,7 +4775,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * with no missing segments to go
 					 * this way too.
 					 */
-					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, nonce_sum_flag,
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd,
 					                         &abort_now);
 				} else {
 					if (netp && *netp)
@@ -5395,66 +5384,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 }
 
 
-/*
- * Process the ECN bits we have something set so we must look to see if it is
- * ECN(0) or ECN(1) or CE
- */
-static void
-sctp_process_ecn_marked_a(struct sctp_tcb *stcb, struct sctp_nets *net,
-    uint8_t ecn_bits)
-{
-	if ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS) {
-		;
-	} else if ((ecn_bits & SCTP_ECT1_BIT) == SCTP_ECT1_BIT) {
-		/*
-		 * we only add to the nonce sum for ECT1, ECT0 does not
-		 * change the NS bit (that we have yet to find a way to send
-		 * it yet).
-		 */
-
-		/* ECN Nonce stuff */
-		stcb->asoc.receiver_nonce_sum++;
-		stcb->asoc.receiver_nonce_sum &= SCTP_SACK_NONCE_SUM;
-
-		/*
-		 * Drag up the last_echo point if cumack is larger since we
-		 * don't want the point falling way behind by more than
-		 * 2^^31 and then having it be incorrect.
-		 */
-		if (SCTP_TSN_GT(stcb->asoc.cumulative_tsn, stcb->asoc.last_echo_tsn)) {
-			stcb->asoc.last_echo_tsn = stcb->asoc.cumulative_tsn;
-		}
-	} else if ((ecn_bits & SCTP_ECT0_BIT) == SCTP_ECT0_BIT) {
-		/*
-		 * Drag up the last_echo point if cumack is larger since we
-		 * don't want the point falling way behind by more than
-		 * 2^^31 and then having it be incorrect.
-		 */
-		if (SCTP_TSN_GT(stcb->asoc.cumulative_tsn, stcb->asoc.last_echo_tsn)) {
-			stcb->asoc.last_echo_tsn = stcb->asoc.cumulative_tsn;
-		}
-	}
-}
-
-static void
-sctp_process_ecn_marked_b(struct sctp_tcb *stcb, struct sctp_nets *net,
-    uint32_t high_tsn, uint8_t ecn_bits)
-{
-	if ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS) {
-		/*
-		 * we possibly must notify the sender that a congestion
-		 * window reduction is in order. We do this by adding a ECNE
-		 * chunk to the output chunk queue. The incoming CWR will
-		 * remove this chunk.
-		 */
-		if (SCTP_TSN_GT(high_tsn, stcb->asoc.last_echo_tsn)) {
-			/* Yep, we need to add a ECNE */
-			sctp_send_ecn_echo(stcb, net, high_tsn);
-			stcb->asoc.last_echo_tsn = high_tsn;
-		}
-	}
-}
-
 #ifdef INVARIANTS
 #ifdef __GNUC__
 __attribute__((noinline))
@@ -5654,11 +5583,6 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 		case SCTP_STATE_SHUTDOWN_SENT:
 			break;
 		}
-		/* take care of ECN, part 1. */
-		if (stcb->asoc.ecn_allowed &&
-		    (ecn_bits & (SCTP_ECT0_BIT | SCTP_ECT1_BIT))) {
-			sctp_process_ecn_marked_a(stcb, net, ecn_bits);
-		}
 		/* plow through the data chunks while length > offset */
 		retval = sctp_process_data(mm, iphlen, &offset, length, sh,
 		    inp, stcb, net, &high_tsn);
@@ -5670,19 +5594,18 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 			goto out_now;
 		}
 		data_processed = 1;
-		if (retval == 0) {
-			/* take care of ecn part 2. */
-			if (stcb->asoc.ecn_allowed &&
-			    (ecn_bits & (SCTP_ECT0_BIT | SCTP_ECT1_BIT))) {
-				sctp_process_ecn_marked_b(stcb, net, high_tsn,
-				    ecn_bits);
-			}
-		}
 		/*
 		 * Anything important needs to have been m_copy'ed in
 		 * process_data
 		 */
 	}
+
+	/* take care of ecn */
+	if (stcb->asoc.ecn_allowed && ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS)) {
+		/* Yep, we need to add a ECNE */
+		sctp_send_ecn_echo(stcb, net, high_tsn);
+	}
+
 	if ((data_processed == 0) && (fwd_tsn_seen)) {
 		int was_a_gap;
 		uint32_t highest_tsn;
