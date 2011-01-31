@@ -491,12 +491,14 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 
 	if (net->lan_type == SCTP_LAN_LOCAL) {
 		/* Data center Congestion Control */
-		if (in_window) {
-			/* Go to CA with have the cwnd */
-			net->ssthresh = net->flight_size;
-			net->cwnd = net->flight_size/2;
+		if (in_window == 0) {
+			/* Go to CA with the cwnd at the point we sent
+			 * the TSN that was marked with a CE.
+			 */
+			net->cwnd = net->ecn_prev_cwnd - (net->mtu * num_pkt_lost);
+			net->ssthresh = net->cwnd - (num_pkt_lost * net->mtu);
 		} else {
-			/* Further tuning down required */
+			/* Further tuning down required over the drastic orginal cut */
 			net->ssthresh -= (net->mtu * num_pkt_lost);
 			net->cwnd -= (net->mtu * num_pkt_lost);
 		}
