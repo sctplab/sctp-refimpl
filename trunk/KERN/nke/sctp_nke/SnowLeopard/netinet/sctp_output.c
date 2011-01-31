@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218072 2011-01-29 19:55:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218129 2011-01-31 11:50:11Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -10951,11 +10951,11 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 			ctsn = ntohl(ecne->tsn);
 			if (SCTP_TSN_GT(high_tsn, ctsn)) {
 				ecne->tsn = htonl(high_tsn);
-				cnt = ntohl(ecne->num_pkts_since_cwr);
-				cnt++;
-				ecne->num_pkts_since_cwr = htonl(cnt);
 				SCTP_STAT_INCR(sctps_queue_upd_ecne);
 			}
+			cnt = ntohl(ecne->num_pkts_since_cwr);
+			cnt++;
+			ecne->num_pkts_since_cwr = htonl(cnt);
 			return;
 		}
 	}
