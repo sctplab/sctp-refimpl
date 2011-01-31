@@ -2540,18 +2540,22 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/* get the current time */
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	(void)SCTP_GETTIME_TIMESPEC(&nano_now);
-	if (did_an_announce < 5) {
-		printf("Calc -      now:%ld.%ld\n", now.tv_sec, now.tv_usec);
-		printf("     - nano_now:%ld.%ld\n", nano_now.tv_sec, 
-		       nano_now.tv_nsec);
-		did_an_announce++;
-	}
 	/* 
 	 * Record the real time of the last RTT for
 	 * use in DC-CC.
 	 */
 	net->last_measured_rtt = now;
 	timevalsub(&net->last_measured_rtt, old);
+	if (did_an_announce < 5) {
+		printf("Calc -      now:%ld.%ld\n", now.tv_sec, now.tv_usec);
+		printf("     -      old:%ld.%ld\n", old->tv_sec, old->tv_usec);
+		printf("     - measured:%ld.%ld\n", net->last_measured_rtt.tv_sec,
+		       net->last_measured_rtt.tv_sec);
+		printf("     - nano_now:%ld.%ld\n", nano_now.tv_sec, 
+		       nano_now.tv_nsec);
+		did_an_announce++;
+	}
+
 
 	/* compute the RTT value */
 	if ((u_long)now.tv_sec > (u_long)old->tv_sec) {
