@@ -1046,6 +1046,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
 
 #if defined(_KERNEL)
 
+#define SCTP_GETTIME_TIMESPEC(x) (getnanouptime(x))
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
 #endif
