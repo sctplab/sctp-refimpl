@@ -990,6 +990,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
  */
 #define SCTP_TIME_WAIT 60
 
+/* How many micro seconds is the cutoff from
+ * local lan type rtt's
+ */
+#define SCTP_LOCAL_LAN_RTT 500
+
 #define SCTP_SEND_BUFFER_SPLITTING 0x00000001
 #define SCTP_RECV_BUFFER_SPLITTING 0x00000002
 
