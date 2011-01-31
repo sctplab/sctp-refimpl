@@ -103,6 +103,8 @@ main(int argc, char **argv)
 		} else {
 			if (headat > tailat) {
 				calc = headat - (tailat+1);
+			} else if (headat == tailat) {
+				calc = 0; /* hit it while being removed */
 			} else {
 				calc = headat + (ring_size - (tailat+1));
 			}
