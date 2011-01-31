@@ -482,13 +482,39 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 }
 
+static int i_announced=0;
+#define SCTP_DC_CC_L 3
+
 static void
 sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int in_window, int num_pkt_lost)
 {
 	int old_cwnd = net->cwnd;
 
-	if (in_window == 0) {
+	if ((net->last_measured_rtt.tv_sec == 0) &&
+	    (net->last_measured_rtt.tv_usec < SCTP_LOCAL_LAN_RTT)) {
+		/* Data center Congestion Congrol */
+		if (i_announced == 0) {
+			i_announced = 1;
+			printf("Data Center CC engaged\n");
+		}
+		if (num_pkt_lost == 0) {
+			printf("Huh NPL == 0?\n");
+			num_pkt_lost = 1;
+		}
+		if (in_window == 0) {
+			/* Set ssthresh the first time */
+			net->ssthresh = net->flight_size - (net->mtu * num_pkt_lost);
+		}
+		/* Always drop the cwnd */
+		net->cwnd = (net->flight_size - (SCTP_DC_CC_L * net->mtu * num_pkt_lost));
+	} else 	if (in_window == 0) {
+		if (i_announced < 4) {
+			printf("net->last_measured_rtt sec:%ld.%6.6ld\n",
+			       net->last_measured_rtt.tv_sec,
+			       net->last_measured_rtt.tv_usec);
+			i_announced++;
+		}
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = net->cwnd / 2;
 		if (net->ssthresh < net->mtu) {
