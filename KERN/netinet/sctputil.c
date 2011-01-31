@@ -2549,8 +2549,9 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	if (did_an_announce < 5) {
 		printf("Calc -      now:%ld.%ld\n", now.tv_sec, now.tv_usec);
 		printf("     -      old:%ld.%ld\n", old->tv_sec, old->tv_usec);
-		printf("     - measured:%ld.%ld\n", net->last_measured_rtt.tv_sec,
-		       net->last_measured_rtt.tv_sec);
+		printf("     - measured:%ld.%ld\n", 
+		       net->last_measured_rtt.tv_sec,
+		       net->last_measured_rtt.tv_usec);
 		printf("     - nano_now:%ld.%ld\n", nano_now.tv_sec, 
 		       nano_now.tv_nsec);
 		did_an_announce++;
