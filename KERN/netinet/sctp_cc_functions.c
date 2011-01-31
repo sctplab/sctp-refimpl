@@ -482,7 +482,6 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 }
 
-#define SCTP_DC_CC_L 3
 
 static void
 sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
@@ -491,17 +490,16 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int old_cwnd = net->cwnd;
 
 	if (net->lan_type == SCTP_LAN_LOCAL) {
-		/* Data center Congestion Congrol */
-		if (num_pkt_lost == 0) {
-			printf("Huh NPL == 0?\n");
-			num_pkt_lost = 1;
+		/* Data center Congestion Control */
+		if (in_window) {
+			/* Go to CA with have the cwnd */
+			net->ssthresh = net->flight_size;
+			net->cwnd = net->flight_size/2;
+		} else {
+			/* Further tuning down required */
+			net->ssthresh -= (mtu * num_pkt_lost);
+			net->cwnd -= (mtu * num_pkt_lost);
 		}
-		if (in_window == 0) {
-			/* Set ssthresh the first time */
-			net->ssthresh = net->flight_size - (net->mtu * num_pkt_lost);
-		}
-		/* Always drop the cwnd */
-		net->cwnd = (net->flight_size - (SCTP_DC_CC_L * net->mtu * num_pkt_lost));
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 	} else 	if (in_window == 0) {
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
