@@ -6572,6 +6572,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		}
 		/* record time */
 		data_list[i]->sent_rcv_time = net->last_sent_time;
+		data_list[i]->rec.data.cwnd_at_send = net->cwnd;
 		data_list[i]->rec.data.fast_retran_tsn = data_list[i]->rec.data.TSN_seq;
 		if (data_list[i]->whoTo == NULL) {
 			data_list[i]->whoTo = net;

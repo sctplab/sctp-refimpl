@@ -2958,6 +2958,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	TAILQ_FOREACH(lchk, &stcb->asoc.sent_queue, sctp_next) {
 		if (lchk->rec.data.TSN_seq == tsn) {
 			net = lchk->whoTo;
+			net->ecn_prev_cwnd = lchk->rec.data.cwnd_at_send;
 			break;
 		}
 		if (SCTP_TSN_GT(lchk->rec.data.TSN_seq, tsn)) {

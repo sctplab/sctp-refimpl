@@ -265,6 +265,7 @@ struct sctp_nets {
 	uint32_t flight_size;
 	uint32_t cwnd;		/* actual cwnd */
 	uint32_t prev_cwnd;	/* cwnd before any processing */
+	uint32_t ecn_prev_cwnd;	/* ECN prev cwnd at first ecn_echo seen in new window */
 	uint32_t partial_bytes_acked;	/* in CA tracks when to incr a MTU */
 	uint32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
@@ -358,8 +359,7 @@ struct sctp_data_chunkrec {
 	uint16_t stream_number;	/* the stream number of this guy */
 	uint32_t payloadtype;
 	uint32_t context;	/* from send */
-
-	uint8_t fwd_tsn_cnt;
+	uint32_t cwnd_at_send;
 	/*
 	 * part of the Highest sacked algorithm to be able to stroke counts
 	 * on ones that are FR'd.
@@ -372,6 +372,7 @@ struct sctp_data_chunkrec {
 				 */
 	uint8_t state_flags;
 	uint8_t chunk_was_revoked;
+	uint8_t fwd_tsn_cnt;
 };
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
