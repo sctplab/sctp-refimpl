@@ -497,8 +497,8 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 			net->cwnd = net->flight_size/2;
 		} else {
 			/* Further tuning down required */
-			net->ssthresh -= (mtu * num_pkt_lost);
-			net->cwnd -= (mtu * num_pkt_lost);
+			net->ssthresh -= (net->mtu * num_pkt_lost);
+			net->cwnd -= (net->mtu * num_pkt_lost);
 		}
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 	} else 	if (in_window == 0) {
