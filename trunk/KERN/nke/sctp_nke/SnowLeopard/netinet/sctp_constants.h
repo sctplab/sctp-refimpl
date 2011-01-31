@@ -990,6 +990,19 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
  */
 #define SCTP_TIME_WAIT 60
 
+/* How many micro seconds is the cutoff from
+ * local lan type rtt's
+ */
+ /* 
+  * We allow 500us for the rtt and another 
+  * 500us for the cookie processing since
+  * we measure this on the first rtt.
+  */
+#define SCTP_LOCAL_LAN_RTT 1000
+#define SCTP_LAN_UNKNOWN  0
+#define SCTP_LAN_LOCAL    1
+#define SCTP_LAN_INTERNET 2
+
 #define SCTP_SEND_BUFFER_SPLITTING 0x00000001
 #define SCTP_RECV_BUFFER_SPLITTING 0x00000002
 
@@ -1041,6 +1054,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
 
 #if defined(_KERNEL)
 
+#define SCTP_GETTIME_TIMESPEC(x) (getnanouptime(x))
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
 #endif

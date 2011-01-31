@@ -346,6 +346,7 @@ struct sctp_nets {
 	uint8_t window_probe;		/* Doing a window probe? */
 	uint8_t RTO_measured;		/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
+	uint8_t lan_type;
 	/* JRS - struct used in HTCP algorithm */
 	struct htcp htcp_ca;
 };
