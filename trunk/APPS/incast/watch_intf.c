@@ -88,9 +88,14 @@ main(int argc, char **argv)
 			break;
 		}
 		if (tailat > headat) {
-			calc = tailat;
+			calc = tailat - headat;
 		} else {
-			calc = tailat + (ring_size - headat);
+			if ((tailat+1) == headat) {
+				/* Empty */
+				calc = 0;
+			} else {
+				calc = tailat + (ring_size - headat);
+			}
 		}
 		if (calc > largest) {
 			largest = calc;
