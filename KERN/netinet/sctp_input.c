@@ -5639,7 +5639,7 @@ trigger_send:
 		stcb->asoc.total_flight);
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
 	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
-		cnt_ctrl_ready = stcb->asoc.ctrl_queue_cnt - ecn_echo_cnt_onq;
+		cnt_ctrl_ready = stcb->asoc.ctrl_queue_cnt - stcb->asoc.ecn_echo_cnt_onq;
 	}
 	if (cnt_ctrl_ready ||
 	    ((un_sent) &&
