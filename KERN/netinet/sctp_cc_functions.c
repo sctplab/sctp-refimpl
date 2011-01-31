@@ -507,6 +507,7 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 		}
 		/* Always drop the cwnd */
 		net->cwnd = (net->flight_size - (SCTP_DC_CC_L * net->mtu * num_pkt_lost));
+		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 	} else 	if (in_window == 0) {
 		if (i_announced < 4) {
 			printf("net->last_measured_rtt sec:%ld.%6.6ld\n",
