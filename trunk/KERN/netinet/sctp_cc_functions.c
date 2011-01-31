@@ -491,8 +491,7 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 {
 	int old_cwnd = net->cwnd;
 
-	if ((net->last_measured_rtt.tv_sec == 0) &&
-	    (net->last_measured_rtt.tv_usec < SCTP_LOCAL_LAN_RTT)) {
+	if (net->lan_type == SCTP_LAN_LOCAL) {
 		/* Data center Congestion Congrol */
 		if (i_announced == 0) {
 			i_announced = 1;
