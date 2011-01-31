@@ -49,8 +49,15 @@ main(int argc, char **argv)
 	char *head=NULL, *tail=NULL;
 	int ring_size=4096;
 	int largest = 0, calc;
-	while((i= getopt(argc,argv,"h:t:r:")) != EOF) {
+	int transmit = 0;
+	while((i= getopt(argc,argv,"h:t:r:TR")) != EOF) {
 		switch(i) {
+		case 'T':
+			transmit = 1;
+			break;
+		case 'R':
+			transmit = 0;
+			break;
 		case 'r':
 			ring_size = strtol(optarg, NULL, 0);
 			break;
@@ -87,10 +94,10 @@ main(int argc, char **argv)
 			       errno, strerror(errno), tail);
 			break;
 		}
-		if (tailat > headat) {
-			calc = tailat - headat;
+		if (tailat >= headat) {
+			calc = (tailat - headat) + 1;
 		} else {
-			if ((tailat+1) == headat) {
+			if ((transmit == 0) && ((tailat+1) == headat)) {
 				/* Empty */
 				calc = 0;
 			} else {
