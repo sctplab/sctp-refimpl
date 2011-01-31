@@ -48,7 +48,7 @@ main(int argc, char **argv)
 	int headat, tailat;
 	char *head=NULL, *tail=NULL;
 	int ring_size=4096;
-	int largest = 0, calc;
+	int largest = -1, calc;
 	int transmit = 0;
 	while((i= getopt(argc,argv,"h:t:r:TR")) != EOF) {
 		switch(i) {
@@ -95,7 +95,10 @@ main(int argc, char **argv)
 			break;
 		}
 		if (tailat >= headat) {
-			calc = (tailat - headat) + 1;
+			if (transmit)
+				calc = (tailat - headat);
+			else
+				calc = (tailat - headat) + 1;
 		} else {
 			if ((transmit == 0) && ((tailat+1) == headat)) {
 				/* Empty */
@@ -103,6 +106,9 @@ main(int argc, char **argv)
 			} else {
 				calc = tailat + (ring_size - headat);
 			}
+		}
+		if (calc > 2000) {
+			printf("?");
 		}
 		if (calc > largest) {
 			largest = calc;
