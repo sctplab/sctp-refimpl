@@ -2504,7 +2504,6 @@ sctp_mtu_size_reset(struct sctp_inpcb *inp,
  * given an association and starting time of the current RTT period return
  * RTO in number of msecs net should point to the current network
  */
-int did_an_announce=0;
 
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *stcb,
@@ -2522,7 +2521,6 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	uint32_t new_rto = 0;
 	int first_measure = 0;
 	struct timeval now, then, *old;
-	struct timespec nano_now;
 	/* Copy it out for sparc64 */
 	if (safe == sctp_align_unsafe_makecopy) {
 		old = &then;
@@ -2539,24 +2537,22 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	/************************/
 	/* get the current time */
 	(void)SCTP_GETTIME_TIMEVAL(&now);
-	(void)SCTP_GETTIME_TIMESPEC(&nano_now);
 	/* 
 	 * Record the real time of the last RTT for
 	 * use in DC-CC.
 	 */
 	net->last_measured_rtt = now;
 	timevalsub(&net->last_measured_rtt, old);
-	if (did_an_announce < 5) {
-		printf("Calc -      now:%ld.%ld\n", now.tv_sec, now.tv_usec);
-		printf("     -      old:%ld.%ld\n", old->tv_sec, old->tv_usec);
-		printf("     - measured:%ld.%ld\n", 
-		       net->last_measured_rtt.tv_sec,
-		       net->last_measured_rtt.tv_usec);
-		printf("     - nano_now:%ld.%ld\n", nano_now.tv_sec, 
-		       nano_now.tv_nsec);
-		did_an_announce++;
-	}
 
+	/* Do we need to determine the lan type? */
+	if (net->lan_type == SCTP_LAN_UNKNOWN) {
+		if ((net->last_measured_rtt.tv_sec) ||
+		    (net->last_measured_rtt.tv_usec > SCTP_LOCAL_LAN_RTT)) {
+			net->lan_type = SCTP_LAN_INTERNET;
+		} else {
+			net->lan_type = SCTP_LAN_LOCAL;
+		}
+	}
 
 	/* compute the RTT value */
 	if ((u_long)now.tv_sec > (u_long)old->tv_sec) {
