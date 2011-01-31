@@ -2422,7 +2422,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		if ((stcb->asoc.ecn_echo_cnt_onq) && (sack_chk_ewr_cnt < 3)) {
 			sack_chk_ewr_cnt++;
 			printf("ss:%d wg:%d ig:%d nd:%d das:%d ps:%d > sf:%d\n",
-			       stb->asoc.send_sack,
+			       stcb->asoc.send_sack,
 			       was_a_gap, is_a_gap,
 			       stcb->asoc.numduptsns,
 			       stcb->asoc.delayed_ack,
