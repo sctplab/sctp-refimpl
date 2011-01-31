@@ -946,7 +946,7 @@ struct sctp_association {
 	uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
 	uint32_t default_flowlabel;
 	uint32_t pr_sctp_cnt;
-	int ctrl_queue_cnt;	/* could be removed  REM */
+	int ctrl_queue_cnt;	/* could be removed  REM - NO IT CAN'T!! RRS */
 	/*
 	 * All outbound datagrams queue into this list from the individual
 	 * stream queue. Here they get assigned a TSN and then await

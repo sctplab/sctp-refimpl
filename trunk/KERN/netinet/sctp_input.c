@@ -5425,6 +5425,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	struct mbuf *m = *mm;
 	int abort_flag = 0;
 	int un_sent;
+	int cnt_ctrl_ready=0;
 
 	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
@@ -5637,8 +5638,10 @@ trigger_send:
 		TAILQ_EMPTY(&stcb->asoc.control_send_queue),
 		stcb->asoc.total_flight);
 	un_sent = (stcb->asoc.total_output_queue_size - stcb->asoc.total_flight);
-
-	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue) ||
+	if (!TAILQ_EMPTY(&stcb->asoc.control_send_queue)) {
+		cnt_ctrl_ready = stcb->asoc.ctrl_queue_cnt - ecn_echo_cnt_onq;
+	}
+	if (cnt_ctrl_ready ||
 	    ((un_sent) &&
 	     (stcb->asoc.peers_rwnd > 0 ||
 	      (stcb->asoc.peers_rwnd <= 0 && stcb->asoc.total_flight == 0)))) {
