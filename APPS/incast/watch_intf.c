@@ -99,7 +99,7 @@ main(int argc, char **argv)
 		}
 		if (calc > largest) {
 			largest = calc;
-			printf("%d", largest);
+			printf("%d\r", largest);
 			fflush(stdout);
 		}
 	}
