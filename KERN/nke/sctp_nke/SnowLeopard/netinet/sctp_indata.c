@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 218072 2011-01-29 19:55:29Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 218129 2011-01-31 11:50:11Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2377,13 +2377,11 @@ sctp_slide_mapping_arrays(struct sctp_tcb *stcb)
 	}
 }
 
-
 void
 sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 {
 	struct sctp_association *asoc;
 	uint32_t highest_tsn;
-
 	asoc = &stcb->asoc;
 	if (SCTP_TSN_GT(asoc->highest_tsn_inside_nr_map, asoc->highest_tsn_inside_map)) {
 		highest_tsn = asoc->highest_tsn_inside_nr_map;
@@ -2418,7 +2416,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		 * received since last ack
 		 */
 		stcb->asoc.cmt_dac_pkts_rcvd++;
-
+	
 		if ((stcb->asoc.send_sack == 1) ||      /* We need to send a SACK */
 		    ((was_a_gap) && (is_a_gap == 0)) ||	/* was a gap, but no
 		                                         * longer is one */
@@ -2426,7 +2424,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		    (is_a_gap) ||                       /* is still a gap */
 		    (stcb->asoc.delayed_ack == 0) ||    /* Delayed sack disabled */
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
-			    ) {
+			) {
 
 			if ((stcb->asoc.sctp_cmt_on_off > 0)&&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
