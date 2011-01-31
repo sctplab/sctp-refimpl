@@ -2384,6 +2384,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 {
 	struct sctp_association *asoc;
 	uint32_t highest_tsn;
+	int print_more=0;
 	asoc = &stcb->asoc;
 	if (SCTP_TSN_GT(asoc->highest_tsn_inside_nr_map, asoc->highest_tsn_inside_map)) {
 		highest_tsn = asoc->highest_tsn_inside_nr_map;
@@ -2421,12 +2422,17 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 	
 		if ((stcb->asoc.ecn_echo_cnt_onq) && (sack_chk_ewr_cnt < 3)) {
 			sack_chk_ewr_cnt++;
-			printf("ss:%d wg:%d ig:%d nd:%d das:%d ps:%d > sf:%d\n",
+		printf("ss:%d wg:%d ig:%d nd:%d das:%d ps:%d > sf:%d cmto_o:%d dac:%d tp:%d\n",
 			       stcb->asoc.send_sack,
 			       was_a_gap, is_a_gap,
 			       stcb->asoc.numduptsns,
 			       stcb->asoc.delayed_ack,
-			       stcb->asoc.data_pkts_seen, stcb->asoc.sack_freq);
+			       stcb->asoc.data_pkts_seen, stcb->asoc.sack_freq,
+			       stcb->asoc.sctp_cmt_on_off,
+			       SCTP_BASE_SYSCTL(sctp_cmt_use_dac),
+			       SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)
+				);
+			print_more = 1;
 		}
 		if ((stcb->asoc.send_sack == 1) ||      /* We need to send a SACK */
 		    ((was_a_gap) && (is_a_gap == 0)) ||	/* was a gap, but no
@@ -2435,7 +2441,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 		    (is_a_gap) ||                       /* is still a gap */
 		    (stcb->asoc.delayed_ack == 0) ||    /* Delayed sack disabled */
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
-			    ) {
+			) {
 
 			if ((stcb->asoc.sctp_cmt_on_off > 0)&&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
@@ -2456,6 +2462,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 				 * gap reports will be delayed with
 				 * DAC. Start the delayed ack timer.
 				 */
+				if (print_more) {
+					printf("Started sack timer\n");
+				}
 				sctp_timer_start(SCTP_TIMER_TYPE_RECV,
 				                 stcb->sctp_ep, stcb, NULL);
 			} else {
@@ -2465,6 +2474,9 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 				 * first packet OR there are gaps or
 				 * duplicates.
 				 */
+				if (print_more) {
+					printf("Send sack\n");
+				}
 				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 				sctp_send_sack(stcb);
 			}
