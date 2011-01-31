@@ -55,10 +55,10 @@ main(int argc, char **argv)
 			ring_size = strtol(optarg, NULL, 0);
 			break;
 		case 'h':
-			optarg = head;
+			head = optarg;
 			break;
 		case 't':
-			optarg = tail;
+			tail = optarg;
 			break;
 		case '?':
 		default:
