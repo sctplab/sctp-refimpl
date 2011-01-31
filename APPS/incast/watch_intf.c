@@ -49,7 +49,7 @@ main(int argc, char **argv)
 	char *head=NULL, *tail=NULL;
 	int ring_size=4096;
 	int largest = 0, calc;
-	while((i= getopt(argc,argv,"h:t:r")) != EOF) {
+	while((i= getopt(argc,argv,"h:t:r:")) != EOF) {
 		switch(i) {
 		case 'r':
 			ring_size = strtol(optarg, NULL, 0);
