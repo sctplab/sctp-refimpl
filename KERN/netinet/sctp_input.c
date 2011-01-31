@@ -4204,6 +4204,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 	uint32_t chk_length;
 	int ret;
 	int abort_no_unlock = 0;
+	int ecne_seen = 0;
 	/*
 	 * How big should this be, and should it be alloc'd? Lets try the
 	 * d-mtu-ceiling for now (2k) and that should hopefully work ...
@@ -4690,13 +4691,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * path sack processing. We also allow window update
 					 * sacks with no missing segments to go this way too.
 					 */
-					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, &abort_now);
+					sctp_express_handle_sack(stcb, cum_ack, a_rwnd, &abort_now, ecne_seen);
 				} else {
 					if (netp && *netp)
 						sctp_handle_sack(m, offset_seg, offset_dup,
 						                 stcb, *netp,
 								 num_seg, 0, num_dup, &abort_now, flags,
-								 cum_ack, a_rwnd);
+								 cum_ack, a_rwnd, ecne_seen);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
@@ -4776,13 +4777,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					 * this way too.
 					 */
 					sctp_express_handle_sack(stcb, cum_ack, a_rwnd,
-					                         &abort_now);
+					                         &abort_now, ecne_seen);
 				} else {
 					if (netp && *netp)
 						sctp_handle_sack(m, offset_seg, offset_dup,
 						                 stcb, *netp,
 						                 num_seg, num_nr_seg, num_dup, &abort_now, flags,
-						                 cum_ack, a_rwnd);
+						                 cum_ack, a_rwnd, ecne_seen);
 				}
 				if (abort_now) {
 					/* ABORT signal from sack processing */
@@ -5059,6 +5060,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				stcb->asoc.overall_error_count = 0;
 				sctp_handle_ecn_echo((struct sctp_ecne_chunk *)ch,
 						     stcb);
+				ecne_seen = 1;
 			}
 			break;
 		case SCTP_ECN_CWR:
