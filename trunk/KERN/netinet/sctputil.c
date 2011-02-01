@@ -2549,9 +2549,9 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	if ((local_lan_determine == SCTP_DETERMINE_LL_OK) && (net->lan_type == SCTP_LAN_UNKNOWN)) {
 		if ((net->last_measured_rtt.tv_sec) ||
 		    (net->last_measured_rtt.tv_usec > SCTP_LOCAL_LAN_RTT)) {
-			printf("Determined local lan with %ld usecs\n", net->last_measured_rtt.tv_usec);
 			net->lan_type = SCTP_LAN_INTERNET;
 		} else {
+			printf("Determined local lan with %ld usecs\n", net->last_measured_rtt.tv_usec);
 			net->lan_type = SCTP_LAN_LOCAL;
 		}
 	}
