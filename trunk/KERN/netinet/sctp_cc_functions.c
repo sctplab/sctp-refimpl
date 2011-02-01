@@ -495,7 +495,14 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 			/* Go to CA with the cwnd at the point we sent
 			 * the TSN that was marked with a CE.
 			 */
-			net->cwnd = net->ecn_prev_cwnd - (net->mtu * num_pkt_lost);
+			if (net->ecn_prev_cwnd < net->cwnd) {
+				/* Restore to prev cwnd */
+				net->cwnd = net->ecn_prev_cwnd - (net->mtu * num_pkt_lost);
+			} else {
+				/* Just cut in 1/2 */
+				net->cwnd /= 2;
+			}
+			/* Drop to CA */
 			net->ssthresh = net->cwnd - (num_pkt_lost * net->mtu);
 		} else {
 			/* Further tuning down required over the drastic orginal cut */
