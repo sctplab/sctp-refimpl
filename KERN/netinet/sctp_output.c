@@ -9573,7 +9573,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		}
-		if ((asoc->max_burst > 0) && (tot_frs > asoc->max_burst)) {
+		if ((asoc->fr_max_burst > 0) && (tot_frs > asoc->fr_max_burst)) {
 			/* Hit FR burst limit */
 			return;
 		}

@@ -1080,8 +1080,10 @@ struct sctp_association {
 	 */
 	uint8_t send_sack;
 
-	/* max burst after fast retransmit completes */
+	/* max burst of new packets into the network */
 	uint32_t max_burst;
+	/* max burst of fast retransmit packets */
+	uint32_t fr_max_burst;
 
 	uint8_t sat_network;	/* RTT is in range of sat net or greater */
 	uint8_t sat_network_lockout;	/* lockout code */
