@@ -378,6 +378,13 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
 #define SCTP_DEF_HBMAX_BURST 4
 #define SCTP_DEF_FRMAX_BURST 4
 
+/* RTO calculation flag to say if it
+ * is safe to determine local lan or not.
+ */
+#define SCTP_DETERMINE_LL_NOTOK 0
+#define SCTP_DETERMINE_LL_OK    1
+
+
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
 #define SCTP_FIRST_MBUF_RESV 68
 /* Packet transmit states in the sent field */

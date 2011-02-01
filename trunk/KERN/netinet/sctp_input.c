@@ -487,7 +487,8 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	    asoc->primary_destination, SCTP_FROM_SCTP_INPUT+SCTP_LOC_4);
 
 	/* calculate the RTO */
-	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered, sctp_align_safe_nocopy);
+	net->RTO = sctp_calculate_rto(stcb, asoc, net, &asoc->time_entered, sctp_align_safe_nocopy, 
+				      SCTP_DETERMINE_LL_NOTOK);
 
 	retval = sctp_send_cookie_echo(m, offset, stcb, net);
 	if (retval < 0) {
@@ -634,7 +635,8 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			net, net->cwnd);
 	}
 	/* Now lets do a RTO with this */
-	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy);
+	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy, 
+					SCTP_DETERMINE_LL_OK);
 	/* Mobility adaptation */
 	if (req_prim) {
 		if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
@@ -1531,7 +1533,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				 */
 				net->hb_responded = 1;
 				net->RTO = sctp_calculate_rto(stcb, asoc, net,
-							      &cookie->time_entered, sctp_align_unsafe_makecopy);
+							      &cookie->time_entered, 
+							      sctp_align_unsafe_makecopy, 
+							      SCTP_DETERMINE_LL_NOTOK);
 
 				if (stcb->asoc.sctp_autoclose_ticks &&
 				    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_AUTOCLOSE))) {
@@ -2236,7 +2240,8 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	(void)SCTP_GETTIME_TIMEVAL(&stcb->asoc.time_entered);
 	if ((netp) && (*netp)) {
 		(*netp)->RTO = sctp_calculate_rto(stcb, asoc, *netp,
-						  &cookie->time_entered, sctp_align_unsafe_makecopy);
+						  &cookie->time_entered, sctp_align_unsafe_makecopy, 
+						  SCTP_DETERMINE_LL_NOTOK);
 	}
 	/* respond with a COOKIE-ACK */
 	sctp_send_cookie_ack(stcb);
@@ -2851,7 +2856,8 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		SCTP_STAT_INCR_GAUGE32(sctps_currestab);
 		if (asoc->overall_error_count == 0) {
 			net->RTO = sctp_calculate_rto(stcb, asoc, net,
-			    &asoc->time_entered, sctp_align_safe_nocopy);
+					             &asoc->time_entered, sctp_align_safe_nocopy, 
+						      SCTP_DETERMINE_LL_NOTOK);
 		}
 		(void)SCTP_GETTIME_TIMEVAL(&asoc->time_entered);
 		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_UP, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
