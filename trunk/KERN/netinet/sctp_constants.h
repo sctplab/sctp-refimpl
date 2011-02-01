@@ -1008,7 +1008,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
   * 500us for the cookie processing since
   * we measure this on the first rtt.
   */
-#define SCTP_LOCAL_LAN_RTT 1000
+#define SCTP_LOCAL_LAN_RTT 1100
 #define SCTP_LAN_UNKNOWN  0
 #define SCTP_LAN_LOCAL    1
 #define SCTP_LAN_INTERNET 2
