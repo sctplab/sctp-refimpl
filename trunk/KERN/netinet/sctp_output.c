@@ -11185,6 +11185,23 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, u
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 
+
+	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
+		if ((chk->rec.chunk_id.id == SCTP_ECN_CWR) && (net == chk->whoTo)) {
+			/* found a previous CWR queued to same destination update it if needed */
+			uint32_t ctsn;
+			cwr = mtod(chk->data, struct sctp_cwr_chunk *);
+			ctsn = ntohl(cwr->tsn);
+			if (SCTP_TSN_GT(high_tsn, ctsn)) {
+				cwr->tsn = htonl(high_tsn);
+			}
+			if (override & SCTP_CWR_REDUCE_OVERRIDE) {
+				/* Make sure override is carried */
+				cwr->ch.chunk_flags |= SCTP_CWR_REDUCE_OVERRIDE;
+			}
+			return;
+		}
+	}
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
