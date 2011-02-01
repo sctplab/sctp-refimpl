@@ -375,6 +375,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
 
 /* default max I can burst out after a fast retransmit, 0 disables it */
 #define SCTP_DEF_MAX_BURST 0
+#define SCTP_DEF_HBMAX_BURST 4
+#define SCTP_DEF_FRMAX_BURST 4
+
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
 #define SCTP_FIRST_MBUF_RESV 68
 /* Packet transmit states in the sent field */
