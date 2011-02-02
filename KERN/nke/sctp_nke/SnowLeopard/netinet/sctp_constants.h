@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -375,6 +375,16 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
 
 /* default max I can burst out after a fast retransmit, 0 disables it */
 #define SCTP_DEF_MAX_BURST 0
+#define SCTP_DEF_HBMAX_BURST 4
+#define SCTP_DEF_FRMAX_BURST 4
+
+/* RTO calculation flag to say if it
+ * is safe to determine local lan or not.
+ */
+#define SCTP_DETERMINE_LL_NOTOK 0
+#define SCTP_DETERMINE_LL_OK    1
+
+
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
 #define SCTP_FIRST_MBUF_RESV 68
 /* Packet transmit states in the sent field */
@@ -998,7 +1008,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218129 2011-01-31 11:50:11
   * 500us for the cookie processing since
   * we measure this on the first rtt.
   */
-#define SCTP_LOCAL_LAN_RTT 1000
+#define SCTP_LOCAL_LAN_RTT 1100
 #define SCTP_LAN_UNKNOWN  0
 #define SCTP_LAN_LOCAL    1
 #define SCTP_LAN_INTERNET 2

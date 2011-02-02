@@ -44,7 +44,7 @@
 #include <netinet/sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 218129 2011-01-31 11:50:11Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 static void
@@ -488,20 +488,7 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int in_window, int num_pkt_lost)
 {
 	int old_cwnd = net->cwnd;
-
-	if (net->lan_type == SCTP_LAN_LOCAL) {
-		/* Data center Congestion Control */
-		if (in_window) {
-			/* Go to CA with have the cwnd */
-			net->ssthresh = net->flight_size;
-			net->cwnd = net->flight_size/2;
-		} else {
-			/* Further tuning down required */
-			net->ssthresh -= (net->mtu * num_pkt_lost);
-			net->cwnd -= (net->mtu * num_pkt_lost);
-		}
-		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
-	} else 	if (in_window == 0) {
+	if (in_window == 0) {
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = net->cwnd / 2;
 		if (net->ssthresh < net->mtu) {

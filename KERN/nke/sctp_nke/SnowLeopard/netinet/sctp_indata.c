@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 218129 2011-01-31 11:50:11Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2947,7 +2947,8 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 											   &stcb->asoc,
 											   tp1->whoTo,
 											   &tp1->sent_rcv_time,
-											   sctp_align_safe_nocopy);
+											   sctp_align_safe_nocopy,
+											   SCTP_DETERMINE_LL_OK);
 								tp1->do_rtt = 0;
 							}
 						}
@@ -3883,7 +3884,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 								sctp_calculate_rto(stcb,
 										   asoc, tp1->whoTo,
 										   &tp1->sent_rcv_time,
-										   sctp_align_safe_nocopy);
+										   sctp_align_safe_nocopy,
+										   SCTP_DETERMINE_LL_OK);
 							tp1->do_rtt = 0;
 						}
 					}
@@ -4475,7 +4477,8 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 								sctp_calculate_rto(stcb,
 								                   asoc, tp1->whoTo,
 								                   &tp1->sent_rcv_time,
-								                   sctp_align_safe_nocopy);
+								                   sctp_align_safe_nocopy,
+										   SCTP_DETERMINE_LL_OK);
 							tp1->do_rtt = 0;
 						}
 					}

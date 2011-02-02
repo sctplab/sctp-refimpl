@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 217894 2011-01-26 19:49:03Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -374,6 +374,7 @@ struct sctp_pcb {
 	uint32_t adaptation_layer_indicator;
 	uint32_t store_at;
 	uint32_t max_burst;
+	uint32_t fr_max_burst;
 	char current_secret_number;
 	char last_secret_number;
 };
