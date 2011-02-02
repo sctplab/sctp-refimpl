@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218129 2011-01-31 11:50:11Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6572,6 +6572,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 		}
 		/* record time */
 		data_list[i]->sent_rcv_time = net->last_sent_time;
+		data_list[i]->rec.data.cwnd_at_send = net->cwnd;
 		data_list[i]->rec.data.fast_retran_tsn = data_list[i]->rec.data.TSN_seq;
 		if (data_list[i]->whoTo == NULL) {
 			data_list[i]->whoTo = net;
@@ -9572,7 +9573,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 						    &now, &now_filled, frag_point, so_locked);
 			return;
 		}
-		if ((asoc->max_burst > 0) && (tot_frs > asoc->max_burst)) {
+		if ((asoc->fr_max_burst > 0) && (tot_frs >= asoc->fr_max_burst)) {
 			/* Hit FR burst limit */
 			return;
 		}
@@ -11184,6 +11185,23 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, u
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 
+
+	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
+		if ((chk->rec.chunk_id.id == SCTP_ECN_CWR) && (net == chk->whoTo)) {
+			/* found a previous CWR queued to same destination update it if needed */
+			uint32_t ctsn;
+			cwr = mtod(chk->data, struct sctp_cwr_chunk *);
+			ctsn = ntohl(cwr->tsn);
+			if (SCTP_TSN_GT(high_tsn, ctsn)) {
+				cwr->tsn = htonl(high_tsn);
+			}
+			if (override & SCTP_CWR_REDUCE_OVERRIDE) {
+				/* Make sure override is carried */
+				cwr->ch.chunk_flags |= SCTP_CWR_REDUCE_OVERRIDE;
+			}
+			return;
+		}
+	}
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		return;
