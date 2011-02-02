@@ -50,6 +50,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218186 2011-02-02 11:13:23Z rr
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
 #include <netinet/udp.h>
+#include <sys/smp.h>
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 2
@@ -6011,10 +6012,31 @@ sctp_input(i_pak, va_alist)
 	}
 	return;
 }
+
+
 void
-sctp_input(i_pak, off)
-	struct mbuf *i_pak;
-	int off;
+sctp_input(struct mbuf *m, int off)
 {
-	sctp_input_with_port(i_pak, off, 0);
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+	struct ip *ip;
+	struct sctphdr *sh;
+	int offset;
+	int cpu_to_use;
+	if (mp_ncpus > 1) {
+		ip = mtod(m, struct ip *);
+		offset = off + sizeof(*sh);
+		if (SCTP_BUF_LEN(m) < offset) {
+			if ((m = m_pullup(m, offset)) == 0) {
+				SCTP_STAT_INCR(sctps_hdrops);
+				return;
+			}
+			ip = mtod(m, struct ip *);
+		}
+		sh = (struct sctphdr *)((caddr_t)ip + off);
+		cpu_to_use = ntohl(sh->v_tag) % mp_ncpus;
+		sctp_queue_to_mcore(m, off, cpu_to_use);
+		return;
+	} 
+#endif
+	sctp_input_with_port(m, off, 0);
 }

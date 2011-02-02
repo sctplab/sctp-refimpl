@@ -810,6 +810,11 @@ sctp_initiate_iterator(inp_func inpf,
 		       end_func ef,
 		       struct sctp_inpcb *,
 		       uint8_t co_off);
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+void
+sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use);
+
+#endif
 
 #ifdef INVARIANTS
 void

@@ -97,6 +97,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218186 2011-02-02 11:13:23
 #define SCTP_KTRHEAD_NAME "sctp_iterator"
 #define SCTP_KTHREAD_PAGES 0
 
+#define SCTP_MCORE_NAME "sctp_core_worker"
+
 
 /* If you support Multi-VRF how big to
  * make the initial array of VRF's to.
