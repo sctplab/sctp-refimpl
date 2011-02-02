@@ -488,29 +488,7 @@ sctp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	int in_window, int num_pkt_lost)
 {
 	int old_cwnd = net->cwnd;
-
-	if (net->lan_type == SCTP_LAN_LOCAL) {
-		/* Data center Congestion Control */
-		if (in_window == 0) {
-			/* Go to CA with the cwnd at the point we sent
-			 * the TSN that was marked with a CE.
-			 */
-			if (net->ecn_prev_cwnd < net->cwnd) {
-				/* Restore to prev cwnd */
-				net->cwnd = net->ecn_prev_cwnd - (net->mtu * num_pkt_lost);
-			} else {
-				/* Just cut in 1/2 */
-				net->cwnd /= 2;
-			}
-			/* Drop to CA */
-			net->ssthresh = net->cwnd - (num_pkt_lost * net->mtu);
-		} else {
-			/* Further tuning down required over the drastic orginal cut */
-			net->ssthresh -= (net->mtu * num_pkt_lost);
-			net->cwnd -= (net->mtu * num_pkt_lost);
-		}
-		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
-	} else 	if (in_window == 0) {
+	if (in_window == 0) {
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = net->cwnd / 2;
 		if (net->ssthresh < net->mtu) {
