@@ -54,8 +54,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 218219 2011-02-03 11:52:22Z rrs 
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_dtrace_define.h>
 #include <netinet/udp.h>
+#if defined(__FreeBSD__)
 #include <sys/sched.h>
 #include <sys/smp.h>
+#endif
 #include <sys/unistd.h>
 
 #if defined(__APPLE__)
