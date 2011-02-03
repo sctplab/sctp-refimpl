@@ -3908,7 +3908,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-		  if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
+		if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif

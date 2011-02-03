@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 216822 2010-12-30 16:56:20Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -71,6 +71,7 @@ MALLOC_DEFINE(SCTP_M_TIMW, "sctp_timw", "sctp time block");
 MALLOC_DEFINE(SCTP_M_MVRF, "sctp_mvrf", "sctp mvrf pcb list");
 MALLOC_DEFINE(SCTP_M_ITER, "sctp_iter", "sctp iterator control");
 MALLOC_DEFINE(SCTP_M_SOCKOPT, "sctp_socko", "sctp socket option");
+MALLOC_DEFINE(SCTP_M_MCORE, "sctp_mcore", "sctp mcore queue");
 #endif
 
 /* Global NON-VNET structure that controls the iterator */

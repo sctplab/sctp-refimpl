@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218186 2011-02-02 11:13:23Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -109,6 +109,33 @@ typedef void (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
          uint32_t val);
 typedef int (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
+
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+/* whats on the mcore control struct */
+struct sctp_mcore_queue {
+	TAILQ_ENTRY(sctp_mcore_queue) next;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	struct vnet *vn;
+#endif
+	struct mbuf *m;
+	int off;
+	int v6;
+};
+
+TAILQ_HEAD(sctp_mcore_qhead, sctp_mcore_queue);
+
+struct sctp_mcore_ctrl {
+	SCTP_PROCESS_STRUCT thread_proc;
+	struct sctp_mcore_qhead que;
+	struct mtx core_mtx;
+	struct mtx que_mtx;
+	int running;
+	int cpuid;
+};
+
+
+#endif
+
 
 struct sctp_iterator {
 	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
