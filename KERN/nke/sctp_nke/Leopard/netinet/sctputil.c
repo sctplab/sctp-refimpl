@@ -35,7 +35,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 218235 2011-02-03 19:59:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 218241 2011-02-03 20:44:49Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1088,7 +1088,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 		TAILQ_INIT(&asoc->strmout[i].outqueue);
 		asoc->strmout[i].stream_no = i;
 		asoc->strmout[i].last_msg_incomplete = 0;
-		asoc->ss_functions.sctp_ss_init_stream(&asoc->strmout[i]);
+		asoc->ss_functions.sctp_ss_init_stream(&asoc->strmout[i], NULL);
 	}
 	asoc->ss_functions.sctp_ss_init(stcb, asoc, 0);
 
