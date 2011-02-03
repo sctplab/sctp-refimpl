@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 218219 2011-02-03 11:52:22Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.c 218232 2011-02-03 19:22:21Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -789,7 +789,7 @@ sysctl_stat_get(SYSCTL_HANDLER_ARGS)
 	}
 
 	memset(&sb, 0, sizeof(sb));
-	for (cpu = 0; cpu < mp_ncpus; cpu++) {
+	for (cpu = 0; cpu < mp_maxid; cpu++) {
 		sarry = &SCTP_BASE_STATS[cpu];
 		if (sarry->sctps_discontinuitytime.tv_sec > sb.sctps_discontinuitytime.tv_sec) {
 			sb.sctps_discontinuitytime.tv_sec = sarry->sctps_discontinuitytime.tv_sec;
