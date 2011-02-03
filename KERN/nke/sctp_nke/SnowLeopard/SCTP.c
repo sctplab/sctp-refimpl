@@ -188,7 +188,7 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	old_pr4  = ip_protox [IPPROTO_SCTP];
 #ifdef INET6
 	old_pr6  = ip6_protox[IPPROTO_SCTP];
-#endif INET6
+#endif
 
 	bzero(&sctp4_dgram,     sizeof(struct protosw));
 	bzero(&sctp4_seqpacket, sizeof(struct protosw));
