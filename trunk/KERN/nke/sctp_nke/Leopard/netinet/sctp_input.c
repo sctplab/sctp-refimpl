@@ -5618,7 +5618,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	}
 
 	/* take care of ecn */
-	if ((stcb->asoc.ecn_allowed == 1 )&&
+	if ((stcb->asoc.ecn_allowed == 1) &&
 	    ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS)) {
 		/* Yep, we need to add a ECNE */
 		sctp_send_ecn_echo(stcb, net, high_tsn);
