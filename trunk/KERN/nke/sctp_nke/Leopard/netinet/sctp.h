@@ -1,50 +1,47 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 /* $KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 194355 2009-06-17 12:34:56Z rrs $");
-
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 218072 2011-01-29 19:55:29Z rrs $");
 #endif
+
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
-
 #if (defined(__APPLE__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Darwin))
 #include <stdint.h>
 #endif
+
 #include <sys/types.h>
 
-#if defined(__Windows__)
-#include <packon.h>
-#endif
 
 #define SCTP_PACKED __attribute__((packed))
 
@@ -116,7 +113,7 @@ struct sctp_paramhdr {
 #define SCTP_MAX_BURST			0x00000019 /* rw */
 /* assoc level context */
 #define SCTP_CONTEXT                    0x0000001a /* rw */
-/* explict EOR signalling */
+/* explicit EOR signalling */
 #define SCTP_EXPLICIT_EOR               0x0000001b
 #define SCTP_REUSE_PORT                 0x0000001c /* rw */
 #define SCTP_AUTH_DEACTIVATE_KEY	0x0000001d
@@ -131,6 +128,7 @@ struct sctp_paramhdr {
 #define SCTP_LOCAL_AUTH_CHUNKS 		0x00000103
 #define SCTP_GET_ASSOC_NUMBER           0x00000104 /* ro */
 #define SCTP_GET_ASSOC_ID_LIST          0x00000105 /* ro */
+#define SCTP_TIMEOUTS                   0x00000106
 
 /*
  * user socket options: BSD implementation specific
@@ -139,9 +137,9 @@ struct sctp_paramhdr {
  * Blocking I/O is enabled on any TCP type socket by default. For the UDP
  * model if this is turned on then the socket buffer is shared for send
  * resources amongst all associations.  The default for the UDP model is that
- * is SS_NBIO is set.  Which means all associations have a seperate send
+ * is SS_NBIO is set.  Which means all associations have a separate send
  * limit BUT they will NOT ever BLOCK instead you will get an error back
- * EAGAIN if you try to send to much. If you want the blocking symantics you
+ * EAGAIN if you try to send too much. If you want the blocking semantics you
  * set this option at the cost of sharing one socket send buffer size amongst
  * all associations. Peeled off sockets turn this option off and block. But
  * since both TCP and peeled off sockets have only one assoc per socket this
@@ -149,7 +147,7 @@ struct sctp_paramhdr {
  * model OR peeled off UDP model, but we do allow you to do so. You just use
  * the normal syscall to toggle SS_NBIO the way you want.
  *
- * Blocking I/O is controled by the SS_NBIO flag on the socket state so_state
+ * Blocking I/O is controlled by the SS_NBIO flag on the socket state so_state
  * field.
  */
 
@@ -163,10 +161,11 @@ struct sctp_paramhdr {
 /* CMT ON/OFF socket option */
 #define SCTP_CMT_ON_OFF                 0x00001200
 #define SCTP_CMT_USE_DAC                0x00001201
-/* EY - NR_SACK on/off socket option */
-#define SCTP_NR_SACK_ON_OFF                 0x00001300
 /* JRS - Pluggable Congestion Control Socket option */
-#define SCTP_PLUGGABLE_CC				0x00001202
+#define SCTP_PLUGGABLE_CC               0x00001202
+/* RS - Pluggable Stream Scheduling Socket option */
+#define SCTP_PLUGGABLE_SS				0x00001203
+#define SCTP_SS_VALUE					0x00001204
 
 /* read only */
 #define SCTP_GET_SNDBUF_USE		0x00001101
@@ -176,22 +175,22 @@ struct sctp_paramhdr {
 
 
 /* Special hook for dynamically setting primary for all assoc's,
- * this is a write only option that requires root privledge.
+ * this is a write only option that requires root privilege.
  */
 #define SCTP_SET_DYNAMIC_PRIMARY        0x00002001
 
-/* VRF (virtual router feature) and multi-VRF support 
+/* VRF (virtual router feature) and multi-VRF support
  * options. VRF's provide splits within a router
  * that give the views of multiple routers. A
  * standard host, without VRF support, is just
- * a single VRF. If VRF's are supported then 
+ * a single VRF. If VRF's are supported then
  * the transport must be VRF aware. This means
  * that every socket call coming in must be directed
  * within the endpoint to one of the VRF's it belongs
  * to. The endpoint, before binding, may select
- * the "default" VRF it is in by using a set socket 
+ * the "default" VRF it is in by using a set socket
  * option with SCTP_VRF_ID. This will also
- * get propegated to the default VRF. Once the
+ * get propagated to the default VRF. Once the
  * endpoint binds an address then it CANNOT add
  * additional VRF's to become a Multi-VRF endpoint.
  *
@@ -204,7 +203,7 @@ struct sctp_paramhdr {
  * packets, assuming the router is VRF aware, can always
  * tell us what VRF they arrived on. A host not supporting
  * any VRF's will find that the packets always arrived on the
- * single VRF that the host has. 
+ * single VRF that the host has.
  *
  */
 
@@ -214,7 +213,7 @@ struct sctp_paramhdr {
 #define SCTP_GET_ASOC_VRF               0x00003004
 #define SCTP_DEL_VRF_ID                 0x00003005
 
-/* 
+/*
  * If you enable packet logging you can get
  * a poor mans ethereal output in binary
  * form. Note this is a compile option to
@@ -249,6 +248,10 @@ struct sctp_paramhdr {
 #define SCTP_GET_ADDR_LEN               0x0000800b
 /* temporary workaround for Apple listen() issue, no args used */
 #define SCTP_LISTEN_FIX			0x0000800c
+#if defined(__Windows__)
+/* workaround for Cygwin on Windows: returns the SOCKET handle */
+#define SCTP_GET_HANDLE			0x0000800d
+#endif
 /* Debug things that need to be purged */
 #define SCTP_SET_INITIAL_DBG_SEQ	0x00009f00
 
@@ -262,8 +265,24 @@ struct sctp_paramhdr {
 /* HTCP Congestion Control */
 #define SCTP_CC_HTCP		0x00000002
 
+/* RS - Supported stream scheduling modules for pluggable
+ * stream scheduling
+ */
+/* Default simple round-robin */
+#define SCTP_SS_DEFAULT			0x00000000
+/* Real round-robin */
+#define SCTP_SS_ROUND_ROBIN		0x00000001
+/* Real round-robin per packet */
+#define SCTP_SS_ROUND_ROBIN_PACKET	0x00000002
+/* Priority */
+#define SCTP_SS_PRIORITY		0x00000003
+/* Fair Bandwidth */
+#define SCTP_SS_FAIR_BANDWITH		0x00000004
+/* First-come, first-serve */
+#define SCTP_SS_FIRST_COME		0x00000005
 
-/* fragment interleave constants 
+
+/* fragment interleave constants
  * setting must be one of these or
  * EINVAL returned.
  */
@@ -318,7 +337,7 @@ struct sctp_paramhdr {
 #define SCTP_CAUSE_UNSUPPORTED_HMACID	0x0105
 
 /*
- * error cause parameters (user visisble)
+ * error cause parameters (user visible)
  */
 struct sctp_error_cause {
 	uint16_t code;
@@ -407,6 +426,10 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_BADCRC		0x02
 #define SCTP_PACKET_TRUNCATED	0x04
 
+/* Flag for ECN -CWR */
+#define SCTP_CWR_REDUCE_OVERRIDE 0x01
+#define SCTP_CWR_IN_SAME_WINDOW  0x02
+
 #define SCTP_SAT_NETWORK_MIN	400	/* min ms for RTT to set satellite
 					 * time */
 #define SCTP_SAT_NETWORK_BURST_INCR  2	/* how many times to multiply maxburst
@@ -450,6 +473,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_BLOCKING_IO	0x08000000
 #define SCTP_PCB_FLAGS_SOCKET_GONE	0x10000000
 #define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x20000000
+#define SCTP_PCB_FLAGS_SOCKET_CANT_READ	0x40000000
 /* flags to copy to new PCB */
 #define SCTP_PCB_COPY_FLAGS		(SCTP_PCB_FLAGS_BOUNDALL|\
 					 SCTP_PCB_FLAGS_WAKEINPUT|\
@@ -515,7 +539,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_MAX_COOKIE_LIFE  3600000 /* 1 hour in ms */
 
 
-/* Types of logging/KTR tracing  that can be enabled via the 
+/* Types of logging/KTR tracing  that can be enabled via the
  * sysctl net.inet.sctp.sctp_logging. You must also enable
  * SUBSYS tracing.
  * Note that you must have the SCTP option in the kernel
@@ -550,9 +574,6 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LOG_AT_SEND_2_OUTQ             0x08000000
 #define SCTP_LOG_TRY_ADVANCE                0x10000000
 
-#if defined(__Windows__)
-#include <packoff.h>
-#endif
 
 #undef SCTP_PACKED
 

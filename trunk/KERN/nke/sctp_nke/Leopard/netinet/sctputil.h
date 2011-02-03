@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 196260 2009-08-15 21:10:52Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -44,7 +44,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 196260 2009-08-15 21:10:52Z tuex
 #define SCTP_READ_LOCK_HELD 1
 #define SCTP_READ_LOCK_NOT_HELD 0
 
-#ifdef SCTP_ASOCLOG_OF_TSNS 
+#ifdef SCTP_ASOCLOG_OF_TSNS
 void sctp_print_out_track_log(struct sctp_tcb *stcb);
 #endif
 
@@ -80,7 +80,7 @@ uint32_t sctp_select_initial_TSN(struct sctp_pcb *);
 
 uint32_t sctp_select_a_tag(struct sctp_inpcb *, uint16_t lport, uint16_t rport, int);
 
-int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, int, uint32_t, uint32_t);
+int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, uint32_t, uint32_t);
 
 void sctp_fill_random_store(struct sctp_pcb *);
 
@@ -123,14 +123,15 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 
 void sctp_iterator_worker(void);
 
-int find_next_best_mtu(int);
+uint32_t sctp_get_prev_mtu(uint32_t);
+uint32_t sctp_get_next_mtu(struct sctp_inpcb *, uint32_t);
 
 void
 sctp_timeout_handler(void *);
 
 uint32_t
 sctp_calculate_rto(struct sctp_tcb *, struct sctp_association *,
-    struct sctp_nets *, struct timeval *, int);
+    struct sctp_nets *, struct timeval *, int, int);
 
 uint32_t sctp_calculate_len(struct mbuf *);
 
@@ -158,7 +159,7 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 
 void sctp_stop_timers_for_shutdown(struct sctp_tcb *);
 
-void sctp_report_all_outbound(struct sctp_tcb *, int, int 
+void sctp_report_all_outbound(struct sctp_tcb *, int, int
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
 #endif
@@ -166,8 +167,6 @@ void sctp_report_all_outbound(struct sctp_tcb *, int, int
 
 int sctp_expand_mapping_array(struct sctp_association *, uint32_t);
 
-/* EY nr_sack version of the above method, expands nr_mapping_array */
-int sctp_expand_nr_mapping_array(struct sctp_association *, uint32_t);
 void sctp_abort_notification(struct sctp_tcb *, int, int
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
     SCTP_UNUSED
@@ -339,15 +338,15 @@ sctp_soreceive(struct socket *so, struct sockaddr **psa,
     int *flagsp);
 
 
-/* For those not passing mbufs, this does the 
+/* For those not passing mbufs, this does the
  * translations for you. Caller owns memory
  * of size controllen returned in controlp.
  */
 int sctp_l_soreceive(struct socket *so,
-		     struct sockaddr **name, 
-		     struct uio *uio, 
-		     char **controlp, 
-		     int *controllen, 
+		     struct sockaddr **name,
+		     struct uio *uio,
+		     char **controlp,
+		     int *controllen,
 		     int *flag);
 
 
@@ -390,7 +389,7 @@ int sctp_fill_stat_log(void *, size_t *);
 void sctp_log_fr(uint32_t, uint32_t, uint32_t, int);
 void sctp_log_sack(uint32_t, uint32_t, uint32_t, uint16_t, uint16_t, int);
 void sctp_log_map(uint32_t, uint32_t, uint32_t, int);
-
+void sctp_print_mapping_array(struct sctp_association *asoc);
 void sctp_clr_stat_log(void);
 
 
@@ -430,5 +429,5 @@ void sctp_audit_log(uint8_t, uint8_t);
 	} while (/* CONSTCOND */ 0)
 #endif				/* SCTP_BASE_FREEBSD */
 
-#endif				/* _KERNEL */ 
+#endif				/* _KERNEL */
 #endif

@@ -1,36 +1,36 @@
 /*-
  * Copyright (c) 2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 195919 2009-07-28 15:07:41Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 218186 2011-02-02 11:13:23Z rrs $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -45,9 +45,11 @@ struct sctp_sysctl {
 	uint32_t sctp_auto_asconf;
 	uint32_t sctp_multiple_asconfs;
 	uint32_t sctp_ecn_enable;
-	uint32_t sctp_ecn_nonce;
+	uint32_t sctp_fr_max_burst_default;
 	uint32_t sctp_strict_sacks;
+#if !defined(SCTP_WITH_NO_CSUM)
 	uint32_t sctp_no_csum_on_loopback;
+#endif
 	uint32_t sctp_strict_init;
 	uint32_t sctp_peer_chunk_oh;
 	uint32_t sctp_max_burst_default;
@@ -96,6 +98,8 @@ struct sctp_sysctl {
 	uint32_t sctp_logging_level;
 	/* JRS - Variable for default congestion control module */
 	uint32_t sctp_default_cc_module;
+	/* RS - Variable for default stream scheduling module */
+	uint32_t sctp_default_ss_module;
 	uint32_t sctp_default_frag_interleave;
 	uint32_t sctp_mobility_base;
 	uint32_t sctp_mobility_fasthandoff;
@@ -111,6 +115,8 @@ struct sctp_sysctl {
 	uint32_t sctp_udp_tunneling_port;
 	uint32_t sctp_enable_sack_immediately;
 	uint32_t sctp_vtag_time_wait;
+	uint32_t sctp_buffer_splitting;
+	uint32_t sctp_initial_cwnd;
 #if defined(SCTP_DEBUG)
 	uint32_t sctp_debug_on;
 #endif
@@ -158,12 +164,6 @@ struct sctp_sysctl {
 #define SCTPCTL_ECN_ENABLE_MAX		1
 #define SCTPCTL_ECN_ENABLE_DEFAULT	1
 
-/* ecn_nonce: Enable SCTP ECN Nonce */
-#define SCTPCTL_ECN_NONCE_DESC		"Enable SCTP ECN Nonce"
-#define SCTPCTL_ECN_NONCE_MIN		0
-#define SCTPCTL_ECN_NONCE_MAX		1
-#define SCTPCTL_ECN_NONCE_DEFAULT	0
-
 /* strict_sacks: Enable SCTP Strict SACK checking */
 #define SCTPCTL_STRICT_SACKS_DESC	"Enable SCTP Strict SACK checking"
 #define SCTPCTL_STRICT_SACKS_MIN	0
@@ -190,9 +190,16 @@ struct sctp_sysctl {
 
 /* maxburst: Default max burst for sctp endpoints */
 #define SCTPCTL_MAXBURST_DESC		"Default max burst for sctp endpoints"
-#define SCTPCTL_MAXBURST_MIN		1
+#define SCTPCTL_MAXBURST_MIN		0
 #define SCTPCTL_MAXBURST_MAX		0xFFFFFFFF
 #define SCTPCTL_MAXBURST_DEFAULT	SCTP_DEF_MAX_BURST
+
+/* fr_maxburst: Default max burst for sctp endpoints when fast retransmitting */
+#define SCTPCTL_FRMAXBURST_DESC		"Default fr max burst for sctp endpoints"
+#define SCTPCTL_FRMAXBURST_MIN		0
+#define SCTPCTL_FRMAXBURST_MAX		0xFFFFFFFF
+#define SCTPCTL_FRMAXBURST_DEFAULT	SCTP_DEF_FRMAX_BURST
+
 
 /* maxchunks: Default max chunks on queue per asoc */
 #define SCTPCTL_MAXCHUNKS_DESC		"Default max chunks on queue per asoc"
@@ -333,9 +340,9 @@ struct sctp_sysctl {
 #define SCTPCTL_OUTGOING_STREAMS_DEFAULT SCTP_OSTREAM_INITIAL
 
 /* cmt_on_off: CMT on/off flag */
-#define SCTPCTL_CMT_ON_OFF_DESC		"CMT on/off flag"
+#define SCTPCTL_CMT_ON_OFF_DESC		"CMT settings"
 #define SCTPCTL_CMT_ON_OFF_MIN		0
-#define SCTPCTL_CMT_ON_OFF_MAX		1
+#define SCTPCTL_CMT_ON_OFF_MAX		2
 #define SCTPCTL_CMT_ON_OFF_DEFAULT	0
 
 /* EY - nr_sack_on_off: NR_SACK on/off flag */
@@ -414,7 +421,7 @@ struct sctp_sysctl {
 #define SCTPCTL_HB_MAX_BURST_DESC	"Confirmation Heartbeat max burst"
 #define SCTPCTL_HB_MAX_BURST_MIN	1
 #define SCTPCTL_HB_MAX_BURST_MAX	0xFFFFFFFF
-#define SCTPCTL_HB_MAX_BURST_DEFAULT	SCTP_DEF_MAX_BURST
+#define SCTPCTL_HB_MAX_BURST_DEFAULT	SCTP_DEF_HBMAX_BURST
 
 /* abort_at_limit: When one-2-one hits qlimit abort */
 #define SCTPCTL_ABORT_AT_LIMIT_DESC	"When one-2-one hits qlimit abort"
@@ -452,6 +459,12 @@ struct sctp_sysctl {
 #define SCTPCTL_DEFAULT_CC_MODULE_MAX		2
 #define SCTPCTL_DEFAULT_CC_MODULE_DEFAULT	0
 
+/* RS - default stream scheduling module sysctl */
+#define SCTPCTL_DEFAULT_SS_MODULE_DESC		"Default stream scheduling module"
+#define SCTPCTL_DEFAULT_SS_MODULE_MIN		0
+#define SCTPCTL_DEFAULT_SS_MODULE_MAX		5
+#define SCTPCTL_DEFAULT_SS_MODULE_DEFAULT	0
+
 /* RRS - default fragment interleave */
 #define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_DESC	"Default fragment interleave level"
 #define SCTPCTL_DEFAULT_FRAG_INTERLEAVE_MIN	0
@@ -488,19 +501,29 @@ struct sctp_sysctl {
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_MAX	1
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT	SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN
 
-/* Enable sending of the SACK-IMMEDIATELY bit */
+/* Enable sending of the NAT-FRIENDLY message */
 #define SCTPCTL_NAT_FRIENDLY_INITS_DESC	"Enable sending of the nat-friendly SCTP option on INITs."
 #define SCTPCTL_NAT_FRIENDLY_INITS_MIN	0
 #define SCTPCTL_NAT_FRIENDLY_INITS_MAX	1
 #define SCTPCTL_NAT_FRIENDLY_INITS_DEFAULT	SCTPCTL_NAT_FRIENDLY_INITS_MIN
 
-
-/* Vtag tiem wait bits */
-#define SCTPCTL_TIME_WAIT_DESC	"Vtag time wait time 0 disables."
+/* Vtag time wait in seconds */
+#define SCTPCTL_TIME_WAIT_DESC	"Vtag time wait time in seconds, 0 disables it."
 #define SCTPCTL_TIME_WAIT_MIN	0
 #define SCTPCTL_TIME_WAIT_MAX	0xffffffff
 #define SCTPCTL_TIME_WAIT_DEFAULT	SCTP_TIME_WAIT
 
+/* Enable Send/Receive buffer splitting */
+#define SCTPCTL_BUFFER_SPLITTING_DESC		"Enable send/receive buffer splitting."
+#define SCTPCTL_BUFFER_SPLITTING_MIN		0
+#define SCTPCTL_BUFFER_SPLITTING_MAX		0x3
+#define SCTPCTL_BUFFER_SPLITTING_DEFAULT	SCTPCTL_BUFFER_SPLITTING_MIN
+
+/* Initial congestion window in MTU */
+#define SCTPCTL_INITIAL_CWND_DESC	"Initial congestion window in MTUs"
+#define SCTPCTL_INITIAL_CWND_MIN	0
+#define SCTPCTL_INITIAL_CWND_MAX	0xffffffff
+#define SCTPCTL_INITIAL_CWND_DEFAULT	3
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */

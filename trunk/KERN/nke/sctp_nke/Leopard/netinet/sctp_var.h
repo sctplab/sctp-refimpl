@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 189790 2009-03-14 13:42:13Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 206137 2010-04-03 15:40:14Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -112,7 +112,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 		sctp_auth_key_release((_stcb), (_chk)->auth_keyid); \
 		(_chk)->holds_key_ref = 0; \
 	} \
-        if(_stcb) { \
+        if (_stcb) { \
           SCTP_TCB_LOCK_ASSERT((_stcb)); \
           if ((_chk)->whoTo) { \
                   sctp_free_remote_addr((_chk)->whoTo); \
@@ -304,7 +304,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #ifdef SCTP_FS_SPEC_LOG
 #define sctp_total_flight_decrease(stcb, tp1) do { \
-        if(stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
+        if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
 		stcb->asoc.fs_index = 0;\
 	stcb->asoc.fslog[stcb->asoc.fs_index].total_flight = stcb->asoc.total_flight; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.TSN_seq; \
@@ -325,7 +325,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 } while (0)
 
 #define sctp_total_flight_increase(stcb, tp1) do { \
-        if(stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
+        if (stcb->asoc.fs_index > SCTP_FS_SPEC_LOG_SIZE) \
 		stcb->asoc.fs_index = 0;\
 	stcb->asoc.fslog[stcb->asoc.fs_index].total_flight = stcb->asoc.total_flight; \
 	stcb->asoc.fslog[stcb->asoc.fs_index].tsn = tp1->rec.data.TSN_seq; \

@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 #ifndef __sctp_os_macosx_h__
@@ -40,7 +40,7 @@
 #include <sys/protosw.h>
 #include <sys/socket.h>
 #include <sys/socketvar.h>
-#include <sys/proc.h> 
+#include <sys/proc.h>
 #include <sys/kernel.h>
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
@@ -105,7 +105,7 @@ extern struct fileops socketops;
 #define _KERNEL
 #endif
 
-#if defined(SCTP_LOCAL_TRACE_BUF) 
+#if defined(SCTP_LOCAL_TRACE_BUF)
 #define SCTP_CTR6 sctp_log_trace
 #else
 #define SCTP_CTR6 CTR6
@@ -114,7 +114,7 @@ extern struct fileops socketops;
 /* Empty ktr statement for mac */
 #define	CTR6(m, d, p1, p2, p3, p4, p5, p6)
 #define SCTP_LTRACE_CHK(a, b, c, d)
-#define SCTP_LTRACE_ERR(a, b, c, d) 
+#define SCTP_LTRACE_ERR(a, b, c, d)
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
 
@@ -187,7 +187,7 @@ extern struct fileops socketops;
 
 #define SCTP_UNUSED __attribute__((unused))
 
-/* 
+/*
  * for per socket level locking strategy:
  * SCTP_INP_SO(sctpinp): returns socket on base inp structure from sctp_inpcb
  * SCTP_SOCKET_LOCK(so, refcnt): locks socket so with refcnt
@@ -325,7 +325,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 	do { \
 		if (rt != NULL) \
 			rt->rt_rmx.rmx_mtu = mtu; \
-	} while (0) 
+	} while (0)
 /* (de-)register interface event notifications */
 #define SCTP_REGISTER_INTERFACE(ifhandle, af)
 #define SCTP_DEREGISTER_INTERFACE(ifhandle, af)
@@ -372,7 +372,7 @@ static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
 #define SCTP_IS_IT_LOOPBACK(m) ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type == IFT_LOOP))
 
-#define SCTP_ALIGN_TO_END(m, len) if(m->m_flags & M_PKTHDR) { \
+#define SCTP_ALIGN_TO_END(m, len) if (m->m_flags & M_PKTHDR) { \
                                      MH_ALIGN(m, len); \
                                   } else if ((m->m_flags & M_EXT) == 0) { \
                                      M_ALIGN(m, len); \
@@ -421,7 +421,7 @@ typedef struct rtentry	sctp_rtentry_t;
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
-/* This is re-pulse ourselves for sendbuf */  
+/* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 /*
@@ -432,38 +432,39 @@ typedef struct rtentry	sctp_rtentry_t;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
-	int o_flgs = 0; \
-	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
-		o_flgs = IP_RAWOUTPUT | (stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE); \
-	} else { \
-		o_flgs = IP_RAWOUTPUT; \
-	} \
+	int o_flgs = IP_RAWOUTPUT; \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && \
+	    local_stcb->sctp_ep && \
+	    local_stcb->sctp_ep->sctp_socket) \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
 	result = ip_output(o_pak, NULL, ro, o_flgs, NULL, NULL); \
 }
 #else
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
-	int o_flgs = 0; \
-	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
-		o_flgs = IP_RAWOUTPUT | (stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE); \
-	} else { \
-		o_flgs = IP_RAWOUTPUT; \
-	} \
+	int o_flgs = IP_RAWOUTPUT; \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && \
+	    local_stcb->sctp_ep && \
+	    local_stcb->sctp_ep->sctp_socket) \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
 	result = ip_output(o_pak, NULL, ro, o_flgs, NULL); \
 }
 #endif
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
- 	if (stcb && stcb->sctp_ep) \
+	struct sctp_tcb *local_stcb = stcb; \
+ 	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
-				    ((struct in6pcb *)(stcb->sctp_ep))->in6p_outputopts, \
+				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
 				    (ro), 0, 0, ifp, 0); \
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, NULL, ifp, 0); \
 }
 
 struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, 
+sctp_get_mbuf_for_msg(unsigned int space_needed,
 		      int want_header, int how, int allonebuf, int type);
 
 /*
@@ -488,17 +489,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #if defined(HAVE_SHA2)
 #include <crypto/sha2/sha2.h>
 #endif
-
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
-#include <libkern/crypto/md5.h>
-#else
-#include <sys/md5.h>
-#endif
-/* map standard crypto API names */
-#define MD5_Init	MD5Init
-#define MD5_Update	MD5Update
-#define MD5_Final	MD5Final
-
 
 /*
  * Other MacOS specific

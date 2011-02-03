@@ -29,7 +29,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 197929 2009-10-10 13:59:18Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -139,8 +139,9 @@ MALLOC_DECLARE(SCTP_M_TIMW);
 MALLOC_DECLARE(SCTP_M_MVRF);
 MALLOC_DECLARE(SCTP_M_ITER);
 MALLOC_DECLARE(SCTP_M_SOCKOPT);
+MALLOC_DECLARE(SCTP_M_MCORE);
 
-#if defined(SCTP_LOCAL_TRACE_BUF) 
+#if defined(SCTP_LOCAL_TRACE_BUF)
 
 #define SCTP_GET_CYCLECOUNT get_cyclecount()
 #define SCTP_CTR6 sctp_log_trace
@@ -182,7 +183,6 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
  *
  */
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #if defined(SCTP_DEBUG)
 #define SCTPDBG(level, params...)					\
@@ -297,10 +297,9 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
 /* SCTP_ZONE_INIT: initialize the zone */
 typedef struct uma_zone *sctp_zone_t;
-#define UMA_ZFLAG_FULL	0x0020
 #define SCTP_ZONE_INIT(zone, name, size, number) { \
 	zone = uma_zcreate(name, size, NULL, NULL, NULL, NULL, UMA_ALIGN_PTR,\
-		UMA_ZFLAG_FULL); \
+		0); \
 	uma_zone_set_max(zone, number); \
 }
 
@@ -370,7 +369,7 @@ typedef struct callout sctp_os_timer_t;
                                   }
 
 /* We make it so if you have up to 4 threads
- * writting based on the default size of
+ * writing based on the default size of
  * the packet log 65 k, that would be
  * 4 16k packets before we would hit
  * a problem.
@@ -407,7 +406,7 @@ typedef struct callout sctp_os_timer_t;
 
 /* For BSD this just accesses the M_PKTHDR length
  * so it operates on an mbuf with hdr flag. Other
- * O/S's may have seperate packet header and mbuf
+ * O/S's may have separate packet header and mbuf
  * chain pointers.. thus the macro.
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
@@ -486,20 +485,21 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
-	int o_flgs = 0; \
-	if (stcb && stcb->sctp_ep && stcb->sctp_ep->sctp_socket) { \
-		o_flgs = IP_RAWOUTPUT | (stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE); \
-	} else { \
-		o_flgs = IP_RAWOUTPUT; \
-	} \
+	int o_flgs = IP_RAWOUTPUT; \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && \
+	    local_stcb->sctp_ep && \
+	    local_stcb->sctp_ep->sctp_socket) \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
 	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
 }
 
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
- 	if (stcb && stcb->sctp_ep) \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
-				    ((struct in6pcb *)(stcb->sctp_ep))->in6p_outputopts, \
+				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
 				    (ro), 0, 0, ifp, NULL); \
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
@@ -530,12 +530,6 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #if defined(HAVE_SHA2)
 #include <crypto/sha2/sha2.h>
 #endif
-
-#include <sys/md5.h>
-/* map standard crypto API names */
-#define MD5_Init	MD5Init
-#define MD5_Update	MD5Update
-#define MD5_Final	MD5Final
 
 #endif
 

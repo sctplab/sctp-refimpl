@@ -1,30 +1,32 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- *
- * Redistribution and use in source and binary forms, with or without 
+ * Copyright (c) 2008-2011, by Randall Stewart, rrs@lakerest.net and
+ *                          Michael Tuexen, tuexen@fh-muenster.de
+ *                          All rights reserved.
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -32,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 197288 2009-09-17 15:11:12Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 218219 2011-02-03 11:52:22Z rrs $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -94,7 +96,7 @@ struct sctp_ifn {
 						 * when refcount = 0. Note
 						 * that it is pulled from the ifn list
 						 * and ifa_p is nulled right away but
-						 * it cannot be freed until the last *net 
+						 * it cannot be freed until the last *net
 						 * pointing to it is deleted.
 						 */
 #define SCTP_ADDR_DEFER_USE     0x00000004	/* Hold off using this one */
@@ -122,7 +124,7 @@ struct sctp_ifa {
 struct sctp_laddr {
 	LIST_ENTRY(sctp_laddr) sctp_nxt_addr;	/* next in list */
 	struct sctp_ifa *ifa;
-	uint32_t action;		/* Used during asconf and adding 
+	uint32_t action;		/* Used during asconf and adding
 					 * if no-zero src-addr selection will
 					 * not consider this address.
 					 */
@@ -149,7 +151,7 @@ struct sctp_tagblock {
 struct sctp_epinfo {
 #ifdef __FreeBSD__
     struct socket *udp_tun_socket;
-#endif  
+#endif
 	struct sctpasochead *sctp_asochash;
 	u_long hashasocmark;
 
@@ -185,8 +187,6 @@ struct sctp_epinfo {
 #if defined(__APPLE__)
 	struct inpcbhead inplisthead;
 #endif
-	struct sctpiterators iteratorhead;
-	int threads_must_exit;
 	/* ep zone info */
 	sctp_zone_t ipi_zone_ep;
 	sctp_zone_t ipi_zone_asoc;
@@ -204,7 +204,6 @@ struct sctp_epinfo {
 #else
 	struct rwlock ipi_ep_mtx;
 #endif
-	struct mtx it_mtx;
 	struct mtx ipi_iterator_wq_mtx;
 #if __FreeBSD_version <= 602000
 	struct mtx ipi_addr_mtx;
@@ -212,41 +211,37 @@ struct sctp_epinfo {
 	struct rwlock ipi_addr_mtx;
 #endif
 	struct mtx ipi_pktlog_mtx;
+	struct mtx wq_addr_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
 	pthread_mutex_t ipi_ep_mtx;
-	pthread_mutex_t it_mtx;
-	pthread_mutex_t ipi_iterator_wq_mtx;
 	pthread_mutex_t ipi_addr_mtx;
 	pthread_mutex_t ipi_count_mtx;
 	pthread_mutex_t ipi_pktlog_mtx;
+	pthread_mutex_t wq_addr_mtx;
 #elif defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
 	lck_grp_t *mtx_grp;
 	lck_attr_t *mtx_attr;
 	lck_rw_t *ipi_ep_mtx;
-	lck_mtx_t *it_mtx;
-	lck_mtx_t *ipi_iterator_wq_mtx;
 	lck_mtx_t *ipi_addr_mtx;
 	lck_mtx_t *ipi_count_mtx;
 	lck_mtx_t *ipi_pktlog_mtx;
 	lck_mtx_t *logging_mtx;
+	lck_mtx_t *wq_addr_mtx;
 #else
 	void *mtx_grp_attr;
 	void *mtx_grp;
 	void *mtx_attr;
 	void *ipi_ep_mtx;
-	void *it_mtx;
-	void *ipi_iterator_wq_mtx;
 	void *ipi_count_mtx;
 	void *logging_mtx;
 #endif /* _KERN_LOCKS_H_ */
 #elif defined(__Windows__)
 	struct rwlock ipi_ep_lock;
-	struct spinlock it_lock;
-	struct spinlock ipi_iterator_wq_lock;
 	struct rwlock ipi_addr_lock;
 	struct spinlock ipi_pktlog_mtx;
+	struct rwlock wq_addr_mtx;
 #elif defined(__Userspace__)
     /* TODO decide on __Userspace__ locks */
 #endif
@@ -283,23 +278,9 @@ struct sctp_epinfo {
 	uint32_t ipi_free_chunks;
 	uint32_t ipi_free_strmoq;
 
-
 	struct sctpvtaghead vtag_timewait[SCTP_STACK_VTAG_HASH_SIZE];
 
 	/* address work queue handling */
-#if defined(SCTP_USE_THREAD_BASED_ITERATOR)
-	uint32_t iterator_running;
-#if !defined(__Windows__)
-	SCTP_PROCESS_STRUCT thread_proc;
-#else
-	PFILE_OBJECT iterator_thread_obj;
-#endif
-#if defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_cond_t iterator_wakeup;
-#elif defined(__Windows__)
-	KEVENT iterator_wakeup[2];
-#endif
-#endif
 	struct sctp_timer addr_wq_timer;
 
 #if defined(_SCTP_NEEDS_CALLOUT_) || defined(_USER_SCTP_NEEDS_CALLOUT_)
@@ -310,10 +291,14 @@ struct sctp_epinfo {
 
 struct sctp_base_info {
 	/* All static structures that
-	 * anchor the system must be here. 
+	 * anchor the system must be here.
 	 */
 	struct sctp_epinfo sctppcbinfo;
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+	struct sctpstat    *sctpstat;
+#else
 	struct sctpstat    sctpstat;
+#endif
 	struct sctp_sysctl sctpsysctl;
 	uint8_t first_time;
 	char sctp_pcb_initialized;
@@ -349,6 +334,7 @@ struct sctp_pcb {
 	uint32_t sctp_sws_receiver;
 
 	uint32_t sctp_default_cc_module;
+	uint32_t sctp_default_ss_module;
 	/* authentication related fields */
 	struct sctp_keyhead shared_keys;
 	sctp_auth_chklist_t *local_auth_chunks;
@@ -389,7 +375,8 @@ struct sctp_pcb {
 	uint32_t initial_sequence_debug;
 	uint32_t adaptation_layer_indicator;
 	uint32_t store_at;
-	uint8_t max_burst;
+	uint32_t max_burst;
+	uint32_t fr_max_burst;
 	char current_secret_number;
 	char last_secret_number;
 };
@@ -462,6 +449,7 @@ struct sctp_inpcb {
 	uint32_t sctp_frag_point;
 	uint32_t partial_delivery_point;
 	uint32_t sctp_context;
+	uint32_t sctp_cmt_on_off;
 	struct sctp_nonpad_sndrcvinfo def_send;
 	/*-
 	 * These three are here for the sosend_dgram
@@ -550,7 +538,7 @@ struct sctp_inpcb {
 	struct sctpasochead *sctp_asocidhash;
 	u_long hashasocidmark;
         uint32_t sctp_associd_counter;
-  
+
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	struct sctp_pcbtsn_rlog readlog[SCTP_READ_LOG_SIZE];
 	uint32_t readlog_index;
@@ -696,14 +684,14 @@ struct sctp_nets *sctp_findnet(struct sctp_tcb *, struct sockaddr *);
 struct sctp_inpcb *sctp_pcb_findep(struct sockaddr *, int, int, uint32_t);
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
+int sctp_inpcb_bind(struct socket *, struct sockaddr *,
 		    struct sctp_ifa *,struct thread *);
 #elif defined(__Windows__)
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
+int sctp_inpcb_bind(struct socket *, struct sockaddr *,
 		    struct sctp_ifa *,PKTHREAD);
 #else
 /* struct proc is a dummy for __Userspace__ */
-int sctp_inpcb_bind(struct socket *, struct sockaddr *, 
+int sctp_inpcb_bind(struct socket *, struct sockaddr *,
 		    struct sctp_ifa *, struct proc *);
 #endif
 
@@ -751,16 +739,16 @@ void sctp_inpcb_free(struct sctp_inpcb *, int, int);
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t, uint32_t, struct thread *);
+                int *, uint32_t, uint32_t, struct thread *);
 #elif defined(__Windows__)
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t, uint32_t, PKTHREAD);
+                int *, uint32_t, uint32_t, PKTHREAD);
 #else
 /* proc will be NULL for __Userspace__ */
 struct sctp_tcb *
 sctp_aloc_assoc(struct sctp_inpcb *, struct sockaddr *,
-    int, int *, uint32_t, uint32_t, struct proc *);
+                int *, uint32_t, uint32_t, struct proc *);
 #endif
 
 int sctp_free_assoc(struct sctp_inpcb *, struct sctp_tcb *, int, int);
@@ -815,15 +803,25 @@ int sctp_swap_inpcb_for_listen(struct sctp_inpcb *inp);
  * indicates run on ONLY assoc's of the specified endpoint.
  */
 int
-sctp_initiate_iterator(inp_func inpf, 
-		       asoc_func af, 
-		       inp_func inpe, 
+sctp_initiate_iterator(inp_func inpf,
+		       asoc_func af,
+		       inp_func inpe,
 		       uint32_t, uint32_t,
-		       uint32_t, void *, 
-		       uint32_t, 
-		       end_func ef, 
-		       struct sctp_inpcb *, 
+		       uint32_t, void *,
+		       uint32_t,
+		       end_func ef,
+		       struct sctp_inpcb *,
 		       uint8_t co_off);
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+void
+sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use);
+
+#endif
+
+#ifdef INVARIANTS
+void
+sctp_validate_no_locks(struct sctp_inpcb *inp);
+#endif
 
 #endif				/* _KERNEL */
 #endif				/* !__sctp_pcb_h__ */
