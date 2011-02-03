@@ -71,7 +71,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 #endif
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
-extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
 #if !defined(SCTP_WITH_NO_CSUM)
 extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
@@ -354,7 +353,6 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
-	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_sacks);
 #if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_register_oid(&sysctl__net_inet_sctp_loopback_nocsum);
@@ -481,7 +479,6 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_sacks);
 #if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_loopback_nocsum);
