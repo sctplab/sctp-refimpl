@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: src/lib/libc/net/sctp_sys_calls.c,v 1.14 2007/07/24 20:06:01 rrs Exp $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 209709 2010-07-05 03:55:49Z brucec $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -275,9 +275,9 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			sin = (struct sockaddr_in *)sa;
 			if (sin->sin_port) {
 				/* non-zero port, check or save */
-				if(sport) {
+				if (sport) {
 					/* Check against our port */
-					if(sport != sin->sin_port) {
+					if (sport != sin->sin_port) {
 						goto out_error;
 					}
 				} else {
@@ -291,9 +291,9 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			sin6 = (struct sockaddr_in6 *)sa;
 			if (sin6->sin6_port) {
 				/* non-zero port, check or save */
-				if(sport) {
+				if (sport) {
 					/* Check against our port */
-					if(sport != sin6->sin6_port) {
+					if (sport != sin6->sin6_port) {
 						goto out_error;
 					}
 				} else {
@@ -307,7 +307,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 			goto out_error;
 		}
 		
-		
+		 sa = (struct sockaddr *)((caddr_t)sa + sz);		
 	}
 	sa = addrs;
 	/* Now if there was a port mentioned, assure that
@@ -400,6 +400,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		break;
 	case SCTP_LOCAL_AUTH_CHUNKS:
 		((struct sctp_authchunks *)arg)->gauth_assoc_id = id;
+		break;
+	case SCTP_TIMEOUTS:
+		((struct sctp_timeouts *)arg)->stimo_assoc_id = id;
 		break;
 	default:
 		break;
@@ -779,7 +782,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	free(buf);
 	if (ret != 0) {
 		if (errno == EALREADY) {
-			no_end_cx = 1;;
+			no_end_cx = 1;
 			goto continue_send;
 		}
 		return (ret);
@@ -809,11 +812,11 @@ sctp_sendmsgx(int sd,
     size_t len,
     struct sockaddr *addrs,
     int addrcnt,
-    u_int32_t ppid,
-    u_int32_t flags,
-    u_int16_t stream_no,
-    u_int32_t timetolive,
-    u_int32_t context)
+    uint32_t ppid,
+    uint32_t flags,
+    uint16_t stream_no,
+    uint32_t timetolive,
+    uint32_t context)
 {
 	struct sctp_sndrcvinfo sinfo;
 
