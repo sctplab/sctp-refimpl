@@ -1,6 +1,8 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- *
+ * Copyright (c) 2008-2011, by Randall Stewart, rrs@lakerest.net and
+ *                          Michael Tuexen, tuexen@fh-muenster.de
+ *                          All rights reserved.
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
  *
@@ -32,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 218186 2011-02-02 11:13:23Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 218219 2011-02-03 11:52:22Z rrs $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -293,7 +295,7 @@ struct sctp_base_info {
 	 */
 	struct sctp_epinfo sctppcbinfo;
 #if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
-	struct sctpstat    sctpstat[MAXCPU];
+	struct sctpstat    *sctpstat;
 #else
 	struct sctpstat    sctpstat;
 #endif
@@ -810,6 +812,11 @@ sctp_initiate_iterator(inp_func inpf,
 		       end_func ef,
 		       struct sctp_inpcb *,
 		       uint8_t co_off);
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+void
+sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use);
+
+#endif
 
 #ifdef INVARIANTS
 void
