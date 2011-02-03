@@ -1,5 +1,8 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart, rrs@lakerest.net and
+ *                          Michael Tuexen, tuexen@fh-muenster.de
+ *                          All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -3908,7 +3911,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
 #elif defined(SCTP_KAME)
-		  if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
+		if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
 #else
 		if (in6_embedscope(&sin6->sin6_addr, sin6) != 0)
 #endif
@@ -9464,13 +9467,15 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	 */
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
-	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0, burst_cnt=0;
+	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0;
+	unsigned int burst_cnt=0;
 	struct timeval now;
 	int now_filled = 0;
 	int nagle_on = 0;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
 	int un_sent=0;
-	int fr_done, tot_frs=0;
+	int fr_done;
+	unsigned int tot_frs=0;
 
 #if defined(__APPLE__)
 	if (so_locked) {
