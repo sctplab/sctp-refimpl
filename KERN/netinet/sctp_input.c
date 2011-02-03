@@ -6027,7 +6027,7 @@ sctp_input(struct mbuf *m, int off)
 	struct sctphdr *sh;
 	int offset;
 	int cpu_to_use;
-	if (mp_ncpus > 1) {
+	if (mp_maxid > 1) {
 		ip = mtod(m, struct ip *);
 		offset = off + sizeof(*sh);
 		if (SCTP_BUF_LEN(m) < offset) {
@@ -6038,7 +6038,7 @@ sctp_input(struct mbuf *m, int off)
 			ip = mtod(m, struct ip *);
 		}
 		sh = (struct sctphdr *)((caddr_t)ip + off);
-		cpu_to_use = ntohl(sh->v_tag) % mp_ncpus;
+		cpu_to_use = ntohl(sh->v_tag) % mp_maxid;
 		sctp_queue_to_mcore(m, off, cpu_to_use);
 		return;
 	} 
