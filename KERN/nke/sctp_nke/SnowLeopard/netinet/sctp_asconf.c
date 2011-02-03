@@ -1385,7 +1385,7 @@ sctp_asconf_queue_mgmt(struct sctp_tcb *stcb, struct sctp_ifa *ifa,
 
 	TAILQ_INSERT_TAIL(&stcb->asoc.asconf_queue, aa, next);
 #ifdef SCTP_DEBUG
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) && SCTP_DEBUG_ASCONF2) {
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_ASCONF2) {
 		if (type == SCTP_ADD_IP_ADDRESS) {
 			SCTP_PRINTF("asconf_queue_mgmt: inserted asconf ADD_IP_ADDRESS: ");
 			SCTPDBG_ADDR(SCTP_DEBUG_ASCONF2, sa);
