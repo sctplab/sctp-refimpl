@@ -28,29 +28,29 @@
  */
 /*
  * Copyright (c) 2006 Apple Computer, Inc. All Rights Reserved.
- * 
+ *
  * @APPLE_LICENSE_OSREFERENCE_HEADER_START@
- * 
- * This file contains Original Code and/or Modifications of Original Code 
- * as defined in and that are subject to the Apple Public Source License 
- * Version 2.0 (the 'License'). You may not use this file except in 
- * compliance with the License.  The rights granted to you under the 
- * License may not be used to create, or enable the creation or 
- * redistribution of, unlawful or unlicensed copies of an Apple operating 
- * system, or to circumvent, violate, or enable the circumvention or 
- * violation of, any terms of an Apple operating system software license 
+ *
+ * This file contains Original Code and/or Modifications of Original Code
+ * as defined in and that are subject to the Apple Public Source License
+ * Version 2.0 (the 'License'). You may not use this file except in
+ * compliance with the License.  The rights granted to you under the
+ * License may not be used to create, or enable the creation or
+ * redistribution of, unlawful or unlicensed copies of an Apple operating
+ * system, or to circumvent, violate, or enable the circumvention or
+ * violation of, any terms of an Apple operating system software license
  * agreement.
  *
- * Please obtain a copy of the License at 
- * http://www.opensource.apple.com/apsl/ and read it before using this 
+ * Please obtain a copy of the License at
+ * http://www.opensource.apple.com/apsl/ and read it before using this
  * file.
  *
- * The Original Code and all software distributed under the License are 
- * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER 
- * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES, 
- * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY, 
- * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT. 
- * Please see the License for the specific language governing rights and 
+ * The Original Code and all software distributed under the License are
+ * distributed on an 'AS IS' basis, WITHOUT WARRANTY OF ANY KIND, EITHER
+ * EXPRESS OR IMPLIED, AND APPLE HEREBY DISCLAIMS ALL SUCH WARRANTIES,
+ * INCLUDING WITHOUT LIMITATION, ANY WARRANTIES OF MERCHANTABILITY,
+ * FITNESS FOR A PARTICULAR PURPOSE, QUIET ENJOYMENT OR NON-INFRINGEMENT.
+ * Please see the License for the specific language governing rights and
  * limitations under the License.
  *
  * @APPLE_LICENSE_OSREFERENCE_HEADER_END@
@@ -500,7 +500,7 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 		}
 		if (len == M_COPYALL) {
 		    if (min(len, (m->m_len - off)) == len) {
-			printf("m->m_len %d - off %d = %d, %d\n", 
+			printf("m->m_len %d - off %d = %d, %d\n",
 			       m->m_len, off, m->m_len - off,
 			       min(len, (m->m_len - off)));
 		    }
@@ -752,7 +752,7 @@ sctp_vtag_watchdog()
 void
 sctp_slowtimo()
 {
-	struct inpcb *inp, *inp_next;
+	struct inpcb *inp, *ninp;
 	struct socket *so;
 	static uint32_t sctp_addr_watchdog_cnt = 0;
 	static uint32_t sctp_vtag_watchdog_cnt = 0;
@@ -772,9 +772,7 @@ sctp_slowtimo()
 	}
 
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
-	inp = LIST_FIRST(&SCTP_BASE_INFO(inplisthead));
-	while (inp) {
-		inp_next = LIST_NEXT(inp, inp_list);
+	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		n++;
 #endif
@@ -793,7 +791,6 @@ sctp_slowtimo()
 				SCTP_DECR_EP_COUNT();
 			}
 		}
-		inp = inp_next;
 	}
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
@@ -1011,7 +1008,7 @@ sctp_print_mbuf_chain(mbuf_t m)
 		printf("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
-	}  
+	}
 }
 #endif
 
@@ -1096,7 +1093,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	return;
 }
 
-void 
+void
 sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 {
 	errno_t error;

@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__
@@ -69,7 +69,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
  * allow 1080 addresses, and each side has 1080 V6 addresses
  * that will be 21600 bytes. In the INIT-ACK we will
  * see the INIT-ACK 21600 + 43200 in the cookie. This leaves
- * about 500 bytes slack for misc things in the cookie. 
+ * about 500 bytes slack for misc things in the cookie.
  */
 #define SCTP_ADDRESS_LIMIT 1080
 
@@ -84,7 +84,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_ZERO_COPY_TICK_DELAY (((100 * hz) + 999) / 1000)
 #define SCTP_ZERO_COPY_SENDQ_TICK_DELAY (((100 * hz) + 999) / 1000)
 
-/* Number of ticks to delay before running 
+/* Number of ticks to delay before running
  * iterator on an address change.
  */
 #define SCTP_ADDRESS_TICK_DELAY 2
@@ -93,15 +93,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 /* #define SCTP_AUDITING_ENABLED 1 used for debug/auditing */
 #define SCTP_AUDIT_SIZE 256
 
-#ifdef __FreeBSD__
-/* temporary disabled since it does not work with VNET. */
-#if 0
-#define SCTP_USE_THREAD_BASED_ITERATOR 1
-#endif
-#endif
 
 #define SCTP_KTRHEAD_NAME "sctp_iterator"
 #define SCTP_KTHREAD_PAGES 0
+
+#define SCTP_MCORE_NAME "sctp_core_worker"
 
 
 /* If you support Multi-VRF how big to
@@ -221,7 +217,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_SORCV_ADJD            101
 #define SCTP_UNKNOWN_MAX           102
 #define SCTP_RANDY_STUFF           103
-#define SCTP_RANDY_STUFF1          104 
+#define SCTP_RANDY_STUFF1          104
 #define SCTP_STRMOUT_LOG_ASSIGN	   105
 #define SCTP_STRMOUT_LOG_SEND	   106
 #define SCTP_FLIGHT_LOG_DOWN_CA    107
@@ -248,7 +244,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
  * To get something to log you define one of the logging defines.
  * (see LINT).
  *
- * This gets the compile in place, but you still need to turn the 
+ * This gets the compile in place, but you still need to turn the
  * logging flag on too in the sysctl (see in sctp.h).
  */
 
@@ -267,7 +263,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_LOG_EVENT_SB   12
 #define SCTP_LOG_EVENT_NAGLE 13
 #define SCTP_LOG_EVENT_WAKE 14
-#define SCTP_LOG_MISC_EVENT 15 
+#define SCTP_LOG_MISC_EVENT 15
 #define SCTP_LOG_EVENT_CLOSE 16
 #define SCTP_LOG_EVENT_MBUF 17
 #define SCTP_LOG_CHUNK_PROC 18
@@ -284,8 +280,12 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_SCALE_FOR_ADDR	2
 
 /* default AUTO_ASCONF mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_AUTO_ASCONF)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_AUTO_ASCONF)
 #define SCTP_DEFAULT_AUTO_ASCONF        0
+#else
+#define SCTP_DEFAULT_AUTO_ASCONF	1
+#endif
 #else
 #define SCTP_DEFAULT_AUTO_ASCONF	1
 #endif
@@ -294,15 +294,23 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_DEFAULT_MULTIPLE_ASCONFS	0
 
 /* default MOBILITY_BASE mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_BASE)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_MOBILITY_BASE)
 #define SCTP_DEFAULT_MOBILITY_BASE      0
+#else
+#define SCTP_DEFAULT_MOBILITY_BASE	1
+#endif
 #else
 #define SCTP_DEFAULT_MOBILITY_BASE	0
 #endif
 
 /* default MOBILITY_FASTHANDOFF mode enable(1)/disable(0) value (sysctl) */
-#if defined (__APPLE__) && !defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
+#if defined (__APPLE__)
+#if !defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 #define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
+#else
+#define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	1
+#endif
 #else
 #define SCTP_DEFAULT_MOBILITY_FASTHANDOFF	0
 #endif
@@ -319,7 +327,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
  */
 #define SCTP_RWND_HIWAT_SHIFT 3
 
-/* How much of the rwnd must the 
+/* How much of the rwnd must the
  * message be taking up to start partial delivery.
  * We calculate this by shifing the hi_water (recv_win)
  * left the following .. set to 1, when a message holds
@@ -346,7 +354,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_VERSION_NUMBER	0x3
 
 #define MAX_TSN	0xffffffff
-#define MAX_SEQ	0xffff
 
 /* how many executions every N tick's */
 #define SCTP_ITERATOR_MAX_AT_ONCE 20
@@ -368,8 +375,18 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
  */
 #define SCTP_NO_FR_UNLESS_SEGMENT_SMALLER 1
 
-/* default max I can burst out after a fast retransmit */
-#define SCTP_DEF_MAX_BURST 4
+/* default max I can burst out after a fast retransmit, 0 disables it */
+#define SCTP_DEF_MAX_BURST 0
+#define SCTP_DEF_HBMAX_BURST 4
+#define SCTP_DEF_FRMAX_BURST 4
+
+/* RTO calculation flag to say if it
+ * is safe to determine local lan or not.
+ */
+#define SCTP_DETERMINE_LL_NOTOK 0
+#define SCTP_DETERMINE_LL_OK    1
+
+
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
 #define SCTP_FIRST_MBUF_RESV 68
 /* Packet transmit states in the sent field */
@@ -381,14 +398,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 						 * hit this value) */
 #define SCTP_DATAGRAM_RESEND		4
 #define SCTP_DATAGRAM_ACKED		10010
-/* EY 
- * If a tsn is nr-gapped, its first tagged as NR_MARKED and then NR_ACKED
- * When yet another nr-sack is received, if a particular TSN's sent tag 
- * is observed to be NR_ACKED after gap-ack info is processed, this implies
- * that particular TSN is reneged
-*/
-#define SCTP_DATAGRAM_NR_ACKED 		10020
-#define SCTP_DATAGRAM_NR_MARKED		20005
 #define SCTP_DATAGRAM_MARKED		20010
 #define SCTP_FORWARD_TSN_SKIP		30010
 
@@ -444,8 +453,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 
 /*************0x8000 series*************/
 #define SCTP_ECN_CAPABLE		0x8000
-/* ECN Nonce: draft-ladha-sctp-ecn-nonce */
-#define SCTP_ECN_NONCE_SUPPORTED	0x8001
+
 /* draft-ietf-tsvwg-auth-xxx */
 #define SCTP_RANDOM			0x8002
 #define SCTP_CHUNK_LIST			0x8003
@@ -518,6 +526,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_STATE_ABOUT_TO_BE_FREED    0x0200
 #define SCTP_STATE_PARTIAL_MSG_LEFT     0x0400
 #define SCTP_STATE_WAS_ABORTED          0x0800
+#define SCTP_STATE_IN_ACCEPT_QUEUE      0x1000
 #define SCTP_STATE_MASK			0x007f
 
 #define SCTP_GET_STATE(asoc)	((asoc)->state & SCTP_STATE_MASK)
@@ -538,8 +547,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_ADDR_UNCONFIRMED		0x200
 #define SCTP_ADDR_REQ_PRIMARY           0x400
 /* JRS 5/13/07 - Added potentially failed state for CMT PF */
-#define SCTP_ADDR_PF            0x800
-#define SCTP_REACHABLE_MASK		0x203
+#define SCTP_ADDR_PF                    0x800
 
 /* bound address types (e.g. valid address types to allow) */
 #define SCTP_BOUND_V6		0x01
@@ -564,13 +572,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_INITIAL_MAPPING_ARRAY  16
 /* how much we grow the mapping array each call */
 #define SCTP_MAPPING_ARRAY_INCR     32
-/* EY 05/13/08 - nr_sack version of the previous 3 constants */
-/* Maximum the nr mapping array will  grow to (TSN mapping array) */
-#define SCTP_NR_MAPPING_ARRAY	512
-/* size of the inital malloc on the nr mapping array */
-#define SCTP_INITIAL_NR_MAPPING_ARRAY  16
-/* how much we grow the nr mapping array each call */
-#define SCTP_NR_MAPPING_ARRAY_INCR     32
+
 /*
  * Here we define the timer types used by the implementation as arguments in
  * the set/get timer type calls.
@@ -605,7 +607,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_TIMER_TYPE_EVENTWAKE	13
 #define SCTP_TIMER_TYPE_STRRESET        14
 #define SCTP_TIMER_TYPE_INPKILL         15
-#define SCTP_TIMER_TYPE_ITERATOR        16
 #define SCTP_TIMER_TYPE_EARLYFR         17
 #define SCTP_TIMER_TYPE_ASOCKILL        18
 #define SCTP_TIMER_TYPE_ADDR_WQ         19
@@ -690,8 +691,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_DEFAULT_SECRET_LIFE_SEC 3600
 
 #define SCTP_RTO_UPPER_BOUND	(60000)	/* 60 sec in ms */
-#define SCTP_RTO_UPPER_BOUND_SEC 60	/* for the init timer */
-#define SCTP_RTO_LOWER_BOUND	(1000)	/* 1 sec in ms */
+#define SCTP_RTO_LOWER_BOUND	(300)	/* 0.3 sec is ms */
 #define SCTP_RTO_INITIAL	(3000)	/* 3 sec in ms */
 
 
@@ -945,7 +945,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 /* third argument */
 #define SCTP_CALLED_DIRECTLY_NOCMPSET     0
 #define SCTP_CALLED_AFTER_CMPSET_OFCLOSE  1
-
+#define SCTP_CALLED_FROM_INPKILL_TIMER    2
 /* second argument */
 #define SCTP_FREE_SHOULD_USE_ABORT          1
 #define SCTP_FREE_SHOULD_USE_GRACEFUL_CLOSE 0
@@ -957,15 +957,25 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_MAX_DATA_BUNDLING		256
 
 /* modular comparison */
-/* True if a > b (mod = M) */
-#define compare_with_wrap(a, b, M) (((a > b) && ((a - b) < ((M >> 1) + 1))) || \
-              ((b > a) && ((b - a) > ((M >> 1) + 1))))
-
+/* See RFC 1982 for details. */
+#define SCTP_SSN_GT(a, b) (((a < b) && ((b - a) > (1<<15))) || \
+                           ((a > b) && ((a - b) < (1<<15))))
+#define SCTP_SSN_GE(a, b) (SCTP_SSN_GT(a, b) || (a == b))
+#define SCTP_TSN_GT(a, b) (((a < b) && ((b - a) > (1<<31))) || \
+                           ((a > b) && ((a - b) < (1<<31))))
+#define SCTP_TSN_GE(a, b) (SCTP_TSN_GT(a, b) || (a == b))
 
 /* Mapping array manipulation routines */
 #define SCTP_IS_TSN_PRESENT(arry, gap) ((arry[(gap >> 3)] >> (gap & 0x07)) & 0x01)
 #define SCTP_SET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] |= (0x01 << ((gap & 0x07))))
 #define SCTP_UNSET_TSN_PRESENT(arry, gap) (arry[(gap >> 3)] &= ((~(0x01 << ((gap & 0x07)))) & 0xff))
+#define SCTP_CALC_TSN_TO_GAP(gap, tsn, mapping_tsn) do { \
+	                if (tsn >= mapping_tsn) { \
+						gap = tsn - mapping_tsn; \
+					} else { \
+						gap = (MAX_TSN - mapping_tsn) + tsn + 1; \
+					} \
+                  } while(0)
 
 
 #define SCTP_RETRAN_DONE -1
@@ -992,7 +1002,23 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
  */
 #define SCTP_TIME_WAIT 60
 
-/* The system retains a cache of free chunks such to 
+/* How many micro seconds is the cutoff from
+ * local lan type rtt's
+ */
+ /* 
+  * We allow 500us for the rtt and another 
+  * 500us for the cookie processing since
+  * we measure this on the first rtt.
+  */
+#define SCTP_LOCAL_LAN_RTT 1100
+#define SCTP_LAN_UNKNOWN  0
+#define SCTP_LAN_LOCAL    1
+#define SCTP_LAN_INTERNET 2
+
+#define SCTP_SEND_BUFFER_SPLITTING 0x00000001
+#define SCTP_RECV_BUFFER_SPLITTING 0x00000002
+
+/* The system retains a cache of free chunks such to
  * cut down on calls the memory allocation system. There
  * is a per association limit of free items and a overall
  * system limit. If either one gets hit then the resource
@@ -1037,9 +1063,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 199866 2009-11-27 17:25:19
 #define SCTP_GETTIME_TIMEVAL(x)	gettimeofday(x, NULL)
 #define SCTP_GETPTIME_TIMEVAL(x)  /* this doesn't seem to ever be used.. */
 #endif
-     
+
 #if defined(_KERNEL)
 
+#define SCTP_GETTIME_TIMESPEC(x) (getnanouptime(x))
 #define SCTP_GETTIME_TIMEVAL(x)	(getmicrouptime(x))
 #define SCTP_GETPTIME_TIMEVAL(x)	(microuptime(x))
 #endif

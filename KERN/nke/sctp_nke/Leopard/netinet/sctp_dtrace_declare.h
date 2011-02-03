@@ -1,5 +1,6 @@
 /*-
- * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2010, by Randall Stewart & Michael Tuexen, 
+ * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -27,57 +28,55 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-
-/* $KAME: sctp_peeloff.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
-
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_peeloff.h 169382 2007-05-08 17:01:12Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 215817 2010-11-25 13:39:55Z rrs $");
 #endif
+#ifndef __sctp_dtrace_declare_h__
+#if defined(__FreeBSD__) && __FreeBSD_version >= 900000
+#include "opt_kdtrace.h"
+#include <sys/kernel.h>
+#include <sys/sdt.h>
 
-#ifndef __sctp_peeloff_h__
-#define __sctp_peeloff_h__
+/* Declare the SCTP provider */
+SDT_PROVIDER_DECLARE(sctp);
+
+/* The probes we have so far: */
+
+/* One to track a net's cwnd */
+/* initial */
+SDT_PROBE_DECLARE(sctp, cwnd, net, init);
+/* update at a ack -- increase */
+SDT_PROBE_DECLARE(sctp, cwnd, net, ack);
+/* update at a fast retransmit -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, fr);
+/* update at a time-out -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, to);
+/* update at a burst-limit -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, bl);
+/* update at a ECN -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, ecn);
+/* update at a Packet-Drop -- decrease */
+SDT_PROBE_DECLARE(sctp, cwnd, net, pd);
+
+/* One to track an associations rwnd */
+SDT_PROBE_DECLARE(sctp, rwnd, assoc, val);
+
+/* One to track a net's flight size */ 
+SDT_PROBE_DECLARE(sctp, flightsize, net, val);
+
+/* One to track an associations flight size */ 
+SDT_PROBE_DECLARE(sctp, flightsize, assoc, val);
 
 
-#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
-/* socket option peeloff */
-struct sctp_peeloff_opt {
-#if !defined(__Windows__)
-	int s;
+
+
+
+
 #else
-	HANDLE s;
+/* All other platforms not defining dtrace probes */
+#ifndef SDT_PROBE
+#define SDT_PROBE(a, b, c, d, e, f, g, h, i) 
 #endif
-	sctp_assoc_t assoc_id;
-#if !defined(__Windows__)
-	int new_sd;
-#else
-	HANDLE new_sd;
 #endif
-};
-
-#endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
-
-
-#if defined(_KERNEL)
-
-int sctp_can_peel_off(struct socket *, sctp_assoc_t);
-int sctp_do_peeloff(struct socket *, struct socket *, sctp_assoc_t);
-struct socket *sctp_get_peeloff(struct socket *, sctp_assoc_t, int *);
-
-#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
-int sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *peeloff);
-
-#endif				/* HAVE_SCTP_PEELOFF_SOCKOPT */
-
-#ifdef __APPLE__
-/* sctp_peeloff() syscall arguments */
-struct sctp_peeloff_args {
-	int s;
-	caddr_t name;
-};
-
-#endif				/* __APPLE__ */
-
-#endif				/* _KERNEL */
-
 #endif

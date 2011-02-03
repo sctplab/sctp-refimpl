@@ -1,30 +1,30 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 199459 2009-11-17 23:03:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -110,11 +110,42 @@ typedef void (*asoc_func) (struct sctp_inpcb *, struct sctp_tcb *, void *ptr,
 typedef int (*inp_func) (struct sctp_inpcb *, void *ptr, uint32_t val);
 typedef void (*end_func) (void *ptr, uint32_t val);
 
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+/* whats on the mcore control struct */
+struct sctp_mcore_queue {
+	TAILQ_ENTRY(sctp_mcore_queue) next;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	struct vnet *vn;
+#endif
+	struct mbuf *m;
+	int off;
+	int v6;
+};
+
+TAILQ_HEAD(sctp_mcore_qhead, sctp_mcore_queue);
+
+struct sctp_mcore_ctrl {
+	SCTP_PROCESS_STRUCT thread_proc;
+	struct sctp_mcore_qhead que;
+	struct mtx core_mtx;
+	struct mtx que_mtx;
+	int running;
+	int cpuid;
+};
+
+
+#endif
+
+
 struct sctp_iterator {
 	TAILQ_ENTRY(sctp_iterator) sctp_nxt_itr;
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+	struct vnet *vn;
+#endif
 	struct sctp_timer tmr;
 	struct sctp_inpcb *inp;		/* current endpoint */
 	struct sctp_tcb *stcb;		/* current* assoc */
+	struct sctp_inpcb *next_inp;    /* special hook to skip to */
 	asoc_func function_assoc;	/* per assoc function */
 	inp_func function_inp;		/* per endpoint function */
 	inp_func function_inp_end;	/* end INP function */
@@ -132,6 +163,7 @@ struct sctp_iterator {
 #define SCTP_ITERATOR_DO_ALL_INP	0x00000001
 #define SCTP_ITERATOR_DO_SINGLE_INP	0x00000002
 
+
 TAILQ_HEAD(sctpiterators, sctp_iterator);
 
 struct sctp_copy_all {
@@ -147,6 +179,37 @@ struct sctp_asconf_iterator {
 	struct sctpladdr list_of_work;
 	int cnt;
 };
+
+struct iterator_control {
+#if defined(__FreeBSD__)
+	struct mtx ipi_iterator_wq_mtx;
+	struct mtx it_mtx;
+#elif defined(__APPLE__)
+	lck_mtx_t *ipi_iterator_wq_mtx;
+	lck_mtx_t *it_mtx;
+#elif defined(SCTP_PROCESS_LEVEL_LOCKS)
+  	pthread_mutex_t ipi_iterator_wq_mtx;
+	pthread_mutex_t it_mtx;
+	pthread_cond_t iterator_wakeup;
+#elif defined(__Windows__)  
+	struct spinlock it_lock;
+	struct spinlock ipi_iterator_wq_lock;  
+	KEVENT iterator_wakeup[2];
+	PFILE_OBJECT iterator_thread_obj;
+#else
+	void *it_mtx;
+#endif  
+#if !defined(__Windows__)
+	SCTP_PROCESS_STRUCT thread_proc;
+#endif
+	struct sctpiterators iteratorhead;
+	struct sctp_iterator *cur_it;
+	uint32_t iterator_running;
+	uint32_t iterator_flags;
+};
+#define SCTP_ITERATOR_MUST_EXIT   	0x00000001
+#define SCTP_ITERATOR_STOP_CUR_IT  	0x00000002
+#define SCTP_ITERATOR_STOP_CUR_INP  	0x00000004
 
 struct sctp_net_route {
 	sctp_rtentry_t *ro_rt;
@@ -203,7 +266,10 @@ struct sctp_nets {
 	/* mtu discovered so far */
 	uint32_t mtu;
 	uint32_t ssthresh;	/* not sure about this one for split */
-
+	uint32_t last_cwr_tsn;
+	uint32_t cwr_window_tsn;
+	uint32_t ecn_ce_pkt_cnt;
+	uint32_t lost_cnt;
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
 	int lastsv;
@@ -226,6 +292,7 @@ struct sctp_nets {
 	uint32_t flight_size;
 	uint32_t cwnd;		/* actual cwnd */
 	uint32_t prev_cwnd;	/* cwnd before any processing */
+	uint32_t ecn_prev_cwnd;	/* ECN prev cwnd at first ecn_echo seen in new window */
 	uint32_t partial_bytes_acked;	/* in CA tracks when to incr a MTU */
 	uint32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
@@ -258,10 +325,10 @@ struct sctp_nets {
 	uint32_t tos_flowlabel;
 
 	struct timeval start_time;      /* time when this net was created */
-
+	struct timeval last_measured_rtt;
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
-	uint32_t marked_fastretrans;   
+	uint32_t marked_fastretrans;
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
@@ -307,6 +374,7 @@ struct sctp_nets {
 	uint8_t window_probe;		/* Doing a window probe? */
 	uint8_t RTO_measured;		/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
+	uint8_t lan_type;
 	/* JRS - struct used in HTCP algorithm */
 	struct htcp htcp_ca;
 };
@@ -318,10 +386,7 @@ struct sctp_data_chunkrec {
 	uint16_t stream_number;	/* the stream number of this guy */
 	uint32_t payloadtype;
 	uint32_t context;	/* from send */
-
-	/* ECN Nonce: Nonce Value for this chunk */
-	uint8_t ect_nonce;
-	uint8_t fwd_tsn_cnt;
+	uint32_t cwnd_at_send;
 	/*
 	 * part of the Highest sacked algorithm to be able to stroke counts
 	 * on ones that are FR'd.
@@ -334,6 +399,7 @@ struct sctp_data_chunkrec {
 				 */
 	uint8_t state_flags;
 	uint8_t chunk_was_revoked;
+	uint8_t fwd_tsn_cnt;
 };
 
 TAILQ_HEAD(sctpchunk_listhead, sctp_tmit_chunk);
@@ -421,7 +487,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * fit every chunk we pull to the send/sent
  * queue to make up the next full packet
  * if we can. An entry cannot be removed
- * from the stream_out queue until 
+ * from the stream_out queue until
  * the msg_is_complete flag is set. This
  * means at times data/tail_mbuf MIGHT
  * be NULL.. If that occurs it happens
@@ -430,7 +496,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
  * awoken to copy more data down... OR
  * the user is in the explict MSG_EOR mode
  * and wrote some data, but has not completed
- * sending. 
+ * sending.
  */
 struct sctp_stream_queue_pending {
 	struct mbuf *data;
@@ -468,11 +534,54 @@ struct sctp_stream_in {
 	uint8_t  delivery_started;
 };
 
-/* This struct is used to track the traffic on outbound streams */
 TAILQ_HEAD(sctpwheel_listhead, sctp_stream_out);
+TAILQ_HEAD(sctplist_listhead, sctp_stream_queue_pending);
+
+/* Round-robin schedulers */
+struct ss_rr {
+	/* next link in wheel */
+	TAILQ_ENTRY(sctp_stream_out) next_spoke;
+};
+
+/* Priority scheduler */
+struct ss_prio {
+	/* next link in wheel */
+	TAILQ_ENTRY(sctp_stream_out) next_spoke;
+	/* priority id */
+	uint16_t priority;
+};
+
+/* Fair Bandwidth scheduler */
+struct ss_fb {
+	/* next link in wheel */
+	TAILQ_ENTRY(sctp_stream_out) next_spoke;
+	/* stores message size */
+	int32_t rounds;
+};
+
+/*
+ * This union holds all data necessary for
+ * different stream schedulers.
+ */
+union scheduling_data {
+	struct sctpwheel_listhead out_wheel;
+	struct sctplist_listhead out_list;
+};
+
+/*
+ * This union holds all parameters per stream
+ * necessary for different stream schedulers.
+ */
+union scheduling_parameters {
+	struct ss_rr rr;
+	struct ss_prio prio;
+	struct ss_fb fb;
+};
+
+/* This struct is used to track the traffic on outbound streams */
 struct sctp_stream_out {
 	struct sctp_streamhead outqueue;
-	TAILQ_ENTRY(sctp_stream_out) next_spoke;	/* next link in wheel */
+	union scheduling_parameters ss_params;
 	uint16_t stream_no;
 	uint16_t next_sequence_sent;	/* next one I expect to send out */
 	uint8_t  last_msg_incomplete;
@@ -484,9 +593,8 @@ struct sctp_asconf_addr {
 	TAILQ_ENTRY(sctp_asconf_addr) next;
 	struct sctp_asconf_addr_param ap;
 	struct sctp_ifa *ifa;	/* save the ifa for add/del ip */
-        uint8_t sent;		/* has this been sent yet? */
-        uint8_t special_del;	/* not to be used in lookup */
-  
+	uint8_t sent;		/* has this been sent yet? */
+	uint8_t special_del;	/* not to be used in lookup */
 };
 
 struct sctp_scoping {
@@ -547,21 +655,48 @@ struct sctp_nonpad_sndrcvinfo {
 struct sctp_cc_functions {
 	void (*sctp_set_initial_cc_param)(struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
-		 	struct sctp_association *asoc, 
+		 	struct sctp_association *asoc,
 		 	int accum_moved ,int reneged_all, int will_exit);
 	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
 			struct sctp_association *asoc);
 	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
 			struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_ecn_echo)(struct sctp_tcb *stcb,
-			struct sctp_nets *net);
+			struct sctp_nets *net, int in_window, int num_pkt_lost);
 	void (*sctp_cwnd_update_after_packet_dropped)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, struct sctp_pktdrop_chunk *cp,
 			uint32_t *bottle_bw, uint32_t *on_queue);
 	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, int burst_limit);
-	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp, 
+	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp,
 			struct sctp_tcb *stcb, struct sctp_nets *net);
+};
+
+/*
+ * RS - Structure to hold function pointers to the functions responsible
+ * for stream scheduling.
+ */
+struct sctp_ss_functions {
+	void (*sctp_ss_init)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		int holds_lock);
+	void (*sctp_ss_clear)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		int clear_values, int holds_lock);
+	void (*sctp_ss_init_stream)(struct sctp_stream_out *strq);
+	void (*sctp_ss_add_to_stream)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		struct sctp_stream_out *strq, struct sctp_stream_queue_pending *sp, int holds_lock);
+	int (*sctp_ss_is_empty)(struct sctp_tcb *stcb, struct sctp_association *asoc);
+	void (*sctp_ss_remove_from_stream)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		struct sctp_stream_out *strq, struct sctp_stream_queue_pending *sp, int holds_lock);
+	struct sctp_stream_out* (*sctp_ss_select_stream)(struct sctp_tcb *stcb,
+		struct sctp_nets *net, struct sctp_association *asoc);
+	void (*sctp_ss_scheduled)(struct sctp_tcb *stcb, struct sctp_nets *net,
+		struct sctp_association *asoc, struct sctp_stream_out *strq, int moved_how_much);
+	void (*sctp_ss_packet_done)(struct sctp_tcb *stcb, struct sctp_nets *net,
+		struct sctp_association *asoc);
+	int (*sctp_ss_get_value)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		struct sctp_stream_out *strq, uint16_t *value);
+	int (*sctp_ss_set_value)(struct sctp_tcb *stcb, struct sctp_association *asoc,
+		struct sctp_stream_out *strq, uint16_t value);
 };
 
 /* used to save ASCONF chunks for retransmission */
@@ -651,9 +786,9 @@ struct sctp_association {
 	 * set our rwnd to the space in the socket minus also the
 	 * size_on_delivery_queue.
 	 */
-	struct sctpwheel_listhead out_wheel;
+	union scheduling_data ss_data;
 
-	/* This pointer will be set to NULL 
+	/* This pointer will be set to NULL
 	 * most of the time. But when we have
 	 * a fragmented message, where we could
 	 * not get out all of the message at
@@ -708,6 +843,10 @@ struct sctp_association {
 	struct sctp_cc_functions cc_functions;
 	/* JRS - value to store the currently loaded congestion control module */
 	uint32_t congestion_control_module;
+	/* RS - the stream scheduling functions are in this struct */
+	struct sctp_ss_functions ss_functions;
+	/* RS - value to store the currently loaded stream scheduling module */
+	uint32_t stream_scheduling_module;
 
 	uint32_t vrf_id;
 
@@ -778,12 +917,8 @@ struct sctp_association {
 	
 	/* EY - new NR variables used for nr_sack based on mapping_array*/
 	uint8_t *nr_mapping_array;
-	uint32_t nr_mapping_array_base_tsn;
 	uint32_t highest_tsn_inside_nr_map;
-	uint16_t nr_mapping_array_size;
 
-	uint32_t last_echo_tsn;
-	uint32_t last_cwr_tsn;
 	uint32_t fast_recovery_tsn;
 	uint32_t sat_t3_recovery_tsn;
 	uint32_t tsn_last_delivered;
@@ -803,17 +938,17 @@ struct sctp_association {
 	uint32_t last_sending_seq[SCTP_MAX_RESET_PARAMS];
 	uint32_t last_base_tsnsent[SCTP_MAX_RESET_PARAMS];
 #ifdef SCTP_ASOCLOG_OF_TSNS
-	/* 
+	/*
 	 * special log  - This adds considerable size
 	 * to the asoc, but provides a log that you
 	 * can use to detect problems via kgdb.
 	 */
-        struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
-        struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log  in_tsnlog[SCTP_TSN_LOG_SIZE];
+	struct sctp_tsn_log  out_tsnlog[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_log[SCTP_TSN_LOG_SIZE];
 	uint32_t cumack_logsnt[SCTP_TSN_LOG_SIZE];
 	uint16_t tsn_in_at;
- 	uint16_t tsn_out_at;
+	uint16_t tsn_out_at;
 	uint16_t tsn_in_wrapped;
 	uint16_t tsn_out_wrapped;
 	uint16_t cumack_log_at;
@@ -838,12 +973,9 @@ struct sctp_association {
 	uint32_t sb_cc;		       /* shadow of sb_cc */
 	uint32_t sb_send_resv;     /* amount reserved on a send */
 	uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
-	/* 32 bit nonce stuff */
-	uint32_t nonce_resync_tsn;
-	uint32_t nonce_wait_tsn;
 	uint32_t default_flowlabel;
 	uint32_t pr_sctp_cnt;
-	int ctrl_queue_cnt;	/* could be removed  REM */
+	int ctrl_queue_cnt;	/* could be removed  REM - NO IT CAN'T!! RRS */
 	/*
 	 * All outbound datagrams queue into this list from the individual
 	 * stream queue. Here they get assigned a TSN and then await
@@ -862,6 +994,7 @@ struct sctp_association {
 
 	unsigned int size_on_reasm_queue;
 	unsigned int cnt_on_reasm_queue;
+	unsigned int fwd_tsn_cnt;
 	/* amount of data (bytes) currently in flight (on all destinations) */
 	unsigned int total_flight;
 	/* Total book size in flight */
@@ -942,7 +1075,7 @@ struct sctp_association {
 	/* could re-arrange to optimize space here. */
 	uint16_t streamincnt;
 	uint16_t streamoutcnt;
-    uint16_t strm_realoutsize;
+	uint16_t strm_realoutsize;
 	/* my maximum number of retrans of INIT and SEND */
 	/* copied from SCTP but should be individually setable */
 	uint16_t max_init_times;
@@ -966,7 +1099,6 @@ struct sctp_association {
 	uint16_t ecn_echo_cnt_onq;
 
 	uint16_t free_chunk_cnt;
-
 	uint8_t stream_locked;
 	uint8_t authenticated;	/* packet authenticated ok */
 	/*
@@ -975,8 +1107,10 @@ struct sctp_association {
 	 */
 	uint8_t send_sack;
 
-	/* max burst after fast retransmit completes */
-	uint8_t max_burst;
+	/* max burst of new packets into the network */
+	uint32_t max_burst;
+	/* max burst of fast retransmit packets */
+	uint32_t fr_max_burst;
 
 	uint8_t sat_network;	/* RTT is in range of sat net or greater */
 	uint8_t sat_network_lockout;	/* lockout code */
@@ -992,20 +1126,13 @@ struct sctp_association {
 	uint8_t default_tos;
 	uint8_t asconf_del_pending;	/* asconf delete last addr pending */
 
-	/* ECN Nonce stuff */
-	uint8_t receiver_nonce_sum;	/* nonce I sum and put in my sack */
-	uint8_t ecn_nonce_allowed;	/* Tells us if ECN nonce is on */
-	uint8_t nonce_sum_check;	/* On off switch used during re-sync */
-	uint8_t nonce_wait_for_ecne;	/* flag when we expect a ECN */
-	uint8_t peer_supports_ecn_nonce;
-
 	/*
 	 * This value, plus all other ack'd but above cum-ack is added
 	 * together to cross check against the bit that we have yet to
 	 * define (probably in the SACK). When the cum-ack is updated, this
 	 * sum is updated as well.
 	 */
-	uint8_t nonce_sum_expect_base;
+
 	/* Flag to tell if ECN is allowed */
 	uint8_t ecn_allowed;
 
@@ -1050,6 +1177,7 @@ struct sctp_association {
 	uint8_t delayed_connection;
 	uint8_t ifp_had_enobuf;
 	uint8_t saw_sack_with_frags;
+	uint8_t saw_sack_with_nr_frags;
 	uint8_t in_asocid_hash;
 	uint8_t assoc_up_sent;
 	uint8_t adaptation_needed;
@@ -1070,16 +1198,16 @@ struct sctp_association {
 	 * trailing locactions out.  If I get a TSN above the array
 	 * mappingArraySz, I discard the datagram and let retransmit happen.
 	 */
-	 uint32_t marked_retrans;
-	 uint32_t timoinit;
-	 uint32_t timodata;
-	 uint32_t timosack;
-	 uint32_t timoshutdown;
-	 uint32_t timoheartbeat;
-	 uint32_t timocookie;
-	 uint32_t timoshutdownack;
-	 struct timeval start_time;
-	 struct timeval discontinuity_time;
+	uint32_t marked_retrans;
+	uint32_t timoinit;
+	uint32_t timodata;
+	uint32_t timosack;
+	uint32_t timoshutdown;
+	uint32_t timoheartbeat;
+	uint32_t timocookie;
+	uint32_t timoshutdownack;
+	struct timeval start_time;
+	struct timeval discontinuity_time;
 };
 
 #endif

@@ -3,30 +3,30 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -70,7 +70,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 182367 2008-08-28 09:44:07Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 218211 2011-02-03 10:05:30Z rrs $");
 #endif
 
 
@@ -79,7 +79,7 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_IPI_COUNT_INIT()
 
-#define SCTP_STATLOG_INIT_LOCK() 
+#define SCTP_STATLOG_INIT_LOCK()
 #define SCTP_STATLOG_LOCK()
 #define SCTP_STATLOG_UNLOCK()
 #define SCTP_STATLOG_DESTROY()
@@ -90,14 +90,14 @@ extern int sctp_logoff_stuff;
              mtx_unlock(&SCTP_BASE_INFO(ipi_ep_mtx)); \
         } \
         mtx_destroy(SCTP_BASE_INFO(ipi_ep_mtx)); \
-      }  while (0) 
+      }  while (0)
 #else
 #define SCTP_INP_INFO_LOCK_DESTROY() do { \
         if(rw_wowned(&SCTP_BASE_INFO(ipi_ep_mtx))) { \
              rw_wunlock(&SCTP_BASE_INFO(ipi_ep_mtx)); \
         } \
         rw_destroy(&SCTP_BASE_INFO(ipi_ep_mtx)); \
-      }  while (0) 
+      }  while (0)
 #endif
 
 #if __FreeBSD_version <= 602000
@@ -119,6 +119,48 @@ extern int sctp_logoff_stuff;
 } while (0)
 #endif
 
+#define SCTP_MCORE_QLOCK_INIT(cpstr) do { \
+		mtx_init(&(cpstr)->que_mtx,	      \
+			 "sctp-mcore_queue","queue_lock",	\
+			 MTX_DEF|MTX_DUPOK);		\
+} while (0)
+
+#define SCTP_MCORE_QLOCK(cpstr)  do { \
+		mtx_lock(&(cpstr)->que_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_QUNLOCK(cpstr)  do { \
+		mtx_unlock(&(cpstr)->que_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_QDESTROY(cpstr)  do { \
+	if(mtx_owned(&(cpstr)->core_mtx)) {	\
+		mtx_unlock(&(cpstr)->que_mtx);	\
+        } \
+	mtx_destroy(&(cpstr)->que_mtx);	\
+} while (0)
+
+
+#define SCTP_MCORE_LOCK_INIT(cpstr) do { \
+		mtx_init(&(cpstr)->core_mtx,	      \
+			 "sctp-cpulck","cpu_proc_lock",	\
+			 MTX_DEF|MTX_DUPOK);		\
+} while (0)
+
+#define SCTP_MCORE_LOCK(cpstr)  do { \
+		mtx_lock(&(cpstr)->core_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_UNLOCK(cpstr)  do { \
+		mtx_unlock(&(cpstr)->core_mtx);	\
+} while (0)
+
+#define SCTP_MCORE_DESTROY(cpstr)  do { \
+	if(mtx_owned(&(cpstr)->core_mtx)) {	\
+		mtx_unlock(&(cpstr)->core_mtx);	\
+        } \
+	mtx_destroy(&(cpstr)->core_mtx);	\
+} while (0)
 
 #if __FreeBSD_version <= 602000
 #define SCTP_INP_INFO_WLOCK()	do { 					\
@@ -143,70 +185,57 @@ extern int sctp_logoff_stuff;
 #if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_INIT() \
         mtx_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr","sctp_addr",MTX_DEF)
-#else
-#define SCTP_IPI_ADDR_INIT() \
-        rw_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr")
-#endif
 
-#if __FreeBSD_version <= 602000
 #define SCTP_IPI_ADDR_DESTROY() do  { \
         if(mtx_owned(&SCTP_BASE_INFO(ipi_addr_mtx))) { \
              mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx)); \
         } \
 	    mtx_destroy(&SCTP_BASE_INFO(ipi_addr_mtx)); \
-      }  while (0) 
+      }  while (0)
+
+
+#define SCTP_IPI_ADDR_RLOCK()	do { 					\
+             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
+} while (0)
+#define SCTP_IPI_ADDR_WLOCK()	do { 					\
+             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
+} while (0)
+
+#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
+#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
+
 #else
+#define SCTP_IPI_ADDR_INIT()								\
+        rw_init(&SCTP_BASE_INFO(ipi_addr_mtx), "sctp-addr")
 #define SCTP_IPI_ADDR_DESTROY() do  { \
         if(rw_wowned(&SCTP_BASE_INFO(ipi_addr_mtx))) { \
              rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx)); \
         } \
 	rw_destroy(&SCTP_BASE_INFO(ipi_addr_mtx)); \
-      }  while (0) 
-#endif
-
-
-
-#if __FreeBSD_version <= 602000
-#define SCTP_IPI_ADDR_RLOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
-} while (0)
-#else
+      }  while (0)
 #define SCTP_IPI_ADDR_RLOCK()	do { 					\
              rw_rlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
-#endif
-
-#if __FreeBSD_version <= 602000
-#define SCTP_IPI_ADDR_WLOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
-} while (0)
-#else
 #define SCTP_IPI_ADDR_WLOCK()	do { 					\
              rw_wlock(&SCTP_BASE_INFO(ipi_addr_mtx));                         \
 } while (0)
-#endif
 
-
-#if __FreeBSD_version <= 602000
-#define SCTP_IPI_ADDR_RUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
-#define SCTP_IPI_ADDR_WUNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_addr_mtx))
-#else
 #define SCTP_IPI_ADDR_RUNLOCK()		rw_runlock(&SCTP_BASE_INFO(ipi_addr_mtx))
 #define SCTP_IPI_ADDR_WUNLOCK()		rw_wunlock(&SCTP_BASE_INFO(ipi_addr_mtx))
 #endif
 
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-        mtx_init(&SCTP_BASE_INFO(ipi_iterator_wq_mtx), "sctp-it-wq", "sctp_it_wq", MTX_DEF)
+        mtx_init(&sctp_it_ctl.ipi_iterator_wq_mtx, "sctp-it-wq", "sctp_it_wq", MTX_DEF)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	mtx_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+	mtx_destroy(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK()	do { 					\
-             mtx_lock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx));                \
+             mtx_lock(&sctp_it_ctl.ipi_iterator_wq_mtx);                \
 } while (0)
 
-#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+#define SCTP_IPI_ITERATOR_WQ_UNLOCK()		mtx_unlock(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 
 #define SCTP_IP_PKTLOG_INIT() \
@@ -254,6 +283,13 @@ extern int sctp_logoff_stuff;
 
 #define SCTP_INP_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_mtx)
+
+#define SCTP_INP_LOCK_CONTENDED(_inp) ((_inp)->inp_mtx.mtx_lock & MTX_CONTESTED)
+
+#define SCTP_INP_READ_CONTENDED(_inp) ((_inp)->inp_rdata_mtx.mtx_lock & MTX_CONTESTED)
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) ((_inp)->inp_create_mtx.mtx_lock & MTX_CONTESTED)
+
 
 #define SCTP_ASOC_CREATE_LOCK_DESTROY(_inp) \
 	mtx_destroy(&(_inp)->inp_create_mtx)
@@ -364,25 +400,45 @@ extern int sctp_logoff_stuff;
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() \
-        mtx_init(&SCTP_BASE_INFO(it_mtx), "sctp-it", "iterator", MTX_DEF)
+        mtx_init(&sctp_it_ctl.it_mtx, "sctp-it", "iterator", MTX_DEF)
 
 #ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
-		if (mtx_owned(&SCTP_BASE_INFO(it_mtx)))			\
+		if (mtx_owned(&sctp_it_ctl.it_mtx))			\
 			panic("Iterator Lock");				\
-		mtx_lock(&SCTP_BASE_INFO(it_mtx));				\
+		mtx_lock(&sctp_it_ctl.it_mtx);				\
 	} while (0)
 #else
 #define SCTP_ITERATOR_LOCK() \
 	do {								\
-		mtx_lock(&SCTP_BASE_INFO(it_mtx));				\
+		mtx_lock(&sctp_it_ctl.it_mtx);				\
 	} while (0)
 
 #endif
 
-#define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&SCTP_BASE_INFO(it_mtx))
-#define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&SCTP_BASE_INFO(it_mtx))
+#define SCTP_ITERATOR_UNLOCK()	        mtx_unlock(&sctp_it_ctl.it_mtx)
+#define SCTP_ITERATOR_LOCK_DESTROY()	mtx_destroy(&sctp_it_ctl.it_mtx)
+
+
+#define SCTP_WQ_ADDR_INIT() do { \
+        mtx_init(&SCTP_BASE_INFO(wq_addr_mtx), "sctp-addr-wq","sctp_addr_wq",MTX_DEF); \
+ } while (0)
+
+#define SCTP_WQ_ADDR_DESTROY() do  { \
+        if(mtx_owned(&SCTP_BASE_INFO(wq_addr_mtx))) { \
+             mtx_unlock(&SCTP_BASE_INFO(wq_addr_mtx)); \
+        } \
+	    mtx_destroy(&SCTP_BASE_INFO(wq_addr_mtx)); \
+      }  while (0)
+
+#define SCTP_WQ_ADDR_LOCK()	do { \
+             mtx_lock(&SCTP_BASE_INFO(wq_addr_mtx));  \
+} while (0)
+#define SCTP_WQ_ADDR_UNLOCK() do { \
+		mtx_unlock(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
 
 
 #define SCTP_INCR_EP_COUNT() \
@@ -442,7 +498,7 @@ extern int sctp_logoff_stuff;
                        if(SCTP_BASE_INFO(ipi_count_chunk) != 0) \
   	               atomic_subtract_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
 	        } while (0)
-#endif 
+#endif
 #define SCTP_INCR_READQ_COUNT() \
                 do { \
 		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \
