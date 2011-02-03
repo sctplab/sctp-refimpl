@@ -1,5 +1,8 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart, rrs@lakerest.net and
+ *                          Michael Tuexen, tuexen@fh-muenster.de
+ *                          All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -2940,7 +2943,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	uint8_t override_bit=0;
 	uint32_t tsn, window_data_tsn;
 	int len;
-	int pkt_cnt;
+	unsigned int pkt_cnt;
 	len = ntohs(cp->ch.chunk_length);
 	if ((len != sizeof(struct sctp_ecne_chunk)) &&
 	    (len != sizeof(struct old_sctp_ecne_chunk))) {
