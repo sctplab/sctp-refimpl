@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2004-2007 Michael Tuexen, tuexen@fh-muenster.de
+ * Copyright (C) 2004-2010 Michael Tuexen, tuexen@fh-muenster.de
  *
  * All rights reserved.
  *
@@ -71,9 +71,10 @@ extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 #endif
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
-extern struct sysctl_oid sysctl__net_inet_sctp_ecn_nonce;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
+#if !defined(SCTP_WITH_NO_CSUM)
 extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
+#endif
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
@@ -113,6 +114,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_min_residual;
 extern struct sysctl_oid sysctl__net_inet_sctp_max_retran_chunk;
 extern struct sysctl_oid sysctl__net_inet_sctp_log_level;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_cc_module;
+extern struct sysctl_oid sysctl__net_inet_sctp_default_ss_module;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_frag_interleave;
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 extern struct sysctl_oid sysctl__net_inet_sctp_mobility_base;
@@ -129,6 +131,8 @@ extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_port;
 extern struct sysctl_oid sysctl__net_inet_sctp_enable_sack_immediately;
 extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_vtag_time_wait;
+extern struct sysctl_oid sysctl__net_inet_sctp_buffer_splitting;
+extern struct sysctl_oid sysctl__net_inet_sctp_initial_cwnd;
 #if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -349,9 +353,11 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
-	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_sacks);
+#if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_register_oid(&sysctl__net_inet_sctp_loopback_nocsum);
+
+#endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_init);
 	sysctl_register_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
@@ -391,6 +397,7 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_max_retran_chunk);
 	sysctl_register_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_register_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_base);
@@ -407,6 +414,8 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly_init);
 	sysctl_register_oid(&sysctl__net_inet_sctp_vtag_time_wait);
+	sysctl_register_oid(&sysctl__net_inet_sctp_buffer_splitting);
+	sysctl_register_oid(&sysctl__net_inet_sctp_initial_cwnd);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -470,9 +479,10 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_nonce);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_sacks);
+#if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_loopback_nocsum);
+#endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_init);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxburst);
@@ -512,6 +522,7 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_max_retran_chunk);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_log_level);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_cc_module);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_frag_interleave);
 #if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_base);
@@ -528,6 +539,8 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly_init);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_vtag_time_wait);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_buffer_splitting);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_initial_cwnd);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
