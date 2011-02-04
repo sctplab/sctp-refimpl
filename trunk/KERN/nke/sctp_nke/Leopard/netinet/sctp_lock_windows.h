@@ -1,5 +1,8 @@
 /*-
  * Copyright (c) 2001-2006, Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2011, by Bruce Cran. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -68,6 +71,11 @@
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
  * the SCTP_BASE_INFO() list's we will do a SCTP_INP_INFO_WLOCK().
  */
+ 
+#ifdef SCTP_LOCK_LOGGING
+#include <netinet/sctputil.h>
+#endif
+ 
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;
 extern LARGE_INTEGER zero_timeout;
@@ -113,6 +121,23 @@ extern LARGE_INTEGER zero_timeout;
 } while (0)
 
 
+#define SCTP_WQ_ADDR_INIT() do { \
+	rwlock_init(&SCTP_BASE_INFO(wq_addr_mtx), "sctp-addr-wq","sctp_addr_wq", 0); \
+} while (0)
+
+#define SCTP_WQ_ADDR_DESTROY() do { \
+	rwlock_destroy(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
+#define SCTP_WQ_ADDR_LOCK() do { \
+	rwlock_acquire(&SCTP_BASE_INFO(wq_addr_mtx), 1); \
+} while (0)
+
+#define SCTP_WQ_ADDR_UNLOCK() do { \
+	rwlock_release(&SCTP_BASE_INFO(wq_addr_mtx)); \
+} while (0)
+
+
 #define SCTP_IPI_ADDR_INIT() do { \
 	rwlock_init(&SCTP_BASE_INFO(ipi_addr_lock), "sctp-addr", "sctp_addr", 0); \
 } while (0)
@@ -139,19 +164,19 @@ extern LARGE_INTEGER zero_timeout;
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() do { \
-	spinlock_init(&SCTP_BASE_INFO(ipi_iterator_wq_lock), "sctp-it-wq", "sctp_it_wq", 0); \
+	spinlock_init(&sctp_it_ctl.ipi_iterator_wq_lock, "sctp-it-wq", "sctp_it_wq", 0); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() do { \
-	spinlock_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_destroy(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_acquire(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() do { \
-	spinlock_release(&SCTP_BASE_INFO(ipi_iterator_wq_lock)); \
+	spinlock_release(&sctp_it_ctl.ipi_iterator_wq_lock); \
 } while (0)
 
 
@@ -223,6 +248,13 @@ extern LARGE_INTEGER zero_timeout;
 #define SCTP_INP_DECR_REF(_inp) do { \
 	atomic_subtract_int(&(_inp)->refcount, 1); \
 } while (0)
+
+
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
 
 
 #define SCTP_ASOC_CREATE_LOCK_INIT(_inp) do { \
@@ -351,26 +383,26 @@ __inline int _SCTP_TCB_TRYLOCK(struct sctp_tcb *tcb, char *filename, int lineno)
 #endif
 
 #define SCTP_ITERATOR_LOCK_INIT() do { \
-	spinlock_init(&SCTP_BASE_INFO(it_lock), "sctp-it", "iterator", 0); \
+	spinlock_init(&sctp_it_ctl.it_lock, "sctp-it", "iterator", 0); \
 } while (0)
 
 #define SCTP_ITERATOR_LOCK_DESTROY() do { \
-	spinlock_destroy(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_destroy(&sctp_it_ctl.it_lock); \
 } while (0)
 
 
 #ifdef INVARIANTS
 #define SCTP_ITERATOR_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_acquire(&sctp_it_ctl.it_lock); \
 } while (0)
 #else
 #define SCTP_ITERATOR_LOCK() do { \
-	spinlock_acquire(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_acquire(&sctp_it_ctl.it_lock); \
 } while (0)
 #endif
 
 #define SCTP_ITERATOR_UNLOCK() do { \
-	spinlock_release(&SCTP_BASE_INFO(it_lock)); \
+	spinlock_release(&sctp_it_ctl.it_lock); \
 } while (0)
 
 #define SCTP_INCR_EP_COUNT() do { \

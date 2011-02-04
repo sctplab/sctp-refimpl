@@ -1,8 +1,7 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart, rrs@lakerest.net and
- *                          Michael Tuexen, tuexen@fh-muenster.de
- *                          All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -6020,6 +6019,9 @@ sctp_input(i_pak, va_alist)
 	return;
 }
 
+#if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
+extern int *sctp_cpuarry;
+#endif
 
 void
 sctp_input(struct mbuf *m, int off)
@@ -6029,7 +6031,9 @@ sctp_input(struct mbuf *m, int off)
 	struct sctphdr *sh;
 	int offset;
 	int cpu_to_use;
-	if (mp_maxid > 1) {
+	uint32_t tag;
+
+	if (mp_ncpus > 1) {
 		ip = mtod(m, struct ip *);
 		offset = off + sizeof(*sh);
 		if (SCTP_BUF_LEN(m) < offset) {
@@ -6040,7 +6044,18 @@ sctp_input(struct mbuf *m, int off)
 			ip = mtod(m, struct ip *);
 		}
 		sh = (struct sctphdr *)((caddr_t)ip + off);
-		cpu_to_use = ntohl(sh->v_tag) % mp_maxid;
+		if (sh->v_tag) {
+			tag = htonl(sh->v_tag);
+		} else {
+			/*
+			 * Distribute new INIT's to
+			 * all CPU's don't just pick on 0.
+			 */
+			struct timeval tv;
+			(void)SCTP_GETTIME_TIMEVAL(&tv);
+			tag = (uint32_t)tv.tv_usec;
+		}
+		cpu_to_use = sctp_cpuarry[tag % mp_ncpus];
 		sctp_queue_to_mcore(m, off, cpu_to_use);
 		return;
 	} 

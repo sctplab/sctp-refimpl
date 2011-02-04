@@ -1,5 +1,7 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -103,6 +105,14 @@
  * per tcb level locking
  */
 #define SCTP_IPI_COUNT_INIT()
+
+#define SCTP_WQ_ADDR_INIT() \
+        (void)pthread_mutex_init(&SCTP_BASE_INFO(wq_addr_mtx), NULL)
+#define SCTP_WQ_ADDR_DESTROY() \
+	(void)pthread_mutex_destroy(&SCTP_BASE_INFO(wq_addr_mtx))
+#define SCTP_WQ_ADDR_LOCK() (void)pthread_mutex_lock(&SCTP_BASE_INFO(wq_addr_mtx))
+#define SCTP_WQ_ADDR_UNLOCK()  (void)pthread_mutex_unlock(&SCTP_BASE_INFO(wq_addr_mtx))
+
 
 #define SCTP_INP_INFO_LOCK_INIT() \
 	(void)pthread_mutex_init(&SCTP_BASE_INFO(ipi_ep_mtx), NULL)
@@ -261,6 +271,13 @@
 /*
  * common locks
  */
+
+/* copied over to compile */
+#define SCTP_INP_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+#define SCTP_INP_READ_CONTENDED(_inp) (0) /* Don't know if this is possible */
+#define SCTP_ASOC_CREATE_LOCK_CONTENDED(_inp) (0) /* Don't know if this is possible */
+
+
 /* socket locks */
 
 #if defined(__Userspace__)
@@ -305,33 +322,33 @@
 
 /* iterator locks */
 #define SCTP_ITERATOR_LOCK_INIT() \
-	(void)pthread_mutex_init(&SCTP_BASE_INFO(it_mtx), NULL)
+	(void)pthread_mutex_init(&sctp_it_ctl.it_mtx, NULL)
 
 #define SCTP_ITERATOR_LOCK() 						\
 	do {								\
-		(void)pthread_mutex_lock(&SCTP_BASE_INFO(it_mtx));		\
+		(void)pthread_mutex_lock(&sctp_it_ctl.it_mtx);		\
 	} while (0)
 
 #define SCTP_ITERATOR_UNLOCK() \
-	(void)pthread_mutex_unlock(&SCTP_BASE_INFO(it_mtx))
+	(void)pthread_mutex_unlock(&sctp_it_ctl.it_mtx)
 
 #define SCTP_ITERATOR_LOCK_DESTROY() \
-	(void)pthread_mutex_destroy(&SCTP_BASE_INFO(it_mtx))
+	(void)pthread_mutex_destroy(&sctp_it_ctl.it_mtx)
 
 
 #define SCTP_IPI_ITERATOR_WQ_INIT() \
-	(void)pthread_mutex_init(&SCTP_BASE_INFO(ipi_iterator_wq_mtx), NULL)
+	(void)pthread_mutex_init(&sctp_it_ctl.ipi_iterator_wq_mtx, NULL)
 
 #define SCTP_IPI_ITERATOR_WQ_DESTROY() \
-	(void)pthread_mutex_destroy(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+	(void)pthread_mutex_destroy(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 #define SCTP_IPI_ITERATOR_WQ_LOCK() \
 	do { \
-		(void)pthread_mutex_lock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx)); \
+		(void)pthread_mutex_lock(&sctp_it_ctl.ipi_iterator_wq_mtx); \
 	} while (0)
 
 #define SCTP_IPI_ITERATOR_WQ_UNLOCK() \
-	(void)pthread_mutex_unlock(&SCTP_BASE_INFO(ipi_iterator_wq_mtx))
+	(void)pthread_mutex_unlock(&sctp_it_ctl.ipi_iterator_wq_mtx)
 
 
 #define SCTP_INCR_EP_COUNT() \

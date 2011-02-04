@@ -1,7 +1,6 @@
 /*-
- * Copyright (c) 2010-2011, by Randall Stewart, rrs@lakerest.net and
- *                          Michael Tuexen, tuexen@fh-muenster.de
- *                          All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -12,10 +11,6 @@
  * b) Redistributions in binary form must reproduce the above copyright 
  *    notice, this list of conditions and the following disclaimer in 
  *   the documentation and/or other materials provided with the distribution.
- *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
- *    from this software without specific prior written permission.
  *
  * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
@@ -872,86 +867,170 @@ default_again:
 struct sctp_ss_functions sctp_ss_functions[] = {
 /* SCTP_SS_DEFAULT */
 {
+#if defined(__Windows__)
+	sctp_ss_default_init,
+	sctp_ss_default_clear,
+	sctp_ss_default_init_stream,
+	sctp_ss_default_add,
+	sctp_ss_default_is_empty,
+	sctp_ss_default_remove,
+	sctp_ss_default_select,
+	sctp_ss_default_scheduled,
+	sctp_ss_default_packet_done,
+	sctp_ss_default_get_value,
+	sctp_ss_default_set_value
+#else
 	.sctp_ss_init = sctp_ss_default_init,
 	.sctp_ss_clear = sctp_ss_default_clear,
 	.sctp_ss_init_stream = sctp_ss_default_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_default_add,
 	.sctp_ss_is_empty = sctp_ss_default_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_default_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_default_remove,
 	.sctp_ss_select_stream = sctp_ss_default_select,
 	.sctp_ss_scheduled = sctp_ss_default_scheduled,
 	.sctp_ss_packet_done = sctp_ss_default_packet_done,
 	.sctp_ss_get_value = sctp_ss_default_get_value,
 	.sctp_ss_set_value = sctp_ss_default_set_value
+#endif
 },
 /* SCTP_SS_ROUND_ROBIN */
 {
+#if defined(__Windows__)
+	sctp_ss_default_init,
+	sctp_ss_default_clear,
+	sctp_ss_default_init_stream,
+	sctp_ss_rr_add,
+	sctp_ss_default_is_empty,
+	sctp_ss_default_remove,
+	sctp_ss_default_select,
+	sctp_ss_default_scheduled,
+	sctp_ss_default_packet_done,
+	sctp_ss_default_get_value,
+	sctp_ss_default_set_value
+#else
 	.sctp_ss_init = sctp_ss_default_init,
 	.sctp_ss_clear = sctp_ss_default_clear,
 	.sctp_ss_init_stream = sctp_ss_default_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_rr_add,
 	.sctp_ss_is_empty = sctp_ss_default_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_default_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_default_remove,
 	.sctp_ss_select_stream = sctp_ss_default_select,
 	.sctp_ss_scheduled = sctp_ss_default_scheduled,
 	.sctp_ss_packet_done = sctp_ss_default_packet_done,
 	.sctp_ss_get_value = sctp_ss_default_get_value,
 	.sctp_ss_set_value = sctp_ss_default_set_value
+#endif
 },
 /* SCTP_SS_ROUND_ROBIN_PACKET */
 {
+#if defined(__Windows__)
+	sctp_ss_default_init,
+	sctp_ss_default_clear,
+	sctp_ss_default_init_stream,
+	sctp_ss_rrp_add,
+	sctp_ss_default_is_empty,
+	sctp_ss_default_remove,
+	sctp_ss_rrp_select,
+	sctp_ss_default_scheduled,
+	sctp_ss_rrp_packet_done,
+	sctp_ss_default_get_value,
+	sctp_ss_default_set_value
+#else
 	.sctp_ss_init = sctp_ss_default_init,
 	.sctp_ss_clear = sctp_ss_default_clear,
 	.sctp_ss_init_stream = sctp_ss_default_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_rrp_add,
 	.sctp_ss_is_empty = sctp_ss_default_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_default_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_default_remove,
 	.sctp_ss_select_stream = sctp_ss_rrp_select,
 	.sctp_ss_scheduled = sctp_ss_default_scheduled,
 	.sctp_ss_packet_done = sctp_ss_rrp_packet_done,
 	.sctp_ss_get_value = sctp_ss_default_get_value,
 	.sctp_ss_set_value = sctp_ss_default_set_value
+#endif
 },
 /* SCTP_SS_PRIORITY */
 {
+#if defined(__Windows__)
+	sctp_ss_default_init,
+	sctp_ss_prio_clear,
+	sctp_ss_prio_init_stream,
+	sctp_ss_prio_add,
+	sctp_ss_default_is_empty,
+	sctp_ss_prio_remove,
+	sctp_ss_prio_select,
+	sctp_ss_default_scheduled,
+	sctp_ss_default_packet_done,
+	sctp_ss_prio_get_value,
+	sctp_ss_prio_set_value
+#else
 	.sctp_ss_init = sctp_ss_default_init,
 	.sctp_ss_clear = sctp_ss_prio_clear,
 	.sctp_ss_init_stream = sctp_ss_prio_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_prio_add,
 	.sctp_ss_is_empty = sctp_ss_default_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_prio_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_prio_remove,
 	.sctp_ss_select_stream = sctp_ss_prio_select,
 	.sctp_ss_scheduled = sctp_ss_default_scheduled,
 	.sctp_ss_packet_done = sctp_ss_default_packet_done,
 	.sctp_ss_get_value = sctp_ss_prio_get_value,
 	.sctp_ss_set_value = sctp_ss_prio_set_value
+#endif
 },
 /* SCTP_SS_FAIR_BANDWITH */
 {
+#if defined(__Windows__)
+	sctp_ss_default_init,
+	sctp_ss_fb_clear,
+	sctp_ss_fb_init_stream,
+	sctp_ss_fb_add,
+	sctp_ss_default_is_empty,
+	sctp_ss_fb_remove,
+	sctp_ss_fb_select,
+	sctp_ss_fb_scheduled,
+	sctp_ss_default_packet_done,
+	sctp_ss_default_get_value,
+	sctp_ss_default_set_value
+#else
 	.sctp_ss_init = sctp_ss_default_init,
 	.sctp_ss_clear = sctp_ss_fb_clear,
 	.sctp_ss_init_stream = sctp_ss_fb_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_fb_add,
 	.sctp_ss_is_empty = sctp_ss_default_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_fb_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_fb_remove,
 	.sctp_ss_select_stream = sctp_ss_fb_select,
 	.sctp_ss_scheduled = sctp_ss_fb_scheduled,
 	.sctp_ss_packet_done = sctp_ss_default_packet_done,
 	.sctp_ss_get_value = sctp_ss_default_get_value,
 	.sctp_ss_set_value = sctp_ss_default_set_value
+#endif
 },
 /* SCTP_SS_FIRST_COME */
 {
+#if defined(__Windows__)
+	sctp_ss_fcfs_init,
+	sctp_ss_fcfs_clear,
+	sctp_ss_fcfs_init_stream,
+	sctp_ss_fcfs_add,
+	sctp_ss_fcfs_is_empty,
+	sctp_ss_fcfs_remove,
+	sctp_ss_fcfs_select,
+	sctp_ss_default_scheduled,
+	sctp_ss_default_packet_done,
+	sctp_ss_default_get_value,
+	sctp_ss_default_set_value
+#else
 	.sctp_ss_init = sctp_ss_fcfs_init,
 	.sctp_ss_clear = sctp_ss_fcfs_clear,
 	.sctp_ss_init_stream = sctp_ss_fcfs_init_stream,
 	.sctp_ss_add_to_stream = sctp_ss_fcfs_add,
 	.sctp_ss_is_empty = sctp_ss_fcfs_is_empty,
-	.sctp_ss_remove_from_stream= sctp_ss_fcfs_remove,
+	.sctp_ss_remove_from_stream = sctp_ss_fcfs_remove,
 	.sctp_ss_select_stream = sctp_ss_fcfs_select,
 	.sctp_ss_scheduled = sctp_ss_default_scheduled,
 	.sctp_ss_packet_done = sctp_ss_default_packet_done,
 	.sctp_ss_get_value = sctp_ss_default_get_value,
 	.sctp_ss_set_value = sctp_ss_default_set_value
+#endif
 }
 };
