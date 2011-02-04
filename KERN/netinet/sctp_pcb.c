@@ -5927,7 +5927,7 @@ static int sctp_scale_up_for_address = SCTP_SCALE_FOR_ADDR;
 
 #if defined(__FreeBSD__) && defined(SCTP_MCORE_INPUT) && defined(SMP)
 struct sctp_mcore_ctrl *sctp_mcore_workers=NULL;
-
+int *sctp_cpuarry=NULL;
 void
 sctp_queue_to_mcore(struct mbuf *m, int off, int cpu_to_use)
 {
@@ -6034,11 +6034,17 @@ sctp_mcore_thread(void *arg)
 static void
 sctp_startup_mcore_threads(void)
 {
-	int i;
+	int i, cpu;
 
-	if (mp_maxid == 1)
+	if (mp_ncpus == 1)
 		return;
 
+	if (sctp_mcore_workers != NULL) {
+		/* Already been here in some previous
+		 * vnet?
+		 */
+		return;
+	}
 	SCTP_MALLOC(sctp_mcore_workers, struct sctp_mcore_ctrl *,
 		    (mp_maxid * sizeof(struct sctp_mcore_ctrl)),
 		    SCTP_M_MCORE);
@@ -6055,20 +6061,30 @@ sctp_startup_mcore_threads(void)
 		SCTP_MCORE_QLOCK_INIT(&sctp_mcore_workers[i]);
 		sctp_mcore_workers[i].cpuid = i;
 	}
+	if (sctp_cpuarry == NULL) {
+		SCTP_MALLOC(sctp_cpuarry, int *,
+			    (mp_ncpus * sizeof(int)),
+			    SCTP_M_MCORE);
+		i=0;
+		CPU_FOREACH(cpu) {
+			sctp_cpuarry[cpu] = i++;
+		}
+	}
+
 	/* Now start them all */
-	for (i=0; i<mp_maxid; i++) {
+	CPU_FOREACH(cpu) {
 #if __FreeBSD_version <= 701000
 		(void)kthread_create(sctp_mcore_thread,
-				     (void *)&sctp_mcore_workers[i],
-				     &sctp_mcore_workers[i].thread_proc,
+				     (void *)&sctp_mcore_workers[cpu],
+				     &sctp_mcore_workers[cpu].thread_proc,
 				     RFPROC,
 				     SCTP_KTHREAD_PAGES,
 				     SCTP_MCORE_NAME);
 
 #else
 		(void)kproc_create(sctp_mcore_thread,
-				   (void *)&sctp_mcore_workers[i],
-				   &sctp_mcore_workers[i].thread_proc,
+				   (void *)&sctp_mcore_workers[cpu],
+				   &sctp_mcore_workers[cpu].thread_proc,
 				   RFPROC,
 				   SCTP_KTHREAD_PAGES,
 				   SCTP_MCORE_NAME);
