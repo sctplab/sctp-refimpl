@@ -1,5 +1,7 @@
 /*-
  * Copyright (c) 2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 218186 2011-02-02 11:13:23Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 218264 2011-02-04 12:03:48Z brucec $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -207,13 +209,13 @@ struct sctp_sysctl {
 #define SCTPCTL_MAXCHUNKS_MAX		0xFFFFFFFF
 #define SCTPCTL_MAXCHUNKS_DEFAULT	SCTP_ASOC_MAX_CHUNKS_ON_QUEUE
 
-/* tcbhashsize: Tuneable for Hash table sizes */
+/* tcbhashsize: Tunable for Hash table sizes */
 #define SCTPCTL_TCBHASHSIZE_DESC	"Tunable for TCB hash table sizes"
 #define SCTPCTL_TCBHASHSIZE_MIN		1
 #define SCTPCTL_TCBHASHSIZE_MAX		0xFFFFFFFF
 #define SCTPCTL_TCBHASHSIZE_DEFAULT	SCTP_TCBHASHSIZE
 
-/* pcbhashsize: Tuneable for PCB Hash table sizes */
+/* pcbhashsize: Tunable for PCB Hash table sizes */
 #define SCTPCTL_PCBHASHSIZE_DESC	"Tunable for PCB hash table sizes"
 #define SCTPCTL_PCBHASHSIZE_MIN		1
 #define SCTPCTL_PCBHASHSIZE_MAX		0xFFFFFFFF
@@ -225,8 +227,8 @@ struct sctp_sysctl {
 #define SCTPCTL_MIN_SPLIT_POINT_MAX	0xFFFFFFFF
 #define SCTPCTL_MIN_SPLIT_POINT_DEFAULT	SCTP_DEFAULT_SPLIT_POINT_MIN
 
-/* chunkscale: Tuneable for Scaling of number of chunks and messages */
-#define SCTPCTL_CHUNKSCALE_DESC		"Tuneable for Scaling of number of chunks and messages"
+/* chunkscale: Tunable for Scaling of number of chunks and messages */
+#define SCTPCTL_CHUNKSCALE_DESC		"Tunable for Scaling of number of chunks and messages"
 #define SCTPCTL_CHUNKSCALE_MIN		1
 #define SCTPCTL_CHUNKSCALE_MAX		0xFFFFFFFF
 #define SCTPCTL_CHUNKSCALE_DEFAULT	SCTP_CHUNKQUEUE_SCALE

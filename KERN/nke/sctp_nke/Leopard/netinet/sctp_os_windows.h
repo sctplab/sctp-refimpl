@@ -1,5 +1,8 @@
 /*
  * Copyright (c) 2008 CO-CONV, Corp. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2011, by Bruce Cran. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions
@@ -82,7 +85,6 @@ struct proc {
 #define SCTP_UNUSED
 
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #if defined(SCTP_DEBUG)
 extern uint32_t *sctp_debug_on;
@@ -226,11 +228,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 #define HASH_WAITOK 0x00000002
 
 #define SCTP_HASH_INIT(size, hashmark) sctp_hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
-#if 0 /* XXX */
-#define SCTP_HASH_FREE(table, hashmark) hashdestroy(table, M_PCB, hashmark)
-#else
-#define SCTP_HASH_FREE(table, hashmark)
-#endif
+#define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
 #define SCTP_M_COPYM	m_copym
 
@@ -383,6 +381,20 @@ typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 
+VOID AioCsqRemoveIrp(IN PIO_CSQ, IN PIRP);
+PIRP AioCsqPeekNextIrp(IN PIO_CSQ, IN PIRP, IN PVOID);
+
+__drv_raisesIRQL(DISPATCH_LEVEL)
+__drv_savesIRQLGlobal(KIRQL, OriginalIrql[cpuid])
+VOID AioCsqAcquireLock(IN PIO_CSQ, IN PKIRQL);
+
+__drv_restoresIRQLGlobal(KIRQL, OriginalIrql[cpuid])
+VOID AioCsqReleaseLock(IN PIO_CSQ, IN KIRQL);
+
+VOID AioCsqCompleteCanceledIrp(IN PIO_CSQ, IN PIRP);
+
+VOID AioCsqInsertIrp(IN PIO_CSQ, IN PIRP);
+
 /*
  * IP output routines
  */
@@ -394,7 +406,7 @@ NTSTATUS IPOutput(IN struct mbuf *, IN struct route *);
 { \
 	NTSTATUS status; \
 	status = IPOutput(o_pak, ro); \
-	if (status == STATUS_SUCCESS || status == STATUS_PENDING) { \
+	if (NT_SUCCESS(status)) { \
 		result = 0; \
 	} else { \
 		result = EINVAL; \
@@ -406,7 +418,7 @@ NTSTATUS IP6Output(IN struct mbuf *, IN struct route *);
 { \
 	NTSTATUS status; \
 	status = IP6Output(o_pak, (struct route *)ro); \
-	if (status == STATUS_SUCCESS || status == STATUS_PENDING) { \
+	if (NT_SUCCESS(status)) { \
 		result = 0; \
 	} else { \
 		result = EINVAL; \

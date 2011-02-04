@@ -1,5 +1,7 @@
 /*-
  * Copyright (c) 2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without 
  * modification, are permitted provided that the following conditions are met:
@@ -106,9 +108,6 @@
 #define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
 #define SCTP_BASE_STATS system_base_info.sctpstat
 #define SCTP_BASE_STAT(elem)     system_base_info.sctpstat.elm
-
-
-#define SCTP_LIST_EMPTY(list)	LIST_EMPTY(list)
 
 #define SCTP_MAX_VRF_ID 0
 #define SCTP_SIZE_OF_VRF_HASH 1
