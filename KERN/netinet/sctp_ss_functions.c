@@ -3,26 +3,26 @@
  * Copyright (c) 2010-2011, by Randall Stewart. All rights reserved.
  * Copyright (c) 2010-2011, by Robin Seggelmann. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
@@ -177,7 +177,7 @@ default_again:
 
 	/* If CMT is off, we must validate that
 	 * the stream in question has the first
-	 * item pointed towards are network destionation 
+	 * item pointed towards are network destination
 	 * requested by the caller. Note that if we
 	 * turn out to be locked to a stream (assigning
 	 * TSN's then we must stop, since we cannot
@@ -288,7 +288,6 @@ sctp_ss_rrp_add(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if ((strq->ss_params.rr.next_spoke.tqe_next == NULL) &&
 	    (strq->ss_params.rr.next_spoke.tqe_prev == NULL)) {
-		
 		if (TAILQ_EMPTY(&asoc->ss_data.out_wheel)) {
 			TAILQ_INSERT_HEAD(&asoc->ss_data.out_wheel, strq, ss_params.rr.next_spoke);
 		} else {
@@ -332,7 +331,7 @@ rrp_again:
 
 	/* If CMT is off, we must validate that
 	 * the stream in question has the first
-	 * item pointed towards are network destionation 
+	 * item pointed towards are network destination
 	 * requested by the caller. Note that if we
 	 * turn out to be locked to a stream (assigning
 	 * TSN's then we must stop, since we cannot
@@ -377,7 +376,7 @@ rrp_pd_again:
 
 	/* If CMT is off, we must validate that
 	 * the stream in question has the first
-	 * item pointed towards are network destionation 
+	 * item pointed towards are network destination
 	 * requested by the caller. Note that if we
 	 * turn out to be locked to a stream (assigning
 	 * TSN's then we must stop, since we cannot
@@ -396,7 +395,6 @@ rrp_pd_again:
 			goto rrp_pd_again;
 		}
 	}
-	
 	asoc->last_out_stream = strq;
 	return;
 }
@@ -447,7 +445,6 @@ sctp_ss_prio_add(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	if ((strq->ss_params.prio.next_spoke.tqe_next == NULL) &&
 	    (strq->ss_params.prio.next_spoke.tqe_prev == NULL)) {
-		
 		if (TAILQ_EMPTY(&asoc->ss_data.out_wheel)) {
 			TAILQ_INSERT_HEAD(&asoc->ss_data.out_wheel, strq, ss_params.prio.next_spoke);
 		} else {
@@ -522,7 +519,7 @@ prio_again:
 
 	/* If CMT is off, we must validate that
 	 * the stream in question has the first
-	 * item pointed towards are network destionation 
+	 * item pointed towards are network destination
 	 * requested by the caller. Note that if we
 	 * turn out to be locked to a stream (assigning
 	 * TSN's then we must stop, since we cannot
@@ -814,7 +811,7 @@ sctp_ss_fcfs_remove(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if (holds_lock == 0) {
 		SCTP_TCB_SEND_LOCK(stcb);
 	}
-	if (sp && 
+	if (sp &&
 	    ((sp->ss_next.tqe_next != NULL) ||
 	     (sp->ss_next.tqe_prev != NULL))) {
 		TAILQ_REMOVE(&asoc->ss_data.out_list, sp, ss_next);
@@ -844,7 +841,7 @@ default_again:
 	/*
 	 * If CMT is off, we must validate that
 	 * the stream in question has the first
-	 * item pointed towards are network destionation 
+	 * item pointed towards are network destination
 	 * requested by the caller. Note that if we
 	 * turn out to be locked to a stream (assigning
 	 * TSN's then we must stop, since we cannot
