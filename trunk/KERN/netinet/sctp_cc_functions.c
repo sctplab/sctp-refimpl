@@ -1671,6 +1671,16 @@ sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
 
 struct sctp_cc_functions sctp_cc_functions[] = {
 {
+#if defined(__Windows__)
+	sctp_set_initial_cc_param,
+	sctp_cwnd_update_after_sack,
+	sctp_cwnd_update_after_fr,
+	sctp_cwnd_update_after_timeout,
+	sctp_cwnd_update_after_ecn_echo,
+	sctp_cwnd_update_after_packet_dropped,
+	sctp_cwnd_update_after_output,
+	sctp_cwnd_update_after_fr_timer
+#else
 	.sctp_set_initial_cc_param = sctp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_cwnd_update_after_sack,
 	.sctp_cwnd_update_after_fr = sctp_cwnd_update_after_fr,
@@ -1679,8 +1689,19 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
 	.sctp_cwnd_update_after_fr_timer = sctp_cwnd_update_after_fr_timer
+#endif
 },
 {
+#if defined(__Windows__)
+	sctp_set_initial_cc_param,
+	sctp_hs_cwnd_update_after_sack,
+	sctp_hs_cwnd_update_after_fr,
+	sctp_cwnd_update_after_timeout,
+	sctp_cwnd_update_after_ecn_echo,
+	sctp_cwnd_update_after_packet_dropped,
+	sctp_cwnd_update_after_output,
+	sctp_cwnd_update_after_fr_timer
+#else
 	.sctp_set_initial_cc_param = sctp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_hs_cwnd_update_after_sack,
 	.sctp_cwnd_update_after_fr = sctp_hs_cwnd_update_after_fr,
@@ -1689,8 +1710,19 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
 	.sctp_cwnd_update_after_fr_timer = sctp_cwnd_update_after_fr_timer
+#endif
 },
 {
+#if defined(__Windows__)
+	sctp_htcp_set_initial_cc_param,
+	sctp_htcp_cwnd_update_after_sack,
+	sctp_htcp_cwnd_update_after_fr,
+	sctp_htcp_cwnd_update_after_timeout,
+	sctp_htcp_cwnd_update_after_ecn_echo,
+	sctp_cwnd_update_after_packet_dropped,
+	sctp_cwnd_update_after_output,
+	sctp_htcp_cwnd_update_after_fr_timer
+#else
 	.sctp_set_initial_cc_param = sctp_htcp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_htcp_cwnd_update_after_sack,
 	.sctp_cwnd_update_after_fr = sctp_htcp_cwnd_update_after_fr,
@@ -1699,5 +1731,6 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
 	.sctp_cwnd_update_after_fr_timer = sctp_htcp_cwnd_update_after_fr_timer
+#endif
 }
 };
