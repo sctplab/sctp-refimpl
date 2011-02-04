@@ -88,6 +88,9 @@
 		50D5A2670850E137008084B7 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50D5A2660850E137008084B7 /* locks.h */; };
 		50DE01150C3998AA0009809A /* sctp_cc_functions.c in Sources */ = {isa = PBXBuildFile; fileRef = 50DE01110C3998AA0009809A /* sctp_cc_functions.c */; };
 		50DE01160C3998AA0009809A /* sctp_cc_functions.h in Headers */ = {isa = PBXBuildFile; fileRef = 50DE01120C3998AA0009809A /* sctp_cc_functions.h */; };
+		50EAAE4312FB04A00058505D /* sctp_dtrace_declare.h in Headers */ = {isa = PBXBuildFile; fileRef = 50EAAE4012FB04A00058505D /* sctp_dtrace_declare.h */; };
+		50EAAE4412FB04A00058505D /* sctp_dtrace_define.h in Headers */ = {isa = PBXBuildFile; fileRef = 50EAAE4112FB04A00058505D /* sctp_dtrace_define.h */; };
+		50EAAE4512FB04A00058505D /* sctp_ss_functions.c in Sources */ = {isa = PBXBuildFile; fileRef = 50EAAE4212FB04A00058505D /* sctp_ss_functions.c */; };
 		50EF0E650D2323BB0060D28C /* namei.h in Headers */ = {isa = PBXBuildFile; fileRef = 50EF0E640D2323BB0060D28C /* namei.h */; };
 		50FA27180CDB24950013C550 /* locks.h in Headers */ = {isa = PBXBuildFile; fileRef = 50FA27170CDB24950013C550 /* locks.h */; };
 		876D69460AF6812C003372FB /* sctp_os_macosx.h in Headers */ = {isa = PBXBuildFile; fileRef = 876D69440AF6812C003372FB /* sctp_os_macosx.h */; };
@@ -190,6 +193,9 @@
 		50D5A2660850E137008084B7 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; name = locks.h; path = ppc/locks.h; sourceTree = "<group>"; };
 		50DE01110C3998AA0009809A /* sctp_cc_functions.c */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.c; path = sctp_cc_functions.c; sourceTree = "<group>"; };
 		50DE01120C3998AA0009809A /* sctp_cc_functions.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_cc_functions.h; sourceTree = "<group>"; };
+		50EAAE4012FB04A00058505D /* sctp_dtrace_declare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_declare.h; path = netinet/sctp_dtrace_declare.h; sourceTree = "<group>"; };
+		50EAAE4112FB04A00058505D /* sctp_dtrace_define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_define.h; path = netinet/sctp_dtrace_define.h; sourceTree = "<group>"; };
+		50EAAE4212FB04A00058505D /* sctp_ss_functions.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_ss_functions.c; path = netinet/sctp_ss_functions.c; sourceTree = "<group>"; };
 		50EF0E640D2323BB0060D28C /* namei.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = namei.h; sourceTree = "<group>"; };
 		50FA27170CDB24950013C550 /* locks.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = locks.h; sourceTree = "<group>"; };
 		876D69440AF6812C003372FB /* sctp_os_macosx.h */ = {isa = PBXFileReference; fileEncoding = 30; lastKnownFileType = sourcecode.c.h; path = sctp_os_macosx.h; sourceTree = "<group>"; };
@@ -258,6 +264,9 @@
 				50D42F2C06D8C0F3004DAC5C /* netinet6 */,
 				5045DCE006DE7B870057890E /* sys */,
 				1A224C3CFF42312311CA2CB7 /* SCTP.c */,
+				50EAAE4012FB04A00058505D /* sctp_dtrace_declare.h */,
+				50EAAE4112FB04A00058505D /* sctp_dtrace_define.h */,
+				50EAAE4212FB04A00058505D /* sctp_ss_functions.c */,
 				500D736C0729B00A008D8EA9 /* sctp_sys_calls.c */,
 			);
 			name = Source;
@@ -482,6 +491,8 @@
 				508408E30DE0C85000E5A708 /* vnode.h in Headers */,
 				508408EC0DE0C87D00E5A708 /* in6_var.h in Headers */,
 				508408ED0DE0C87D00E5A708 /* scope6_var.h in Headers */,
+				50EAAE4312FB04A00058505D /* sctp_dtrace_declare.h in Headers */,
+				50EAAE4412FB04A00058505D /* sctp_dtrace_define.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
@@ -620,6 +631,7 @@
 				879DD26F0B2F48B7005FFF83 /* sctp_callout.c in Sources */,
 				50BDE7C80BAB46ED00ED41D7 /* sctp_sysctl.c in Sources */,
 				50DE01150C3998AA0009809A /* sctp_cc_functions.c in Sources */,
+				50EAAE4512FB04A00058505D /* sctp_ss_functions.c in Sources */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
