@@ -10491,6 +10491,12 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = NULL;
+#if defined(__FreeBSD__)
+	if (m->m_flags & M_FLOWID) {
+		mout->m_pkthdr.flowid = m->m_pkthdr.flowid;
+		mout->m_flags |= M_FLOWID;
+	}
+#endif
 	iph_out = NULL;
 #ifdef INET6
 	ip6_out = NULL;
@@ -11600,6 +11606,12 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = err_cause;
+#if defined(__FreeBSD__)
+	if (m->m_flags & M_FLOWID) {
+		mout->m_pkthdr.flowid = m->m_pkthdr.flowid;
+		mout->m_flags |= M_FLOWID;
+	}
+#endif
 	iph_out = NULL;
 #ifdef INET6
 	ip6_out = NULL;
@@ -11886,6 +11898,12 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = scm;
+#if defined(__FreeBSD__)
+	if (m->m_flags & M_FLOWID) {
+		mout->m_pkthdr.flowid = m->m_pkthdr.flowid;
+		mout->m_flags |= M_FLOWID;
+	}
+#endif
 	iph_out = NULL;
 #ifdef INET6
 	ip6_out = NULL;
