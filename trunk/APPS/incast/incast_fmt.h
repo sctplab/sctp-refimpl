@@ -80,6 +80,13 @@ struct incast_peer {
 	int byte_cnt; /* byte cnt rcvd */
 };
 
+struct incast_peer_outrec {
+	struct timespec start;
+	struct timespec end;
+	int peerno;
+	int state;
+};
+
 struct peer_record {
 	struct timespec timeof;
 	int byte_cnt;
@@ -89,6 +96,7 @@ struct peer_record {
 LIST_HEAD(incast_list, incast_peer);
 
 struct incast_control {
+	char *file_to_store_results;
 	struct sockaddr_in bind_addr;
 	struct incast_list master_list;
 	int number_server;
@@ -101,6 +109,22 @@ struct incast_control {
 	int completed_server_cnt; /* How many servers are done with pass */
 	int verbose;
 	int nap_time;
+};
+
+struct incast_lead_hdr {
+	struct timespec start;
+	struct timespec connected;
+	struct timespec sending;
+	struct timespec end;
+	int number_servers;
+	int passcnt;
+};
+
+struct elephant_lead_hdr {
+	struct timespec start;
+	struct timespec end;
+	uint32_t number_of_bytes;
+	int number_servers;
 };
 
 #ifndef timespecsub
