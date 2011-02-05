@@ -379,6 +379,9 @@ struct sctp_nets {
 	uint8_t lan_type;
 	/* JRS - struct used in HTCP algorithm */
 	struct htcp htcp_ca;
+#if defined(__FreeBSD__)
+	uint32_t flowid;
+#endif
 };
 
 

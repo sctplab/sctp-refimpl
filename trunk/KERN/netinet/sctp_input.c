@@ -5920,6 +5920,11 @@ sctp_input(i_pak, va_alist)
 		}
 		net->port = port;
 	}
+#if defined(__FreeBSD__)
+	if (m->m_flags & M_FLOWID) {
+		net->flowid = m->m_pkthdr.flowid;
+	}
+#endif
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;

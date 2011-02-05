@@ -4461,6 +4461,12 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
 	}
+#if defined(__FreeBSD__)
+	/* Choose an initial flowid. */
+	net->flowid = stcb->asoc.my_vtag ^
+	              ntohs(stcb->rport) ^
+	              ntohs(stcb->sctp_ep->sctp_lport);
+#endif
 	return (0);
 }
 
