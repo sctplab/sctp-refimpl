@@ -36,7 +36,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_var.h 180387 2008-07-09 16:45:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_var.h 218319 2011-02-05 12:12:51Z rrs $");
 #endif
 
 /* TODO __Userspace__ IPv6 stuff... */
