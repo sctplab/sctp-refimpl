@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218269 2011-02-04 13:50:30Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218335 2011-02-05 19:13:38Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2619,6 +2619,11 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		/* still no TCB... must be bad cookie-echo */
 		return (NULL);
 	}
+#if defined(__FreeBSD__)
+	if ((*netp != NULL) && (m->m_flags & M_FLOWID)) {
+		(*netp)->flowid = m->m_pkthdr.flowid;
+	}
+#endif
 	/*
 	 * Ok, we built an association so confirm the address we sent the
 	 * INIT-ACK to.
@@ -5920,6 +5925,11 @@ sctp_input(i_pak, va_alist)
 		}
 		net->port = port;
 	}
+#if defined(__FreeBSD__)
+	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+		net->flowid = m->m_pkthdr.flowid;
+	}
+#endif
 	/* inp's ref-count increased && stcb locked */
 	if (inp == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
