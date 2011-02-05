@@ -356,6 +356,7 @@ gather_kq_results(int kq, struct incast_control *ctrl)
 	}
 	return (0);
 }
+
 void
 display_results(struct incast_control *ctrl, int pass, int no_time)
 {
@@ -399,23 +400,71 @@ display_results(struct incast_control *ctrl, int pass, int no_time)
 	}
 }
 
+static int
+store_results(struct incast_control *ctrl, struct incast_lead_hdr *hdr)
+{
+	FILE *out;
+	struct incast_peer_outrec orec;
+	int peer_no=0;
+	out = fopen(ctrl->file_to_store_results, "a+");
+	struct incast_peer *peer;
+	if (out == NULL) {
+		printf("Can't open file %s to store results err:%d\n", 
+		       ctrl->file_to_store_results,
+		       errno);
+		return (-1);
+	}
+	if (fwrite(hdr, sizeof(struct incast_lead_hdr), 1, out) != 1) {
+		printf("write fails err:%d\n", errno);
+		fclose(out);
+		return (-1);
+	}
+	LIST_FOREACH(peer, &ctrl->master_list, next) {
+		orec.start = peer->start;
+		orec.end = peer->end;
+		orec.state = peer->state;
+		orec.peerno = peer_no;
+		peer_no++;
+		if (fwrite(&orec, sizeof(struct incast_peer_outrec), 1, out) != 1) {
+			printf("write fails err:%d\n", errno);
+			fclose(out);
+			return (-1);
+		}
+	}
+	fclose(out);
+	return (0);
+}
+
 void 
 incast_run_clients(struct incast_control *ctrl)
 {
-	int kq, pass;
-
+	int kq;
+	struct incast_lead_hdr hdr;
 	kq = kqueue();
 	if (kq == -1) {
 		printf("Fatal error - can't open kqueue err:%d\n", errno);
 		return;
 	}
-	pass = 0;
+	memset(&hdr, 0, sizeof(hdr));
+
+	hdr.passcnt = 0;
+	hdr.number_servers = ctrl->number_server;
+
 	while (ctrl->cnt_of_times > 0) {
 		ctrl->cnt_of_times -= ctrl->decrement_amm;
-		pass++;
+		hdr.passcnt++;
 		/* Build the connections */
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.start)) {
+			printf("Can't get clock, errno:%d\n", errno);
+			break;
+		}
 		if(build_conn_into_kq(kq, ctrl)) {
 			printf("Can't build all the connections\n");
+			clean_up_conn(ctrl);
+			break;
+		}
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.connected)) {
+			printf("Can't get clock, errno:%d\n", errno);
 			clean_up_conn(ctrl);
 			break;
 		}
@@ -427,6 +476,12 @@ incast_run_clients(struct incast_control *ctrl)
 			break;
 		}
 
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.sending)) {
+			printf("Can't get clock, errno:%d\n", errno);
+			clean_up_conn(ctrl);
+			break;
+		}
+
 		/* Now gather responses of data from all */
 		if(gather_kq_results(kq, ctrl) ){
 			printf("Gather results fails!!\n");
@@ -434,9 +489,22 @@ incast_run_clients(struct incast_control *ctrl)
 			break;
 		}
 
-		/* Display results */
-		display_results(ctrl, pass, 0);
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.end)) {
+			printf("Can't get clock, errno:%d\n", errno);
+			clean_up_conn(ctrl);
+			break;
+		}
 
+
+		/* Display results */
+		if (ctrl->file_to_store_results == NULL) {
+			display_results(ctrl, hdr.passcnt, 0);
+		} else {
+			if(store_results(ctrl, &hdr)) {
+				clean_up_conn(ctrl);
+				break;
+			}
+		}
 		/* Now assure everyone is back to the new state */
 		clean_up_conn(ctrl);
 		
@@ -534,22 +602,59 @@ distribute_to_each_peer(struct incast_control *ctrl)
 	return (0);
 }
 
+static int
+store_elephant_peer(struct incast_control *ctrl, struct elephant_lead_hdr *hdr)
+{
+	FILE *out;
+	struct incast_peer_outrec orec;
+	int peer_no=0;
+	out = fopen(ctrl->file_to_store_results, "a+");
+	struct incast_peer *peer;
+	if (out == NULL) {
+		printf("Can't open file %s to store results err:%d\n", 
+		       ctrl->file_to_store_results,
+		       errno);
+		return (-1);
+	}
+	if (fwrite(hdr, sizeof(struct elephant_lead_hdr), 1, out) != 1) {
+		printf("write fails err:%d\n", errno);
+		fclose(out);
+		return (-1);
+	}
+	LIST_FOREACH(peer, &ctrl->master_list, next) {
+		orec.start = peer->start;
+		orec.end = peer->end;
+		orec.state = peer->state;
+		orec.peerno = peer_no;
+		peer_no++;
+		if (fwrite(&orec, sizeof(struct incast_peer_outrec), 1, out) != 1) {
+			printf("write fails err:%d\n", errno);
+			fclose(out);
+			return (-1);
+		}
+	}
+	fclose(out);
+	return (0);
+}
+
 void 
 elephant_run_clients(struct incast_control *ctrl)
 {
+	int pass=0;
 	struct timespec ts;
 	long randval;
-	int pass;
-	
+	struct elephant_lead_hdr hdr;
+
+	memset(&hdr, 0, sizeof(hdr));
+	hdr.number_servers = ctrl->number_server;	
+
 	/* Seed the random number generator */
 	clock_gettime(CLOCK_MONOTONIC_PRECISE, &ts);
 	srandom((unsigned long)ts.tv_nsec);
 	
-	pass = 0;
 	while (ctrl->cnt_of_times > 0) {
 		ctrl->cnt_of_times -= ctrl->decrement_amm;
 		pass++;
-
 		/* Select some number of bytes to send 
 		 * we need a number between 1Meg - 100Meg
 		 */
@@ -563,12 +668,28 @@ elephant_run_clients(struct incast_control *ctrl)
 		ctrl->size = DEFAULT_MSG_SIZE;
 		ctrl->cnt_req = (ctrl->byte_cnt_req/ctrl->size) + 1;
 
+		hdr.number_of_bytes = ctrl->byte_cnt_req;
+
 		/* Now for each peer we must connect, send and close */
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.start)) {
+			printf("Can't get clock, errno:%d\n", errno);
+			break;
+		}
 		distribute_to_each_peer(ctrl);
-
 		/* Display results */
-		display_results(ctrl, pass, 1);
-
+		if (clock_gettime(CLOCK_REALTIME_PRECISE, &hdr.end)) {
+			printf("Can't get clock, errno:%d\n", errno);
+			clean_up_conn(ctrl);
+			break;
+		}
+		if (ctrl->file_to_store_results == NULL) {
+			display_results(ctrl, pass, 1);
+		} else {
+			if (store_elephant_peer(ctrl, &hdr)) {
+				printf("Can't store results\n");
+				display_results(ctrl, pass, 1);
+			}
+		}
 		/* Clean up everything */
 		clean_up_conn(ctrl);
 

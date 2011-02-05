@@ -230,11 +230,15 @@ int
 main(int argc, char **argv)
 {
 	int i;
-	char *configfile=NULL;
+	char *configfile = NULL;
+	char *storeFile = NULL;
 	memset(&ctrl, 0, sizeof(ctrl));
 	
-	while ((i = getopt(argc, argv, "c:vS:?")) != EOF) {
+	while ((i = getopt(argc, argv, "c:vS:w:?")) != EOF) {
 		switch (i) {
+		case 'w':
+			storeFile = optarg;
+			break;
 		case 'S':
 			ctrl.nap_time = strtol(optarg, NULL, 0);
 			if (ctrl.nap_time < 0) 
@@ -253,7 +257,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -c config-file\n", argv[0]);
+			printf("Use %s -c config-file [-w outfile -v -S nap]\n", argv[0]);
 			return (-1);
 			break;
 		};
@@ -264,6 +268,7 @@ main(int argc, char **argv)
 	}
 	/* Setup our list and init things */
 	LIST_INIT(&ctrl.master_list);
+	ctrl.file_to_store_results = storeFile;
 	ctrl.decrement_amm = 1;
 	ctrl.cnt_of_times = 1;
 	ctrl.size = DEFAULT_MSG_SIZE;
