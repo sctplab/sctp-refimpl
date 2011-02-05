@@ -3528,11 +3528,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTP_BUF_NEXT(newm) = m;
 		m = newm;
 #if defined(__FreeBSD__)
-		if (net) {
+		if (net != NULL) {
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {
-			if (init->m_flags & M_FLOWID) {
+			if ((init != NULL) && (init->m_flags & M_FLOWID)) {
 				m->m_pkthdr.flowid = init->m_pkthdr.flowid;
 				m->m_flags |= M_FLOWID;
 			}
@@ -3895,6 +3895,17 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTP_BUF_LEN(newm) = len;
 		SCTP_BUF_NEXT(newm) = m;
 		m = newm;
+#if defined(__FreeBSD__)
+		if (net != NULL) {
+			m->m_pkthdr.flowid = net->flowid;
+			m->m_flags |= M_FLOWID;
+		} else {
+			if ((init != NULL) && (init->m_flags & M_FLOWID)) {
+				m->m_pkthdr.flowid = init->m_pkthdr.flowid;
+				m->m_flags |= M_FLOWID;
+			}
+		}
+#endif
 		packet_length = sctp_calculate_len(m);
 
 		ip6h = mtod(m, struct ip6_hdr *);
