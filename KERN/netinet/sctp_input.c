@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218335 2011-02-05 19:13:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 218371 2011-02-06 13:17:40Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6041,7 +6041,7 @@ sctp_input(struct mbuf *m, int off)
 	struct sctphdr *sh;
 	int offset;
 	int cpu_to_use;
-	uint32_t flowid;
+	uint32_t flowid, tag;
 
 	if (mp_ncpus > 1) {
 		if (m->m_flags & M_FLOWID) {
