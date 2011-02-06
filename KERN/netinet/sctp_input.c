@@ -6057,8 +6057,8 @@ sctp_input(struct mbuf *m, int off)
 					SCTP_STAT_INCR(sctps_hdrops);
 					return;
 				}
-			}
 			ip = mtod(m, struct ip *);
+			}
 			sh = (struct sctphdr *)((caddr_t)ip + off);
 			tag = htonl(sh->v_tag);
 			flowid = tag ^ ntohs(sh->dest_port) ^ ntohs(sh->src_port);
