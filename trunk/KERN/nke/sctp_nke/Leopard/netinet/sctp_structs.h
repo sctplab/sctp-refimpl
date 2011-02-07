@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218335 2011-02-05 19:13:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218400 2011-02-07 15:04:23Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -381,6 +381,9 @@ struct sctp_nets {
 	struct htcp htcp_ca;
 #if defined(__FreeBSD__)
 	uint32_t flowid;
+#ifdef INVARIANTS
+	uint8_t flowidset;
+#endif
 #endif
 };
 

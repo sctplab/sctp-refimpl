@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 218400 2011-02-07 15:04:23Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -294,6 +294,14 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 			}
 			net->port = port;
 		}
+#if defined(__FreeBSD__)
+		if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+			net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
+			net->flowidset = 1;
+#endif
+		}
+#endif
 		/* in6p's ref-count increased && stcb locked */
 		if ((in6p) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
@@ -322,6 +330,14 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		}
 		net->port = port;
 	}
+#if defined(__FreeBSD__)
+	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+		net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
+		net->flowidset = 1;
+#endif
+	}
+#endif
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
