@@ -4378,6 +4378,15 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->find_pseudo_cumack = 1;
 	net->find_rtx_pseudo_cumack = 1;
 	net->src_addr_selected = 0;
+#if defined(__FreeBSD__)
+	/* Choose an initial flowid. */
+	net->flowid = stcb->asoc.my_vtag ^
+	              ntohs(stcb->rport) ^
+	              ntohs(stcb->sctp_ep->sctp_lport);
+#ifdef INVARIANTS
+	net->flowidset = 1;
+#endif
+#endif
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
 		/* Since we have no route put it at the back */
@@ -4461,15 +4470,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
 	}
-#if defined(__FreeBSD__)
-	/* Choose an initial flowid. */
-	net->flowid = stcb->asoc.my_vtag ^
-	              ntohs(stcb->rport) ^
-	              ntohs(stcb->sctp_ep->sctp_lport);
-#ifdef INVARIANTS
-	net->flowidset = 1;
-#endif
-#endif
 	return (0);
 }
 
