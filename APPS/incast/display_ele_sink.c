@@ -61,12 +61,11 @@ main(int argc, char **argv)
 	}
 	while(fread(&sink, sizeof(sink), 1, io) > 0) {
 		print_an_address((struct sockaddr *)&sink.from, 0);
-		printf(" - bytes:%d stop:%ld.%9.9ld start:%ld.%9.9ld\n",
+		timespecsub(&sink.mono_end, &sink.mono_start);
+		printf(" - bytes:%d time:%ld.%9.9ld\n",
 		       sink.number_bytes,
 		       (unsigned long)sink.mono_end.tv_sec, 
-		       (unsigned long)sink.mono_end.tv_nsec,
-		       (unsigned long)sink.mono_start.tv_sec, 
-		       (unsigned long)sink.mono_start.tv_nsec);
+		       (unsigned long)sink.mono_end.tv_nsec);
 	}
 	fclose(io);
 	return (0);
