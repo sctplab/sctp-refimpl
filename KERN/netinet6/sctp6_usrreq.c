@@ -294,6 +294,12 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 			}
 			net->port = port;
 		}
+#if defined(__FreeBSD__)
+		if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+			net->flowid = m->m_pkthdr.flowid;
+			net->flowidset = 1;
+		}
+#endif
 		/* in6p's ref-count increased && stcb locked */
 		if ((in6p) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
@@ -322,6 +328,12 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		}
 		net->port = port;
 	}
+#if defined(__FreeBSD__)
+	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+		net->flowid = m->m_pkthdr.flowid;
+		net->flowidset = 1;
+	}
+#endif
 	/* in6p's ref-count increased */
 	if (in6p == NULL) {
 		struct sctp_init_chunk *init_chk, chunk_buf;
