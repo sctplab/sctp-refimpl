@@ -93,41 +93,33 @@ read_peer_rec(struct incast_peer_outrec *rec, FILE *io)
 	return(1);
 }
 
-struct incast_lead_hdr32 {
+struct ele_lead_hdr32 {
 	uint32_t start_tv_sec;
 	uint32_t start_tv_nsec;
-	uint32_t connected_tv_sec;
-	uint32_t connected_tv_nsec;
-	uint32_t sending_tv_sec;
-	uint32_t sending_tv_nsec;
 	uint32_t end_tv_sec;
 	uint32_t end_tv_nsec;
+	uint32_t number_of_bytes;
 	uint32_t number_servers;
-	uint32_t passcnt;
 };
 
-struct incast_lead_hdr64 {
+struct ele_lead_hdr64 {
 	uint64_t start_tv_sec;
 	uint64_t start_tv_nsec;
-	uint64_t connected_tv_sec;
-	uint64_t connected_tv_nsec;
-	uint64_t sending_tv_sec;
-	uint64_t sending_tv_nsec;
 	uint64_t end_tv_sec;
 	uint64_t end_tv_nsec;
+	uint32_t number_of_bytes;
 	uint32_t number_servers;
-	uint32_t passcnt;
 };
 
 
 int
-read_incast_hdr(struct incast_lead_hdr *hdr, FILE *io)
+read_ele_hdr(struct elephant_lead_hdr *hdr, FILE *io)
 {
 	int ret;
-	struct incast_lead_hdr32 bit32;
-	struct incast_lead_hdr64 bit64;
+	struct ele_lead_hdr32 bit32;
+	struct ele_lead_hdr64 bit64;
 	if (sizeof(time_t) == infile_size) {
-		return (fread(hdr, sizeof(struct incast_lead_hdr), 1, io));
+		return (fread(hdr, sizeof(struct elephant_lead_hdr), 1, io));
 	}
 	if (sizeof(time_t) == 8) {
 		/* We are reading from a 32 bit into 
@@ -140,14 +132,10 @@ read_incast_hdr(struct incast_lead_hdr *hdr, FILE *io)
 		/* now convert to 64 bit */
 		hdr->start.tv_sec = (time_t)bit32.start_tv_sec;
 		hdr->start.tv_nsec = (long)bit32.start_tv_nsec;
-		hdr->connected.tv_sec = (time_t)bit32.connected_tv_sec;
-		hdr->connected.tv_nsec = (long)bit32.connected_tv_nsec;
-		hdr->sending.tv_sec = (time_t)bit32.sending_tv_sec;
-		hdr->sending.tv_nsec = (long)bit32.sending_tv_nsec;
 		hdr->end.tv_sec = (time_t)bit32.end_tv_sec;
 		hdr->end.tv_nsec = (long)bit32.end_tv_nsec;
 		hdr->number_servers = bit32.number_servers;
-		hdr->passcnt = bit32.passcnt;
+		hdr->number_of_bytes = bit32.number_of_bytes;
 
 	} else {
 		/* We are on a 32 bit reading a 64 bit record */
@@ -158,14 +146,10 @@ read_incast_hdr(struct incast_lead_hdr *hdr, FILE *io)
 		/* now convert to 32 bit */
 		hdr->start.tv_sec = (time_t)bit64.start_tv_sec;
 		hdr->start.tv_nsec = (long)bit64.start_tv_nsec;
-		hdr->connected.tv_sec = (time_t)bit64.connected_tv_sec;
-		hdr->connected.tv_nsec = (long)bit64.connected_tv_nsec;
-		hdr->sending.tv_sec = (time_t)bit64.sending_tv_sec;
-		hdr->sending.tv_nsec = (long)bit64.sending_tv_nsec;
 		hdr->end.tv_sec = (time_t)bit64.end_tv_sec;
 		hdr->end.tv_nsec = (long)bit64.end_tv_nsec;
 		hdr->number_servers = bit64.number_servers;
-		hdr->passcnt = bit64.passcnt;
+		hdr->number_of_bytes = bit64.number_of_bytes;
 	}
 	return (1);
 }
@@ -176,10 +160,9 @@ main(int argc, char **argv)
 	int i;
 	FILE *io;
 	char *infile=NULL;
-	int incomplete=0;
-	struct incast_lead_hdr hdr;
+	struct elephant_lead_hdr hdr;
 	struct incast_peer_outrec rec;
-	int a=0;
+	struct timespec tmp;
 	while ((i = getopt(argc, argv, "r:a?36")) != EOF) {
 		switch (i) {
 		case '3':
@@ -188,9 +171,6 @@ main(int argc, char **argv)
 			break;
 		case '6':
 			infile_size = 8;
-			break;
-		case 'a':
-			a = 1;
 			break;
 		case 'r':
 			infile = optarg;
@@ -211,32 +191,29 @@ main(int argc, char **argv)
 		printf("Can't open file %s - err:%d\n", infile, errno);
 		return (-1);
 	}
-	while(read_incast_hdr(&hdr, io) > 0) {
+	while(read_ele_hdr(&hdr, io) > 0) {
+		printf("Started %ld.%9.9ld %d cnt:%d bytes\n",
+		       (unsigned long)hdr.start.tv_sec, (unsigned long)hdr.start.tv_nsec,
+		       hdr.number_servers, hdr.number_of_bytes);
 		for(i=0; i<hdr.number_servers; i++) {
 			if (read_peer_rec(&rec, io) < 1) {
 				printf("Error hit end and expected %d svr found %d\n",
 				       hdr.number_servers, i);
 				return (-1);
 			}
-			if (rec.state == SRV_STATE_COMPLETE) {
-				timespecsub(&rec.end, &rec.start);
-				if (a == 0) {
-				print_it:
-					printf("%d:%ld.%9.9ld\n",
-					       hdr.passcnt,
-					       (unsigned long)rec.end.tv_sec,
-					       (unsigned long)rec.end.tv_nsec);
-				} else {
-					if ((rec.end.tv_sec) ||
-					    (rec.end.tv_nsec > 300000000)) {
-						goto print_it;
-					}
-				}
-				       
-			} else {
-				incomplete++;
-			}
+			timespecsub(&rec.end, &rec.start);
+			printf("%d:%ld.%9.9ld\n",
+			       rec.peerno,
+			       (unsigned long)rec.end.tv_sec,
+			       (unsigned long)rec.end.tv_nsec);
 		}
+		tmp = hdr.end;
+		timespecsub(&tmp, &hdr.start);
+		printf("Ended  %ld.%9.9ld (%ld.%9.9ld)\n", 
+		       (unsigned long)hdr.end.tv_sec, 
+		       (unsigned long)hdr.end.tv_nsec,
+		       (unsigned long)tmp.tv_sec,
+		       (unsigned long)tmp.tv_nsec);
 	}
 	fclose(io);
 	return (0);
