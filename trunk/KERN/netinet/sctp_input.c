@@ -5896,6 +5896,12 @@ sctp_input(i_pak, va_alist)
 			}
 			net->port = port;
 		}
+#if defined(__FreeBSD__)
+		if ((net != NULL) && (m->m_flags & M_FLOWID)) {
+			net->flowid = m->m_pkthdr.flowid;
+			net->flowidset = 1;
+		}
+#endif
 		if ((inp) && (stcb)) {
 			sctp_send_packet_dropped(stcb, net, m, iphlen, 1);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_INPUT_ERROR, SCTP_SO_NOT_LOCKED);
