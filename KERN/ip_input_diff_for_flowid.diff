@@ -1,0 +1,96 @@
+Index: ip_input.c
+===================================================================
+--- ip_input.c	(revision 218370)
++++ ip_input.c	(working copy)
+@@ -145,11 +145,15 @@
+ 
+ VNET_DEFINE(struct pfil_head, inet_pfil_hook);	/* Packet filter hooks */
+ 
++netisr_m2flow_t *ip_m2flow_handlers[IPPROTO_MAX]; /* netisr handlers */
++static struct mbuf *ip_flow_lookup(struct mbuf *m, uintptr_t source);
++
+ static struct netisr_handler ip_nh = {
+ 	.nh_name = "ip",
+ 	.nh_handler = ip_input,
+ 	.nh_proto = NETISR_IP,
+ 	.nh_policy = NETISR_POLICY_FLOW,
++	.nh_m2flow = ip_flow_lookup,
+ };
+ 
+ extern	struct domain inetdomain;
+@@ -390,6 +394,54 @@
+ 	callout_stop(&ipport_tick_callout);
+ }
+ 
++struct mbuf *
++ip_flow_lookup(struct mbuf *m, uintptr_t source)
++{
++	/* If a flow was not determined by
++	 * the hardware:
++	 * 1) See if the ip-protocol actually registered
++	 *    an flow descriminator, if so call it.
++	 * 2) If no registered handler, make a guess.
++	 */
++	struct ip *ip;
++	uint32_t flowid;
++	int hlen;
++
++	ip = mtod(m, struct ip *);
++	hlen = ip->ip_hl << 2;
++	if (m->m_len < hlen) {
++		if ((m = m_pullup(m, hlen)) == 0) {
++			IPSTAT_INC(ips_badhlen);
++			return (NULL);
++		}
++	}
++	ip = mtod(m, struct ip *);
++	if(ip_m2flow_handlers[ip->ip_p]) {
++		return ((*ip_m2flow_handlers[ip->ip_p])(m, source));
++	}
++	/* Take a stab at it. */
++	flowid = ntohl(ip->ip_src.s_addr) ^ ntohl(ip->ip_dst.s_addr);
++	m->m_pkthdr.flowid = flowid;
++	m->m_flags |= M_FLOWID;
++	return (m);
++}
++
++int
++ip_register_flow_handler(netisr_m2flow_t hdlr, uint8_t proto)
++{
++	if (ip_m2flow_handlers[proto]) {
++		return (EALREADY);
++	}
++	ip_m2flow_handlers[proto] = hdlr;
++	return (0);
++}
++
++void
++ip_deregister_flow_handler(uint8_t proto)
++{
++	ip_m2flow_handlers[proto] = NULL;
++}
++
+ /*
+  * Ip input routine.  Checksum and byte swap header.  If fragmented
+  * try to reassemble.  Process options.  Pass to next level.
+Index: ip_var.h
+===================================================================
+--- ip_var.h	(revision 218370)
++++ ip_var.h	(working copy)
+@@ -34,6 +34,7 @@
+ #define	_NETINET_IP_VAR_H_
+ 
+ #include <sys/queue.h>
++#include <net/netisr.h>
+ 
+ /*
+  * Overlay for ip header used by other protocols (tcp, udp).
+@@ -211,6 +212,8 @@
+ 	    u_long if_hwassist_flags, int sw_csum);
+ void	ip_forward(struct mbuf *m, int srcrt);
+ void	ip_init(void);
++int ip_register_flow_handler(netisr_m2flow_t hdlr, uint8_t proto);
++void ip_deregister_flow_handler(uint8_t proto);
+ #ifdef VIMAGE
+ void	ip_destroy(void);
+ #endif
