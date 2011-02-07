@@ -3907,7 +3907,6 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				panic("Flow ID not set");
 			}
 #endif
-			}
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {
