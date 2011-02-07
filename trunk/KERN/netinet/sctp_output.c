@@ -3529,6 +3529,16 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		m = newm;
 #if defined(__FreeBSD__)
 		if (net != NULL) {
+			if (net->flowidset == 0) {
+#ifdef INVARIANTS
+				panic("Flow ID not set");
+#else
+				net->flowid = stcb->asoc.my_vtag ^
+					ntohs(stcb->rport) ^
+					ntohs(stcb->sctp_ep->sctp_lport);
+				net->flowidset = 1;
+#endif
+			}
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {
@@ -3897,6 +3907,16 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		m = newm;
 #if defined(__FreeBSD__)
 		if (net != NULL) {
+			if (net->flowidset == 0) {
+#ifdef INVARIANTS
+				panic("Flow ID not set");
+#else
+				net->flowid = stcb->asoc.my_vtag ^
+					ntohs(stcb->rport) ^
+					ntohs(stcb->sctp_ep->sctp_lport);
+				net->flowidset = 1;
+#endif
+			}
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {

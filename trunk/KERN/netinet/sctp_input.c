@@ -2622,6 +2622,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
 	if ((*netp != NULL) && (m->m_flags & M_FLOWID)) {
 		(*netp)->flowid = m->m_pkthdr.flowid;
+		(*netp)->flowidset = 1;
 	}
 #endif
 	/*
@@ -5928,6 +5929,7 @@ sctp_input(i_pak, va_alist)
 #if defined(__FreeBSD__)
 	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
 		net->flowid = m->m_pkthdr.flowid;
+		net->flowidset = 1;
 	}
 #endif
 	/* inp's ref-count increased && stcb locked */
@@ -6057,7 +6059,7 @@ sctp_input(struct mbuf *m, int off)
 					SCTP_STAT_INCR(sctps_hdrops);
 					return;
 				}
-			ip = mtod(m, struct ip *);
+				ip = mtod(m, struct ip *);
 			}
 			sh = (struct sctphdr *)((caddr_t)ip + off);
 			tag = htonl(sh->v_tag);
