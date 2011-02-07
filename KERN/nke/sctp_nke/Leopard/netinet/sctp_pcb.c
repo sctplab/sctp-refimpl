@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 218335 2011-02-05 19:13:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 218400 2011-02-07 15:04:23Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4378,6 +4378,15 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->find_pseudo_cumack = 1;
 	net->find_rtx_pseudo_cumack = 1;
 	net->src_addr_selected = 0;
+#if defined(__FreeBSD__)
+	/* Choose an initial flowid. */
+	net->flowid = stcb->asoc.my_vtag ^
+	              ntohs(stcb->rport) ^
+	              ntohs(stcb->sctp_ep->sctp_lport);
+#ifdef INVARIANTS
+	net->flowidset = 1;
+#endif
+#endif
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
 		/* Since we have no route put it at the back */
@@ -4461,12 +4470,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
 	}
-#if defined(__FreeBSD__)
-	/* Choose an initial flowid. */
-	net->flowid = stcb->asoc.my_vtag ^
-	              ntohs(stcb->rport) ^
-	              ntohs(stcb->sctp_ep->sctp_lport);
-#endif
 	return (0);
 }
 
@@ -6100,7 +6103,36 @@ sctp_startup_mcore_threads(void)
 	}
 }
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 990000
+static struct mbuf *
+sctp_netisr_hdlr(struct mbuf *m, uintptr_t source)
+{
+	struct ip *ip;
+	struct sctphdr *sh;
+	int offset;
+	uint32_t flowid, tag;
+	/*
+	 * No flow id built by lower layers fix it so we
+	 * create one.
+	 */
+	ip = mtod(m, struct ip *);
+	offset = (ip->ip_hl << 2) + sizeof(*sh) + sizeof(*ch);
+	if (SCTP_BUF_LEN(m) < offset) {
+		if ((m = m_pullup(m, offset)) == 0) {
+			SCTP_STAT_INCR(sctps_hdrops);
+			return (NULL);
+		}
+		ip = mtod(m, struct ip *);
+	}
+	sh = (struct sctphdr *)((caddr_t)ip + (ip->ip_hl << 2));
 
+	tag = htonl(sh->v_tag);
+	flowid = tag ^ ntohs(sh->dest_port) ^ ntohs(sh->src_port);
+	m->m_pkthdr.flowid = flowid;
+	m->m_flags |= M_FLOWID;
+	return (m);
+}
+#endif
 
 void
 sctp_pcb_init()
@@ -6285,7 +6317,11 @@ sctp_pcb_init()
 	 */
 	sctp_init_vrf_list(SCTP_DEFAULT_VRF);
 #endif
-
+#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 990000
+	if (ip_register_flow_handler(sctp_netisr_hdlr, IPPROTO_SCTP)) {
+		printf("***SCTP- Error can't register netisr handler***\n");
+	}
+#endif
 #if defined(_SCTP_NEEDS_CALLOUT_) || defined(_USER_SCTP_NEEDS_CALLOUT_)
 	/* allocate the lock for the callout/timer queue */
 	SCTP_TIMERQ_LOCK_INIT();
