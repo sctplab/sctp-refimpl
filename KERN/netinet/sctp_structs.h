@@ -381,6 +381,7 @@ struct sctp_nets {
 	struct htcp htcp_ca;
 #if defined(__FreeBSD__)
 	uint32_t flowid;
+	uint8_t flowidset;
 #endif
 };
 
