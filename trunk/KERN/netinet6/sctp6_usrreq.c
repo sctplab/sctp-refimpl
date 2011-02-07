@@ -297,7 +297,9 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #if defined(__FreeBSD__)
 		if ((net != NULL) && (m->m_flags & M_FLOWID)) {
 			net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
 			net->flowidset = 1;
+#endif
 		}
 #endif
 		/* in6p's ref-count increased && stcb locked */
@@ -331,7 +333,9 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #if defined(__FreeBSD__)
 	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
 		net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
 		net->flowidset = 1;
+#endif
 	}
 #endif
 	/* in6p's ref-count increased */

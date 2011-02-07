@@ -4466,7 +4466,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->flowid = stcb->asoc.my_vtag ^
 	              ntohs(stcb->rport) ^
 	              ntohs(stcb->sctp_ep->sctp_lport);
+#ifdef INVARIANTS
 	net->flowidset = 1;
+#endif
 #endif
 	return (0);
 }
