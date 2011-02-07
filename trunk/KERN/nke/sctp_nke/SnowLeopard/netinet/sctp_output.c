@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218335 2011-02-05 19:13:38Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 218393 2011-02-07 08:12:24Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3529,6 +3529,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		m = newm;
 #if defined(__FreeBSD__)
 		if (net != NULL) {
+#ifdef INVARIANTS
+			if (net->flowidset == 0) {
+				panic("Flow ID not set");
+			}
+#endif
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {
@@ -3897,6 +3902,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		m = newm;
 #if defined(__FreeBSD__)
 		if (net != NULL) {
+#ifdef INVARIANTS
+			if (net->flowidset == 0) {
+				panic("Flow ID not set");
+			}
+#endif
+			}
 			m->m_pkthdr.flowid = net->flowid;
 			m->m_flags |= M_FLOWID;
 		} else {
