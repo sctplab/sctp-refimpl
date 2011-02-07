@@ -2622,7 +2622,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
 	if ((*netp != NULL) && (m->m_flags & M_FLOWID)) {
 		(*netp)->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
 		(*netp)->flowidset = 1;
+#endif
 	}
 #endif
 	/*
@@ -5899,7 +5901,9 @@ sctp_input(i_pak, va_alist)
 #if defined(__FreeBSD__)
 		if ((net != NULL) && (m->m_flags & M_FLOWID)) {
 			net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
 			net->flowidset = 1;
+#endif
 		}
 #endif
 		if ((inp) && (stcb)) {
@@ -5935,7 +5939,9 @@ sctp_input(i_pak, va_alist)
 #if defined(__FreeBSD__)
 	if ((net != NULL) && (m->m_flags & M_FLOWID)) {
 		net->flowid = m->m_pkthdr.flowid;
+#ifdef INVARIANTS
 		net->flowidset = 1;
+#endif
 	}
 #endif
 	/* inp's ref-count increased && stcb locked */
