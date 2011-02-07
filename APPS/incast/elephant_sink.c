@@ -31,20 +31,21 @@
 #include <incast_fmt.h>
 #include <pthread.h>
 
+char *outfile=NULL;
+
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 {
+	double bw, timeof;
 	uint64_t cnt, sz;
 	int ret;
 	char buffer[MAX_SINGLE_MSG];
 	struct timespec tvs, tve;
-	int no_clock_s=1, no_clock_e=1;
 	socklen_t optlen;
 	int optval;
-	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tvs))
-		no_clock_s = 1;
-	else 
-		no_clock_s = 0;
+	struct elephant_sink_rec sink;
+
+	memset(&sink, 0, sizeof(sink));
 	optval = 1;
 	optlen = sizeof(optval);
 	if (use_sctp) {
@@ -58,6 +59,14 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 			       errno);
 		}
 	}
+	if (clock_gettime(CLOCK_REALTIME_PRECISE, &sink.start)) {
+		printf("Can't get clock, errno:%d\n", errno);
+		exit(-1);
+	}
+	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tvs)) {
+		printf("Can't get clock err:%d\n", errno);
+		exit(-1);
+	}
 	/* Read data until there is no more */
 	cnt = sz = 0;
 	do {
@@ -68,19 +77,41 @@ process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 		}
 	} while (ret > 0);
 
-	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tve))
-		no_clock_e = 1;
-	else 
-		no_clock_e = 0;
-	if ((no_clock_e == 0) && (no_clock_s == 0)) {
-		timespecsub(&tve, &tvs);
-		double bw, timeof;
+	if(clock_gettime(CLOCK_MONOTONIC_PRECISE, &tve)) {
+		printf("Can't get clock err:%d\n", errno);
+		exit(-1);
+	}
+	if (clock_gettime(CLOCK_REALTIME_PRECISE, &sink.end)) {
+		printf("Can't get clock, errno:%d\n", errno);
+		exit(-1);
+	}
+	sink.mono_start = tvs;
+	sink.mono_end = tve;
+	timespecsub(&tve, &tvs);
+	if (outfile == NULL) {
 		timeof = (tve.tv_sec * 1.0) + (1.0 / (tve.tv_nsec * 1.0));
 		bw = (sz * 1.0)/timeof;
 		printf("%ld:%ld.%9.9ld:%f:",
 		       (long int)sz,
 		       (long int)tve.tv_sec, tve.tv_nsec, bw);
 		print_an_address((struct sockaddr *)sin, 1);
+	} else {
+		/* save result */
+		FILE *io;
+		sink.from = *sin;
+		sink.number_bytes = sz;
+		io = fopen(outfile, "a+");
+		if (io == NULL) {
+			printf("Can't open outfile '%s' for append err:%d\n",
+			       outfile, errno);
+			exit(-1);
+		}
+		if (fwrite(&sink, sizeof(sink), 1, io) != 1) {
+			printf("Can't write outfile '%s' err:%d\n",
+			       outfile, errno);
+			exit(-1);
+		}
+		fclose(io);
 	}
 	close(sd);
 }
@@ -111,8 +142,11 @@ main(int argc, char **argv)
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
-	while ((i = getopt(argc, argv, "B:b:tsp:?T:")) != EOF) {
+	while ((i = getopt(argc, argv, "B:b:tsp:?T:w:")) != EOF) {
 		switch (i) {
+		case 'w':
+			outfile = optarg;
+			break;
 		case 'T':
 			thrd_cnt = strtol(optarg, NULL, 0);
 			break;

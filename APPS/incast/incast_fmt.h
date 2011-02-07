@@ -127,6 +127,15 @@ struct elephant_lead_hdr {
 	int number_servers;
 };
 
+struct elephant_sink_rec {
+	struct sockaddr_in from;
+	struct timespec start;
+	struct timespec end;
+	struct timespec mono_start;
+	struct timespec mono_end;
+	int number_bytes;
+};
+
 #ifndef timespecsub
 #define timespecsub(vvp, uvp)						\
 	do {								\
