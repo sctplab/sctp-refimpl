@@ -228,7 +228,7 @@ main(int argc, char **argv)
 					       (unsigned long)rec.end.tv_nsec);
 				} else {
 					if ((rec.end.tv_sec) ||
-					    (rec.end.tv_nsec > 30000000)) {
+					    (rec.end.tv_nsec > 300000000)) {
 						goto print_it;
 					}
 				}
