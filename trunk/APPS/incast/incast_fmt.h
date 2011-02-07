@@ -80,6 +80,7 @@ struct incast_peer {
 	int byte_cnt; /* byte cnt rcvd */
 };
 
+/* 32bit:24 bytes 64bit:40 bytes */
 struct incast_peer_outrec {
 	struct timespec start;
 	struct timespec end;
@@ -87,6 +88,7 @@ struct incast_peer_outrec {
 	int state;
 };
 
+/* 32bit:16 bytes 64bit:24 bytes */
 struct peer_record {
 	struct timespec timeof;
 	int byte_cnt;
@@ -111,6 +113,7 @@ struct incast_control {
 	int nap_time;
 };
 
+/* 32bit:40 bytes 64bit:72 bytes */
 struct incast_lead_hdr {
 	struct timespec start;
 	struct timespec connected;
@@ -120,6 +123,7 @@ struct incast_lead_hdr {
 	int passcnt;
 };
 
+/* 32bit:24 bytes 64bit:40  */
 struct elephant_lead_hdr {
 	struct timespec start;
 	struct timespec end;
@@ -127,6 +131,7 @@ struct elephant_lead_hdr {
 	int number_servers;
 };
 
+/* 32bit:52 bytes 64bit:88 bytes */
 struct elephant_sink_rec {
 	struct sockaddr_in from;
 	struct timespec start;
