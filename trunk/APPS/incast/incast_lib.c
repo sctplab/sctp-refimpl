@@ -1005,23 +1005,22 @@ incast_add_peer(struct incast_control *ctrl, char *body, int linecnt)
 	len = strlen(body);
 	max = body + len + 1;
 
-	ipaddr = body;
-	tok = strtok(body, ":") ;
-	if (tok != NULL) {
-		/* We have a port string */
-		len = strlen(tok) + 1;
-		portstr = &tok[len];
-	} else {
+	 
+	ipaddr = strtok(body, ":") ;
+	if (ipaddr == NULL) {
 		printf("Parse error for peer line %d - no port?\n", linecnt);
 		return;
 	}
-	tok = strtok(NULL, ":");
-	if (tok == NULL) {
+	portstr = strtok(NULL, ":");
+	if (portstr == NULL) {
+		printf("Parse error no port string %d \n", linecnt);
+		return;
+	}
+	hostname = strtok(NULL, ":");
+	if (hostname == NULL) {
 		printf("Parse error for peer line %d - no hostname string\n", 
 		       linecnt);
 		return;
-	} else {
-		hostname = tok;
 	}
 	len = strlen(hostname);
 	tok = &hostname[len+1];
@@ -1073,16 +1072,58 @@ incast_add_peer(struct incast_control *ctrl, char *body, int linecnt)
 static void
 incast_set_bind(struct incast_control *ctrl, char *body, int linecnt)
 {
+	char *ipaddr, *port, *host, *max, *tok;
+	int long_size, len;
 	if (body == NULL) {
 		printf("setting bind - error line:%d no body\n",
 		       linecnt);
 		return;
 	}
-	if (translate_ip_address(body, &ctrl->bind_addr)) {
+	len = strlen(body);
+	max = body + len + 1;
+	ipaddr = strtok(body, ":");
+	if (ipaddr == NULL) {
+		printf("Parse error bind - no ip addr field - line:%d\n",
+		       linecnt);
+		return;
+	}
+	port = strtok(NULL, ":");
+	if (port == NULL) {
+		printf("Parse error bind - no port field - line:%d\n",
+		       linecnt);
+		return;
+	}
+	host = strtok(NULL, ":");
+	if (host == NULL) {
+		printf("Parse error bind - no hostname field - line:%d\n",
+		       linecnt);
+		return;
+	}
+	len = strlen(host);
+	tok = host + len + 1;
+	if (tok > max) {
+		printf("No long size found on end line:%d bind\n", linecnt);
+		return;
+	}
+	long_size = strtol(tok, NULL, 0);
+	if ((long_size != 4) && (long_size != 8) && (long_size != 0)) {
+		printf("Invalid long size in bind line %d!\n", linecnt);
+		return;
+	}
+	if (long_size) {
+		ctrl->long_size = long_size;
+	} else {
+		ctrl->long_size = sizeof(long);
+	}
+	len = strlen(host);
+	ctrl->hostname = malloc(len+1);
+	strcpy(ctrl->hostname, host);
+	if (translate_ip_address(ipaddr, &ctrl->bind_addr)) {
 		printf("line:%d unrecognizable bind address '%s'\n",
 		       linecnt, body);
 		return;
 	}
+	ctrl->bind_addr.sin_port = htons((uint16_t)strtol(port, NULL, 0));
 }
 
 void
@@ -1110,6 +1151,15 @@ parse_config_file(struct incast_control *ctrl, char *configfile)
 	 * When the format is an address leaving off the port or setting
 	 * it to 0 gains the default address.
 	 */
+
+	memset(ctrl, 0, sizeof(struct incast_control));
+	LIST_INIT(&ctrl->master_list);
+	ctrl->decrement_amm = 1;
+	ctrl->cnt_of_times = 1;
+	ctrl->size = DEFAULT_MSG_SIZE;
+	ctrl->cnt_req = DEFAULT_NUMBER_SENDS;
+
+
 	io = fopen(configfile, "r");
 	if (io == NULL) {
 		printf("Can't open config file '%s':%d\n", configfile, errno);

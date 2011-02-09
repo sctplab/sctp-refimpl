@@ -36,45 +36,55 @@ main(int argc, char **argv)
 {
 	int i;
 	FILE *io;
-	char *infile=NULL;
-	int infile_size = sizeof(long);
+	struct incast_control ctrl;
+	char loadfile[1024];
+	char *directory=NULL;
+	char *config=NULL;
 	struct elephant_lead_hdr hdr;
 	struct incast_peer_outrec rec;
 	struct timespec tmp;
-	while ((i = getopt(argc, argv, "r:a?36")) != EOF) {
+	while ((i = getopt(argc, argv, "c:d:")) != EOF) {
 		switch (i) {
-		case '3':
-			/* Reading 32 bit mode */
-			infile_size = 4;
+		case 'c':
+			config = optarg;
 			break;
-		case '6':
-			infile_size = 8;
-			break;
-		case 'r':
-			infile = optarg;
+		case 'd':
+			directory = optarg;
 			break;
 		default:
 		case '?':
 		use:
-			printf("Use %s -r infile\n", argv[0]);
+			printf("Use %s -c config -d directory\n", argv[0]);
 			exit(0);
 			break;
 		};
 	};
-	if (infile == NULL) {
+	if (config == NULL) {
+		printf("No -c config\n");
 		goto use;
 	}
-	io = fopen(infile, "r");
-	if (io == NULL) {
-		printf("Can't open file %s - err:%d\n", infile, errno);
+	if (directory == NULL) {
+		printf("No -d directory\n");
+		goto use;
+	}
+	parse_config_file(&ctrl, config);
+	if (ctrl.hostname == NULL) {
+		printf("Sorry no hostname found in loaded config\n");
 		return (-1);
 	}
-	while(read_ele_hdr(&hdr, io, infile_size) > 0) {
+	sprintf(loadfile, "%s/%s_ele_src.out", directory, ctrl.hostname);
+	printf("Loading file %s\n", loadfile);
+	io = fopen(loadfile, "r");
+	if (io == NULL) {
+		printf("Can't open file %s - err:%d\n", loadfile, errno);
+		return (-1);
+	}
+	while(read_ele_hdr(&hdr, io, ctrl.long_size) > 0) {
 		printf("Started %ld.%9.9ld %d cnt:%d bytes\n",
 		       (unsigned long)hdr.start.tv_sec, (unsigned long)hdr.start.tv_nsec,
 		       hdr.number_servers, hdr.number_of_bytes);
 		for(i=0; i<hdr.number_servers; i++) {
-			if (read_peer_rec(&rec, io, infile_size) < 1) {
+			if (read_peer_rec(&rec, io, ctrl.long_size) < 1) {
 				printf("Error hit end and expected %d svr found %d\n",
 				       hdr.number_servers, i);
 				return (-1);
