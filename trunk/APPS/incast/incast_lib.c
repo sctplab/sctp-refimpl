@@ -277,7 +277,7 @@ read_a_sink_rec(struct elephant_sink_rec *sink, FILE *io, int infile_size)
 	struct elephant_sink_rec64 bit64;
 
 	if (sizeof(time_t) == infile_size) {
-		return(fread(&sink, sizeof(sink), 1, io));
+		return(fread(sink, sizeof(struct elephant_sink_rec), 1, io));
 	} 
 	/* Ok we have a size mis-match */
 	if (sizeof(time_t) == 8) {
@@ -949,7 +949,6 @@ elephant_run_clients(struct incast_control *ctrl)
 		} else {
 			ctrl->byte_cnt_req = randval;
 		}
-		ctrl->size = DEFAULT_MSG_SIZE;
 		ctrl->cnt_req = (ctrl->byte_cnt_req/ctrl->size) + 1;
 
 		hdr.number_of_bytes = ctrl->byte_cnt_req;
@@ -1235,7 +1234,6 @@ parse_config_file(struct incast_control *ctrl, char *configfile)
 				printf("Warning line:%d sizes invalid ( 0 > %d < %d)\n",
 				       linecnt, cnt, MAX_SINGLE_MSG);
 				printf("Using default %d\n", DEFAULT_MSG_SIZE);
-				ctrl->size = DEFAULT_MSG_SIZE;
 			}
 
 		} else if (strcmp(token, "sendc") == 0) {
