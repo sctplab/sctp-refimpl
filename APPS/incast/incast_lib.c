@@ -36,6 +36,290 @@
 #define STRING_BUF_SZ 1024
 #endif
 
+
+
+struct incast_peer_outrec32 {
+	uint32_t start_tv_sec;
+	uint32_t start_tv_nsec;
+	uint32_t end_tv_sec;
+	uint32_t end_tv_nsec;
+	int peerno;
+	int state;
+};
+
+struct incast_peer_outrec64 {
+	uint64_t start_tv_sec;
+	uint64_t start_tv_nsec;
+	uint64_t end_tv_sec;
+	uint64_t end_tv_nsec;
+	int peerno;
+	int state;
+};
+
+
+int
+read_peer_rec(struct incast_peer_outrec *rec, FILE *io, int infile_size)
+{
+	int ret;
+	struct incast_peer_outrec32 bit32;
+	struct incast_peer_outrec64 bit64;
+	if (sizeof(time_t) == infile_size) {
+		return (fread(rec, sizeof(struct incast_peer_outrec), 1, io));
+	}
+	if (sizeof(time_t) == 8) {
+		/* We are reading from a 32 bit into 
+		 * a 64 bit record. 
+		 */
+		ret = fread(&bit32, sizeof(bit32), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 64 bit */
+		rec->start.tv_sec = (time_t)bit32.start_tv_sec;
+		rec->start.tv_nsec = (long)bit32.start_tv_nsec;
+		rec->end.tv_sec = (time_t)bit32.end_tv_sec;
+		rec->end.tv_nsec = (long)bit32.end_tv_nsec;
+		rec->peerno = bit32.peerno;
+		rec->state = bit32.state;
+	} else {
+		/* We are on a 32 bit reading a 64 bit record */
+		ret = fread(&bit64, sizeof(bit64), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 32 bit */
+		rec->start.tv_sec = (time_t)bit64.start_tv_sec;
+		rec->start.tv_nsec = (long)bit64.start_tv_nsec;
+		rec->end.tv_sec = (time_t)bit64.end_tv_sec;
+		rec->end.tv_nsec = (long)bit64.end_tv_nsec;
+		rec->peerno = bit64.peerno;
+		rec->state = bit64.state;
+	}
+	return(1);
+}
+
+struct ele_lead_hdr32 {
+	uint32_t start_tv_sec;
+	uint32_t start_tv_nsec;
+	uint32_t end_tv_sec;
+	uint32_t end_tv_nsec;
+	uint32_t number_of_bytes;
+	uint32_t number_servers;
+};
+
+struct ele_lead_hdr64 {
+	uint64_t start_tv_sec;
+	uint64_t start_tv_nsec;
+	uint64_t end_tv_sec;
+	uint64_t end_tv_nsec;
+	uint32_t number_of_bytes;
+	uint32_t number_servers;
+};
+
+
+int
+read_ele_hdr(struct elephant_lead_hdr *hdr, FILE *io, int infile_size)
+{
+	int ret;
+	struct ele_lead_hdr32 bit32;
+	struct ele_lead_hdr64 bit64;
+	if (sizeof(time_t) == infile_size) {
+		return (fread(hdr, sizeof(struct elephant_lead_hdr), 1, io));
+	}
+	if (sizeof(time_t) == 8) {
+		/* We are reading from a 32 bit into 
+		 * a 64 bit record. 
+		 */
+		ret = fread(&bit32, sizeof(bit32), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 64 bit */
+		hdr->start.tv_sec = (time_t)bit32.start_tv_sec;
+		hdr->start.tv_nsec = (long)bit32.start_tv_nsec;
+		hdr->end.tv_sec = (time_t)bit32.end_tv_sec;
+		hdr->end.tv_nsec = (long)bit32.end_tv_nsec;
+		hdr->number_servers = bit32.number_servers;
+		hdr->number_of_bytes = bit32.number_of_bytes;
+
+	} else {
+		/* We are on a 32 bit reading a 64 bit record */
+		ret = fread(&bit64, sizeof(bit64), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 32 bit */
+		hdr->start.tv_sec = (time_t)bit64.start_tv_sec;
+		hdr->start.tv_nsec = (long)bit64.start_tv_nsec;
+		hdr->end.tv_sec = (time_t)bit64.end_tv_sec;
+		hdr->end.tv_nsec = (long)bit64.end_tv_nsec;
+		hdr->number_servers = bit64.number_servers;
+		hdr->number_of_bytes = bit64.number_of_bytes;
+	}
+	return (1);
+}
+
+
+
+
+struct incast_lead_hdr32 {
+	uint32_t start_tv_sec;
+	uint32_t start_tv_nsec;
+	uint32_t connected_tv_sec;
+	uint32_t connected_tv_nsec;
+	uint32_t sending_tv_sec;
+	uint32_t sending_tv_nsec;
+	uint32_t end_tv_sec;
+	uint32_t end_tv_nsec;
+	uint32_t number_servers;
+	uint32_t passcnt;
+};
+
+struct incast_lead_hdr64 {
+	uint64_t start_tv_sec;
+	uint64_t start_tv_nsec;
+	uint64_t connected_tv_sec;
+	uint64_t connected_tv_nsec;
+	uint64_t sending_tv_sec;
+	uint64_t sending_tv_nsec;
+	uint64_t end_tv_sec;
+	uint64_t end_tv_nsec;
+	uint32_t number_servers;
+	uint32_t passcnt;
+};
+
+
+int
+read_incast_hdr(struct incast_lead_hdr *hdr, FILE *io, int infile_size)
+{
+	int ret;
+	struct incast_lead_hdr32 bit32;
+	struct incast_lead_hdr64 bit64;
+	if (sizeof(time_t) == infile_size) {
+		return (fread(hdr, sizeof(struct incast_lead_hdr), 1, io));
+	}
+	if (sizeof(time_t) == 8) {
+		/* We are reading from a 32 bit into 
+		 * a 64 bit record. 
+		 */
+		ret = fread(&bit32, sizeof(bit32), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 64 bit */
+		hdr->start.tv_sec = (time_t)bit32.start_tv_sec;
+		hdr->start.tv_nsec = (long)bit32.start_tv_nsec;
+		hdr->connected.tv_sec = (time_t)bit32.connected_tv_sec;
+		hdr->connected.tv_nsec = (long)bit32.connected_tv_nsec;
+		hdr->sending.tv_sec = (time_t)bit32.sending_tv_sec;
+		hdr->sending.tv_nsec = (long)bit32.sending_tv_nsec;
+		hdr->end.tv_sec = (time_t)bit32.end_tv_sec;
+		hdr->end.tv_nsec = (long)bit32.end_tv_nsec;
+		hdr->number_servers = bit32.number_servers;
+		hdr->passcnt = bit32.passcnt;
+
+	} else {
+		/* We are on a 32 bit reading a 64 bit record */
+		ret = fread(&bit64, sizeof(bit64), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 32 bit */
+		hdr->start.tv_sec = (time_t)bit64.start_tv_sec;
+		hdr->start.tv_nsec = (long)bit64.start_tv_nsec;
+		hdr->connected.tv_sec = (time_t)bit64.connected_tv_sec;
+		hdr->connected.tv_nsec = (long)bit64.connected_tv_nsec;
+		hdr->sending.tv_sec = (time_t)bit64.sending_tv_sec;
+		hdr->sending.tv_nsec = (long)bit64.sending_tv_nsec;
+		hdr->end.tv_sec = (time_t)bit64.end_tv_sec;
+		hdr->end.tv_nsec = (long)bit64.end_tv_nsec;
+		hdr->number_servers = bit64.number_servers;
+		hdr->passcnt = bit64.passcnt;
+	}
+	return (1);
+}
+
+
+
+
+struct elephant_sink_rec64 {
+	struct sockaddr_in from;
+	uint64_t start_tv_sec;
+	uint64_t start_tv_nsec;
+	uint64_t end_tv_sec;
+	uint64_t end_tv_nsec;
+	uint64_t mono_start_tv_sec;
+	uint64_t mono_start_tv_nsec;
+	uint64_t mono_end_tv_sec;
+	uint64_t mono_end_tv_nsec;
+	int number_bytes;
+};
+
+struct elephant_sink_rec32 {
+	struct sockaddr_in from;
+	uint32_t start_tv_sec;
+	uint32_t start_tv_nsec;
+	uint32_t end_tv_sec;
+	uint32_t end_tv_nsec;
+	uint32_t mono_start_tv_sec;
+	uint32_t mono_start_tv_nsec;
+	uint32_t mono_end_tv_sec;
+	uint32_t mono_end_tv_nsec;
+	int number_bytes;
+};
+
+
+int 
+read_a_sink_rec(struct elephant_sink_rec *sink, FILE *io, int infile_size)
+{
+	int ret;
+	struct elephant_sink_rec32 bit32;
+	struct elephant_sink_rec64 bit64;
+
+	if (sizeof(time_t) == infile_size) {
+		return(fread(&sink, sizeof(sink), 1, io));
+	} 
+	/* Ok we have a size mis-match */
+	if (sizeof(time_t) == 8) {
+		/* We are reading from a 32 bit into 
+		 * a 64 bit record. 
+		 */
+		ret = fread(&bit32, sizeof(bit32), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		/* now convert to 64 bit */
+		memcpy(&sink->from, &bit32.from, sizeof(sink->from));
+		sink->number_bytes = bit32.number_bytes;
+		sink->start.tv_sec = (time_t)bit32.start_tv_sec;
+		sink->start.tv_nsec = (long)bit32.start_tv_nsec;
+		sink->end.tv_sec = (time_t)bit32.end_tv_sec;
+		sink->end.tv_nsec = (long)bit32.end_tv_nsec;
+		sink->mono_start.tv_sec = (time_t)bit32.mono_start_tv_sec;
+		sink->mono_start.tv_nsec = (long)bit32.mono_start_tv_nsec;
+		sink->mono_end.tv_sec = (time_t)bit32.mono_end_tv_sec;
+		sink->mono_end.tv_nsec = (long)bit32.mono_end_tv_nsec;
+	} else {
+		/* We are on a 32 bit reading a 64 bit record */
+		ret = fread(&bit64, sizeof(bit64), 1, io);
+		if (ret != 1) {
+			return (ret);
+		}
+		memcpy(&sink->from, &bit64.from, sizeof(sink->from));
+		sink->number_bytes = bit64.number_bytes;
+		sink->start.tv_sec = (time_t)bit64.start_tv_sec;
+		sink->start.tv_nsec = (long)bit64.start_tv_nsec;
+		sink->end.tv_sec = (time_t)bit64.end_tv_sec;
+		sink->end.tv_nsec = (long)bit64.end_tv_nsec;
+		sink->mono_start.tv_sec = (time_t)bit64.mono_start_tv_sec;
+		sink->mono_start.tv_nsec = (long)bit64.mono_start_tv_nsec;
+		sink->mono_end.tv_sec = (time_t)bit64.mono_end_tv_sec;
+		sink->mono_end.tv_nsec = (long)bit64.mono_end_tv_nsec;
+	}
+	return (1);
+
+}
+
 void
 print_an_address(struct sockaddr *a, int cr)
 {
@@ -704,3 +988,228 @@ elephant_run_clients(struct incast_control *ctrl)
 	return;
 }
 
+
+static void
+incast_add_peer(struct incast_control *ctrl, char *body, int linecnt)
+{
+	struct incast_peer *peer;
+	char *ipaddr, *portstr=NULL, *tok, *hostname, *max;
+	int long_len;
+	int len;
+
+	if (body == NULL) {
+		printf("adding peer - error line:%d no body\n",
+		       linecnt);
+		return;
+	}
+	len = strlen(body);
+	max = body + len + 1;
+
+	ipaddr = body;
+	tok = strtok(body, ":") ;
+	if (tok != NULL) {
+		/* We have a port string */
+		len = strlen(tok) + 1;
+		portstr = &tok[len];
+	} else {
+		printf("Parse error for peer line %d - no port?\n", linecnt);
+		return;
+	}
+	tok = strtok(NULL, ":");
+	if (tok == NULL) {
+		printf("Parse error for peer line %d - no hostname string\n", 
+		       linecnt);
+		return;
+	} else {
+		hostname = tok;
+	}
+	len = strlen(hostname);
+	tok = &hostname[len+1];
+	if (tok >= max) {
+		printf("Parse error for peer line %d - no long length\n",
+			linecnt);
+		return;
+	}
+	long_len = strtol(tok, NULL, 0);
+	if ((long_len != 4) && (long_len != 8)) {
+		printf("Long length not set to 4 or 8 - error line %d\n", 
+		       linecnt);
+		return;
+	}
+	peer = malloc(sizeof(struct incast_peer));
+	memset(peer, 0, sizeof(struct incast_peer));
+	
+	peer->long_size = long_len;
+	if (translate_ip_address(ipaddr, &peer->addr)) {
+		printf("line:%d unrecognizable peer address '%s'\n",
+		       linecnt, ipaddr);
+		free(peer);
+		return;
+	}
+	if(portstr == NULL) {
+		peer->addr.sin_port = htons(DEFAULT_SVR_PORT);
+	} else {
+		int x;
+		x = strtol(portstr, NULL, 0);
+		if ((x < 1) || (x > 65535)) {
+			if (x) {
+				printf("Invalid port number %d - using default\n",
+				       x);
+			}
+			peer->addr.sin_port = htons(DEFAULT_SVR_PORT); 
+		} else {
+			peer->addr.sin_port = htons(x);
+		}
+	}
+	peer->state = SRV_STATE_NEW;
+	peer->sd = -1;
+	peer->peer_name = malloc(strlen(hostname)+1);
+	strcpy(peer->peer_name, hostname);
+
+	LIST_INSERT_HEAD(&ctrl->master_list, peer, next);
+	ctrl->number_server++;
+}
+
+static void
+incast_set_bind(struct incast_control *ctrl, char *body, int linecnt)
+{
+	if (body == NULL) {
+		printf("setting bind - error line:%d no body\n",
+		       linecnt);
+		return;
+	}
+	if (translate_ip_address(body, &ctrl->bind_addr)) {
+		printf("line:%d unrecognizable bind address '%s'\n",
+		       linecnt, body);
+		return;
+	}
+}
+
+void
+parse_config_file(struct incast_control *ctrl, char *configfile)
+{
+	char buffer[1025];
+	FILE *io;
+	char *token, *body;
+	int linecnt, len, olen;
+	/* 
+	 * Here we parse the configuration
+	 * file. An entry in the file has
+	 * the form:
+	 * keyword:information
+	 *
+	 * Allowable keywords and from are:
+	 * sctp:  - switch sctp on tcp off
+	 * tcp:   - switch tcp on sctp off - defaults to TCP on.
+	 * peer:ip.dot.addr.or.name:port   - create a peer entry for this guy
+	 * bind:ip.dot.addr.or.name        - specify the bind to address
+	 * times:number - Number of passes, if 0 never stop. (default 1)
+	 * sends:number - Number of bytes per send (1-9000 - default 1448)
+	 * sendc:number - Total number of sends (1-N) - default 3.
+	 *
+	 * When the format is an address leaving off the port or setting
+	 * it to 0 gains the default address.
+	 */
+	io = fopen(configfile, "r");
+	if (io == NULL) {
+		printf("Can't open config file '%s':%d\n", configfile, errno);
+		return;
+	}
+	linecnt = 1;
+	memset(buffer, 0, sizeof(buffer));
+	while (fgets(buffer, (sizeof(buffer)-1), io) != NULL) {
+		/* Get rid of cr */
+		olen = strlen(buffer);
+		if (olen == 1) {
+			linecnt++;
+			continue;
+		}
+		if (buffer[olen-1] == '\n') {
+			buffer[olen-1] = 0;
+			olen--;
+		}
+		if (buffer[0] == '#') {
+			/* commented out */
+			linecnt++;
+			continue;
+		}
+		/* tokenize the token and body */
+		token = strtok(buffer, ":");
+		if (token == NULL) {
+			linecnt++;
+			continue;
+		}
+		len = strlen(token);
+		if ((len+1) == olen) {
+			/* No body */
+			body = NULL;
+		} else {
+			/* past the null */
+			body = &token[len+1];
+		}
+		if (strcmp(token, "sctp") == 0) {
+			ctrl->sctp_on = 1;
+		} else if (strcmp(token, "tcp") == 0) {
+			ctrl->sctp_on = 0;
+		} else if (strcmp(token, "peer") == 0) {
+			incast_add_peer(ctrl, body, linecnt);
+		} else if (strcmp(token, "bind") == 0) {
+			incast_set_bind(ctrl, body, linecnt);
+		} else if (strcmp(token, "times") == 0) {
+			int cnt;
+			if (body == NULL) {
+				printf("Parse error line:%d times with no body\n",
+					linecnt);
+				linecnt++;
+				continue;
+			}
+			cnt = strtol(body, NULL, 0);
+			if (cnt) {
+				ctrl->cnt_of_times = cnt;
+			} else {
+				ctrl->cnt_of_times = 1;
+				ctrl->decrement_amm = 0;
+			}
+		} else if (strcmp(token, "sends") == 0) {
+			int cnt;
+			if (body == NULL) {
+				printf("Parse error line:%d sends with no body\n",
+					linecnt);
+				linecnt++;
+				continue;
+			}
+			cnt = strtol(body, NULL, 0);
+			if ((cnt) && ((cnt > 0) && (cnt < MAX_SINGLE_MSG))) {
+				ctrl->size = cnt;
+			} else {
+				printf("Warning line:%d sizes invalid ( 0 > %d < %d)\n",
+				       linecnt, cnt, MAX_SINGLE_MSG);
+				printf("Using default %d\n", DEFAULT_MSG_SIZE);
+				ctrl->size = DEFAULT_MSG_SIZE;
+			}
+
+		} else if (strcmp(token, "sendc") == 0) {
+			int cnt;
+			if (body == NULL) {
+				printf("Parse error line:%d sendc with no body\n",
+					linecnt);
+				linecnt++;
+				continue;
+			}
+			cnt = strtol(body, NULL, 0);
+			if ((cnt) && (cnt > 0)) {
+				ctrl->cnt_req = cnt;
+			} else {
+				printf("Warning line:%d sizes invalid ( 0 > %d)\n",
+				       linecnt, cnt);
+				printf("Using default %d\n", DEFAULT_NUMBER_SENDS);
+				ctrl->cnt_req = DEFAULT_NUMBER_SENDS;
+			}
+		} else {
+			printf("Unknown token '%s' at line %d\n",
+			       token, linecnt);
+		}
+		linecnt++;
+	}
+	fclose(io);
+}
