@@ -157,6 +157,18 @@ struct elephant_sink_rec {
 	} while (0)
 #endif
 
+#ifndef timespecadd
+#define timespecadd(vvp, uvp)						\
+	do {								\
+		(vvp)->tv_sec += (uvp)->tv_sec;				\
+		(vvp)->tv_nsec += (uvp)->tv_nsec;			\
+		if ((vvp)->tv_nsec >= 1000000000) {			\
+			(vvp)->tv_sec++;				\
+			(vvp)->tv_nsec -= 1000000000;			\
+		}							\
+	} while (0)
+#endif
+
 int translate_ip_address(char *host, struct sockaddr_in *sa);
 void incast_run_clients(struct incast_control *ctrl);
 void  elephant_run_clients(struct incast_control *ctrl);

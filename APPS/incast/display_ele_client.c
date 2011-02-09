@@ -31,6 +31,61 @@
 #include <incast_fmt.h>
 #include <sys/signal.h>
 
+struct incast_peer **peers;
+
+
+static int
+retrieve_ele_sink_record(struct incast_control *ctrl,
+			 struct elephant_sink_rec *sink,
+			 struct incast_peer *peer, 
+			 char *dir, 
+			 int number_of_bytes)
+{
+	FILE *io;
+	struct elephant_sink_rec lsink;
+	char loadfile[1024];
+	int target_size;
+
+	target_size = (number_of_bytes/ctrl->size + 1) * ctrl->size;
+
+	sprintf(loadfile, "%s/%s_ele.out", dir, peer->peer_name);
+	io = fopen(loadfile, "r");
+	if (io == NULL) {
+		printf("Can't open file %s - err:%d\n", loadfile, errno);
+		return (-1);
+	}
+	while(read_a_sink_rec(&lsink, io, peer->long_size) > 0) {
+		if (lsink.number_bytes == target_size) {
+			fclose(io);
+			memcpy(sink, &lsink, sizeof(lsink));
+			return (0);
+		}
+	}
+	fclose(io);
+	return (-1);
+}
+
+void
+display_an_entry(struct incast_peer *peer, 
+		 struct incast_peer_outrec *rec, 
+		 struct elephant_sink_rec *sink,
+		 struct elephant_lead_hdr *hdr)
+{
+	double bps, tim, byt;
+	timespecadd(&hdr->start, &sink->mono_end);
+	bps = 0;
+	tim = ((1.0 * sink->mono_end.tv_sec) + ((sink->mono_end.tv_nsec * 1.0)/1000000000));
+	if (tim > 0.0) {
+		byt = 1.0 * sink->number_bytes;
+		bps =  byt/tim;
+	} else {
+		printf("Invalid time\n");
+	}
+	printf("%ld:%f\n",
+	       (unsigned long)hdr->start.tv_sec, 
+	       bps);
+}
+
 int 
 main(int argc, char **argv)
 {
@@ -40,11 +95,17 @@ main(int argc, char **argv)
 	char loadfile[1024];
 	char *directory=NULL;
 	char *config=NULL;
+	struct incast_peer *peer;
+	int siz, secs=0;
 	struct elephant_lead_hdr hdr;
 	struct incast_peer_outrec rec;
-	struct timespec tmp;
-	while ((i = getopt(argc, argv, "c:d:")) != EOF) {
+	struct elephant_sink_rec sink;
+
+	while ((i = getopt(argc, argv, "c:d:s:")) != EOF) {
 		switch (i) {
+		case 's':
+			secs = strtol(optarg, NULL, 0);
+			break;
 		case 'c':
 			config = optarg;
 			break;
@@ -72,6 +133,15 @@ main(int argc, char **argv)
 		printf("Sorry no hostname found in loaded config\n");
 		return (-1);
 	}
+	siz = sizeof(struct incast_peer *) * ctrl.number_server;
+	peers = malloc(siz);
+	memset(peers, 0, siz);
+	i = 0;
+	LIST_FOREACH(peer, &ctrl.master_list, next) {
+		peers[i] = peer;
+		i++;
+	}
+
 	sprintf(loadfile, "%s/%s_ele_src.out", directory, ctrl.hostname);
 	printf("Loading file %s\n", loadfile);
 	io = fopen(loadfile, "r");
@@ -80,9 +150,8 @@ main(int argc, char **argv)
 		return (-1);
 	}
 	while(read_ele_hdr(&hdr, io, ctrl.long_size) > 0) {
-		printf("Started %ld.%9.9ld %d cnt:%d bytes\n",
-		       (unsigned long)hdr.start.tv_sec, (unsigned long)hdr.start.tv_nsec,
-		       hdr.number_servers, hdr.number_of_bytes);
+		/* Add time compensation if any */
+		hdr.start.tv_sec += secs;
 		for(i=0; i<hdr.number_servers; i++) {
 			if (read_peer_rec(&rec, io, ctrl.long_size) < 1) {
 				printf("Error hit end and expected %d svr found %d\n",
@@ -90,18 +159,24 @@ main(int argc, char **argv)
 				return (-1);
 			}
 			timespecsub(&rec.end, &rec.start);
-			printf("%d:%ld.%9.9ld\n",
-			       rec.peerno,
-			       (unsigned long)rec.end.tv_sec,
-			       (unsigned long)rec.end.tv_nsec);
+			if (rec.peerno >= ctrl.number_server) {
+				printf("peer exceeds bounds %d >= %d\n",
+				       rec.peerno, ctrl.number_server);
+				       
+			} else {
+				if(retrieve_ele_sink_record(&ctrl, &sink, 
+							 peers[rec.peerno], 
+							 directory, 
+							    hdr.number_of_bytes)) {
+					printf("Could not retrieve sink record for peer %s record\n", 
+					       peers[rec.peerno]->peer_name);
+					continue;
+				}
+				timespecsub(&sink.mono_end, &sink.mono_start);
+				display_an_entry(peers[rec.peerno], &rec, &sink, &hdr);
+
+			}
 		}
-		tmp = hdr.end;
-		timespecsub(&tmp, &hdr.start);
-		printf("Ended  %ld.%9.9ld (%ld.%9.9ld)\n", 
-		       (unsigned long)hdr.end.tv_sec, 
-		       (unsigned long)hdr.end.tv_nsec,
-		       (unsigned long)tmp.tv_sec,
-		       (unsigned long)tmp.tv_nsec);
 	}
 	fclose(io);
 	return (0);

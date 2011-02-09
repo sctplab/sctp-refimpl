@@ -10,6 +10,6 @@ peer:10.1.5.17:0:bsd10:4:
 peer:10.1.5.16:0:bsd11:4:
 peer:10.1.5.15:0:bsd4:8:
 times:0
-sends:1452
+sends:1448
 sendc:2
 bind:10.1.5.14:0:bsd3:8:
