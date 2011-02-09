@@ -78,6 +78,8 @@ struct incast_peer {
 	struct sockaddr_in addr;
 	int msg_cnt; /* Cnt rcvd */
 	int byte_cnt; /* byte cnt rcvd */
+	char *peer_name;
+	int long_size;
 };
 
 /* 32bit:24 bytes 64bit:40 bytes */
@@ -157,4 +159,12 @@ int translate_ip_address(char *host, struct sockaddr_in *sa);
 void incast_run_clients(struct incast_control *ctrl);
 void  elephant_run_clients(struct incast_control *ctrl);
 void print_an_address(struct sockaddr *a, int cr);
+void parse_config_file(struct incast_control *ctrl, char *configfile);
+
+/* Magic read utilities */
+int read_ele_hdr(struct elephant_lead_hdr *hdr, FILE *io, int mac_long_size);
+int read_peer_rec(struct incast_peer_outrec *rec, FILE *io, int mac_long_size);
+int read_incast_hdr(struct incast_lead_hdr *hdr, FILE *io, int mac_long_size);
+int  read_a_sink_rec(struct elephant_sink_rec *sink, FILE *io, int infile_size);
+
 #endif
