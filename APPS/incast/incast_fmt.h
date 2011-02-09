@@ -103,6 +103,7 @@ struct incast_control {
 	char *file_to_store_results;
 	struct sockaddr_in bind_addr;
 	struct incast_list master_list;
+	char *hostname;
 	int number_server;
 	int sctp_on;
 	int cnt_of_times;  /* number of passes */
@@ -113,6 +114,7 @@ struct incast_control {
 	int completed_server_cnt; /* How many servers are done with pass */
 	int verbose;
 	int nap_time;
+	int long_size;
 };
 
 /* 32bit:40 bytes 64bit:72 bytes */

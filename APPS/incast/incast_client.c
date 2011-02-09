@@ -76,12 +76,8 @@ main(int argc, char **argv)
 	}
 	/* Setup our list and init things */
 	signal(SIGPIPE, SIG_IGN);
-	LIST_INIT(&ctrl.master_list);
 	ctrl.file_to_store_results = storeFile;
-	ctrl.decrement_amm = 1;
-	ctrl.cnt_of_times = 1;
-	ctrl.size = DEFAULT_MSG_SIZE;
-	ctrl.cnt_req = DEFAULT_NUMBER_SENDS;
+
 	/* Now parse the configuration file */
 	parse_config_file(&ctrl, configfile);
 	if (ctrl.bind_addr.sin_family != AF_INET) {
