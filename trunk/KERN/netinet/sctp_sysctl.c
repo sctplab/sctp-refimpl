@@ -188,9 +188,6 @@ number_of_addresses(struct sctp_inpcb *inp)
 		}
 	} else {
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->action == SCTP_DEL_IP_ADDRESS) {
-				continue;
-			}
 			if ((laddr->ifa->address.sa.sa_family == AF_INET) ||
 			    (laddr->ifa->address.sa.sa_family == AF_INET6)) {
 				cnt++;
@@ -330,9 +327,6 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 	} else {
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 			/* ignore if blacklisted at association level */
-			if (laddr->action == SCTP_DEL_IP_ADDRESS) {
-				continue;
-			}
 			if (stcb && sctp_is_addr_restricted(stcb, laddr->ifa))
 				continue;
 			memset((void *)&xladdr, 0, sizeof(struct xsctp_laddr));
