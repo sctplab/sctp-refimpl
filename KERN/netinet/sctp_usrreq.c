@@ -1571,14 +1571,17 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 		uint32_t sa_len = 0;
 #endif
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+				continue;
+			}
 			if (stcb) {
 				if (sctp_is_addr_restricted(stcb, laddr->ifa)) {
 					continue;
 				}
 			}
-			if (sctp_fill_user_address(sas, &laddr->ifa->address.sa))
+			if (sctp_fill_user_address(sas, &laddr->ifa->address.sa)) {
 				continue;
-
+			}
 #if defined(__Windows__)
 			if (laddr->ifa->address.sa.sa_family == AF_INET) {
 				sa_len = sizeof(struct sockaddr_in);
@@ -1676,6 +1679,9 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 		struct sctp_laddr *laddr;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
+			if (laddr->action == SCTP_DEL_IP_ADDRESS) {
+				continue;
+			}
 			if (laddr->ifa->address.sa.sa_family == AF_INET) {
 				if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4))
 					cnt += sizeof(struct sockaddr_in6);
