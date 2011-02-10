@@ -80,6 +80,7 @@ struct incast_peer {
 	int byte_cnt; /* byte cnt rcvd */
 	char *peer_name;
 	int long_size;
+	int exclude;
 };
 
 /* 32bit:24 bytes 64bit:40 bytes */

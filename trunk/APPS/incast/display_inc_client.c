@@ -36,17 +36,19 @@ main(int argc, char **argv)
 {
 	int i;
 	FILE *io;
-	int incomplete=0;
+	FILE *output = stdout;
 	char *dir=NULL;
 	char *conf=NULL;
+	char *prefix=NULL;
+
 	char infile[1024];
 	struct incast_lead_hdr hdr;
 	struct incast_peer_outrec rec;
 	struct incast_control ctrl;
 	struct incast_peer *peer;
+	struct timespec highest;
 	
-	int a=0;
-	while ((i = getopt(argc, argv, "d:c:?")) != EOF) {
+	while ((i = getopt(argc, argv, "d:c:p:?")) != EOF) {
 		switch (i) {
 		case 'd':
 			dir = optarg;
@@ -54,10 +56,13 @@ main(int argc, char **argv)
 		case 'c':
 			conf = optarg;
 			break;
+		case 'p':
+			prefix = optarg;
+			break;
 		default:
 		case '?':
 		use:
-			printf("Use %s -d directory -c config\n", argv[0]);
+			printf("Use %s -d directory -c config [-p prefix]\n", argv[0]);
 			exit(0);
 			break;
 		};
@@ -87,35 +92,44 @@ main(int argc, char **argv)
 		if (io == NULL) {
 			printf("Can't open file %s - err:%d\n", infile, errno);
 			continue;
-		} else {
-			printf("Processing file %s\n", infile);
+		}
+		if (prefix) {
+			sprintf(infile, "%s%s_incast.graph", 
+				prefix,
+				peer->peer_name);
+			output = fopen(infile, "w+");
+			if (output == NULL) {
+				printf("Can't open '%s' to write err:%d\n", 
+				       infile, errno);
+				return (-1);
+			}
+			
 		}
 		while(read_incast_hdr(&hdr, io, peer->long_size) > 0) {
+			highest.tv_sec = 0;
+			highest.tv_nsec = 0;
 			for(i=0; i<hdr.number_servers; i++) {
 				if (read_peer_rec(&rec, io, peer->long_size) < 1) {
-					printf("Error hit end and expected %d svr found %d\n",
-					       hdr.number_servers, i);
+					fprintf(output, 
+						"Error hit end and expected %d svr found %d\n",
+						hdr.number_servers, i);
 					return (-1);
 				}
 				if (rec.state == SRV_STATE_COMPLETE) {
 					timespecsub(&rec.end, &rec.start);
-					if (a == 0) {
-					print_it:
-						printf("%d:%ld.%9.9ld\n",
-						       hdr.passcnt,
-						       (unsigned long)rec.end.tv_sec,
-						       (unsigned long)rec.end.tv_nsec);
-					} else {
-						if ((rec.end.tv_sec) ||
-						    (rec.end.tv_nsec > 300000000)) {
-							goto print_it;
+					if (rec.end.tv_sec > highest.tv_sec) {
+						highest = rec.end;
+					} else if (rec.end.tv_sec == highest.tv_sec) {
+						if (rec.end.tv_nsec > highest.tv_nsec) {
+							highest = rec.end;
 						}
 					}
-				       
-				} else {
-					incomplete++;
 				}
 			}
+			fprintf(output, "%ld.%9.9ld:%d\n",
+			       (unsigned long)highest.tv_sec,
+				(unsigned long)highest.tv_nsec,
+				hdr.passcnt);
 		}
 		fclose(io);
 	}
