@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 218521 2011-02-10 14:46:37Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -3164,6 +3164,7 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
     uint32_t type, uint32_t vrf_id, struct sctp_ifa *sctp_ifap)
 {
 	struct sctp_ifa *ifa;
+	struct sctp_laddr *laddr, *nladdr;
 #if defined(__APPLE__)
 	struct timeval timenow;
 
@@ -3191,8 +3192,6 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 		if (type == SCTP_ADD_IP_ADDRESS) {
 			sctp_add_local_addr_ep(inp, ifa, type);
 		} else if (type == SCTP_DEL_IP_ADDRESS) {
-			struct sctp_laddr *laddr;
-
 			if (inp->laddr_count < 2) {
 				/* can't delete the last local address */
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_ASCONF, EINVAL);
@@ -3206,11 +3205,19 @@ sctp_addr_mgmt_ep_sa(struct sctp_inpcb *inp, struct sockaddr *sa,
 				}
 			}
 		}
-		if (!LIST_EMPTY(&inp->sctp_asoc_list)) {
+		if (LIST_EMPTY(&inp->sctp_asoc_list)) {
 			/*
 			 * There is no need to start the iterator if
 			 * the inp has no associations.
 			 */
+			if (type == SCTP_DEL_IP_ADDRESS) {
+				LIST_FOREACH_SAFE(laddr, &inp->sctp_addr_list, sctp_nxt_addr, nladdr) {
+					if (laddr->ifa == ifa) {
+						sctp_del_local_addr_ep(inp, ifa);
+					}
+				}
+			}
+		} else {
 			struct sctp_asconf_iterator *asc;
 			struct sctp_laddr *wi;
 			
