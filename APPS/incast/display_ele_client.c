@@ -32,7 +32,7 @@
 #include <sys/signal.h>
 
 struct incast_peer **peers;
-
+struct timespec begin;
 
 static int
 retrieve_ele_sink_record(struct incast_control *ctrl,
@@ -72,7 +72,10 @@ display_an_entry(struct incast_peer *peer,
 		 struct elephant_lead_hdr *hdr)
 {
 	double bps, tim, byt;
-	timespecadd(&hdr->start, &sink->mono_end);
+	long i;
+	if (peer->exclude) 
+		return;
+
 	bps = 0;
 	tim = ((1.0 * sink->mono_end.tv_sec) + ((sink->mono_end.tv_nsec * 1.0)/1000000000));
 	if (tim > 0.0) {
@@ -81,15 +84,19 @@ display_an_entry(struct incast_peer *peer,
 	} else {
 		printf("Invalid time\n");
 	}
-	printf("%ld:%f\n",
-	       (unsigned long)hdr->start.tv_sec, 
-	       bps);
+	for(i=0; i<sink->mono_end.tv_sec; i++) {
+		printf("%ld:%ld\n",
+		       (unsigned long)(bps/1024.0),
+		       (unsigned long)(hdr->start.tv_sec - begin.tv_sec + i));
+	}
+	timespecadd(&hdr->start, &sink->mono_end);
 }
 
+#define EXCLUDE_MAX 10
 int 
 main(int argc, char **argv)
 {
-	int i;
+	int i, j;
 	FILE *io;
 	struct incast_control ctrl;
 	char loadfile[1024];
@@ -100,9 +107,26 @@ main(int argc, char **argv)
 	struct elephant_lead_hdr hdr;
 	struct incast_peer_outrec rec;
 	struct elephant_sink_rec sink;
+	char *exclude_list[EXCLUDE_MAX];
+	int excl_cnt=0;
 
-	while ((i = getopt(argc, argv, "c:d:s:")) != EOF) {
+	memset(exclude_list, 0, sizeof(exclude_list));
+	begin.tv_sec = 0;
+	begin.tv_nsec = 0;
+	while ((i = getopt(argc, argv, "c:d:s:b:x:")) != EOF) {
 		switch (i) {
+		case 'x':
+			if (excl_cnt < EXCLUDE_MAX ) {
+				exclude_list[excl_cnt]= optarg;
+				excl_cnt++;
+			} else {
+				printf("Sorry - Max exclude %d reached\n", 
+				       excl_cnt);
+			}
+			break;
+		case 'b':
+			begin.tv_sec = (time_t)strtoul(optarg, NULL, 0);
+			break;
 		case 's':
 			secs = strtol(optarg, NULL, 0);
 			break;
@@ -133,6 +157,7 @@ main(int argc, char **argv)
 		printf("Sorry no hostname found in loaded config\n");
 		return (-1);
 	}
+
 	siz = sizeof(struct incast_peer *) * ctrl.number_server;
 	peers = malloc(siz);
 	memset(peers, 0, siz);
@@ -140,10 +165,19 @@ main(int argc, char **argv)
 	LIST_FOREACH(peer, &ctrl.master_list, next) {
 		peers[i] = peer;
 		i++;
+		peer->exclude = 0;
+		/* See if its in the exclude list */
+		if (excl_cnt) {
+			for(j=0; j<excl_cnt; j++) {
+				if (strcmp(exclude_list[j], 
+					   peer->peer_name) == 0) {
+					peer->exclude = 1;
+				}
+			}
+		}
 	}
 
 	sprintf(loadfile, "%s/%s_ele_src.out", directory, ctrl.hostname);
-	printf("Loading file %s\n", loadfile);
 	io = fopen(loadfile, "r");
 	if (io == NULL) {
 		printf("Can't open file %s - err:%d\n", loadfile, errno);
