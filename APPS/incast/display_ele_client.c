@@ -33,6 +33,7 @@
 
 struct incast_peer **peers;
 struct timespec begin;
+time_t cutoff_time=0;
 
 static int
 retrieve_ele_sink_record(struct incast_control *ctrl,
@@ -65,6 +66,10 @@ retrieve_ele_sink_record(struct incast_control *ctrl,
 	return (-1);
 }
 
+FILE *out;
+int raw_bytes=0;
+int one_print_per = 0;
+
 void
 display_an_entry(struct incast_peer *peer, 
 		 struct incast_peer_outrec *rec, 
@@ -76,6 +81,9 @@ display_an_entry(struct incast_peer *peer,
 	if (peer->exclude) 
 		return;
 
+	if (cutoff_time && (hdr->start.tv_sec > cutoff_time))
+		return;
+
 	bps = 0;
 	tim = ((1.0 * sink->mono_end.tv_sec) + ((sink->mono_end.tv_nsec * 1.0)/1000000000));
 	if (tim > 0.0) {
@@ -84,10 +92,22 @@ display_an_entry(struct incast_peer *peer,
 	} else {
 		printf("Invalid time\n");
 	}
-	for(i=0; i<sink->mono_end.tv_sec; i++) {
-		printf("%ld:%ld\n",
-		       (unsigned long)(bps/1024.0),
-		       (unsigned long)(hdr->start.tv_sec - begin.tv_sec + i));
+	if (raw_bytes) {
+		fprintf(out, "%ld:%f\n",
+			(unsigned long)sink->number_bytes,
+			tim);
+	} else if (one_print_per) {
+			fprintf(out, "%ld:%ld\n",
+				(unsigned long)(bps/1024.0),
+				(unsigned long)((hdr->start.tv_sec - begin.tv_sec) + sink->mono_end.tv_sec));
+
+	} else {
+		for(i=0; i<sink->mono_end.tv_sec; i++) {
+
+			fprintf(out, "%ld:%ld\n",
+				(unsigned long)(bps/1024.0),
+				(unsigned long)(hdr->start.tv_sec - begin.tv_sec + i));
+		}
 	}
 	timespecadd(&hdr->start, &sink->mono_end);
 }
@@ -110,11 +130,29 @@ main(int argc, char **argv)
 	char *exclude_list[EXCLUDE_MAX];
 	int excl_cnt=0;
 
+	out = stdout;
 	memset(exclude_list, 0, sizeof(exclude_list));
 	begin.tv_sec = 0;
 	begin.tv_nsec = 0;
-	while ((i = getopt(argc, argv, "c:d:s:b:x:")) != EOF) {
+	while ((i = getopt(argc, argv, "c:d:s:b:x:w:rC:O")) != EOF) {
 		switch (i) {
+		case 'O':
+			one_print_per = 1;
+			break;
+		case 'C':
+			cutoff_time = strtol(optarg, NULL, 0);
+			break;
+		case 'r':
+			raw_bytes = 1;
+			break;
+		case 'w':
+			out = fopen(optarg, "w+");
+			if (out == NULL) {
+				printf("Can't open %s for output - sorry err:%d\n",
+				       optarg, errno);
+				out = stdout;
+			}
+			break;
 		case 'x':
 			if (excl_cnt < EXCLUDE_MAX ) {
 				exclude_list[excl_cnt]= optarg;
@@ -139,7 +177,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -c config -d directory\n", argv[0]);
+			printf("Use %s -c config -d directory [ -C cutoff -O -w out -s sec -b begin -x exclude -r ]\n", argv[0]);
 			exit(0);
 			break;
 		};
