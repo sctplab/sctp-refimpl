@@ -81,8 +81,9 @@ display_an_entry(struct incast_peer *peer,
 	if (peer->exclude) 
 		return;
 
-	if (cutoff_time && (hdr->start.tv_sec > cutoff_time))
+	if (cutoff_time && (hdr->start.tv_sec > cutoff_time)) { 
 		return;
+	}
 
 	bps = 0;
 	tim = ((1.0 * sink->mono_end.tv_sec) + ((sink->mono_end.tv_nsec * 1.0)/1000000000));
