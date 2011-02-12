@@ -2889,10 +2889,6 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 			SCTP_SOCKET_LOCK(so, 1);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
-			if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
-				SCTP_SOCKET_UNLOCK(so, 1);
-				return;
-			}
 #endif
 			if ((stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) == 0) {
 				soisconnected(stcb->sctp_socket);
