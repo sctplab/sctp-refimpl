@@ -56,7 +56,7 @@ struct pkt_track {
 
 int beginning=0;
 int cnt_outstanding=0;
-int time_in_micro = 0;
+int time_in_micro = 1;
 int ecn_print = 0;
 
 struct pkt_track pkt_arry[PKT_ARRAY_SIZE];
@@ -133,6 +133,9 @@ process_data(struct pcap_pkthdr *phdr,
 	tslot->sent = phdr->ts;
 }
 
+struct timeval initial_time;
+int initial_time_set=0;
+
 void
 process_sack(struct pcap_pkthdr *phdr,
 	     struct sctphdr *sctp, struct sctp_sack_chunk *sc,
@@ -140,7 +143,7 @@ process_sack(struct pcap_pkthdr *phdr,
 {
 	int i;
 	uint32_t cumtsn;
-	struct timeval tv;
+	struct timeval tv, cur_time;
 	cumtsn = ntohl(sc->sack.cum_tsn_ack);
 	for(i=0;i<PKT_ARRAY_SIZE;i++) {
 		if (pkt_arry[i].inuse == 0)
@@ -149,20 +152,27 @@ process_sack(struct pcap_pkthdr *phdr,
 			cnt_outstanding--;
 			tv = phdr->ts;
 			timevalsub(&tv, &pkt_arry[i].sent);
+			if (initial_time_set == 0) {
+				initial_time = phdr->ts;
+				initial_time_set = 1;
+			}
+			cur_time = phdr->ts;
+			timevalsub(&cur_time, &initial_time);
 			if (ecn_print) {
 				if (ecnseen) {
 					if (time_in_micro) {
 						uint64_t tim;
 						tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-						printf("%ld.%6.6ld %d %ld\n",
-						       (unsigned long)phdr->ts.tv_sec,
-						       (unsigned long)phdr->ts.tv_usec,
+						printf("%ld.%6.6ld %d %ld %ld\n",
+						       (unsigned long)cur_time.tv_sec,
+						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
-						       (unsigned long)tim);
+						       (unsigned long)tim, 
+						       tim/pkt_arry[i].cnt_out);
 					} else {
 						printf("%ld.%6.6ld %d %ld.%6.6ld\n",
-						       (unsigned long)phdr->ts.tv_sec,
-						       (unsigned long)phdr->ts.tv_usec,
+						       (unsigned long)cur_time.tv_sec,
+						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
 						       tv.tv_sec, tv.tv_usec);
 					}
@@ -171,15 +181,16 @@ process_sack(struct pcap_pkthdr *phdr,
 				if (time_in_micro) {
 					uint64_t tim;
 					tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-					printf("%ld.%6.6ld %d %ld\n",
-					       (unsigned long)phdr->ts.tv_sec,
-					       (unsigned long)phdr->ts.tv_usec,
+					printf("%ld.%6.6ld %d %ld %ld\n",
+					       (unsigned long)cur_time.tv_sec,
+					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
-					       (unsigned long)tim);
+					       (unsigned long)tim,
+					       tim/pkt_arry[i].cnt_out);
 				} else {
 					printf("%ld.%6.6ld %d %ld.%6.6ld\n",
-					       (unsigned long)phdr->ts.tv_sec,
-					       (unsigned long)phdr->ts.tv_usec,
+					       (unsigned long)cur_time.tv_sec,
+					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
 					       tv.tv_sec, tv.tv_usec);
 				}
@@ -251,7 +262,7 @@ main(int argc, char **argv)
 			ecn_print = 1;
 			break;
 		case 'm':
-			time_in_micro = 1;
+			time_in_micro = 0;
 			break;
 		case 'c':
 			capture = optarg;
@@ -261,7 +272,7 @@ main(int argc, char **argv)
 		use:
 			printf("Use %s -c capture-file [-e -m]\n", argv[0]);
 			printf("  -e - only sacks with ECNE\n");
-			printf("  -m - time of rrt in microseconds\n");
+			printf("  -m - time of rrt NOT in microseconds\n");
 			return (-1);
 			break;
 		};
