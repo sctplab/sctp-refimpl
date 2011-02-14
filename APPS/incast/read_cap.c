@@ -50,14 +50,17 @@
 struct pkt_track {
 	uint32_t tsn;
 	uint32_t cnt_out;
-	struct timeval sent;
 	int inuse;
+	int size;
+	struct timeval sent;
 };
 
 int beginning=0;
 int cnt_outstanding=0;
 int time_in_micro = 1;
 int ecn_print = 0;
+double total_acked=0.0;
+
 
 struct pkt_track pkt_arry[PKT_ARRAY_SIZE];
 
@@ -131,6 +134,7 @@ process_data(struct pcap_pkthdr *phdr,
 	cnt_outstanding++;
 	tslot->cnt_out = cnt_outstanding;
 	tslot->sent = phdr->ts;
+	tslot->size = phdr->len * 8; /* number of bits */
 }
 
 struct timeval initial_time;
@@ -144,12 +148,15 @@ process_sack(struct pcap_pkthdr *phdr,
 	int i;
 	uint32_t cumtsn;
 	struct timeval tv, cur_time;
+	double bw=0.0, tti;
+
 	cumtsn = ntohl(sc->sack.cum_tsn_ack);
 	for(i=0;i<PKT_ARRAY_SIZE;i++) {
 		if (pkt_arry[i].inuse == 0)
 			continue;
 		if (SCTP_TSN_GE(cumtsn, pkt_arry[i].tsn)) {
 			cnt_outstanding--;
+			total_acked += (pkt_arry[i].size * 1.0);
 			tv = phdr->ts;
 			timevalsub(&tv, &pkt_arry[i].sent);
 			if (initial_time_set == 0) {
@@ -158,41 +165,47 @@ process_sack(struct pcap_pkthdr *phdr,
 			}
 			cur_time = phdr->ts;
 			timevalsub(&cur_time, &initial_time);
+			if ((cur_time.tv_sec != 0) && (cur_time.tv_usec != 0)) {
+				tti = ((1.0 * cur_time.tv_sec) + (cur_time.tv_usec / 1000000.0));
+				bw = total_acked/tti;
+			}
 			if (ecn_print) {
 				if (ecnseen) {
 					if (time_in_micro) {
 						uint64_t tim;
 						tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-						printf("%ld.%6.6ld %d %ld %ld\n",
+						printf("%ld.%6.6ld %d %ld %f %ld\n",
 						       (unsigned long)cur_time.tv_sec,
 						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
 						       (unsigned long)tim, 
+						       bw,
 						       tim/pkt_arry[i].cnt_out);
 					} else {
-						printf("%ld.%6.6ld %d %ld.%6.6ld\n",
+						printf("%ld.%6.6ld %d %ld.%6.6ld %f\n",
 						       (unsigned long)cur_time.tv_sec,
 						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
-						       tv.tv_sec, tv.tv_usec);
+						       tv.tv_sec, tv.tv_usec, bw);
 					}
 				}
 			} else {
 				if (time_in_micro) {
 					uint64_t tim;
 					tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-					printf("%ld.%6.6ld %d %ld %ld\n",
+					printf("%ld.%6.6ld %d %ld %f %ld\n",
 					       (unsigned long)cur_time.tv_sec,
 					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
 					       (unsigned long)tim,
+					       bw,
 					       tim/pkt_arry[i].cnt_out);
 				} else {
-					printf("%ld.%6.6ld %d %ld.%6.6ld\n",
+					printf("%ld.%6.6ld %d %ld.%6.6ld %f\n",
 					       (unsigned long)cur_time.tv_sec,
 					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
-					       tv.tv_sec, tv.tv_usec);
+					       tv.tv_sec, tv.tv_usec, bw);
 				}
 			}
 			pkt_arry[i].inuse = 0;
