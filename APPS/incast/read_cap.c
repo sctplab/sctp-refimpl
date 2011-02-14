@@ -119,6 +119,10 @@ find_next_entry()
 	return (NULL);
 }
 
+struct timeval initial_time;
+int initial_time_set=0;
+
+
 void
 process_data(struct pcap_pkthdr *phdr, 
 	     struct sctphdr *sctp, struct sctp_data_chunk *dc)
@@ -130,6 +134,10 @@ process_data(struct pcap_pkthdr *phdr,
 		printf("Out of space -- eek\n");
 		exit(-1);
 	}
+	if (initial_time_set == 0) {
+		initial_time = phdr->ts;
+		initial_time_set = 1;
+	}
 	tslot->tsn = ntohl(dc->dp.tsn);
 	cnt_outstanding++;
 	tslot->cnt_out = cnt_outstanding;
@@ -137,8 +145,6 @@ process_data(struct pcap_pkthdr *phdr,
 	tslot->size = phdr->len * 8; /* number of bits */
 }
 
-struct timeval initial_time;
-int initial_time_set=0;
 
 void
 process_sack(struct pcap_pkthdr *phdr,
@@ -174,38 +180,38 @@ process_sack(struct pcap_pkthdr *phdr,
 					if (time_in_micro) {
 						uint64_t tim;
 						tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-						printf("%ld.%6.6ld %d %ld %f %ld\n",
+						printf("%ld.%6.6ld %d %ld %ld %ld\n",
 						       (unsigned long)cur_time.tv_sec,
 						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
 						       (unsigned long)tim, 
-						       bw,
+						       (unsigned long)bw,
 						       tim/pkt_arry[i].cnt_out);
 					} else {
-						printf("%ld.%6.6ld %d %ld.%6.6ld %f\n",
+						printf("%ld.%6.6ld %d %ld.%6.6ld %ld\n",
 						       (unsigned long)cur_time.tv_sec,
 						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
-						       tv.tv_sec, tv.tv_usec, bw);
+						       tv.tv_sec, tv.tv_usec, (unsigned long)bw);
 					}
 				}
 			} else {
 				if (time_in_micro) {
 					uint64_t tim;
 					tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-					printf("%ld.%6.6ld %d %ld %f %ld\n",
+					printf("%ld.%6.6ld %d %ld %ld %ld\n",
 					       (unsigned long)cur_time.tv_sec,
 					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
 					       (unsigned long)tim,
-					       bw,
+					       (unsigned long)bw,
 					       tim/pkt_arry[i].cnt_out);
 				} else {
-					printf("%ld.%6.6ld %d %ld.%6.6ld %f\n",
+					printf("%ld.%6.6ld %d %ld.%6.6ld %ld\n",
 					       (unsigned long)cur_time.tv_sec,
 					       (unsigned long)cur_time.tv_usec,
 					       pkt_arry[i].cnt_out,
-					       tv.tv_sec, tv.tv_usec, bw);
+					       tv.tv_sec, tv.tv_usec, (unsigned long)bw);
 				}
 			}
 			pkt_arry[i].inuse = 0;
