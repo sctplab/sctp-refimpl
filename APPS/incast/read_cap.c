@@ -154,11 +154,15 @@ process_sack(struct pcap_pkthdr *phdr,
 					if (time_in_micro) {
 						uint64_t tim;
 						tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-						printf("%d %ld\n",
+						printf("%ld.%6.6ld %d %ld\n",
+						       (unsigned long)phdr->ts.tv_sec,
+						       (unsigned long)phdr->ts.tv_usec,
 						       pkt_arry[i].cnt_out,
 						       (unsigned long)tim);
 					} else {
-						printf("%d %ld.%6.6ld\n",
+						printf("%ld.%6.6ld %d %ld.%6.6ld\n",
+						       (unsigned long)phdr->ts.tv_sec,
+						       (unsigned long)phdr->ts.tv_usec,
 						       pkt_arry[i].cnt_out,
 						       tv.tv_sec, tv.tv_usec);
 					}
@@ -167,11 +171,15 @@ process_sack(struct pcap_pkthdr *phdr,
 				if (time_in_micro) {
 					uint64_t tim;
 					tim = ((tv.tv_sec* 1000000) +  tv.tv_usec);
-					printf("%d %ld\n",
+					printf("%ld.%6.6ld %d %ld\n",
+					       (unsigned long)phdr->ts.tv_sec,
+					       (unsigned long)phdr->ts.tv_usec,
 					       pkt_arry[i].cnt_out,
 					       (unsigned long)tim);
 				} else {
-					printf("%d %ld.%6.6ld\n",
+					printf("%ld.%6.6ld %d %ld.%6.6ld\n",
+					       (unsigned long)phdr->ts.tv_sec,
+					       (unsigned long)phdr->ts.tv_usec,
 					       pkt_arry[i].cnt_out,
 					       tv.tv_sec, tv.tv_usec);
 				}
@@ -190,7 +198,7 @@ analyze_packet(struct pcap_pkthdr *phdr, uint32_t len, const u_char *p)
 	struct sctp_chunkhdr *ch;
 	int lenat;
 	int ecnseen=0;
-	uint32_t ecn_tsn;
+	uint32_t ecn_tsn=0;
 
 	pkt = __DECONST(struct ether_header *, p);
 	if (ntohs(pkt->ether_type) != ETHERTYPE_IP) {
@@ -251,7 +259,9 @@ main(int argc, char **argv)
 		case '?':
 		default:
 		use:
-			printf("Use %s -c capture-file\n", argv[0]);
+			printf("Use %s -c capture-file [-e -m]\n", argv[0]);
+			printf("  -e - only sacks with ECNE\n");
+			printf("  -m - time of rrt in microseconds\n");
 			return (-1);
 			break;
 		};
