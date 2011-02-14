@@ -47,9 +47,9 @@ translate_entry(struct entry *ent, char *buf)
 {
 	char *tm;
 
-	ent->bps = strtol(buf, &tm, 0);
+	ent->timemark = strtol(buf, &tm, 0);
 	tm++;
-	ent->timemark = strtol(tm, NULL, 0);
+	ent->bps = strtol(tm, NULL, 0);
 }
 
 void
@@ -65,8 +65,8 @@ sync_needed(struct entry *le, FILE **leftp,
 restart_closed:
 	if (left == NULL) {
 		/* Left is closed ... read out all the right */
-		fprintf(out, "%ld:%ld\n",
-			re->bps, re->timemark);
+		fprintf(out, "%ld %ld\n",
+			re->timemark, re->bps);
 		while(fgets(localbuf, sizeof(localbuf), right) != NULL) {
 			fprintf(out, "%s", localbuf);
 		}
@@ -75,8 +75,8 @@ restart_closed:
 		return;
 	} else if (right == NULL) {
 		/* write is closed ... read out all the left */
-		fprintf(out, "%ld:%ld\n",
-			le->bps, le->timemark);
+		fprintf(out, "%ld %ld\n",
+			le->timemark, le->bps);
 		while(fgets(localbuf, sizeof(localbuf), left) != NULL) {
 			fprintf(out, "%s", localbuf);
 		}
@@ -88,8 +88,8 @@ again:
 	/* Ok we have a valid right and left entry */
 	if(le->timemark > re->timemark) {
 		/* write out the right entry and read another */
-		fprintf(out, "%ld:%ld\n",
-			re->bps, re->timemark);
+		fprintf(out, "%ld %ld\n",
+			re->timemark, re->bps);
 		/* read next right one */
 		if (fgets(localbuf, sizeof(localbuf), right) == NULL) {
 			fclose(right);
@@ -103,8 +103,8 @@ again:
 
 	} else if (re->timemark > le->timemark) {
 		/* write out the left entry and read another */
-		fprintf(out, "%ld:%ld\n",
-			le->bps, le->timemark);
+		fprintf(out, "%ld %ld\n",
+			le->timemark, le->bps);
 		if (fgets(localbuf, sizeof(localbuf), left) == NULL) {
 			fclose(left);
 			left = NULL;
@@ -200,9 +200,10 @@ main(int argc, char **argv)
 			continue;
 		}
 		/* If we reach here we are in sync */
-		fprintf(out, "%ld:%ld\n",
-			(left_entry.bps+right_entry.bps),
-			left_entry.timemark);
+		fprintf(out, "%ld %ld\n",
+			left_entry.timemark,
+			(left_entry.bps+right_entry.bps));
+
 
 		/* Read the next entry */
 		if (right_io) {
