@@ -80,18 +80,18 @@ main(int argc, char **argv)
 	}
 	stop = NULL;
 	while (fgets(buffer, sizeof(buffer), io) != NULL) {
-		txfr = strtol(buffer, &stop, 0);
+		readin = strtod(buffer, &stop);
 		if (stop == NULL) {
 			printf("Huh\n");
 			return (-1);
 		}
 		stop++;
-		readin = strtod(stop, NULL);
+		txfr = strtol(stop, NULL, 0);
 		time_of += readin;
 		bytes += txfr;
 	}
 	fclose(io);
 	bytes_per_sec = ((double)(bytes * 1.0))/time_of;
-	printf("%s:%ld\n", place, (unsigned long)bytes_per_sec);
+	printf("%s %ld\n", place, (unsigned long)bytes_per_sec);
 	return (0);
 }

@@ -94,20 +94,21 @@ display_an_entry(struct incast_peer *peer,
 		printf("Invalid time\n");
 	}
 	if (raw_bytes) {
-		fprintf(out, "%ld:%f\n",
-			(unsigned long)sink->number_bytes,
-			tim);
+		fprintf(out, "%f %ld\n",
+			tim,
+			(unsigned long)sink->number_bytes);
+
 	} else if (one_print_per) {
-			fprintf(out, "%ld:%ld\n",
-				(unsigned long)(bps/1024.0),
-				(unsigned long)((hdr->start.tv_sec - begin.tv_sec) + sink->mono_end.tv_sec));
+			fprintf(out, "%ld %ld\n",
+				(unsigned long)((hdr->start.tv_sec - begin.tv_sec) + sink->mono_end.tv_sec),
+				(unsigned long)(bps/1024.0));
 
 	} else {
 		for(i=0; i<sink->mono_end.tv_sec; i++) {
 
-			fprintf(out, "%ld:%ld\n",
-				(unsigned long)(bps/1024.0),
-				(unsigned long)(hdr->start.tv_sec - begin.tv_sec + i));
+			fprintf(out, "%ld %ld\n",
+				(unsigned long)(hdr->start.tv_sec - begin.tv_sec + i),
+				(unsigned long)(bps/1024.0));
 		}
 	}
 	timespecadd(&hdr->start, &sink->mono_end);
