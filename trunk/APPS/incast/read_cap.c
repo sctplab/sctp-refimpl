@@ -165,7 +165,7 @@ process_sack(struct pcap_pkthdr *phdr,
 			}
 			cur_time = phdr->ts;
 			timevalsub(&cur_time, &initial_time);
-			if ((cur_time.tv_sec != 0) && (cur_time.tv_usec != 0)) {
+			if (cur_time.tv_sec || cur_time.tv_usec) {
 				tti = ((1.0 * cur_time.tv_sec) + (cur_time.tv_usec / 1000000.0));
 				bw = total_acked/tti;
 			}
