@@ -2687,6 +2687,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 			atomic_add_int(&(*stcb)->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK((*stcb));
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+			CURVNET_SET(oso->so_vnet);
+#endif
 #if defined(__APPLE__)
 			SCTP_SOCKET_LOCK(oso, 1);
 #endif
@@ -2703,6 +2706,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 #if defined(__APPLE__)
 			SCTP_SOCKET_UNLOCK(oso, 1);
+#endif
+#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
+			CURVNET_RESTORE();
 #endif
 			SCTP_TCB_LOCK((*stcb));
 			atomic_subtract_int(&(*stcb)->asoc.refcnt, 1);
