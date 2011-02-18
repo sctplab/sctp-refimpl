@@ -677,7 +677,11 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 	int error;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800056
+#ifdef VIMAGE
 	error = vnet_sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
+#else
+	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
+#endif
 #else
 	error = sysctl_handle_int(oidp, oidp->oid_arg1, oidp->oid_arg2, req);
 #endif
