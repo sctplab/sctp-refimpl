@@ -1292,6 +1292,7 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, output_unlocked, CTLTYPE_UINT|CTLFLAG
                  &SCTP_BASE_SYSCTL(sctp_output_unlocked), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_OUTPUT_UNLOCKED_DESC);
 #endif
+
 #if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, stats,
                  CTLTYPE_STRUCT|CTLFLAG_RW,
