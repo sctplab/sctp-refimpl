@@ -2,7 +2,7 @@ AM_CFLAGS=-g -Wall -Werror
 AM_CPPFLAGS=-I.
 bin_PROGRAMS = incast_client incast_server elephant_sink elephant_source \
 watch_intf display_ele_sink display_inc_client display_ele_client \
-ele_aggregator sum_aggregator read_cap
+ele_aggregator sum_aggregator read_cap per_aggregator
 
 LDADD = -lpthread -lpcap
 
@@ -25,6 +25,8 @@ watch_intf_SOURCES = watch_intf.c
 ele_aggregator_SOURCES = ele_aggregator.c
 
 sum_aggregator_SOURCES = sum_aggregator.c
+
+per_aggregator_SOURCES = per_aggregator.c
 
 read_cap_SOURCES = read_cap.c
 
