@@ -51,7 +51,8 @@ main(int argc, char **argv)
 	while ((i = getopt(argc, argv, "d:c:p:?a:")) != EOF) {
 		switch (i) {
 		case 'a':
-			above_ms = strtol(optarg, NULL, 0);
+			above_ms = ((uint64_t)strtol(optarg, NULL, 0) * 
+				    1000000);
 			break;
 		case 'd':
 			dir = optarg;
@@ -65,7 +66,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -d directory -c config [-p prefix]\n", argv[0]);
+			printf("Use %s -d directory -c config [-p prefix -a abovems]\n", argv[0]);
 			exit(0);
 			break;
 		};
