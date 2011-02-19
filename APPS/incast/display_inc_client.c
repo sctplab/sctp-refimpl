@@ -40,7 +40,7 @@ main(int argc, char **argv)
 	char *dir=NULL;
 	char *conf=NULL;
 	char *prefix=NULL;
-
+	uint64_t above_ms = 0;
 	char infile[1024];
 	struct incast_lead_hdr hdr;
 	struct incast_peer_outrec rec;
@@ -48,8 +48,11 @@ main(int argc, char **argv)
 	struct incast_peer *peer;
 	struct timespec highest;
 	
-	while ((i = getopt(argc, argv, "d:c:p:?")) != EOF) {
+	while ((i = getopt(argc, argv, "d:c:p:?a:")) != EOF) {
 		switch (i) {
+		case 'a':
+			above_ms = strtol(optarg, NULL, 0);
+			break;
 		case 'd':
 			dir = optarg;
 			break;
@@ -126,10 +129,19 @@ main(int argc, char **argv)
 					}
 				}
 			}
-			fprintf(output, "%ld.%9.9ld:%d\n",
-			       (unsigned long)highest.tv_sec,
-				(unsigned long)highest.tv_nsec,
-				hdr.passcnt);
+			if (above_ms) {
+				if (highest.tv_sec ||
+				    (highest.tv_nsec > above_ms)) {
+					goto print_it;
+				}
+			} else {
+			print_it:
+				fprintf(output, "%d %ld.%9.9ld\n",
+					hdr.passcnt,
+					(unsigned long)highest.tv_sec,
+					(unsigned long)highest.tv_nsec);
+			}
+
 		}
 		fclose(io);
 	}
