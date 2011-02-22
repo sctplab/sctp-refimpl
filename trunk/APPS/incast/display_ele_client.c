@@ -34,7 +34,7 @@
 struct incast_peer **peers;
 struct timespec begin;
 time_t cutoff_time=0;
-
+int divsor = 1024;
 static int
 retrieve_ele_sink_record(struct incast_control *ctrl,
 			 struct elephant_sink_rec *sink,
@@ -110,7 +110,7 @@ display_an_entry(struct incast_peer *peer,
 
 			fprintf(out, "%ld %ld\n",
 				(unsigned long)(hdr->start.tv_sec - begin.tv_sec + i),
-				(unsigned long)(bps/1024.0));
+				(unsigned long)(bps/(divsor * 1.0)));
 		}
 	}
 	timespecadd(&hdr->start, &sink->mono_end);
@@ -138,8 +138,14 @@ main(int argc, char **argv)
 	memset(exclude_list, 0, sizeof(exclude_list));
 	begin.tv_sec = 0;
 	begin.tv_nsec = 0;
-	while ((i = getopt(argc, argv, "c:d:s:b:x:w:rC:O")) != EOF) {
+	while ((i = getopt(argc, argv, "c:d:s:b:x:w:rC:OD:")) != EOF) {
 		switch (i) {
+		case 'D':
+			divsor = strtol(optarg, NULL, 0);
+			if (divsor <= 0) {
+				printf("Error divsor must be 1 or > \n");
+				divsor = 1024;
+			}
 		case 'O':
 			one_print_per = 1;
 			break;
@@ -181,7 +187,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -c config -d directory [ -C cutoff -O -w out -s sec -b begin -x exclude -r ]\n", argv[0]);
+			printf("Use %s -c config -d directory [ -C cutoff -O -w out -s sec -b begin -x exclude -r  -D divsor]\n", argv[0]);
 			exit(0);
 			break;
 		};
