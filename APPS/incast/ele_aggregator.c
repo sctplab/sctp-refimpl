@@ -66,7 +66,7 @@ restart_closed:
 	if (left == NULL) {
 		/* Left is closed ... read out all the right */
 		while(fgets(localbuf, sizeof(localbuf), right) != NULL) {
-			fprintf(out, "%s", localbuf);
+			;
 		}
 		fclose(right);
 		*rightp = NULL;
@@ -74,7 +74,7 @@ restart_closed:
 	} else if (right == NULL) {
 		/* write is closed ... read out all the left */
 		while(fgets(localbuf, sizeof(localbuf), left) != NULL) {
-			fprintf(out, "%s", localbuf);
+			;
 		}
 		fclose(left);
 		*leftp = NULL;
@@ -118,7 +118,7 @@ main(int argc, char **argv)
 	char buffer_r[1024];
 	char buffer_l[1024];
 	int i, notdone = 1;
-	FILE *left_io, *right_io, *out;
+	FILE *left_io, *right_io, *out=stdout;
 	char *left=NULL, *right=NULL, *outfile = NULL;
 	struct entry left_entry;
 	struct entry right_entry;
@@ -139,11 +139,11 @@ main(int argc, char **argv)
 		use:
 			printf("Use %s -l leftfile -r rightfile -w outfile\n",
 			       argv[0]);
-		exit(-1);
-		break;
+			exit(-1);
+			break;
 		};
 	};
-	if ((left == NULL) || (right == NULL) || (outfile == NULL)) {
+	if ((left == NULL) || (right == NULL)) {
 		goto use;
 	}
 	left_io = fopen(left, "r");
@@ -156,11 +156,13 @@ main(int argc, char **argv)
 		printf("Can't open '%s' - err:%d\n", right, errno);
 		return (-1);
 	}
-	out = fopen(outfile, "w+");
-	if (out == NULL) {
-		printf("Can't open '%s' for write - err:%d\n", 
-		       outfile, errno);
-		return (-1);
+	if (outfile) {
+		out = fopen(outfile, "w+");
+		if (out == NULL) {
+			printf("Can't open '%s' for write - err:%d\n", 
+			       outfile, errno);
+			return (-1);
+		}
 	}
 	/* Initial read */
 	if (fgets(buffer_r, sizeof(buffer_r), 
