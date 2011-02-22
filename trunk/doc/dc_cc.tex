@@ -265,7 +265,7 @@ DBL is enabled globally
 DBL flow does not include vlan
 DBL flow includes layer4-ports
 DBL uses ecn to indicate congestion
-DBL exceed-action probability: 100%
+DBL exceed-action probability: 100\%
 DBL max credits: 15
 DBL aggressive credit limit: 5
 DBL aggressive buffer limit: 255 packets
@@ -678,7 +678,8 @@ During these incidents, we can be sure large number of drops are occurring. A lo
 information tells us that not only are DBL drops occurring but also tail
 drops from transmit queue overflows are occurring as well.  The switch reports 19,312 DBL drops
 and 46 Transmit queue drops. The SCTP statistics shows
-a large number of T3-Timeouts i.e.~1360. Any T3 timeout in the incast test would definitely
+a large number of T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.}
+ i.e.~1360. Any T3 timeout in the incast test would definitely
 cause an incident of incast since there is not enough data in the pipe to enable fast retransmits with
 only two packets being sent.
 
