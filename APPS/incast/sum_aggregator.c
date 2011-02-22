@@ -30,7 +30,7 @@
  */
 #include <stdio.h>
 #include <sys/types.h>
-#include <strings.h>
+#include <string.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <getopt.h>
@@ -43,12 +43,13 @@ main(int argc, char **argv)
 
 	char buffer[1024];
 	FILE *io;
-	char *file=NULL, *stop, *place="1";
+	char *file[10], *stop, *place="1";
 	double time_of, readin;
 	uint64_t bytes;
-	int txfr, i;
+	int txfr, i, at=0;
 	double bytes_per_sec;
 
+	memset(file, 0, sizeof(file));
 	time_of = 0.0;
 	bytes = 0;
 
@@ -58,39 +59,46 @@ main(int argc, char **argv)
 			place = optarg;
 			break;
 		case 'i':
-			file = optarg;
+			if (at >= 10) {
+				printf("File limit reached - can't include %s\n",
+				       optarg);
+			} else {
+				file[at] = optarg;
+				at++;
+			}
 			break;
 		case '?':
 		default:
 		use:
-			printf("Use %s -i file-to-sum (-p place)\n",
+			printf("Use %s -i file-to-sum [-p place -i morefiles]\n",
 			       argv[0]);
-		exit(-1);
-		break;
+			exit(-1);
+			break;
 		};
 	};
-	if (file == NULL) {
+	if (at == 0) {
 		goto use;
 	}
-
-	io = fopen(file, "r");
-	if (io == NULL) {
-		printf("Can't open '%s' err:%d\n", file, errno);
-		return (-1);
-	}
-	stop = NULL;
-	while (fgets(buffer, sizeof(buffer), io) != NULL) {
-		readin = strtod(buffer, &stop);
-		if (stop == NULL) {
-			printf("Huh\n");
+	for(i=0; i<at; i++) {
+		io = fopen(file[i], "r");
+		if (io == NULL) {
+			printf("Can't open '%s' err:%d\n", file[i], errno);
 			return (-1);
 		}
-		stop++;
-		txfr = strtol(stop, NULL, 0);
-		time_of += readin;
-		bytes += txfr;
+		stop = NULL;
+		while (fgets(buffer, sizeof(buffer), io) != NULL) {
+			readin = strtod(buffer, &stop);
+			if (stop == NULL) {
+				printf("Huh\n");
+				return (-1);
+			}
+			stop++;
+			txfr = strtol(stop, NULL, 0);
+			time_of += readin;
+			bytes += txfr;
+		}
+		fclose(io);
 	}
-	fclose(io);
 	bytes_per_sec = ((double)(bytes * 1.0))/time_of;
 	printf("%s %ld\n", place, (unsigned long)bytes_per_sec);
 	return (0);
