@@ -27,15 +27,15 @@ Data centers pose a unique set of demands on any transport protocol being used
 within them. In particular it has been noted in Griffen et.al.~\cite{griffen} that common datacenter
 communication patterns virtually guarantee incidents of incast. For every problem, there is a solution,
 and with incast in the datacenter it is no different. In Vasudevan et.al.~\cite{vasudevan} solving the incast
-problem involved reducing the RTO.min (the minimum round trip time) of the transport protocol, but
-this failed to alleviate the root cause of the problem i.e. switch buffer overflow. In Alizadeh et.al (DC-TCP)~\cite{alizadeh} the problem
+problem involved reducing the RTO.min (the minimum retransmission timeout) of the transport protocol, but
+this failed to alleviate the root cause of the problem i.e.~switch buffer overflow. In Alizadeh et.al (DC-TCP)~\cite{alizadeh} the problem
 was again reexamined with thought given to using ECN~\cite{rfc3168}  with a new algorithm to not only eliminate
 incast but to also reduce switch buffer occupancy, thus improving both elephant and mice flows
 within the datacenter. In this paper we attempt to revisit some of the DC-TCP  work with a few differences, namely:
 
 \begin{enumerate}
- \item  Instead of TCP~\cite{rfc793}  we separate the external transport protocol (TCP) from the internal datacenter protocol.
- To achieve this separation,  we use SCTP~\cite{rfc4960} for internal datacenter communication. This gives us more flexibility in the feature set available to our internal datacenter, and at the same
+ \item  Instead of using only TCP~\cite{rfc793} we separate the external transport protocol from the internal datacenter protocol.
+ To achieve this separation, we use SCTP~\cite{rfc4960} instead of TCP for the internal datacenter communication. This gives us more flexibility in the feature set available to our internal datacenter, and at the same
  time assures that changes within the transport stack internally will not adversely effect external communications on
  the internet itself.
 \item  When attempting to reproduce some of DC-TCP findings, we will use existing switch products
@@ -43,6 +43,7 @@ to provide the appropriate ECN marking.
 \item Instead of using the DC-TCP algorithm we have defined a less compute intensive modification
 to ECN we call Data Center Congestion Control (DCCC), implementing it within our FreeBSD SCTP stack.
 \item We compare standard SCTP, SCTP with ECN, SCTP with Dynamic DCCC and SCTP with DCCC.
+\marginpar{Introduce \emph{Dynamic DCCC}}
 \end{enumerate}
 
 \end{abstract}
@@ -63,25 +64,32 @@ work and encouraged this investigation.
 \begin{enumerate}
 \item Why was plain ECN not used in the DC-TCP work? ECN itself was mentioned but no
 real measurements were performed contrasting DC-TCP and plain TCP with ECN.
+
 \item The algorithm defined by DC-TCP seemed somewhat complex and a bit difficult to
 implement; could there be a simpler method than prescribed that would obtain similar results?
+\marginpar{Can you specify \emph{somewhat complex}?}
+
 \item Could existing hardware, readily available from vendors, be used to reproduce these results? The
 DC-TCP paper explicitly mentions a  Broadcom Triumph,  Broadcom Scorpion, and Cisco CAT4948~\footnote{The 
 CAT4948 was explicitly mentioned as NOT supporting ECN.} switch, but what is the real availability of 
 a switch off the shelf to support ECN?
 
-\item SCTP seems to be a perfect candidate for use within a datacenter. It provides a rich set of additional
-features not available in TCP (for example it can automatically discard old data after a specified time) but was not 
-considered. 
+\item Could it be beneficial to use separate protocol within the datacenter and for accessing the datacenter?
+      This would allow isolating any congestion control changes to be contained within the datacenter
+      while not effecting internet traffic.
+
+\item SCTP seems to be a perfect candidate for use within a datacenter.
+
+\begin{itemize}
+\item It provides a rich set of additional features not available in
+      TCP (for example it can automatically discard old data after a specified time) but was not considered. 
 
 \item SCTP also provides multi-homing and CMT~\cite{jana} which could prove useful inside a datacenter.
 
-\item SCTP also provides a division;  separating the Internet traffic (TCP) from the internal datacenter traffic, isolating
-any congestion control changes to be contained within the datacenter while not effecting internet traffic.
-
 \item SCTP's ECN implementation is more conducive to knowing when each packet is marked without
-changing any internal ECN mechanism or maintaining a small state machine to track acknowledgment state. 
-This would make implementation both simpler and more efficient
+      changing any internal ECN mechanism or maintaining a small state machine to track acknowledgment state. 
+      This would make implementation both simpler and more efficient.
+\end{itemize}
 
 \end{enumerate}
 
@@ -95,8 +103,8 @@ At first glance one would think gathering the necessary equipment in order to do
 experiments would be easy:
 \begin{enumerate}
 \item Find several switches that can perform ECN and configure them
-to do ECN on a instantaneous basis \footnote{Normally ECN is set to use average queue size
-for its decision to mark.}. 
+to do ECN on a instantaneous basis.\footnote{Normally ECN is set to use average queue size
+for its decision to mark.}
 
 \item Setup the appropriate set of switch parameters as to when to start
 marking. 
@@ -119,6 +127,8 @@ for purchase on \emph{Ebay}. On average, we were able to obtain dual-core and qu
 servers with two Gigabit interface at reasonable costs\footnote{For these experiments we only used
 one interface but have plans to use this `datacenter' for future investigations  namely CMT.}. 
 
+\marginpar{Add a figure showing the setup of the machines, IP addresses switch here}
+
 
 \subsection{Caveats with using the Cisco 4500}
 
@@ -128,7 +138,8 @@ of a SUP-2 also would suffice but a more advanced CPU was thought to be a better
 choice for additional purchase.}  was a minimum
 requirement. So with another trip to \emph{Ebay} a newer SUP-4 was obtained. The
 next steps were to try to configure the switch in a way that would generate either drops
-or ECN with its 'DBL' feature. 
+or ECN with its 'DBL' feature.
+\marginpar{Introduce \emph{SUP} and \emph{DBL}}
 
 Our switch load was initially a 12.2(50)SG1 - IPbase version of IOS. After
 a lot of research and digging around we were able to get the DBL feature active, but it
@@ -143,33 +154,34 @@ basic settings that control the ECN feature.
 \begin{enumerate}
 
 \item Maximum Credits - this value represents how many credits to issue to a
-flow~\footnote{Either identified via IP addresses or IP addresses and layer 4 ports.}.
-The value was configurable between 1-15. Each
+flow.\footnote{Either identified via IP addresses or IP addresses and layer 4 ports.}
+The value was configurable between 1--15. Each
 packet above this threshold, added by the flow to the switches transmit queue when the
 switch decides it is congested, would decrement its credit.
+\marginpar{I don't understand this}
 
-\item Aggressive Credits - This value represents when a flow that is not responding begins
+\item Aggressive Credits --- This value represents when a flow that is not responding begins
 to be considered as a non-responsive flow. The aggressive credits value
-can be between 1-15.
+can be between 1--15.
 
-\item Aggressive Buffers - This is the maximum number of packets a classified non-responsive
-flow may have outstanding in the transmit queue. This value was configurable  between 0-255.
+\item Aggressive Buffers --- This is the maximum number of packets a classified non-responsive
+flow may have outstanding in the transmit queue. This value was configurable  between 0--255.
 Any flow having more than this many packets in queue that is considered aggressive will have
 new packets dropped.
 
-\item Exceeds Action - This item can be set to either use ECN or not use ECN. When not
+\item Exceeds Action --- This item can be set to either use ECN or not use ECN. When not
 using ECN, the switch signals with a packet drop. With ECN on, flows supporting
 ECN will mark the packet instead of drop.
 
-\item Exceeds Action Probability - This is a percentage of random times that the Exceed
-Action will happen (i.e. a packet will be dropped or marked).
+\item Exceeds Action Probability --- This is a percentage of random times that the Exceed
+Action will happen (i.e.~a packet will be dropped or marked).
 
 \end{enumerate}
 
  When first examining the switch configuration, it appeared that just by setting some reasonable values in these
  control fields we would obtain ECN marking or drops (based on the configuration). A first attempt was made on a Gigabit
  link using TCP\footnote{We initially used TCP in our initial tests to validate that the switch would do ECN since
- we were unsure, at first, if SCTP would be properly marked. Later we switched back to SCTP to do all of our measurements
+ we were unsure, at first, if SCTP would be properly marked. Later we switched to SCTP to do all of our measurements
  after confirming that the switch would mark SCTP packets.},
  but in trying incast experiments with the eleven servers we had resulted in no DBL  
  activity drops or ECN. Further investigation into the switch showed us that each Gigabit link has 1920 packet
@@ -201,7 +213,7 @@ Action will happen (i.e. a packet will be dropped or marked).
  would leave somewhere between 90-120 packets available before the transmit queue would overflow.
  
  It was felt that this configuration would be closer to what could be obtained with a more
- configurable switch with less buffer space (i.e. somewhere in the range of a switch with
+ configurable switch with less buffer space (i.e.~somewhere in the range of a switch with
  100 packet buffers available configured to start marking packets around 10).  The only downside
  to this configuration was that with 130 or more packets in queue before marking began the
  round trip time, normally around 115us, would increase to up to 14-15ms.
@@ -220,42 +232,27 @@ Here we show the basic QOS DBL configuration used. It was
 also not ever certain that the CAT 4500 could actually distinguish SCTP ports in separate flows.\footnote{This
 may mean that the switch always saw traffic from each machine as a single flow, but this will have no impact on
 our results since all measurements would be impacted (ECN and non-ECN) in the same way.}
- \\
-
+\begin{verbatim}
 no qos dbl flow include vlan
-
 qos dbl exceed-action ecn
-
 qos dbl exceed-action probability 100
-
 qos dbl credits aggressive-flow 5
-
 qos dbl buffers aggressive-flow 255
-
 qos dbl   
-
 qos
-\\
+\end{verbatim}
 A show qos dbl on our CAT 4500 displays the following:
-
+\begin{verbatim}
 QOS is enabled globally
-
 DBL is enabled globally
-
 DBL flow does not include vlan
-
 DBL flow includes layer4-ports
-
 DBL uses ecn to indicate congestion
-
-DBL exceed-action probability: 100\%
-
+DBL exceed-action probability: 100%
 DBL max credits: 15
-
 DBL aggressive credit limit: 5
-
 DBL aggressive buffer limit: 255 packets
-
+\end{verbatim}
 
 \subsubsection {POLICY MAP AND CLASS MAP}
 
@@ -266,48 +263,36 @@ are high enough for both our 100 Megabit and Gigabit links so that
 the shaping action would never be applied to the interface. Only the
 QOS DBL actions would influence the transmit queue. Shaping actions
 on a Cisco 4500 happen before DBL actions.
-\\
-
+\begin{verbatim}
 class-map match-all c1
-
-~match any 
-\\
+ match any 
 
 policy-map p2
-
-~class c1
-  
-~~dbl
-    
-~~police 1000 mbps 100 kbyte conform-action transmit exceed-action drop 
-
+ class c1 
+  dbl  
+  police 1000 mbps 100 kbyte conform-action transmit exceed-action drop 
+\end{verbatim}
 \subsubsection {Example Interface Configuration}
 
 Here is an example of our specific interface configurations. Notice that 
 for Gigiabit interfaces we turned off flow control in the initial attempts at
 trying to use these interface to get ECN markings.
-\\
-
+\begin{verbatim}
 interface FastEthernet2/48
-
-~~service-policy output p2
-\\
-
+service-policy output p2
 
 interface GigabitEthernet3/1
-
-~~flowcontrol receive off
- 
-~~service-policy output p2
-
+  flowcontrol receive off
+  service-policy output p2
+\end{verbatim}
 
  
 \section{Targeted Communication Pattern}
 In examining the results of DC-TCP it was decided to focus specifically on the interactions between
 the elephant flows (in a datacenter those flows updating data bases in the order of a constant one or two flows
-sized randomly at about 100-500 Megabyte per flows) and the mice partition/aggregation type flows that typically 
+sized randomly at about 100--500 Megabyte per flows) and the mice partition/aggregation type flows that typically 
 can cause incast. In the following subsections we describe each client and server that was created for
-our experiments and is available online at http://www.freebsd.org/\~rrs/dccc.tar.gz.
+our experiments and is available online at \texttt{http://www.freebsd.org/\textasciitilde rrs/dccc.tar.gz}.
 
 \subsection{Partition/Aggregation Flows}
 \label{partition}
@@ -319,7 +304,7 @@ as rapidly as possible with normally a small number of packets of data. The requ
 this data and sends it back to the external requestor. Since most of the aggregate servers will respond
 at almost the same time the partition/aggregation work model precisely fits a description of incast. 
 
-To simulate incast on our small testbed we built a client (incast\_client.c) and a server (incast\_server.c).
+To simulate incast on our small testbed we built a client (\texttt{incast\_client.c}) and a server (\texttt{incast\_server.c}).
 The servers are quite simple. They basically do the following:
 \begin{enumerate}
 
@@ -341,6 +326,7 @@ size and then closes the socket, returning to the accept call.
 
 The server
 was always bound to the single address that our CAT 4500 was connected to the hosts over\footnote{In our case 10.1.5.X}.
+\marginpar{Add reference to the figure I suggested}
 The server also accepted one other important option, the option to run over SCTP or TCP. This allowed us to use
 the same server in both our early testing, validating the switches configuration for ECN, and our final tests
 using SCTP.
@@ -348,71 +334,56 @@ using SCTP.
 The clients were a bit more complicated. It was decided to build a universal 
 configuration file that could be reused to describe all of the peers that any
 particular machine had. An example of the file from `bsd3` is shown below:
-\\
-
+\begin{verbatim}
 sctp:on
-
 peer:10.1.5.24:0:bsd1:4:
-
 peer:10.1.5.23:0:bsd2:4:
-
 peer:10.1.5.22:0:bsd5:4:
-
 peer:10.1.5.21:0:bsd6:4:
-
 peer:10.1.5.20:0:bsd7:4:
-
 peer:10.1.5.19:0:bsd8:4:
-
 peer:10.1.5.18:0:bsd9:4:
-
 peer:10.1.5.17:0:bsd10:4:
-
 peer:10.1.5.16:0:bsd11:4:
-
 peer:10.1.5.15:0:bsd4:8:
-
 times:0
-
 sends:1448
-
 sendc:2
-
 bind:10.1.5.14:0:bsd3:8:
-\\
+\end{verbatim}
 
-All fields within the file are separated by the `:` character.
-The first line in the example hold either `sctp:on' or `tcp:on'. This controls which transport protocol
+All fields within the file are separated by the \texttt{:} character.
+The first line in the example hold either \texttt{sctp:on} or \texttt{tcp:on}. This controls which transport protocol
 the incast\_client will use. 
 
-The peer line is made up of the keyword `peer' followed by the IP address of the particular
+The peer line is made up of the keyword \texttt{peer} followed by the IP address of the particular
 machine running the server. The next field holds the port  number the server is
 running on (the value 0 specifies to use the default value for the server\footnote{For the incast
 client the default server port was 9902.}). The next field represents the hostname of the peer. This value 
 is used only by some of the data processing routines. The final field represents how many bytes a
 long holds; This was used again by our data processing routines to determine what record format
-to read\footnote{32 bit machines write the value for a time as two 4 byte longs where as 64 bit machines
-write the value as two 8 byte longs.}.
+to read\footnote{32~bit machines write the value for a time as two 4~byte longs where as 64~bit machines
+write the value as two 8~byte longs.}.
 
-The line containing the keyword `times' indicates how many times to run the test, a value of 0
+The line containing the keyword \texttt{times} indicates how many times to run the test, a value of 0
 means run infinitely.
 
-The keyword `sends' indicates how many bytes to send. We always elected 1448 since this is
+The keyword \textt{sends} indicates how many bytes to send. We always elected 1448 since this is
 the number of bytes that will fit in a typical timestamped TCP packet, SCTP is actually capable
 of fitting 1452 bytes, but it was decided to keep the same exact configuration without changing
 the number of bytes in each packet.
 
-The keyword `sendc' specifies how many packets the client should request of the incast\_server.
+The keyword \texttt{sendc} specifies how many packets the client should request of the incast\_server.
 
 The final line indicates the actual address and port to bind. The format is the same as that
-of a `peer' entry with the only difference being a `bind' keyword.
+of a \texttt{peer} entry with the only difference being a \texttt{bind} keyword.
 
 Once the configuration file is loaded (passed to the incast\_client program with the required
--c option), the process creates a kqueue, which it uses to multiplex responses from
+\texttt{-c} option), the process creates a kqueue, which it uses to multiplex responses from
 servers. It then enters a loop for the requested number of times (which may be infinite) and
 does the following:
 
-\newpage
+%\newpage
 
 \begin{enumerate}
 
@@ -450,7 +421,7 @@ responding peers with there timings.
 With the combination of this client and our servers, we were thus able to track and show incidents
 of incast.
 
-\newpage
+%\newpage
 
 \subsection{Elephant Flows}
 \label{elephants}
@@ -458,9 +429,9 @@ To simulate any datacenter like traffic, a small number of large flows is also n
 real datacenter, these flows would provide updates to the various databases that all the query traffic is attempting to access. 
 
 It was decided to simulate these flows
-with a server (elephant\_sink.c) and a client(elephant\_source.c). In the simulations, each machine ran
-an elephant\_sink; but only two machines were chosen to run the elephant\_source client. The hosts
-that ran the elephant\_source (bsd3 and bsd4) were our two eight core 64 bit machines, connected to the switch
+with a server~(\texttt{elephant\_sink.c}) and a client~(\texttt{elephant\_source.c}). In the simulations, each machine ran
+an \texttt{elephant\_sink}; but only two machines were chosen to run the \texttt{elephant\_source} client. The hosts
+that ran the elephant\_source (bsd3 and bsd4) were our two eight core 64~bit machines, connected to the switch
 via a Gigabit ethernet port. This allowed the elephant flows to always push at filling the transmit queues
 of the 100 Megabit clients. One additional host (bsd8) was also connected via Gigabit ethernet to provide
 an additional push on transmit queues while running the incast\_client. Note that the elephant flows that
@@ -483,7 +454,7 @@ single address to disable SCTP's multihoming feature.}:
 
 \item Subtract the two monotonic clock values to come up with the time of the transfer.
 
-\newpage
+%\newpage
 
 \item Display the results either to the user (if no output file was configured with the -w option) or save
 it to the output file. The results include the size of the transfer, the number of seconds and nanosecond
@@ -506,7 +477,7 @@ do the following:
 \item Record in a header the precise realtime of the pass start.
 
 \item Distribute the data to each peer, to do this we would connect to each peer (turning on 
-NODELAY~\footnote{NODELAY turns any Nagle\cite{rfc896} like algorithm off.} ), record the
+NODELAY\footnote{NODELAY turns any Nagle\cite{rfc896} like algorithm off.}), record the
 precise monotonic clock with the peer record, send the specified number of bytes
 and close the connection. After closing the connection again, record the end monotonic 
 precise time.
@@ -543,20 +514,26 @@ standard TCP ECN. This is due to the fact that SCTP was not limited to two bits
 in a header to indicate ECN and so provides a much richer environment for its
 implementation. The normal response of SCTP to an ECN Echo event is the same
 as TCP in any loss within a single window of data:
-\begin{equation}
-\begin{split}
-&ssthresh = cwnd / 2\\
-if (ssthresh < &mtu) \{ ssthresh = mtu; RTO <<= 1 \} \\
-&cwnd = ssthresh
-\end{split}
-\end{equation}
-
+\begin{figure}[h!]
+\begin{verbatim}
+ssthresh = cwnd / 2
+if (ssthresh < mtu) {
+  ssthresh = mtu;
+  RTO <<= 1;
+}
+cwnd = ssthresh;
+\end{verbatim}
+\caption{Algorithm~1}
+\label{algo1}
+\end{figure}
 Basically when one or more losses occur in a single window of data, the cwnd is halved and
 the ssthresh is set to the same value. When a ecn\_echo is received the congestion
 control algorithm is given two extra pieces of information besides the stcb and the 
-net structures. These two extra pieces are key to our new DCCC algorithm, they are
+net structures.
+\marginpar{Explain stcb and net structure}
+These two extra pieces are key to our new DCCC algorithm, they are
 the in\_window flag as well as the number of packets marked. The in\_window flag
-is used by the current algorithm to know if it should perform equation (1) or not and
+is used by the current algorithm to know if it should perform algorithm shown in Figure~\ref{algo1} or not and
 the number of packets marked is ignored by the existing algorithm. For
 our new algorithm we will use both these values combined with another value passed
 to us via the network structure (net).
@@ -566,18 +543,21 @@ window at the time the send was made. When an ECN Echo arrives, before calling
 the modular congestion control, an attempt to find the TSN being reported is made. The TSN
 will always be found if the ECN Echo is in a new window of data. If the TSN
 is found, the previous cwnd at the time that the TSN was sent, is recorded on
-the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in equation (2).
+the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Figure~\ref{algo2}.
 
-\begin{equation}
-\begin{split}
-if (&in\_window == 0) \\
-&cwnd = ecn\_prev\_cwnd - (mtu * num\_pkt\_marked) \\
-&ssthresh = cwnd - (num\_pkt\_marked * mtu) \\
-els&e\\
-&ssthresh -= mtu * num\_pkt\_marked \\
-&cwnd -= mtu * num\_pkt\_marked
-\end{split}
-\end{equation}
+\begin{figure}[h!]
+\begin{verbatim}
+if (in_window == 0) {
+  cwnd = ecn_prev_cwnd - (mtu * num_pkt_marked);
+  ssthresh = cwnd - (num\_pkt\_marked * mtu);
+} else {
+  cwnd -= mtu * num_pkt_marked;
+  ssthresh -= mtu * num_pkt_marked;
+}
+\end{verbatim}
+\caption{Algorithm~2}
+\label{algo2}
+\end{figure}
 
 It is important to remember when looking at SCTP congestion control parameters there
 is a separate set of parameters for each destination address (RTO, cwnd, ssthresh and mtu). In
@@ -587,16 +567,16 @@ by binding explicitly a single address.
 As noted earlier we also used a third algorithm as well. We termed this version dynamic DCCC. This
 is because the algorithm would switch between normal ECN behavior and DCCC based on the
 initial round trip time measured on the first data packet. SCTP uses this value to try to determine
-if the destination address is on a local lan. If it thinks that it is on a local lan (i.e. having a round
+if the destination address is on a local lan. If it thinks that it is on a local lan (i.e.~having a round
 trip time of under 1.1ms), then it sets a flag to indicate that. Our dynamic algorithm simply used
-that flag to switch between equation (1) and equation (2).
+that flag to switch between the algorithms shown in Figure~\ref{algo1} and Figure~\ref{algo2}.
 
 \section{Measurements}
 \label{measure}
 First it was decided to examine incast and how the three algorithms (DCCC, DYN-DCCC and ECN) compared with
-running plain SCTP in our network. We thus started an incast\_server and elephant\_sink on each machine (bsd1-11) and then 
+running plain SCTP in our network. We thus started an incast\_server and elephant\_sink on each machine (bsd1--bsd11) and then 
 started an incast\_client passing it options to start collecting data. Once all incast servers were busily attempting to cause
-incast, we started two elephant sources one on bsd3 the other on bsd4. With the switch configured to drop, i.e. not do ecn, we
+incast, we started two elephant sources one on bsd3 the other on bsd4. With the switch configured to drop, i.e.~not do ecn, we
 then record all results and were able to obtain the plots show in Figure~\ref{fig:noEcnIncast}\footnote{Time below 15ms excluded}.
 \begin{figure}[h]
 \centering
@@ -604,6 +584,8 @@ then record all results and were able to obtain the plots show in Figure~\ref{fi
 \caption{Normal SCTP transfers experiencing incast}
 \label{fig:noEcnIncast}
 \end{figure}
+
+\marginpar{Provide units on the y-axis}
 
 In Figure~\ref{fig:noEcnIncast} we see incast occurring in cases where the time to complete a transfer exceeds
 300ms\footnote{The default RTO.min timeout value for SCTP}. In some cases we see more than
@@ -621,6 +603,8 @@ lead to the results seen in Figure~\ref{fig:ecnIncast}\footnote{Time below 15ms 
 \caption{Normal SCTP with ECN experiencing incast}
 \label{fig:ecnIncast}
 \end{figure}
+
+\marginpar{Provide units on the y-axis}
 
 Note that simply enabling ECN on the switch with our settings reduces the incidents of incast to a minimal
 level. There are only 4 occurrences of incase that reach the 300ms level. This is a vast improvement over
@@ -644,6 +628,8 @@ results from this run can be seen in Figure~\ref{fig:dcccIncast}\footnote{Time b
 \label{fig:dcccIncast}
 \end{figure}
 
+\marginpar{Provide units on the y-axis}
+
 Surprisingly, the actually occurrence of incast increases in this graph to 34 separate incidents. This
 was definitely unexpected, but with a look at some of our further graphs we will see possible
 reasons why so much unexpected incast is occuring.
@@ -662,6 +648,8 @@ seen when transfer of data first begins. The results of this run can be seen in 
 \label{fig:dynIncast}
 \end{figure}
 
+\marginpar{Provide units on the y-axis}
+
 Surprisingly, we see no incidents of incast over 300ms. This again is a quite unexpected
 outcome since we had anticipated no differences between DCCC (with its 34 incidents) and
 the dynamic version. If we turn, however, to the elephant graphs, we can reach a conclusion
@@ -669,7 +657,7 @@ as to why these incidents are occurring.
 
 \newpage
 
-Now lets look at  four graphs of the elephant transfers that were being run while all
+Now lets look at four graphs of the elephant transfers that were being run while all
 the incast was occurring. Figure~\ref{fig:noEcnBw} shows a normal SCTP transfer with
 ECN disabled. Note the huge swings downward in throughput for both
 flows when the flows collide and share transfer to the same machine. 
@@ -678,7 +666,7 @@ During these incidents, we can be sure large number of drops are occurring. A lo
 information tells us that not only are DBL drops occurring but also tail
 drops from transmit queue overflows are occurring as well.  The switch reports 19,312 DBL drops
 and 46 Transmit queue drops. The SCTP statistics shows
-a large number of T3-Timeouts i.e. 1360. Any T3 timeout in the incast test would definitely
+a large number of T3-Timeouts i.e.~1360. Any T3 timeout in the incast test would definitely
 cause an incident of incast since there is not enough data in the pipe to enable fast retransmits with
 only two packets being sent.
 
@@ -688,6 +676,8 @@ only two packets being sent.
 \caption{Bandwidth of two flows no ECN}
 \label{fig:noEcnBw}
 \end{figure}
+
+\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 \newpage
 
@@ -704,6 +694,8 @@ number seen in the instance of no ECN.
 \caption{Bandwidth of two flows with ECN}
 \label{fig:ecnBw}
 \end{figure}
+
+\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 \newpage
 
@@ -723,6 +715,8 @@ appears to be better (we will look at this in a comparison bar chart).
 \label{fig:dcccBw}
 \end{figure}
 
+\marginpar{What is shown on the y-axis? Don't provide only the unit}
+
 \newpage
 
 Finally, the bandwidth of our Dynamic DCCC is shown in Figure~\ref{fig:dynBw}. Clearly the
@@ -736,6 +730,8 @@ the lack of incast on our earlier incast chart for Dynamic DCCC.
 \caption{Bandwidth of two flows with Dynamic DCCC}
 \label{fig:dynBw}
 \end{figure}
+
+\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 You can definitely see, when examining this graph, that the large flow that arrives first on a particular
 host is being more aggressive, while the later arriving large flow is less aggressive. This is due to
@@ -786,11 +782,11 @@ So what should switch vendors take away from these results?
 
 \item They should have an implementation of ECN for their datacenter switches (having one
 for non-datacenter switches could also be a benefit to their products too). This
-should not be too hard since many of the more modern switch an a chip's (e.g. BCM56820)
+should not be too hard since many of the more modern switch an a chip's (e.g.~BCM56820)
 already support ECN in hardware and its just a matter of allowing its users access to those
 hardware features.
 
-\item Vendors need to allow configuration for both `network level settings' (i.e. those classically called
+\item Vendors need to allow configuration for both `network level settings' (i.e.~those classically called
 for by ECN) and `Datacenter settings'. Network level settings would allow the switch to use average queue
 size and hopefully set thresholds to start marking and dropping in terms of percentage of queue occupied by
 a flow. Datacenter settings would allow a switch to be configured for observing instantaneous queue size
@@ -812,7 +808,7 @@ attractive since if it was implemented, it could easily exist on the internet wi
 off in cases of a longer RTT time\footnote{We used 1.1ms but would think something smaller, perhaps 700us would
 be better for general deployment}). 
 
-In thinking of our limited switch configuration, if this was changed so that marking could begin at 5-10 packets
+In thinking of our limited switch configuration, if this was changed so that marking could begin at 5--10 packets
 would we see the same results? Clearly the dynamic DCCC would become less dynamic and may look more
 like plain DCCC. But would plain DCCC do better since it would no longer be hitting tail drops 
 by overrunning the switch transmit queues? Also the plain SCTP-ECN variant may well perform less well 
@@ -824,7 +820,7 @@ a way as to provide insights into these questions.
 
 \section*{Acknowledgment}
 
-Thanks to George Nevile-Neil and Michael T\"uxen for agreeing to review this work privately, my children Randall Jr. and Anne who also have been inflicted upon by their father for their comments, and special thanks to my editor,
+Thanks to George Nevile-Neil and Michael T\"uxen for agreeing to review this work privately, my children Randall Jr.~and Anne who also have been inflicted upon by their father for their comments, and special thanks to my editor,
 companion, and sweetheart Sandra Stewart.
 
 \section*{Appendix A - Whats in the tarball?}
@@ -833,38 +829,38 @@ these utilities were used to generate data not presented here, but they may be o
 to those attempting to recreate the results. All software is released under BSD license.
 
 
-\begin{enumerate}
+\begin{description}
 
-\item display\_ele\_client.c - This program understands how to access stored elephant results file from a
+\item[display\_ele\_client.c] This program understands how to access stored elephant results file from a
 client and will further look for timing from the stored elephant\_sink output results. A common naming
 scheme is used to find the files, and the store option really takes a directory path prefix. 
 
-\item display\_ele\_sink.c - This program knows how to read a single elephant sink file.
+\item[display\_ele\_sink.c] This program knows how to read a single elephant sink file.
 
-\item display\_inc\_client.c - This program has the ability to read and interpret the incast client output.
+\item [display\_inc\_client.c] This program has the ability to read and interpret the incast client output.
 
-\item ele\_aggregator.c - This utility was used to aggregate multi-machine elephant output.
+\item [ele\_aggregator.c] This utility was used to aggregate multi-machine elephant output.
 
-\item elephant\_sink.c - This utility was described earlier and is the actual measurement tool for elephant flows.
+\item [elephant\_sink.c] This utility was described earlier and is the actual measurement tool for elephant flows.
 
-\item elephant\_source.c - This utility was described earlier and contains the client code that drives the elephant
+\item [elephant\_source.c] This utility was described earlier and contains the client code that drives the elephant
 flows.
 
-\item incast\_client.c - This is the incast generation program described earlier.
+\item [incast\_client.c] This is the incast generation program described earlier.
 
-\item incast\_lib.c - This is the common library utilities that most of these programs used.
+\item [incast\_lib.c] This is the common library utilities that most of these programs used.
 
-\item incast\_server.c - This is the incast server described earlier.
+\item [incast\_server.c] This is the incast server described earlier.
 
-\item per\_aggregator.c - This utility is yet another aggregator used in summing data.
+\item [per\_aggregator.c] This utility is yet another aggregator used in summing data.
 
-\item read\_cap.c - This utility is a special pcap reader capable of reading a tcpdump~\footnote{providing the -s0 option
+\item [read\_cap.c] This utility is a special pcap reader capable of reading a tcpdump\footnote{providing the -s0 option
 is used with the tcpdump} or tshark dump. It analyzes SCTP flow information and can create output for gnuplot
 to observe packets outstanding as well as packets outstanding when ECN Echo's occur.
 
-\item sum\_aggregator.c - This is yet another aggregation utility.
+\item [sum\_aggregator.c] This is yet another aggregation utility.
 
-\end{enumerate}
+\end{description}
 
 \begin{thebibliography}{8}
 
@@ -883,26 +879,26 @@ to observe packets outstanding as well as packets outstanding when ECN Echo's oc
 \bibitem{rfc3168}  K~Ramakrishnan, S~Floyd, D~Black,
   ``The Addition of Explicit Congestion Notification (ECN) to IP'',
   \textit{RFC~3168},
-  September~2001
+  September~2001.
  
 \bibitem{rfc793}  J~Postel,
   ``Transmission Control Protocol'',
   \textit{RFC~793},
-  September~1981
+  September~1981.
   
 \bibitem{rfc4960} R.~Stewart,
   ``Stream Control Transmission Protocol'',
   \textit{RFC~4960},
- September~2007
+ September~2007.
  
  \bibitem{jana}J Iyengar et. al.,
  ``Concurrent Multipath Transfer Using SCTP Multihoming'',
- In SPECTS, 2004
+ In SPECTS, 2004.
  
  \bibitem{rfc896}  J~Nagle,
  ``Congestion Control in IP\/TCP Internetworks'',
   \textit{RFC~896},
- January~1984
+ January~1984.
  
 \end{thebibliography}
 
