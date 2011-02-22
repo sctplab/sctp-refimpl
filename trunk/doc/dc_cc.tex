@@ -42,8 +42,9 @@ within the datacenter. In this paper we attempt to revisit some of the DC-TCP  w
 to provide the appropriate ECN marking.
 \item Instead of using the DC-TCP algorithm we have defined a less compute intensive modification
 to ECN we call Data Center Congestion Control (DCCC), implementing it within our FreeBSD SCTP stack.
-\item We compare standard SCTP, SCTP with ECN, SCTP with Dynamic DCCC and SCTP with DCCC.
-\marginpar{Introduce \emph{Dynamic DCCC}}
+\item We compare four variants of SCTP: standard SCTP, SCTP with ECN, SCTP with DCCC and an alternate
+form of DCCC we call Dynamic DCCC. This version of DCCC is capable of switching between regular ECN
+and DCCC based on the initial Round Trip Time (RTT) of the path. 
 \end{enumerate}
 
 \end{abstract}
@@ -65,9 +66,9 @@ work and encouraged this investigation.
 \item Why was plain ECN not used in the DC-TCP work? ECN itself was mentioned but no
 real measurements were performed contrasting DC-TCP and plain TCP with ECN.
 
-\item The algorithm defined by DC-TCP seemed somewhat complex and a bit difficult to
-implement; could there be a simpler method than prescribed that would obtain similar results?
-\marginpar{Can you specify \emph{somewhat complex}?}
+\item The algorithm defined by DC-TCP seemed somewhat complex by the use
+of both floating point numbers in its calculations and also with respect to its introduction
+of another state machine to track acknowledgement state; could there be a simpler method than prescribed that would obtain similar results?
 
 \item Could existing hardware, readily available from vendors, be used to reproduce these results? The
 DC-TCP paper explicitly mentions a  Broadcom Triumph,  Broadcom Scorpion, and Cisco CAT4948~\footnote{The 
@@ -127,19 +128,30 @@ for purchase on \emph{Ebay}. On average, we were able to obtain dual-core and qu
 servers with two Gigabit interface at reasonable costs\footnote{For these experiments we only used
 one interface but have plans to use this `datacenter' for future investigations  namely CMT.}. 
 
-\marginpar{Add a figure showing the setup of the machines, IP addresses switch here}
+Our final lab configuration can be seen in Figure~\ref{fig:labconfig}.
+
+\begin{figure}[h]
+\centering
+\epsfig{file=labconfig,scale=.45}
+\caption{Final Laboratory Configuration }
+\label{fig:labconfig}
+\end{figure}
+
+
 
 
 \subsection{Caveats with using the Cisco 4500}
 
 Initially after acquiring our Cat 4506, we found it lacked the necessary core CPU card
-to support ECN. Our switch came with a SUP-3 supervisor and a SUP-4\footnote{A special model
+to support ECN. Our switch came with a supervisor version 3 card (SUP-3) and a 
+Version 4 card (SUP-4)\footnote{A special model
 of a SUP-2 also would suffice but a more advanced CPU was thought to be a better
 choice for additional purchase.}  was a minimum
 requirement. So with another trip to \emph{Ebay} a newer SUP-4 was obtained. The
 next steps were to try to configure the switch in a way that would generate either drops
-or ECN with its 'DBL' feature.
-\marginpar{Introduce \emph{SUP} and \emph{DBL}}
+or ECN with its Data Buffer Limiting (DBL) feature. DBL allows ECN or Random Early
+Drop (RED) like features to be enabled on transmit queues within the switch.
+
 
 Our switch load was initially a 12.2(50)SG1 - IPbase version of IOS. After
 a lot of research and digging around we were able to get the DBL feature active, but it
@@ -155,10 +167,15 @@ basic settings that control the ECN feature.
 
 \item Maximum Credits - this value represents how many credits to issue to a
 flow.\footnote{Either identified via IP addresses or IP addresses and layer 4 ports.}
-The value was configurable between 1--15. Each
-packet above this threshold, added by the flow to the switches transmit queue when the
-switch decides it is congested, would decrement its credit.
-\marginpar{I don't understand this}
+The value was configurable between 1--15. A credit comes in to play only when
+the switch decides it is congested. At the point the switch does decide it is
+congested, it then issues this number of credits to all identified flows\footnote{In the
+case where layer 4 ports are not used then a flow is considered any packets between
+a source and destination IP address.}. Every additional packet a flow adds to the outgoing
+transmit queue decrements the number of credits it has available. If the flow does NOT
+respond by reducing its rate of sending, then it may reach the point where it reaches the `Aggressive
+Credits' threshold. If it does it will be treated as an aggressive non-responsive flow.
+
 
 \item Aggressive Credits --- This value represents when a flow that is not responding begins
 to be considered as a non-responsive flow. The aggressive credits value
@@ -325,8 +342,8 @@ size and then closes the socket, returning to the accept call.
 \end{enumerate}
 
 The server
-was always bound to the single address that our CAT 4500 was connected to the hosts over\footnote{In our case 10.1.5.X}.
-\marginpar{Add reference to the figure I suggested}
+was always bound to the single address that our CAT 4500 was connected to the hosts over\footnote{In our case 10.1.5.X}
+see Figure~\ref{fig:labconfig}.
 The server also accepted one other important option, the option to run over SCTP or TCP. This allowed us to use
 the same server in both our early testing, validating the switches configuration for ECN, and our final tests
 using SCTP.
@@ -368,7 +385,7 @@ write the value as two 8~byte longs.}.
 The line containing the keyword \texttt{times} indicates how many times to run the test, a value of 0
 means run infinitely.
 
-The keyword \textt{sends} indicates how many bytes to send. We always elected 1448 since this is
+The keyword \texttt{sends} indicates how many bytes to send. We always elected 1448 since this is
 the number of bytes that will fit in a typical timestamped TCP packet, SCTP is actually capable
 of fitting 1452 bytes, but it was decided to keep the same exact configuration without changing
 the number of bytes in each packet.
@@ -514,26 +531,29 @@ standard TCP ECN. This is due to the fact that SCTP was not limited to two bits
 in a header to indicate ECN and so provides a much richer environment for its
 implementation. The normal response of SCTP to an ECN Echo event is the same
 as TCP in any loss within a single window of data:
-\begin{figure}[h!]
-\begin{verbatim}
-ssthresh = cwnd / 2
-if (ssthresh < mtu) {
-  ssthresh = mtu;
-  RTO <<= 1;
-}
-cwnd = ssthresh;
-\end{verbatim}
-\caption{Algorithm~1}
+
+\begin{equation}
+\begin{split}
+&ssthresh = cwnd / 2\\
+&if (ssthresh < mtu)~\{ \\
+&~~~ssthresh = mtu; \\
+&~~~RTO <<= 1\\
+&\} \\
+&cwnd = ssthresh
+\end{split}
 \label{algo1}
-\end{figure}
+\end{equation}
+
 Basically when one or more losses occur in a single window of data, the cwnd is halved and
-the ssthresh is set to the same value. When a ecn\_echo is received the congestion
+the ssthresh is set to the same value. When an ecn\_echo is received, the congestion
 control algorithm is given two extra pieces of information besides the stcb and the 
-net structures.
-\marginpar{Explain stcb and net structure}
+net structures\footnote{The stcb and net structures are internal structure used within the FreeBSD SCTP
+stack to track the specific SCTP association (stcb) and the specific details of a peers destination
+address (net)}.
+
 These two extra pieces are key to our new DCCC algorithm, they are
 the in\_window flag as well as the number of packets marked. The in\_window flag
-is used by the current algorithm to know if it should perform algorithm shown in Figure~\ref{algo1} or not and
+is used by the current algorithm to know if it should perform algorithm shown in Equation [1] or not and
 the number of packets marked is ignored by the existing algorithm. For
 our new algorithm we will use both these values combined with another value passed
 to us via the network structure (net).
@@ -543,21 +563,19 @@ window at the time the send was made. When an ECN Echo arrives, before calling
 the modular congestion control, an attempt to find the TSN being reported is made. The TSN
 will always be found if the ECN Echo is in a new window of data. If the TSN
 is found, the previous cwnd at the time that the TSN was sent, is recorded on
-the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Figure~\ref{algo2}.
+the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Equation [2].
 
-\begin{figure}[h!]
-\begin{verbatim}
-if (in_window == 0) {
-  cwnd = ecn_prev_cwnd - (mtu * num_pkt_marked);
-  ssthresh = cwnd - (num\_pkt\_marked * mtu);
-} else {
-  cwnd -= mtu * num_pkt_marked;
-  ssthresh -= mtu * num_pkt_marked;
-}
-\end{verbatim}
-\caption{Algorithm~2}
-\label{algo2}
-\end{figure}
+\begin{equation}
+\begin{split}
+if (&in\_window == 0)~\{ \\
+&cwnd = ecn\_prev\_cwnd - (mtu * num\_pkt\_marked) \\
+&ssthresh = cwnd - (num\_pkt\_marked * mtu) \\
+\}~e&lse~\{\\
+&ssthresh -= mtu * num\_pkt\_marked \\
+&cwnd -= mtu * num\_pkt\_marked\\
+\}~~&
+\end{split}
+\end{equation}
 
 It is important to remember when looking at SCTP congestion control parameters there
 is a separate set of parameters for each destination address (RTO, cwnd, ssthresh and mtu). In
@@ -569,7 +587,7 @@ is because the algorithm would switch between normal ECN behavior and DCCC based
 initial round trip time measured on the first data packet. SCTP uses this value to try to determine
 if the destination address is on a local lan. If it thinks that it is on a local lan (i.e.~having a round
 trip time of under 1.1ms), then it sets a flag to indicate that. Our dynamic algorithm simply used
-that flag to switch between the algorithms shown in Figure~\ref{algo1} and Figure~\ref{algo2}.
+that flag to switch between the algorithms shown in Equation [1] and Equation [2].
 
 \section{Measurements}
 \label{measure}
@@ -584,8 +602,6 @@ then record all results and were able to obtain the plots show in Figure~\ref{fi
 \caption{Normal SCTP transfers experiencing incast}
 \label{fig:noEcnIncast}
 \end{figure}
-
-\marginpar{Provide units on the y-axis}
 
 In Figure~\ref{fig:noEcnIncast} we see incast occurring in cases where the time to complete a transfer exceeds
 300ms\footnote{The default RTO.min timeout value for SCTP}. In some cases we see more than
@@ -604,7 +620,6 @@ lead to the results seen in Figure~\ref{fig:ecnIncast}\footnote{Time below 15ms 
 \label{fig:ecnIncast}
 \end{figure}
 
-\marginpar{Provide units on the y-axis}
 
 Note that simply enabling ECN on the switch with our settings reduces the incidents of incast to a minimal
 level. There are only 4 occurrences of incase that reach the 300ms level. This is a vast improvement over
@@ -628,7 +643,6 @@ results from this run can be seen in Figure~\ref{fig:dcccIncast}\footnote{Time b
 \label{fig:dcccIncast}
 \end{figure}
 
-\marginpar{Provide units on the y-axis}
 
 Surprisingly, the actually occurrence of incast increases in this graph to 34 separate incidents. This
 was definitely unexpected, but with a look at some of our further graphs we will see possible
@@ -647,8 +661,6 @@ seen when transfer of data first begins. The results of this run can be seen in 
 \caption{Dynamic DCCC ECN experiencing incast}
 \label{fig:dynIncast}
 \end{figure}
-
-\marginpar{Provide units on the y-axis}
 
 Surprisingly, we see no incidents of incast over 300ms. This again is a quite unexpected
 outcome since we had anticipated no differences between DCCC (with its 34 incidents) and
@@ -677,7 +689,6 @@ only two packets being sent.
 \label{fig:noEcnBw}
 \end{figure}
 
-\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 \newpage
 
@@ -695,7 +706,6 @@ number seen in the instance of no ECN.
 \label{fig:ecnBw}
 \end{figure}
 
-\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 \newpage
 
@@ -715,7 +725,6 @@ appears to be better (we will look at this in a comparison bar chart).
 \label{fig:dcccBw}
 \end{figure}
 
-\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 \newpage
 
@@ -752,7 +761,7 @@ if it also includes the number of ECN marked packets that would have been droppe
 Finally, Figure~\ref{fig:aggBw}  shows us an aggregate bandwidth comparison of the 
 overall throughput of the 4 different tests. Each of the two flows in the test are summed
 together to give an overall aggregate and then these are summed to give us the average
-goodput of the combined flows.
+goodput of the combined flow on a per second basis. 
 
 \begin{figure}[h]
 \centering
@@ -761,10 +770,13 @@ goodput of the combined flows.
 \label{fig:aggBw}
 \end{figure}
 
-As expected the ECN flow was better than the non-ECN flow by approximately 2.5\%. The
-pure DCCC flow increased its bandwidth by nearly 5\% over the standard SCTP with no ECN.
-And as expected from our earlier graphs, the Dynamic DCCC yielded close to a 7.5\% bandwidth
-improvement over standard SCTP.
+As expected the ECN flow was better than the non-ECN flow by approximately 2\%. The
+pure DCCC flow increased its bandwidth by nearly 5.5\% over the standard SCTP with no ECN.
+And as expected from our earlier graphs, the Dynamic DCCC yielded close to a 7.9\% bandwidth
+improvement over standard SCTP. As can be seen from the graph, this is quite a distance from the
+theoretical maximum. Note that the theoretical maximum includes a key assumption i.e. that 
+no two flows would be transferring to the same computer at the same time. This could only
+be achieved by flow coordination between the two elephant flows.
 
 \section{Conclusion and Future work}
 
@@ -802,7 +814,7 @@ numbers with SCTP would be acceptable, but innovative providers could also use S
 \end{enumerate}
 
 Other conclusions from this work are much less clear. The performance gain of the various DCCC algorithms
-was evident but these gains were limited (5 and 7.5\%). Clearly this is an advantage, but is it an advantage
+was evident but these gains were limited (5.5 and 7.9\%). Clearly this is an advantage, but is it an advantage
 worth changing congestion control algorithms within the transport protocol? The dynamic version is obviously most
 attractive since if it was implemented, it could easily exist on the internet with no impact (since it would switch itself
 off in cases of a longer RTT time\footnote{We used 1.1ms but would think something smaller, perhaps 700us would
