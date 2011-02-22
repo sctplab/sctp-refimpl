@@ -65,8 +65,6 @@ sync_needed(struct entry *le, FILE **leftp,
 restart_closed:
 	if (left == NULL) {
 		/* Left is closed ... read out all the right */
-		fprintf(out, "%ld %ld\n",
-			re->timemark, re->bps);
 		while(fgets(localbuf, sizeof(localbuf), right) != NULL) {
 			fprintf(out, "%s", localbuf);
 		}
@@ -75,8 +73,6 @@ restart_closed:
 		return;
 	} else if (right == NULL) {
 		/* write is closed ... read out all the left */
-		fprintf(out, "%ld %ld\n",
-			le->timemark, le->bps);
 		while(fgets(localbuf, sizeof(localbuf), left) != NULL) {
 			fprintf(out, "%s", localbuf);
 		}
@@ -87,9 +83,6 @@ restart_closed:
 again:
 	/* Ok we have a valid right and left entry */
 	if(le->timemark > re->timemark) {
-		/* write out the right entry and read another */
-		fprintf(out, "%ld %ld\n",
-			re->timemark, re->bps);
 		/* read next right one */
 		if (fgets(localbuf, sizeof(localbuf), right) == NULL) {
 			fclose(right);
@@ -102,9 +95,6 @@ again:
 		goto again;
 
 	} else if (re->timemark > le->timemark) {
-		/* write out the left entry and read another */
-		fprintf(out, "%ld %ld\n",
-			le->timemark, le->bps);
 		if (fgets(localbuf, sizeof(localbuf), left) == NULL) {
 			fclose(left);
 			left = NULL;
