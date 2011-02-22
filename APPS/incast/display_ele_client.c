@@ -146,6 +146,7 @@ main(int argc, char **argv)
 				printf("Error divsor must be 1 or > \n");
 				divsor = 1024;
 			}
+			break;
 		case 'O':
 			one_print_per = 1;
 			break;
