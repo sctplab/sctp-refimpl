@@ -99,9 +99,8 @@ display_an_entry(struct incast_peer *peer,
 			(unsigned long)sink->number_bytes);
 
 	} else if (one_print_per) {
-			fprintf(out, "%ld %ld %ld\n",
-				(unsigned long)((sink->mono_end.tv_sec * 1000) +
-						(sink->mono_end.tv_nsec/1000000)),
+			fprintf(out, "%f %ld %ld\n",
+				tim,
 				(unsigned long)sink->number_bytes,
 				(unsigned long)hdr->start.tv_sec
 				);
