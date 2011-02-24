@@ -187,7 +187,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 		}
 	}
 }
-
 #ifdef SCTP_HAS_RTTCC
 
 int sctp_cc_rtt_stats[6] = { 0, 0, 0, 0, 0 };
