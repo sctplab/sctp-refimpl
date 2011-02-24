@@ -257,6 +257,14 @@ struct sctp_nets {
 	 * Things on the top half may be able to be split into a common
 	 * structure shared by all.
 	 */
+#ifdef SCTP_HAS_RTTCC
+	struct timeval tls;   /* The time we last sent */
+	uint64_t lbw;         /* Our last estimated bw */
+	uint64_t bw_bytes;    /* The total bytes since this sending began */
+	uint64_t bw_tot_time; /* The total time since sending began */
+	uint64_t bw_rtt;      /* The last recorded value */
+	uint64_t new_bw_rtt;  /* temp holding the new value */
+#endif 
 	struct sctp_timer pmtu_timer;
 
 	/*
@@ -284,6 +292,10 @@ struct sctp_nets {
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
+
+	/* JRS - struct used in HTCP algorithm */
+	struct htcp htcp_ca;
+
 	int ref_count;
 
 	/* Congestion stats per destination */
@@ -377,8 +389,9 @@ struct sctp_nets {
 	uint8_t RTO_measured;		/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
 	uint8_t lan_type;
-	/* JRS - struct used in HTCP algorithm */
-	struct htcp htcp_ca;
+#ifdef SCTP_HAS_RTTCC
+	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
+#endif
 #if defined(__FreeBSD__)
 	uint32_t flowid;
 #ifdef INVARIANTS

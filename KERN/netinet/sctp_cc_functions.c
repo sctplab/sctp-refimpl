@@ -188,6 +188,98 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	}
 }
 
+#ifdef SCTP_HAS_RTTCC
+static int
+cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
+{
+	uint64_t bw_offset, rtt_offset;
+	/*- 
+	 * Here we need to see if we want
+	 * to limit cwnd growth due to increase
+	 * in overall rtt but no increase in bw.
+	 * We use the following table to figure
+	 * out what we should do. When we return
+	 * 0, cc update goes on as planned. If we
+	 * return 1, then no cc update happens and cwnd
+	 * stays where it is at.
+	 * ----------------------------------
+	 *   BW    |    RTT   | Action
+	 * *********************************
+	 *   INC   |    INC   | return 0
+	 * ----------------------------------
+	 *   INC   |    SAME  | return 0
+	 * ----------------------------------
+	 *   INC   |    DECR  | return 0 
+	 * ----------------------------------
+	 *   SAME  |    INC   | return 1
+	 * ----------------------------------
+	 *   SAME  |    SAME  | return 1
+	 * ----------------------------------
+	 *   SAME  |    DECR  | return 0
+	 * ----------------------------------
+	 *   DECR  |    INC   | return 0 (?) -- should we look at offered load from us?
+	 * ----------------------------------
+	 *   DECR  |    SAME  | return 0 (?) -- should we look at offered load from us?
+	 * ----------------------------------
+	 *   DECR  |    DECR  | return 0
+	 * ----------------------------------
+	 *
+	 * We are a bit fuzz on what an increase or
+	 * decrease is. For BW it is the same if
+	 * it did not change within 1/64th. For
+	 * RTT it stayed the same if it did not
+	 * change within 1/32nd
+	 */
+	bw_offset = net->lbw >> 6;
+	if (nbw > net->lbw+bw_offset) {
+		/* BW increased, so update and
+		 * return 0, since all actions in 
+		 * our table say to do the normal CC
+		 * update
+		 */
+		net->lbw = nbw;
+		net->bw_rtt = net->new_bw_rtt;
+		return(0);
+	}
+	if (nbw < net->lbw-bw_offset) {
+		/* Bandwidth decreased. Again
+		 * (for now) our table says
+		 * do the normal thing. We
+		 * may change this later. But
+		 * for now not.
+		 */
+		net->lbw = nbw;
+		net->bw_rtt = net->new_bw_rtt;
+		return(0);
+	}
+	/* If we reach here then
+	 * we are in a situation where
+	 * the bw stayed the same.
+	 */
+	rtt_offset = net->bw_rtt >> 5;
+	if (net->new_bw_rtt  > net->bw_rtt+rtt_offset) {
+		/*
+		 * rtt increased 
+		 * we don't update bw.. its the same.
+		 * but we DO update RTT its larger.
+		 */
+		net->bw_rtt = net->new_bw_rtt;
+		return (1);
+	}
+	if (net->new_bw_rtt  < net->bw_rtt-rtt_offset) {
+		/*
+		 * rtt decreased, there could be more room.
+		 * we update both the bw and the rtt here.
+		 */
+		net->lbw = nbw;
+		net->bw_rtt = net->new_bw_rtt;
+		return (0);
+	}
+	/* Ok bw and rtt remained the same .. no update  to any */
+	return (0);
+}
+#endif
+
 static void
 sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 struct sctp_association *asoc,
@@ -326,6 +418,26 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 */
 			goto skip_cwnd_update;
 		}
+#ifdef SCTP_HAS_RTTCC
+		/* 
+		 * Did any measurements go on for this network?
+		 */
+		if (net->tls_needs_set == 1) {
+			uint64_t nbw;
+			/* 
+			 * At this point our bw_bytes has been updated and
+			 * our time as been updated. The time for this
+			 * ack is in net->new_bw_rtt, old value is net->bw_rtt.
+			 * Old bw is in net->lbw and we calculate here the
+			 * new bw .. nbw.
+			 */
+			nbw = net->bw_bytes/net->bw_tot_time;
+			if(cc_bw_limit(net, nbw)) {
+				/* Hold here, no update */
+				goto skip_cwnd_update;
+			}
+		}
+#endif
 		/*
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
