@@ -272,7 +272,7 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		sctp_cc_rtt_stats[2]++;
 		return (1);
 	}
-	if (rtt  < net->bw_rtt-rtt_offset) {
+	if (rtt  < net->lbw_rtt-rtt_offset) {
 		/*
 		 * rtt decreased, there could be more room.
 		 * we update both the bw and the rtt here.
