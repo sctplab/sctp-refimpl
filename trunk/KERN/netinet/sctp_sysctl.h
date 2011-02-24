@@ -106,6 +106,10 @@ struct sctp_sysctl {
 	uint32_t sctp_mobility_base;
 	uint32_t sctp_mobility_fasthandoff;
 	uint32_t sctp_inits_include_nat_friendly;
+#ifdef SCTP_HAS_RTTCC
+	uint32_t sctp_rttvar_bw;
+	uint32_t sctp_rttvar_rtt;
+#endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	struct sctp_log *sctp_log;
@@ -526,6 +530,20 @@ struct sctp_sysctl {
 #define SCTPCTL_INITIAL_CWND_MIN	0
 #define SCTPCTL_INITIAL_CWND_MAX	0xffffffff
 #define SCTPCTL_INITIAL_CWND_DEFAULT	3
+
+#ifdef SCTP_HAS_RTTCC
+/* rttvar smooth avg for bw calc  */
+#define SCTPCTL_RTTVAR_BW_DESC	"Shift amount for bw smothing on rtt calc"
+#define SCTPCTL_RTTVAR_BW_MIN	0
+#define SCTPCTL_RTTVAR_BW_MAX	32
+#define SCTPCTL_RTTVAR_BW_DEFAULT	6
+
+/* rttvar smooth avg for bw calc  */
+#define SCTPCTL_RTTVAR_RTT_DESC	"Shift amount for rtt smothing on rtt calc"
+#define SCTPCTL_RTTVAR_RTT_MIN	0
+#define SCTPCTL_RTTVAR_RTT_MAX	32
+#define SCTPCTL_RTTVAR_RTT_DEFAULT	5
+#endif
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
