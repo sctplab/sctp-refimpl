@@ -278,7 +278,7 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
-		sctp_cc_rtt_stats[]++;
+		sctp_cc_rtt_stats[7]++;
 		return (0);
 	}
 	/* If we reach here then
