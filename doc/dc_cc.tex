@@ -17,6 +17,22 @@
                 Santa Clara, Ca, 95050
                 USA,
                 \texttt{randall@lakerest.net}.}
+	 \and
+	M.~T\"uxen%
+        \thanks{M\"unster University of Applied Sciences,
+                Department of Electrical Engineering
+                and Computer Science,
+                Stegerwaldstr.~39,
+                D-48565 Steinfurt,
+                Germany,
+                \texttt{tuexen@fh-muenster.de}.}
+ 	\and
+ 	G.~Nevile-Neil%
+ 	\thanks{Georges Company,
+	             He will take manhattan
+	             New York, New York, 22222
+	             USA,
+	             \texttt{gnn@freebsd.org}.}
 }
 
 \maketitle
@@ -85,7 +101,7 @@ a switch off the shelf to support ECN?
 
 \begin{itemize}
 \item It provides a rich set of additional features not available in
-      TCP (for example it can automatically discard old data after a specified time) but was not considered. 
+      TCP (for example it can automatically discard old data after a specified time). 
 
 \item SCTP also provides multi-homing and CMT~\cite{jana} which could prove useful inside a datacenter.
 
@@ -167,7 +183,7 @@ case where layer 4 ports are not used then a flow is considered any packets betw
 a source and destination IP address.}. Every additional packet a flow adds to the outgoing
 transmit queue decrements the number of credits it has available. If the flow does \emph{not}
 respond by reducing its rate of sending, then it may reach the point where it reaches the `Aggressive
-Credits' thresholdm, where it will be treated as an aggressive non-responsive flow.
+Credits' threshold, where it will be treated as an aggressive (non-responsive) flow.
 
 
 \item Aggressive Credits --- This value represents when a flow that is not responding begins
@@ -205,11 +221,11 @@ Action will happen (i.e.~a packet will be dropped or marked).
  overtaken set of transmit buffers. Three of the servers,
  two eight core and one four core, were left on Gigabit interfaces to provide higher amounts of traffic
  into the remaining eight servers. With this configuration we could finally obtain DBL markings and drops
- on a reliable basis. With the help of wireshark\cite{} it was established that the switch would not
+ on a reliable basis. With the help of wireshark\cite{wireshark} it was established that the switch would not
  enter a "congested state" and start marking until at least 120-130 packets were queued by a single
  flow. Two flows appeared to get the switch marking around 70-80 packets from each flow.
  
-We wer now left with a dilemma. In the DC-TCP experiments, the switch was configured to mark
+We were now left with a dilemma. In the DC-TCP experiments, the switch was configured to mark
  whenever a flow took more than N packets:  N was set to 20 for Gigabit links and 65 for
  10 Gigabit links. Our switch would not mark packets until more than
  100 packets were in the queue. Without the proper controls over when the switch would start marking packets,  how could the switch 
@@ -225,9 +241,9 @@ We wer now left with a dilemma. In the DC-TCP experiments, the switch was config
  It was felt that this configuration would be closer to what could be obtained with a more
  configurable switch with less buffer space (i.e.~somewhere in the range of a switch with
  100 packet buffers available configured to start marking packets around 10).  The only downside
- to this configuration was that with 130 or more packets in queue before marking began the
- round trip time, normally around 115us, would increase to up to 14-15ms.
- Though not as flexible as the configuration in presented the DC-TCP papers, it was definitely a more realistic configuration with the only
+ to this configuration was that with 130 or more packets in queue\footnote{Before marking began the
+ round trip time normally around 115us.} the round trip time would increase to up to 14-15ms.
+ Though not as flexible as the configuration presented in the DC-TCP papers, it was definitely a more realistic configuration with the only
  off-the shelf  switch we could find supporting ECN.
  
 \section{Targeted Communication Pattern}
@@ -254,7 +270,7 @@ which  do the following:
 
 \item Open a socket and bind to a specific well known port and address\footnote{The multi-homing
 behavior of SCTP was specifically disabled by binding to only a single address.}. After creating and
-binding the socket issue a listen call is the backlog set to a configurable value defaulting to 4.
+binding the socket issue a listen setting the backlog to X\footnote{We used a value of 4 for the backlog value X in our tests}.
 
 \item Create N\footnote{N in our testbed was set to 10.} additional threads, besides the main thread.
 
@@ -306,8 +322,8 @@ the incast\_client will use.
 The peer line is made up of the keyword \texttt{peer} followed by the IP address of a
 machine running the server. The next field indicates the port  number the server is
 listening on, where 0 indicates that the default value for the server
-should be used. \footnote{For the incast
-client the default server port was 9902.} The next field represents
+should be used\footnote{For the incast
+client the default server port was 9902.}. The next field represents
 the hostname of the peer, a value 
 that is used only by some of the data processing routines. The final field represents how many bytes a
 long holds; and was used by our data processing routines to determine what record format
@@ -359,16 +375,14 @@ precise monotonic clock is again taken and stored with the peer entry.
 in the header record with the number of peers.
 
 \item The results are either displayed or stored based on
-whether the user specified an output file on the command line with. If the results are being
-displayed, then only peers that responded in more than 300ms are shown..
+whether the user specified an output file on the command line. If the results are being
+displayed, then only peers that responded in more than 300ms are shown.
 If the results are being stored, the header record is written first, followed by a record for each of the
 responding peers with their timings.
 
 \item This sequence is repeated until the specified number of iterations is reached.
 
 \end{enumerate}
-
-%\newpage
 
 \subsection{Elephant Flows}
 \label{elephants}
@@ -401,18 +415,15 @@ would do the following after binding the specified address and port numbers:
 
 \item Subtract the two monotonic clock values to come up with the time of the transfer.
 
-%\newpage
-
 \item Display the results either to the user, if no output file was configured, or save
 it to the output file. The results include the size of the transfer, the number of seconds and nanoseconds
 that the transfer took, and the bandwidth. Note that when writing to an output file a raw binary record
 was used that also included the realtime clock start and stop values.
 
-\item Repeat this sequence indefinitely..
+\item Repeat this sequence indefinitely.
 
 \end{enumerate}
-\footnote{Note again that we explicitly bind a
-single address to disable SCTP's multihoming feature.}
+
 
 The elephant\_source used the same common configuration files that were used by the incast\_client program.
 After loading the configuration our elephant\_source would first
@@ -422,7 +433,8 @@ do the following:
 \begin{enumerate}
 
 \item Choose a random number of bytes between 100,000,000 and
-  536,870,912.\footnote{WHY THIS NUMBER?}
+  536,870,912.\footnote{This number was arrived at as a mask to bound the
+  random number since when you subtract one the number becomes 0x1fffffff}
 
 \item Record in a header the precise realtime of the pass start.
 
@@ -492,12 +504,14 @@ the number of packets marked is ignored by the existing algorithm. For
 our new algorithm we use both of these values combined with another value passed
 to us via the network structure (net).
 
-Each time a SCTP chunk is sent in a packet, we also send the congestion
-window at the time the transmission was made. When an ECN Echo arrives, before calling
+Each time a SCTP chunk is sent in a packet, we also record the congestion
+window at the time the transmission was made\footnote{The value is recorded
+on an internal structure used to track the chunk.}. When an ECN Echo arrives, before calling
 the modular congestion control, an attempt to find the
-TSN\footnote{DEFINE TSN}  being reported is made. The TSN
+TSN\footnote{A Transport Sequence Number is the unit of message transmission that
+SCTP uses when it sends data.}  being reported is made. The TSN
 will always be found if the ECN Echo is in a new window of data. If the TSN
-is found, the previous cwnd at the time that the TSN was sent, is recorded on
+is found, the previous cwnd at the time that the TSN was sent\footnote{Found on the chunk structure mentioned earlier}, is recorded on
 the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Equation [2].
 
 \begin{equation}
@@ -540,7 +554,7 @@ then record all results and were able to obtain the plots show in Figure~\ref{fi
 In Figure~\ref{fig:noEcnIncast} we see incast occurring in cases where the time to complete a transfer exceeds
 300ms\footnote{The default RTO.min timeout value for SCTP}. In some cases we see more than
 one retransmission. Clearly incast is occurring on a fairly regular basis. Counting the actual number
-of incast occurrences shows us 567 different incidents of incast occurred represented in Figure~\ref{fig:noEcnIncast}.
+of incast occurrences shows us 567 different incidents of incast  represented in Figure~\ref{fig:noEcnIncast}.
 
 \newpage
 
@@ -586,7 +600,7 @@ reasons why so much unexpected incast is occuring.
 
 Finally, we ran the tests again only this time we used our Dynamic DCCC algorithm. This allowed the
 SCTP stack to switch between normal ECN and DCCC ECN based on the round trip time
-seen when transfer of data first begins. The results of this run can be seen in Figure~\ref{fig:dynIncast}\footnote{Time below 15ms excluded}.
+seen when transfer of data first begins. The results of this test can be seen in Figure~\ref{fig:dynIncast}\footnote{Time below 15ms excluded}.
 
 
 \begin{figure}[h]
@@ -631,9 +645,8 @@ Figure~\ref{fig:ecnBw} show the data transfer when ECN is enabled on
 the switch but no alternate congestion control is running. In this graph,
 we see fewer swings and a more orderly set of transfers. Checking
 the switch error counts we find that there occurred 1,079 DBL drops and 65 tail
-drops. SCTP's statistics also show 43 T3-Timeouts\footnote{A T3
-  TIMEOUT IS...}, but far from the larger
-number seen in the instance of no ECN.
+drops. SCTP's statistics also show 43 T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.},
+but far from the larger number seen in the instance of no ECN.
 
 \begin{figure}[h]
 \centering
@@ -650,8 +663,8 @@ results are seen in Figure~\ref{fig:dcccBw}, showing similar behavior to ECN but
 overall bandwidth. The error counters on the switch, however,
 show 1,890 DBL drops and 1,441 tail drops. This tells us that  the more aggressive congestion
 control, when the two large flows meet on the same host, end up overflowing the switch
-transmit queues. The SCTP statistics show similar results of 422 T3-Timeouts. Overall bandwidth
-appears to be better.
+transmit queues. The SCTP statistics show similar results of 422 
+T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.}. 
 
 
 \begin{figure}[h]
@@ -666,8 +679,8 @@ appears to be better.
 
 Finally, the bandwidth of our Dynamic DCCC is shown in Figure~\ref{fig:dynBw}. Clearly the
 overall bandwidth is better than in any other of the tests. The switch error counters show that only 35 tail
-drops occurred and 1,028 DBL drops. SCTP statistics show only 42 T3-Timeouts. This would explain
-the lack of incast on our earlier incast chart for Dynamic DCCC.
+drops occurred and 1,028 DBL drops. SCTP statistics show only 42 T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.}. 
+This would explain the lack of incast on our earlier incast chart for Dynamic DCCC.
 
 \begin{figure}[h]
 \centering
@@ -676,7 +689,6 @@ the lack of incast on our earlier incast chart for Dynamic DCCC.
 \label{fig:dynBw}
 \end{figure}
 
-\marginpar{What is shown on the y-axis? Don't provide only the unit}
 
 You can see that the large flow that arrives first on a particular
 host is being more aggressive, while the later arriving large flow is less aggressive. This is due to
@@ -688,7 +700,9 @@ offered much smaller and thus less drops occur.
 One thing that is not illustrated in any Cisco documentation is what a DBL drop means. Considering
 that we have the exceeds action set at 255 packets, 15 packets above the transmit queue size, one
 would expect that you would only get tail drops occurring.  It is important to also remember that a DBL 
-drop would occur for any non-Data packet since the ECN code-point ECT0 would NOT be enabled on any packet that
+drop would occur for any non-Data packet since the ECN code-point ECT0\footnote{ECT0 is the
+mark used in the IP level header by a transport protocol to indicate ECN support to a switch
+or router.} would NOT be enabled on any packet that
 does not contain data. Thus our DBL drops could be lost SACK's or other connection setup packets.
 Without further information from Cisco, it is hard to tell if the DBL drop counter is strictly drops or
 if it also includes the number of ECN marked packets that would have been dropped.
@@ -717,7 +731,7 @@ be achieved by flow coordination between the two elephant flows.
 \section{Conclusion and Future work}
 
 After examining the data presented here, packet traces, and respective
-graphs from those traces\footnote{Not shown for brevity but included in the source
+graphs from those traces\footnote{Not shown for brevity, but tools to generate them from a wireshark trace are included in the source
 code drop for those wanting to recreate our results}, the most clear conclusion reached is that 
 with \emph{proper} configuration, enabling ECN will virtually eliminate incidents of
 incast in the datacenter. This is, of course, provided that the SCTP or
@@ -756,22 +770,21 @@ worth changing congestion control algorithms within the transport protocol? The 
 attractive since if it was implemented, it could easily exist on the
 internet with no impact, since it would switch itself
 off in cases of a longer RTT time\footnote{We used 1.1ms but would think something smaller, perhaps 700us would
-be better for general deployment}). 
+be better for general deployment}. 
 
 In thinking of our limited switch configuration, if this was changed so that marking could begin at 5--10 packets
 would we see the same results? Clearly the dynamic DCCC would become less dynamic and might look more
 like plain DCCC. But would plain DCCC do better since it would no longer be hitting tail drops 
 by overrunning the switch transmit queues? Also the plain SCTP-ECN variant may well perform less well 
 in a switch that was more aggressively marking ECN. These questions are some of the future work that
-is envisioned to attempt with a more controllable switch. The author has been informed that Broadcom
+is envisioned to attempt with a more controllable switch. The authors have been informed that Broadcom
 offers a development kit which hopefully can be acquired at a reasonable cost and configured in such
 a way as to provide insights into these questions.
      
 
 \section*{Acknowledgment}
 
-Thanks to George Nevile-Neil and Michael T\"uxen for agreeing to review this work privately, my children Randall Jr.~and Anne who also have been inflicted upon by their father for their comments, and special thanks to my editor,
-companion, and sweetheart Sandra Stewart.
+Thanks to  Randall L. Stewart and Anne Stewart who have been inflicted upon by their father for their comments, and special thanks to our editor,  Sandra Stewart.
 
 \section*{Appendix A - Switch Configuration}
 
@@ -879,7 +892,7 @@ to observe packets outstanding as well as packets outstanding when ECN Echo's oc
 
 \end{description}
 
-\begin{thebibliography}{8}
+\begin{thebibliography}{9}
 
 \bibitem{griffen}R. Griffith et.al.,
   ``Understanding TCP incast throughput collapse in datacenter networks'', 
@@ -911,6 +924,10 @@ to observe packets outstanding as well as packets outstanding when ECN Echo's oc
  \bibitem{jana}J Iyengar et. al.,
  ``Concurrent Multipath Transfer Using SCTP Multihoming'',
  In SPECTS, 2004.
+ 
+ \bibitem{wireshark}M Scalisi,
+ ``Track down network problems with Wireshark'',
+ On line at http://www.computerworld.com/s/article/9144700/Track\_down\_network\_problems\_with\_Wireshark.
  
  \bibitem{rfc896}  J~Nagle,
  ``Congestion Control in IP\/TCP Internetworks'',
