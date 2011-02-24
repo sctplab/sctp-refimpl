@@ -30,7 +30,7 @@
  */
 #include <incast_fmt.h>
 #include <sys/signal.h>
-
+int milli_second = 0;
 int 
 main(int argc, char **argv)
 {
@@ -48,8 +48,11 @@ main(int argc, char **argv)
 	struct incast_peer *peer;
 	struct timespec highest;
 	
-	while ((i = getopt(argc, argv, "d:c:p:?a:")) != EOF) {
+	while ((i = getopt(argc, argv, "d:c:p:?ma:")) != EOF) {
 		switch (i) {
+		case 'm':
+			milli_second = 1;
+			break;
 		case 'a':
 			above_ms = ((uint64_t)strtol(optarg, NULL, 0) * 
 				    1000000);
@@ -137,10 +140,17 @@ main(int argc, char **argv)
 				}
 			} else {
 			print_it:
-				fprintf(output, "%d %ld.%9.9ld\n",
-					hdr.passcnt,
-					(unsigned long)highest.tv_sec,
-					(unsigned long)highest.tv_nsec);
+				if (milli_second) {
+					fprintf(output, "%d %ld\n",
+						hdr.passcnt,
+						(unsigned long)((highest.tv_sec * 1000) +
+								(highest.tv_nsec/1000000)));
+				} else {
+					fprintf(output, "%d %ld.%9.9ld\n",
+						hdr.passcnt,
+						(unsigned long)highest.tv_sec,
+						(unsigned long)highest.tv_nsec);
+				}
 			}
 
 		}
