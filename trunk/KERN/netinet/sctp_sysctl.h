@@ -531,8 +531,8 @@ struct sctp_sysctl {
 #define SCTPCTL_INITIAL_CWND_MIN	0
 #define SCTPCTL_INITIAL_CWND_MAX	0xffffffff
 #define SCTPCTL_INITIAL_CWND_DEFAULT	3
-
 #ifdef SCTP_HAS_RTTCC
+
 /* rttvar smooth avg for bw calc  */
 #define SCTPCTL_RTTVAR_BW_DESC	"Shift amount for bw smothing on rtt calc"
 #define SCTPCTL_RTTVAR_BW_MIN	0
@@ -549,8 +549,6 @@ struct sctp_sysctl {
 #define SCTPCTL_RTTVAR_EQRET_MIN	0
 #define SCTPCTL_RTTVAR_EQRET_MAX	1
 #define SCTPCTL_RTTVAR_EQRET_DEFAULT	0
-
-
 #endif
 
 #if defined(SCTP_DEBUG)
