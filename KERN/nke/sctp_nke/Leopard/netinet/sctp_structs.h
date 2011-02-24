@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 218400 2011-02-07 15:04:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 219013 2011-02-24 22:36:40Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -257,6 +257,15 @@ struct sctp_nets {
 	 * Things on the top half may be able to be split into a common
 	 * structure shared by all.
 	 */
+#ifdef SCTP_HAS_RTTCC
+	struct timeval tls;   /* The time we started the sending  */
+	uint64_t lbw;         /* Our last estimated bw */
+	uint64_t lbw_rtt;     /* RTT at bw estimate */
+	uint64_t bw_bytes;    /* The total bytes since this sending began */
+	uint64_t bw_tot_time; /* The total time since sending began */
+	uint64_t new_tot_time;  /* temp holding the new value */
+	uint32_t cwnd_at_bw_set;
+#endif 
 	struct sctp_timer pmtu_timer;
 
 	/*
@@ -275,7 +284,7 @@ struct sctp_nets {
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
 	int lastsv;
-	int rtt; /* last measured rtt value in ms */
+	uint64_t rtt; /* last measured rtt value in us */
 	unsigned int RTO;
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
@@ -284,6 +293,10 @@ struct sctp_nets {
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
+
+	/* JRS - struct used in HTCP algorithm */
+	struct htcp htcp_ca;
+
 	int ref_count;
 
 	/* Congestion stats per destination */
@@ -296,7 +309,6 @@ struct sctp_nets {
 	uint32_t prev_cwnd;	/* cwnd before any processing */
 	uint32_t ecn_prev_cwnd;	/* ECN prev cwnd at first ecn_echo seen in new window */
 	uint32_t partial_bytes_acked;	/* in CA tracks when to incr a MTU */
-	uint32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
@@ -327,7 +339,6 @@ struct sctp_nets {
 	uint32_t tos_flowlabel;
 
 	struct timeval start_time;      /* time when this net was created */
-	struct timeval last_measured_rtt;
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
 	uint32_t marked_fastretrans;
@@ -377,8 +388,9 @@ struct sctp_nets {
 	uint8_t RTO_measured;		/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
 	uint8_t lan_type;
-	/* JRS - struct used in HTCP algorithm */
-	struct htcp htcp_ca;
+#ifdef SCTP_HAS_RTTCC
+	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
+#endif
 #if defined(__FreeBSD__)
 	uint32_t flowid;
 #ifdef INVARIANTS
