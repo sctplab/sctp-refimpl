@@ -305,7 +305,10 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		sctp_cc_rtt_stats[3]++;
 		return (0);
 	}
-	/* Ok bw and rtt remained the same .. no update to any */
+	/* Ok bw and rtt remained the same .. no update to any 
+	 * but save the latest cwnd.
+	 */
+	net->cwnd_at_bw_set = net->cwnd;
 	sctp_cc_rtt_stats[4]++;
 	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 }
