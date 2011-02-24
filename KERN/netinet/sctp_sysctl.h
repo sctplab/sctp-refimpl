@@ -543,6 +543,13 @@ struct sctp_sysctl {
 #define SCTPCTL_RTTVAR_RTT_MIN	0
 #define SCTPCTL_RTTVAR_RTT_MAX	32
 #define SCTPCTL_RTTVAR_RTT_DEFAULT	5
+
+#define SCTPCTL_RTTVAR_EQRET_DESC	"When rtt and bw are unchanged return what"
+#define SCTPCTL_RTTVAR_EQRET_MIN	0
+#define SCTPCTL_RTTVAR_EQRET_MAX	1
+#define SCTPCTL_RTTVAR_EQRET_DEFAULT	0
+
+
 #endif
 
 #if defined(SCTP_DEBUG)
