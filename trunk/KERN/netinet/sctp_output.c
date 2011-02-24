@@ -6657,6 +6657,12 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 			asoc->peers_rwnd = 0;
 		}
 	}
+#ifdef SCTP_HAS_RTTCC
+	if ((net->tls_needs_set == 1) || (net->tls_needs_set == 0)) {
+		SCTP_GETTIME_TIMEVAL(&net->tls);
+		net->tls_needs_set = 2;
+	}
+#endif
 }
 
 static void
@@ -7520,6 +7526,16 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 				}
 			        continue;
 			}
+#ifdef SCTP_HAS_RTTCC
+			if (net->lbw && (net->flight_size == 0)) {
+				/* Clear the old bw.. we went to 0 in-flight */
+				net->lbw = 0;
+				net->bw_tot_time = 0;
+				net->bw_bytes = 0;
+				net->bw_rtt = 0;
+				net->tls_needs_set = 0;
+			}
+#endif
 			if ((asoc->sctp_cmt_on_off == 0) &&
 			    (asoc->primary_destination != net) &&
 			    (net->ref_count < 2)) {
