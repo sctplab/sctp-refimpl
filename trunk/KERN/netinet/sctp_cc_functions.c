@@ -189,7 +189,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 }
 #ifdef SCTP_HAS_RTTCC
 
-int sctp_cc_rtt_stats[6] = { 0, 0, 0, 0, 0 };
+int sctp_cc_rtt_stats[8] = { 0, 0, 0, 0, 0 };
 
 static int
 cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
@@ -219,9 +219,9 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 	 * ----------------------------------
 	 *   SAME  |    DECR  | return 0
 	 * ----------------------------------
-	 *   DECR  |    INC   | return 0 (?) -- should we look at offered load from us?
+	 *   DECR  |    INC   | return 0 or 1 based on if we caused.
 	 * ----------------------------------
-	 *   DECR  |    SAME  | return 0 (?) -- should we look at offered load from us?
+	 *   DECR  |    SAME  | return 0
 	 * ----------------------------------
 	 *   DECR  |    DECR  | return 0
 	 * ----------------------------------
@@ -246,30 +246,45 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		sctp_cc_rtt_stats[0]++;
 		return(0);
 	}
+	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
 	if (nbw < net->lbw-bw_offset) {
 		/* Bandwidth decreased.*/
-		
-		/* Did we add more */
-		if (net->cwnd > net->cwnd_at_bw_set) {
-			/* We caused it maybe .. */
-			sctp_cc_rtt_stats[5]++;
+		if (rtt  > net->lbw_rtt+rtt_offset) {
+			/* rtt increased */
+			/* Did we add more */
+			if (net->cwnd > net->cwnd_at_bw_set) {
+				/* We caused it maybe .. */
+				sctp_cc_rtt_stats[5]++;
+				net->lbw = nbw;
+				net->lbw_rtt = rtt;
+				net->cwnd = net->cwnd_at_bw_set;
+				return (1);
+			} 
+			/* Someone else - fight for more? */
 			net->lbw = nbw;
 			net->lbw_rtt = rtt;
 			net->cwnd_at_bw_set = net->cwnd;
-			return (1);
-		} 
-		/* Someone else - fight for more? */
+			sctp_cc_rtt_stats[1]++;
+			return(0);
+		} else  if (rtt  < net->lbw_rtt-rtt_offset) {
+			/* rtt decreased */
+			net->lbw = nbw;
+			net->lbw_rtt = rtt;
+			net->cwnd_at_bw_set = net->cwnd;
+			sctp_cc_rtt_stats[6]++;
+			return (0);
+		}
+		/* The bw decreased but rtt stated the same */
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
-		sctp_cc_rtt_stats[1]++;
-		return(0);
+		sctp_cc_rtt_stats[]++;
+		return (0);
 	}
 	/* If we reach here then
 	 * we are in a situation where
 	 * the bw stayed the same.
 	 */
-	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
 	if (rtt  > net->lbw_rtt+rtt_offset) {
 		/*
 		 * rtt increased 
