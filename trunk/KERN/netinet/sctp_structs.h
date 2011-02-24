@@ -264,6 +264,7 @@ struct sctp_nets {
 	uint64_t bw_bytes;    /* The total bytes since this sending began */
 	uint64_t bw_tot_time; /* The total time since sending began */
 	uint64_t new_tot_time;  /* temp holding the new value */
+	uint32_t cwnd_at_bw_set;
 #endif 
 	struct sctp_timer pmtu_timer;
 

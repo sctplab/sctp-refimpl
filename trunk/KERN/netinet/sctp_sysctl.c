@@ -125,6 +125,7 @@ sctp_init_sysctls()
 #ifdef SCTP_HAS_RTTCC
 	SCTP_BASE_SYSCTL(sctp_rttvar_bw) = SCTPCTL_RTTVAR_BW_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_rttvar_rtt) = SCTPCTL_RTTVAR_RTT_DEFAULT;
+	SCTP_BASE_SYSCTL(sctp_rttvar_eqret) = SCTPCTL_RTTVAR_EQRET_DEFAULT;
 #endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
@@ -759,6 +760,7 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #ifdef SCTP_HAS_RTTCC
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_rttvar_bw), SCTPCTL_RTTVAR_BW_MIN, SCTPCTL_RTTVAR_BW_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_rttvar_rtt), SCTPCTL_RTTVAR_RTT_MIN, SCTPCTL_RTTVAR_RTT_MAX);
+		RANGECHK(SCTP_BASE_SYSCTL(sctp_rttvar_eqret), SCTPCTL_RTTVAR_EQRET_MIN, SCTPCTL_RTTVAR_EQRET_MAX);
 #endif
 
 #if defined(__FreeBSD__)
@@ -1288,6 +1290,11 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, rttvar_bw, CTLTYPE_UINT|CTLFLAG_RW,
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, rttvar_rtt, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_rttvar_rtt), 0, sysctl_sctp_check, "IU",
 		 SCTPCTL_RTTVAR_RTT_DESC);
+
+SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, rttvar_eqret, CTLTYPE_UINT|CTLFLAG_RW,
+                 &SCTP_BASE_SYSCTL(sctp_rttvar_eqret), 0, sysctl_sctp_check, "IU",
+		 SCTPCTL_RTTVAR_EQRET_DESC);
+
 #endif
 
 #ifdef SCTP_DEBUG
@@ -1612,6 +1619,11 @@ void sysctl_setup_sctp(void)
 	sysctl_add_oid(&sysctl_oid_top, "rttvar_rtt", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_rttvar_rtt, 0, sysctl_sctp_check,
 	    SCTPCTL_RTTVAR_RTT_DESC);
+
+	sysctl_add_oid(&sysctl_oid_top, "rttvar_eqret", CTLTYPE_INT|CTLFLAG_RW,
+            &SCTP_BASE_SYSCTL(sctp_rttvar_eqret, 0, sysctl_sctp_check,
+	    SCTPCTL_RTTVAR_EQRET_DESC);
+
 #endif
 
 #ifdef SCTP_DEBUG

@@ -7530,6 +7530,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			if (net->lbw && (net->flight_size == 0)) {
 				/* Clear the old bw.. we went to 0 in-flight */
 				net->lbw_rtt = 0;
+				net->cwnd_at_bw_set = 0;
 				net->lbw = 0;
 				net->bw_tot_time = 0;
 				net->bw_bytes = 0;

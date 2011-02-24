@@ -190,7 +190,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 
 #ifdef SCTP_HAS_RTTCC
 
-int sctp_cc_rtt_stats[5] = { 0, 0, 0, 0, 0 };
+int sctp_cc_rtt_stats[6] = { 0, 0, 0, 0, 0 };
 
 static int
 cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
@@ -243,18 +243,26 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 */
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
 		sctp_cc_rtt_stats[0]++;
 		return(0);
 	}
 	if (nbw < net->lbw-bw_offset) {
-		/* Bandwidth decreased. Again
-		 * (for now) our table says
-		 * do the normal thing. We
-		 * may change this later. But
-		 * for now not.
-		 */
+		/* Bandwidth decreased.*/
+		
+		/* Did we add more */
+		if (net->cwnd > net->cwnd_at_bw_set) {
+			/* We caused it maybe .. */
+			sctp_cc_rtt_stats[5]++;
+			net->lbw = nbw;
+			net->lbw_rtt = rtt;
+			net->cwnd_at_bw_set = net->cwnd;
+			return (1);
+		} 
+		/* Someone else - fight for more? */
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
 		sctp_cc_rtt_stats[1]++;
 		return(0);
 	}
@@ -279,12 +287,13 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 */
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
 		sctp_cc_rtt_stats[3]++;
 		return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update to any */
 	sctp_cc_rtt_stats[4]++;
-	return (1);
+	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 }
 #endif
 
