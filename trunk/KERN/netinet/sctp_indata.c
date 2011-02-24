@@ -3741,7 +3741,6 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	}
 }
 
-
 void
 sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
                          uint32_t rwnd, int *abort_now, int ecne_seen)

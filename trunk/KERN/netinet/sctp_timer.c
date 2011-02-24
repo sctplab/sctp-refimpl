@@ -1021,6 +1021,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		net->tls_needs_set = 0;
 	}
 #endif
+
 	/*
 	 * setup the sat loss recovery that prevents satellite cwnd advance.
 	 */
