@@ -186,13 +186,14 @@ process_sack(struct pcap_pkthdr *phdr,
 						       pkt_arry[i].cnt_out,
 						       (unsigned long)tim, 
 						       (unsigned long)bw,
-						       tim/pkt_arry[i].cnt_out);
+						       (unsigned long)tim/pkt_arry[i].cnt_out);
 					} else {
 						printf("%ld.%6.6ld %d %ld.%6.6ld %ld\n",
 						       (unsigned long)cur_time.tv_sec,
 						       (unsigned long)cur_time.tv_usec,
 						       pkt_arry[i].cnt_out,
-						       tv.tv_sec, tv.tv_usec, (unsigned long)bw);
+						       (unsigned long)tv.tv_sec,
+							(unsigned long) tv.tv_usec, (unsigned long)bw);
 					}
 				}
 			} else {
@@ -205,13 +206,15 @@ process_sack(struct pcap_pkthdr *phdr,
 					       pkt_arry[i].cnt_out,
 					       (unsigned long)tim,
 					       (unsigned long)bw,
-					       tim/pkt_arry[i].cnt_out);
+					       (unsigned long)tim/pkt_arry[i].cnt_out);
 				} else {
-					printf("%ld.%6.6ld %d %ld.%6.6ld %ld\n",
+					printf("%ld.%6.6ld %ld %ld.%6.6ld %ld\n",
 					       (unsigned long)cur_time.tv_sec,
 					       (unsigned long)cur_time.tv_usec,
-					       pkt_arry[i].cnt_out,
-					       tv.tv_sec, tv.tv_usec, (unsigned long)bw);
+					       (unsigned long)pkt_arry[i].cnt_out,
+					      	(unsigned long)tv.tv_sec, 
+						(unsigned long)tv.tv_usec, 
+						(unsigned long)bw);
 				}
 			}
 			pkt_arry[i].inuse = 0;
