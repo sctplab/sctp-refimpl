@@ -284,7 +284,7 @@ struct sctp_nets {
 	/* smoothed average things for RTT and RTO itself */
 	int lastsa;
 	int lastsv;
-	int rtt; /* last measured rtt value in ms */
+	uint64_t rtt; /* last measured rtt value in us */
 	unsigned int RTO;
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
@@ -309,7 +309,6 @@ struct sctp_nets {
 	uint32_t prev_cwnd;	/* cwnd before any processing */
 	uint32_t ecn_prev_cwnd;	/* ECN prev cwnd at first ecn_echo seen in new window */
 	uint32_t partial_bytes_acked;	/* in CA tracks when to incr a MTU */
-	uint32_t prev_rtt;
 	/* tracking variables to avoid the aloc/free in sack processing */
 	unsigned int net_ack;
 	unsigned int net_ack2;
@@ -340,7 +339,6 @@ struct sctp_nets {
 	uint32_t tos_flowlabel;
 
 	struct timeval start_time;      /* time when this net was created */
-	struct timeval last_measured_rtt;
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
 	uint32_t marked_fastretrans;
