@@ -135,7 +135,7 @@ marking.
 \end{enumerate}
 
 Finding a switch that supports ECN proved surprisingly difficult.  
-There are chipsets like the Broadcom BCM56820 and BCM56630 natively support 
+There are chipsets like the Broadcom BCM56820 and BCM56630 that natively support 
 ECN in hardware,  but the software available from vendors that use
 these chipsets did not have the the knobs to enable ECN. After looking at various CLI
 configuration guides and talking with switch manufacturers, the only switch with documented
@@ -168,9 +168,9 @@ or ECN with using the Data Buffer Limiting (DBL) feature. DBL allows ECN or Rand
 Drop (RED) like features to be enabled on transmit queues within the switch.
 
 After some initial problems finding a software version that would
-support the features we wished we finally settled on an older
-12.2(31)SGA9 -- Enterprise Release, and this finally generated
-ECN marked packets.
+support the features we wished, we finally settled on an older
+12.2(31)SGA9 -- Enterprise Release. This version was the only
+one of those tested that would generate ECN marked packets.
 
 The DBL feature on a CAT 4500 proved less configurable than desired. There are four
 basic settings that control the ECN feature. 
@@ -861,7 +861,7 @@ DBL is enabled globally
 DBL flow does not include vlan
 DBL flow includes layer4-ports
 DBL uses ecn to indicate congestion
-DBL exceed-action probability: 100\%
+DBL exceed-action probability: 100%
 DBL max credits: 15
 DBL aggressive credit limit: 5
 DBL aggressive buffer limit: 255 packets
