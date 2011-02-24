@@ -258,12 +258,12 @@ struct sctp_nets {
 	 * structure shared by all.
 	 */
 #ifdef SCTP_HAS_RTTCC
-	struct timeval tls;   /* The time we last sent */
+	struct timeval tls;   /* The time we started the sending  */
 	uint64_t lbw;         /* Our last estimated bw */
+	uint64_t lbw_rtt;     /* RTT at bw estimate */
 	uint64_t bw_bytes;    /* The total bytes since this sending began */
 	uint64_t bw_tot_time; /* The total time since sending began */
-	uint64_t bw_rtt;      /* The last recorded value */
-	uint64_t new_bw_rtt;  /* temp holding the new value */
+	uint64_t new_tot_time;  /* temp holding the new value */
 #endif 
 	struct sctp_timer pmtu_timer;
 

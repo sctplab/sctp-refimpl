@@ -3741,7 +3741,6 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	}
 }
 
-int __sctp_debug_cnt=0;
 
 void
 sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
@@ -3803,24 +3802,12 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
 #ifdef SCTP_HAS_RTTCC
-		if (net->tls_needs_set == 2) {
+		if (net->tls_needs_set > 0) {
 			/* We had a bw measurment going on */
 			struct timeval ltls;
 			SCTP_GETPTIME_TIMEVAL(&ltls);
-			net->tls_needs_set = 1;
-			/* now add in the microseconds to our counter */
-			if (__sctp_debug_cnt < 3) {
-				printf("Subtract sec:%ld usec:%ld from sec:%ld usec:%ld\n",
-				       ltls.tv_sec,
-				       ltls.tv_usec,
-				       net->tls.tv_sec,
-				       net->tls.tv_usec
-					);
-				__sctp_debug_cnt++;
-			}
 			timevalsub(&ltls, &net->tls);
-			net->new_bw_rtt = (ltls.tv_sec * 1000000) + ltls.tv_usec;
-			net->bw_tot_time += net->new_bw_rtt;
+			net->new_tot_time = (ltls.tv_sec * 1000000) + ltls.tv_usec;
 		}
 #endif
 	}
@@ -4458,16 +4445,14 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
 #ifdef SCTP_HAS_RTTCC
-		if (net->tls_needs_set == 2) {
+		if (net->tls_needs_set > 0) {
 			/* We had a bw measurment going on */
 			struct timeval ltls;
 			SCTP_GETPTIME_TIMEVAL(&ltls);
-			net->tls_needs_set = 1;
 			/* now add in the microseconds to our counter */
 			timevalsub(&ltls, &net->tls);
-			net->new_bw_rtt = (ltls.tv_sec * 1000000) + ltls.tv_usec;
-			net->bw_tot_time += net->new_bw_rtt;
-		} 
+			net->new_tot_time = (ltls.tv_sec * 1000000) + ltls.tv_usec;
+		}
 #endif
 	}
 	/* process the new consecutive TSN first */
