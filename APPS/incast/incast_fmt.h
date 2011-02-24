@@ -174,7 +174,8 @@ int translate_ip_address(char *host, struct sockaddr_in *sa);
 void incast_run_clients(struct incast_control *ctrl);
 void  elephant_run_clients(struct incast_control *ctrl);
 void print_an_address(struct sockaddr *a, int cr);
-void parse_config_file(struct incast_control *ctrl, char *configfile);
+void parse_config_file(struct incast_control *ctrl, char *configfile,
+	uint16_t def_port);
 
 /* Magic read utilities */
 int read_ele_hdr(struct elephant_lead_hdr *hdr, FILE *io, int mac_long_size);
