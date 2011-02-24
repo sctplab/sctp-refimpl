@@ -3741,6 +3741,8 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 	}
 }
 
+int __sctp_debug_cnt=0;
+
 void
 sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
                          uint32_t rwnd, int *abort_now, int ecne_seen)
@@ -3807,6 +3809,15 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			SCTP_GETTIME_TIMEVAL(&ltls);
 			net->tls_needs_set = 1;
 			/* now add in the microseconds to our counter */
+			if (__sctp_debug_cnt < 3) {
+				printf("Subtract sec:%ld usec:%ld from sec:%ld usec:%ld\n",
+				       ltls.tv_sec,
+				       ltls.tv_usec,
+				       net->tls.tv_sec,
+				       net->tls.tv_usec
+					);
+				__sctp_debug_cnt++;
+			}
 			timevalsub(&ltls, &net->tls);
 			net->new_bw_rtt = (ltls.tv_sec * 1000000) + ltls.tv_usec;
 			net->bw_tot_time += net->new_bw_rtt;
