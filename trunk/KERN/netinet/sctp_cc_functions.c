@@ -282,9 +282,9 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		sctp_cc_rtt_stats[3]++;
 		return (0);
 	}
-	/* Ok bw and rtt remained the same .. no update  to any */
+	/* Ok bw and rtt remained the same .. no update to any */
 	sctp_cc_rtt_stats[4]++;
-	return (0);
+	return (1);
 }
 #endif
 
