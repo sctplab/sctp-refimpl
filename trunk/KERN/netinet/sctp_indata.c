@@ -3806,7 +3806,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		if (net->tls_needs_set == 2) {
 			/* We had a bw measurment going on */
 			struct timeval ltls;
-			SCTP_GETTIME_TIMEVAL(&ltls);
+			SCTP_GETPTIME_TIMEVAL(&ltls);
 			net->tls_needs_set = 1;
 			/* now add in the microseconds to our counter */
 			if (__sctp_debug_cnt < 3) {
@@ -4461,7 +4461,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		if (net->tls_needs_set == 2) {
 			/* We had a bw measurment going on */
 			struct timeval ltls;
-			SCTP_GETTIME_TIMEVAL(&ltls);
+			SCTP_GETPTIME_TIMEVAL(&ltls);
 			net->tls_needs_set = 1;
 			/* now add in the microseconds to our counter */
 			timevalsub(&ltls, &net->tls);

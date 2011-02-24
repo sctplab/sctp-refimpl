@@ -6659,7 +6659,7 @@ sctp_clean_up_datalist(struct sctp_tcb *stcb,
 	}
 #ifdef SCTP_HAS_RTTCC
 	if ((net->tls_needs_set == 1) || (net->tls_needs_set == 0)) {
-		SCTP_GETTIME_TIMEVAL(&net->tls);
+		SCTP_GETPTIME_TIMEVAL(&net->tls);
 		net->tls_needs_set = 2;
 	}
 #endif
