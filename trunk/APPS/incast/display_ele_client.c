@@ -201,7 +201,7 @@ main(int argc, char **argv)
 		printf("No -d directory\n");
 		goto use;
 	}
-	parse_config_file(&ctrl, config);
+	parse_config_file(&ctrl, config, DEFAULT_ELEPHANT_PORT);
 	if (ctrl.hostname == NULL) {
 		printf("Sorry no hostname found in loaded config\n");
 		return (-1);

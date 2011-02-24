@@ -76,7 +76,7 @@ main(int argc, char **argv)
 	ctrl.file_to_store_results = storeFile;
 
 	/* Now parse the configuration file */
-	parse_config_file(&ctrl, configfile);
+	parse_config_file(&ctrl, configfile, DEFAULT_ELEPHANT_PORT);
 	if (ctrl.bind_addr.sin_family != AF_INET) {
 		printf("Fatal error bind address not set by config file\n");
 		return (-1);

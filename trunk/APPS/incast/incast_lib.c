@@ -989,7 +989,8 @@ elephant_run_clients(struct incast_control *ctrl)
 
 
 static void
-incast_add_peer(struct incast_control *ctrl, char *body, int linecnt)
+incast_add_peer(struct incast_control *ctrl, char *body, int linecnt,
+	uint16_t def_port)
 {
 	struct incast_peer *peer;
 	char *ipaddr, *portstr=NULL, *tok, *hostname, *max;
@@ -1054,7 +1055,7 @@ incast_add_peer(struct incast_control *ctrl, char *body, int linecnt)
 				printf("Invalid port number %d - using default\n",
 				       x);
 			}
-			peer->addr.sin_port = htons(DEFAULT_SVR_PORT); 
+			peer->addr.sin_port = htons(def_port); 
 		} else {
 			peer->addr.sin_port = htons(x);
 		}
@@ -1126,7 +1127,8 @@ incast_set_bind(struct incast_control *ctrl, char *body, int linecnt)
 }
 
 void
-parse_config_file(struct incast_control *ctrl, char *configfile)
+parse_config_file(struct incast_control *ctrl, char *configfile, 
+		  uint16_t def_port)
 {
 	char buffer[1025];
 	FILE *io;
@@ -1201,7 +1203,7 @@ parse_config_file(struct incast_control *ctrl, char *configfile)
 		} else if (strcmp(token, "tcp") == 0) {
 			ctrl->sctp_on = 0;
 		} else if (strcmp(token, "peer") == 0) {
-			incast_add_peer(ctrl, body, linecnt);
+			incast_add_peer(ctrl, body, linecnt, def_port);
 		} else if (strcmp(token, "bind") == 0) {
 			incast_set_bind(ctrl, body, linecnt);
 		} else if (strcmp(token, "times") == 0) {

@@ -80,7 +80,7 @@ main(int argc, char **argv)
 	if (conf == NULL) {
 		goto use;
 	}
-	parse_config_file(&ctrl, conf);
+	parse_config_file(&ctrl, conf, DEFAULT_SVR_PORT);
 	if (ctrl.hostname == NULL) {
 		printf("Sorry no hostname found in loaded config\n");
 		return (-1);
