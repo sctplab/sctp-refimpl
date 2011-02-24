@@ -30,76 +30,103 @@
  */
 #include <stdio.h>
 #include <sys/types.h>
-#include <string.h>
+#include <strings.h>
 #include <unistd.h>
 #include <stdlib.h>
 #include <getopt.h>
 #include <sys/errno.h>
-
+struct list {
+	int txfr;
+	int indx;
+	int gain;
+	double gainpercentage;
+};
 
 int
 main(int argc, char **argv)
 {
-
+	int smallest, index_of_small;
 	char buffer[1024];
 	FILE *io;
-	char *file[10], *stop, *place="1";
-	uint32_t timemark;
+	char *file=NULL, *stop;
 	uint64_t bytes;
-	int timecount=0;
-	int txfr, i, at=0;
-	double bytes_per_sec;
+	int txfr, i, j;
+	struct list *listp=NULL;
 
-	memset(file, 0, sizeof(file));
 	bytes = 0;
 
-	while ((i = getopt(argc, argv, "i:p:?")) != EOF) {
+	while ((i = getopt(argc, argv, "h:i:?")) != EOF) {
 		switch (i) {
-		case 'p':
-			place = optarg;
+		case 'h':
+			txfr = strtol(optarg, NULL,0);
+			listp = malloc((sizeof(struct list)) * txfr);
+			if (listp == NULL) {
+				printf("Malloc of %d entries fails\n",
+				       txfr);
+			}
 			break;
 		case 'i':
-			if (at >= 10) {
-				printf("File limit reached - can't include %s\n",
-				       optarg);
-			} else {
-				file[at] = optarg;
-				at++;
-			}
+			file = optarg;
 			break;
 		case '?':
 		default:
 		use:
-			printf("Use %s -i file-to-sum [-p place -i morefiles]\n",
+			printf("Use %s -i file-to-sum -h how-many\n",
 			       argv[0]);
-			exit(-1);
-			break;
+		exit(-1);
+		break;
 		};
 	};
-	if (at == 0) {
+	if (file == NULL) {
 		goto use;
 	}
-	for(i=0; i<at; i++) {
-		io = fopen(file[i], "r");
-		if (io == NULL) {
-			printf("Can't open '%s' err:%d\n", file[i], errno);
+	if (listp == NULL) {
+		goto use;
+	}
+
+	io = fopen(file, "r");
+	if (io == NULL) {
+		printf("Can't open '%s' err:%d\n", file, errno);
+		return (-1);
+	}
+	stop = NULL;
+	i = 0;
+	while (fgets(buffer, sizeof(buffer), io) != NULL) {
+		listp[i].indx = strtol(buffer, &stop, 0);
+		if (stop == NULL) {
+			printf("Huh\n");
 			return (-1);
 		}
-		stop = NULL;
-		while (fgets(buffer, sizeof(buffer), io) != NULL) {
-			timemark = strtol(buffer, &stop, 0);
-			if (stop == NULL) {
-				printf("Huh\n");
-				return (-1);
-			}
-			stop++;
-			txfr = strtol(stop, NULL, 0);
-			timecount++;
-			bytes += txfr;
-		}
-		fclose(io);
+		stop++;
+		listp[i].txfr = strtol(stop, NULL, 0);
+		i++;
 	}
-	bytes_per_sec = ((double)(bytes * 1.0))/(timecount * 1.0);
-	printf("%s %ld\n", place, (unsigned long)bytes_per_sec);
+	fclose(io);
+	smallest = listp[0].txfr;
+	index_of_small = 0;
+	for(j=0; j<i; j++) {
+		if(smallest > listp[j].txfr) {
+			index_of_small = j;
+			smallest = listp[j].txfr;
+		}
+	}
+	/* Now we have the smallest calculate the gains */
+	for(j=0; j<i; j++) {
+		listp[j].gain = listp[j].txfr - smallest;
+	}
+	/* Now generate the percentages */
+	for(j=0; j<i; j++) {
+		if (listp[j].gain) {
+			listp[j].gainpercentage = (100.0 * listp[j].gain)/(listp[j].txfr * 1.0);
+		} else {
+			listp[j].gainpercentage = 0.0;
+		}
+	}
+	for (j=0; j<i; j++) {
+		printf("%d %d %f\n",
+		       listp[j].indx,
+		       listp[j].txfr,
+		       listp[j].gainpercentage);
+	}
 	return (0);
 }
