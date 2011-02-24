@@ -234,7 +234,7 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 	 * change within 1/32nd
 	 */
 	rtt = ((net->last_measured_rtt.tv_sec  * 1000000) + net->last_measured_rtt.tv_usec);
-	bw_offset = net->lbw >> 6;
+	bw_offset = net->lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	if (nbw > net->lbw+bw_offset) {
 		/* BW increased, so update and
 		 * return 0, since all actions in 
@@ -262,7 +262,7 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 	 * we are in a situation where
 	 * the bw stayed the same.
 	 */
-	rtt_offset = net->lbw_rtt >> 5;
+	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
 	if (rtt  > net->lbw_rtt+rtt_offset) {
 		/*
 		 * rtt increased 
