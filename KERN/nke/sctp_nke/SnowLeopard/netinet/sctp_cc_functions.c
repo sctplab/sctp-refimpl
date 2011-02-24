@@ -46,7 +46,7 @@
 #include <netinet/sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 219014 2011-02-24 22:58:15Z tuexen $");
 #endif
 
 static void
@@ -565,7 +565,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		 */
 		if (net->net_ack2) {
 			/* restore any doubled timers */
-			net->RTO = ((net->lastsa >> 2) + net->lastsv) >> 1;
+			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
 			if (net->RTO < stcb->asoc.minrto) {
 				net->RTO = stcb->asoc.minrto;
 			}
@@ -655,8 +655,8 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 	unsigned int incr;
 	int old_cwnd = net->cwnd;
 
-	/* need real RTT for this calc */
-	rtt = ((net->lastsa >> 2) + net->lastsv) >> 1;
+	/* need real RTT in msd for this calc */
+	rtt = net->rtt / 1000;
 	/* get bottle neck bw */
 	*bottle_bw = ntohl(cp->bottle_bw);
 	/* and whats on queue */
@@ -1210,7 +1210,7 @@ skip_cwnd_update:
 		 */
 		if (net->net_ack2) {
 			/* restore any doubled timers */
-			net->RTO = ((net->lastsa >> 2) + net->lastsv) >> 1;
+			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
 			if (net->RTO < stcb->asoc.minrto) {
 				net->RTO = stcb->asoc.minrto;
 			}
@@ -1278,7 +1278,7 @@ htcp_cwnd_undo(struct sctp_tcb *stcb, struct sctp_nets *net)
 static inline void
 measure_rtt(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	uint32_t srtt = net->lastsa>>3;
+	uint32_t srtt = net->lastsa>>SCTP_RTT_SHIFT;
 
 	/* keep track of minimum RTT seen so far, minRTT is zero at first */
 	if (net->htcp_ca.minRTT > srtt || !net->htcp_ca.minRTT)
@@ -1660,7 +1660,7 @@ skip_cwnd_update:
 		 */
 		if (net->net_ack2) {
 			/* restore any doubled timers */
-			net->RTO = ((net->lastsa >> 2) + net->lastsv) >> 1;
+			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
 			if (net->RTO < stcb->asoc.minrto) {
 				net->RTO = stcb->asoc.minrto;
 			}
