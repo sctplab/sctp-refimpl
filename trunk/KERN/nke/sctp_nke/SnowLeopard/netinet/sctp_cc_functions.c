@@ -187,11 +187,119 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 		}
 	}
 }
+#ifdef SCTP_HAS_RTTCC
+
+int sctp_cc_rtt_stats[6] = { 0, 0, 0, 0, 0 };
+
+static int
+cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
+{
+	uint64_t bw_offset, rtt_offset, rtt;
+	/*- 
+	 * Here we need to see if we want
+	 * to limit cwnd growth due to increase
+	 * in overall rtt but no increase in bw.
+	 * We use the following table to figure
+	 * out what we should do. When we return
+	 * 0, cc update goes on as planned. If we
+	 * return 1, then no cc update happens and cwnd
+	 * stays where it is at.
+	 * ----------------------------------
+	 *   BW    |    RTT   | Action
+	 * *********************************
+	 *   INC   |    INC   | return 0
+	 * ----------------------------------
+	 *   INC   |    SAME  | return 0
+	 * ----------------------------------
+	 *   INC   |    DECR  | return 0 
+	 * ----------------------------------
+	 *   SAME  |    INC   | return 1
+	 * ----------------------------------
+	 *   SAME  |    SAME  | return 1
+	 * ----------------------------------
+	 *   SAME  |    DECR  | return 0
+	 * ----------------------------------
+	 *   DECR  |    INC   | return 0 (?) -- should we look at offered load from us?
+	 * ----------------------------------
+	 *   DECR  |    SAME  | return 0 (?) -- should we look at offered load from us?
+	 * ----------------------------------
+	 *   DECR  |    DECR  | return 0
+	 * ----------------------------------
+	 *
+	 * We are a bit fuzz on what an increase or
+	 * decrease is. For BW it is the same if
+	 * it did not change within 1/64th. For
+	 * RTT it stayed the same if it did not
+	 * change within 1/32nd
+	 */
+	rtt = net->rtt;
+	bw_offset = net->lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
+	if (nbw > net->lbw+bw_offset) {
+		/* BW increased, so update and
+		 * return 0, since all actions in 
+		 * our table say to do the normal CC
+		 * update
+		 */
+		net->lbw = nbw;
+		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
+		sctp_cc_rtt_stats[0]++;
+		return(0);
+	}
+	if (nbw < net->lbw-bw_offset) {
+		/* Bandwidth decreased.*/
+		
+		/* Did we add more */
+		if (net->cwnd > net->cwnd_at_bw_set) {
+			/* We caused it maybe .. */
+			sctp_cc_rtt_stats[5]++;
+			net->lbw = nbw;
+			net->lbw_rtt = rtt;
+			net->cwnd_at_bw_set = net->cwnd;
+			return (1);
+		} 
+		/* Someone else - fight for more? */
+		net->lbw = nbw;
+		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
+		sctp_cc_rtt_stats[1]++;
+		return(0);
+	}
+	/* If we reach here then
+	 * we are in a situation where
+	 * the bw stayed the same.
+	 */
+	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
+	if (rtt  > net->lbw_rtt+rtt_offset) {
+		/*
+		 * rtt increased 
+		 * we don't update bw.. so we don't
+		 * update the rtt either.
+		 */
+		sctp_cc_rtt_stats[2]++;
+		return (1);
+	}
+	if (rtt  < net->lbw_rtt-rtt_offset) {
+		/*
+		 * rtt decreased, there could be more room.
+		 * we update both the bw and the rtt here.
+		 */
+		net->lbw = nbw;
+		net->lbw_rtt = rtt;
+		net->cwnd_at_bw_set = net->cwnd;
+		sctp_cc_rtt_stats[3]++;
+		return (0);
+	}
+	/* Ok bw and rtt remained the same .. no update to any */
+	sctp_cc_rtt_stats[4]++;
+	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
+}
+#endif
 
 static void
 sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
-		 struct sctp_association *asoc,
-		 int accum_moved ,int reneged_all, int will_exit )
+			    struct sctp_association *asoc,
+			    int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
 	int old_cwnd;
@@ -276,7 +384,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state |= SCTP_ADDR_REACHABLE;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-				    SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
+						SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
 				/* now was it the primary? if so restore */
 				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
 					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
@@ -301,7 +409,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
-					updates the cwnd value. */
+				   updates the cwnd value. */
 				goto skip_cwnd_update;
 			}
 		}
@@ -310,10 +418,10 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                 /* CMT fast recovery code
 		 */
 		/*
-		if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
-		     @@@ Do something
-		 }
-		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
+		  if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		  @@@ Do something
+		  }
+		  else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
 #endif
 
@@ -326,6 +434,35 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 */
 			goto skip_cwnd_update;
 		}
+#ifdef SCTP_HAS_RTTCC
+		/* 
+		 * Did any measurements go on for this network?
+		 */
+		if (net->tls_needs_set > 0) {
+			uint64_t nbw;
+			/* 
+			 * At this point our bw_bytes has been updated 
+			 * by incoming sack information.
+			 * 
+			 * But our bw may not yet be set.
+			 * 
+			 */
+			if (net->new_tot_time) {
+				nbw = net->bw_bytes/net->new_tot_time;
+			} else {
+				nbw = net->bw_bytes;
+			}
+			if (net->lbw) {
+				if(cc_bw_limit(net, nbw)) {
+					/* Hold here, no update */
+					goto skip_cwnd_update;
+				}
+			} else {
+				net->lbw = nbw;
+				net->lbw_rtt = net->rtt;
+			}
+		}
+#endif
 		/*
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
@@ -372,7 +509,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				} else {
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
-							SCTP_CWND_LOG_NOADV_SS);
+							      SCTP_CWND_LOG_NOADV_SS);
 					}
 				}
 			} else {
@@ -404,22 +541,22 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 						  old_cwnd, net->cwnd);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
-								SCTP_CWND_LOG_FROM_CA);
+							      SCTP_CWND_LOG_FROM_CA);
 					}
 				} else {
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
-							SCTP_CWND_LOG_NOADV_CA);
+							      SCTP_CWND_LOG_NOADV_CA);
 					}
 				}
 			}
 		} else {
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
-					SCTP_CWND_LOG_NO_CUMACK);
+					      SCTP_CWND_LOG_NO_CUMACK);
 			}
 		}
-skip_cwnd_update:
+	skip_cwnd_update:
 		/*
 		 * NOW, according to Karn's rule do we need to restore the
 		 * RTO timer back? Check our net_ack2. If not set then we
