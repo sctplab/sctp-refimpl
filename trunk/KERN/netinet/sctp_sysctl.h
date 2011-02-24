@@ -109,6 +109,7 @@ struct sctp_sysctl {
 #ifdef SCTP_HAS_RTTCC
 	uint32_t sctp_rttvar_bw;
 	uint32_t sctp_rttvar_rtt;
+	uint32_t sctp_rttvar_eqret;
 #endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
