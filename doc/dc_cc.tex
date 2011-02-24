@@ -1,38 +1,39 @@
 \documentclass[12pt]{article}
-\usepackage{cite}
-\usepackage{epsfig}
-\usepackage[cmex10]{amsmath}
-\usepackage{fixltx2e}
-\usepackage{url}
+%\usepackage{cite}
+\usepackage{graphicx}
+\DeclareGraphicsExtensions{.pdf}
+%\usepackage{epsfig}
+%\usepackage[cmex10]{amsmath}
+%\usepackage{fixltx2e}
+%\usepackage{url}
 \hyphenation{op-tical net-works semi-conduc-tor}
-
 \begin{document}
 %
 % paper title
 %
 \title{An Investigation into Data Center Congestion Control with ECN}
-\author{R.~Stewart%
-        \thanks{Huawei Inc.,
-                2330 Central Expressway,
-                Santa Clara, Ca, 95050
-                USA,
-                \texttt{randall@lakerest.net}.}
-	 \and
-	M.~T\"uxen%
-        \thanks{M\"unster University of Applied Sciences,
-                Department of Electrical Engineering
-                and Computer Science,
-                Stegerwaldstr.~39,
-                D-48565 Steinfurt,
-                Germany,
-                \texttt{tuexen@fh-muenster.de}.}
- 	\and
- 	G.~Nevile-Neil%
- 	\thanks{Georges Company,
-	             He will take manhattan
-	             New York, New York, 22222
-	             USA,
-	             \texttt{gnn@freebsd.org}.}
+\author{%
+Randall R.~Stewart%
+\thanks{Huawei Inc.,
+        2330 Central Expressway,
+        Santa Clara, Ca, 95050,
+        USA.
+        e-mail: \texttt{randall@lakerest.net}.}
+\and
+Michael~T\"uxen%
+\thanks{M\"unster University of Applied Sciences,
+        Dep.~of Electrical Engineering \& Computer Science,
+        Stegerwaldstr.~39,
+        48565 Steinfurt,
+        Germany.
+        e-mail: \texttt{tuexen@fh-muenster.de}.}
+\and
+George V.~Neville-Neil%
+\thanks{Neville-Neil Consulting,
+        822 10th Avenue,
+        New York, NY, 10019,
+        USA.
+        e-mail: \texttt{gnn@neville-neil.com}.}
 }
 
 \maketitle
@@ -92,8 +93,8 @@ DC-TCP paper explicitly mentions a  Broadcom Triumph,  Broadcom Scorpion, and Ci
 CAT4948 was explicitly mentioned as NOT supporting ECN.} switch, but what is the real availability of 
 a switch off the shelf to support ECN?
 
-\item Could it be beneficial to use a separate protocol within the
-  datacenter from the one used for  accessing the datacenter?
+\item Could it be beneficial to use one protocol within the
+      datacenter and a different one for accessing the datacenter?
       This would allow isolating any congestion control changes within the datacenter
       while not effecting internet traffic.
 
@@ -112,13 +113,15 @@ a switch off the shelf to support ECN?
 
 \end{enumerate}
 
-After considering these facts, it was decided to put together a `mini-datacenter` to simulate the
-kinds of traffic highlighted in the DC-TCP work. Budget constraints meant having to spend frugally and 
-using \emph{Ebay} to find used equipment that could be used to do these experiments.
+After considering these facts, it was decided to put together a `mini-datacenter`
+to simulate the kinds of traffic highlighted in the DC-TCP work.
+%Budget constraints meant having to spend frugally and  using \emph{Ebay}
+%to find used equipment that could be used to do these experiments.
 
-\section{Gathering the equipment}
+\section{The Testnetwork}
+\subsection{Gathering the Network Equipment}
 
-At first glance one would think gathering the necessary equipment in order to do DC-TCP like
+At first glance one would think gathering the necessary network equipment in order to do DC-TCP like
 experiments would be easy:
 \begin{enumerate}
 \item Find several switches that can perform ECN and configure them
@@ -128,11 +131,11 @@ for its decision to mark.}
 \item Setup the appropriate set of switch parameters as to when to start
 marking. 
 
-\item Add a number of servers all with the same software and test, gather results, wash, rinse, and repeat.
+%\item Add a number of servers all with the same software and test, gather results, wash, rinse, and repeat.
 \end{enumerate}
 
 Finding a switch that supports ECN proved surprisingly difficult.  
-Chipsets like the Broadcom BCM56820 and BCM56630 natively support 
+There are chipsets like the Broadcom BCM56820 and BCM56630 natively support 
 ECN in hardware,  but the software available from vendors that use
 these chipsets did not have the the knobs to enable ECN. After looking at various CLI
 configuration guides and talking with switch manufacturers, the only switch with documented
@@ -141,20 +144,20 @@ to use for experimentation, only one was available. A Cat 4500 is really a "big 
 switch. This posed additional problems in setting up a configuration
 that would allow us to do DC-TCP like tests.
 
-Gathering the servers, however, proved to be quite easy. There are quite a number of 1U servers
-for purchase on \emph{Ebay}. On average, we were able to obtain dual-core and quad-core 32-bit 
-servers with two Gigabit interface at reasonable costs\footnote{For these experiments we only used
-one interface but have plans to use this `datacenter' for future investigations  namely CMT.}. 
+%Gathering the servers, however, proved to be quite easy. There are quite a number of 1U servers
+%for purchase on \emph{Ebay}. On average, we were able to obtain dual-core and quad-core 32-bit 
+%servers with two Gigabit interface at reasonable costs\footnote{For these experiments we only used
+%one interface but have plans to use this `datacenter' for future investigations  namely CMT.}. 
 
 Our final lab configuration can be seen in Figure~\ref{fig:labconfig}.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=labconfig,scale=.45}
+\includegraphics[height=0.5\textheight]{labconfig}
+%\epsfig{file=labconfig,scale=.45}
 \caption{Final Laboratory Configuration }
 \label{fig:labconfig}
 \end{figure}
-
 
 
 
@@ -166,10 +169,10 @@ Drop (RED) like features to be enabled on transmit queues within the switch.
 
 After some initial problems finding a software version that would
 support the features we wished we finally settled on an older
-12.2(31)SGA9 - Enterprise Release, and this finally generated
+12.2(31)SGA9 -- Enterprise Release, and this finally generated
 ECN marked packets.
 
-The DBL feature on a CAT 4500 proved less configurable than desired.There are four
+The DBL feature on a CAT 4500 proved less configurable than desired. There are four
 basic settings that control the ECN feature. 
 
 \begin{enumerate}
@@ -222,8 +225,8 @@ Action will happen (i.e.~a packet will be dropped or marked).
  two eight core and one four core, were left on Gigabit interfaces to provide higher amounts of traffic
  into the remaining eight servers. With this configuration we could finally obtain DBL markings and drops
  on a reliable basis. With the help of wireshark\cite{wireshark} it was established that the switch would not
- enter a "congested state" and start marking until at least 120-130 packets were queued by a single
- flow. Two flows appeared to get the switch marking around 70-80 packets from each flow.
+ enter a "congested state" and start marking until at least 120--130 packets were queued by a single
+ flow. Two flows appeared to get the switch marking around 70--80 packets from each flow.
  
 We were now left with a dilemma. In the DC-TCP experiments, the switch was configured to mark
  whenever a flow took more than N packets:  N was set to 20 for Gigabit links and 65 for
@@ -234,15 +237,15 @@ We were now left with a dilemma. In the DC-TCP experiments, the switch was confi
  The solution was to configure the switch to have a maximum number
  of credits (15), the fall-over to an aggressive flow at a low value (5), the probability
  of exceeds action to 100\% and the exceeds switch buffer to the maximum to 255. With
- this configuration, marking would happen as noted earlier around 120-130 packets, and
+ this configuration, marking would happen as noted earlier around 120--130 packets, and
  in the worst case (with two flows) around 75 packets, or 150 total packets outstanding. This then
- would leave somewhere between 90-120 packets available before the transmit queue would overflow.
+ would leave somewhere between 90--120 packets available before the transmit queue would overflow.
  
  It was felt that this configuration would be closer to what could be obtained with a more
  configurable switch with less buffer space (i.e.~somewhere in the range of a switch with
  100 packet buffers available configured to start marking packets around 10).  The only downside
  to this configuration was that with 130 or more packets in queue\footnote{Before marking began the
- round trip time normally around 115us.} the round trip time would increase to up to 14-15ms.
+ round trip time normally around 115us.} the round trip time would increase to up to 14--15ms.
  Though not as flexible as the configuration presented in the DC-TCP papers, it was definitely a more realistic configuration with the only
  off-the shelf  switch we could find supporting ECN.
  
@@ -263,14 +266,13 @@ as rapidly as possible, usually with a small number of packets. The requestor th
 this data and sends it back to the external requestor. Since most of the aggregate servers will respond
 at almost the same time the partition/aggregation work model precisely fits a description of incast. 
 
-To simulate incast on our small testbed we built a client
-(\texttt{incast\_client.c}) and a server (\texttt{incast\_server.c}), 
-which  do the following:
+To simulate incast on our testbed we built a client~(\texttt{incast\_client.c})
+and a server~(\texttt{incast\_server.c}), which  do the following:
 \begin{enumerate}
 
 \item Open a socket and bind to a specific well known port and address\footnote{The multi-homing
 behavior of SCTP was specifically disabled by binding to only a single address.}. After creating and
-binding the socket issue a listen setting the backlog to X\footnote{We used a value of 4 for the backlog value X in our tests}.
+binding the socket issue a listen setting the backlog to X\footnote{We used a value of 4 for the backlog value X in our tests.}.
 
 \item Create N\footnote{N in our testbed was set to 10.} additional threads, besides the main thread.
 
@@ -285,7 +287,7 @@ size and then closes the socket, returning to the accept call.
 \end{enumerate}
 
 The server
-was always bound to the single address that our CAT 4500 was connected to the hosts over\footnote{In our case 10.1.5.X}
+was always bound to the single address that our CAT 4500 was connected to the hosts over\footnote{In our case 10.1.5.X.}
 see Figure~\ref{fig:labconfig}.
 The server also accepted one other option, whether to run over SCTP or
 TCP, allowing us to use
@@ -389,16 +391,15 @@ responding peers with their timings.
 To simulate datacenter like traffic, a small number of large flows are also needed. In a
 real datacenter, these flows would provide updates to the various databases that all the query traffic is attempting to access. 
 
-We simulated these flows
-with a server~(\texttt{elephant\_sink.c}) and a client~(\texttt{elephant\_source.c}). In the simulations, each machine ran
-an \texttt{elephant\_sink}; but only two machines were chosen to run the \texttt{elephant\_source}. The hosts
+We realized these flows using a specific server~(\texttt{elephant\_sink.c}) and a corresponding client~(\texttt{elephant\_source.c}).
+In these measurements, each machine ran a server;
+but only two machines were chosen to run a client. The hosts
 that ran the elephant\_source (bsd3 and bsd4) were our two, eight core, 64~bit machines, connected to the switch
 via a Gigabit ethernet port. This allowed the elephant flows to always push at filling the transmit queues
 of the 100 Megabit clients. One additional host (bsd8) was also connected via Gigabit ethernet to provide
 an additional push on transmit queues while running the incast\_client. Note that the elephant flows that
 were sent to this additional host (bsd8) were not used in measuring overall bandwidth obtained 
 in our datacenter simulation.
-\\
 
 The elephant\_sink worked much like our incast\_server, creating a
 number of threads, defaulting to 2, that
@@ -432,9 +433,9 @@ do the following:
 
 \begin{enumerate}
 
-\item Choose a random number of bytes between 100,000,000 and
+\item Choose a random number of bytes in the range of 100,000,000 and
   536,870,912.\footnote{This number was arrived at as a mask to bound the
-  random number since when you subtract one the number becomes 0x1fffffff}
+  random number since when you subtract one the number becomes 0x1fffffff.}
 
 \item Record in a header the precise realtime of the pass start.
 
@@ -477,29 +478,44 @@ in a header to indicate ECN and so provides a much richer environment for its
 implementation. The normal response of SCTP to an ECN Echo event is the same
 as TCP in any loss within a single window of data:
 
-\begin{equation}
-\begin{split}
-&ssthresh = cwnd / 2\\
-&if (ssthresh < mtu)~\{ \\
-&~~~ssthresh = mtu; \\
-&~~~RTO <<= 1\\
-&\} \\
-&cwnd = ssthresh
-\end{split}
+\begin{figure}[!h]
+\begin{quote}
+\begin{verbatim}
+ssthresh = cwnd / 2;
+if (ssthresh < mtu) {
+  ssthresh = mtu;
+  RTO <<= 1;
+}
+cwnd = ssthresh;
+\end{verbatim}
+\end{quote}
+\caption{Algorithm 1}
 \label{algo1}
-\end{equation}
+\end{figure}
+
+
+%\begin{equation}
+%\begin{split}
+%&ssthresh = cwnd / 2\\
+%&if (ssthresh < mtu)~\{ \\
+%&~~~ssthresh = mtu; \\
+%&~~~RTO <<= 1\\
+%&\} \\
+%&cwnd = ssthresh
+%\end{split}
+%\end{equation}
 
 When one or more losses occur in a single window of data, the cwnd is halved and
 the ssthresh is set to the same value. When an ecn\_echo is received, the congestion
 control algorithm is given two extra pieces of information besides the stcb and the 
 net structures\footnote{The stcb and net structures are internal structure used within the FreeBSD SCTP
 stack to track the specific SCTP association (stcb) and the specific details of a peers destination
-address (net)}.
+address (net).}.
 
 These two extra pieces of information are the keys to our new DCCC algorithm, they are
 the in\_window flag as well as the number of packets marked. The in\_window flag
 is used by the current algorithm to know if it should perform the
-algorithm shown in Equation [1],  and
+algorithm shown in Figure~\ref{algo1},  and
 the number of packets marked is ignored by the existing algorithm. For
 our new algorithm we use both of these values combined with another value passed
 to us via the network structure (net).
@@ -511,20 +527,36 @@ the modular congestion control, an attempt to find the
 TSN\footnote{A Transport Sequence Number is the unit of message transmission that
 SCTP uses when it sends data.}  being reported is made. The TSN
 will always be found if the ECN Echo is in a new window of data. If the TSN
-is found, the previous cwnd at the time that the TSN was sent\footnote{Found on the chunk structure mentioned earlier}, is recorded on
-the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Equation [2].
+is found, the previous cwnd at the time that the TSN was sent\footnote{Found on the chunk structure mentioned earlier.}, is recorded on
+the net structure in a special field for ECN (ecn\_prev\_cwnd).  These three values are then used as shown in Figure~\ref{algo2}.
 
-\begin{equation}
-\begin{split}
-if (&in\_window == 0)~\{ \\
-&cwnd = ecn\_prev\_cwnd - (mtu * num\_pkt\_marked) \\
-&ssthresh = cwnd - (num\_pkt\_marked * mtu) \\
-\}~e&lse~\{\\
-&ssthresh -= mtu * num\_pkt\_marked \\
-&cwnd -= mtu * num\_pkt\_marked\\
-\}~~&
-\end{split}
-\end{equation}
+%\begin{equation}
+%\begin{split}
+%if (&in\_window == 0)~\{ \\
+%&cwnd = ecn\_prev\_cwnd - (mtu * num\_pkt\_marked) \\
+%&ssthresh = cwnd - (num\_pkt\_marked * mtu) \\
+%\}~e&lse~\{\\
+%&ssthresh -= mtu * num\_pkt\_marked \\
+%&cwnd -= mtu * num\_pkt\_marked\\
+%\}~~&
+%\end{split}
+%\end{equation}
+
+\begin{figure}[!h]
+\begin{quote}
+\begin{verbatim}
+if (in_window == 0) {
+  cwnd = ecn_prev_cwnd - (mtu * num_pkt_marked);
+  ssthresh = cwnd - (mtu * num_pkt_marked); 
+} else {
+  cwnd -= mtu * num_pkt_marked;
+  ssthresh -= mtu * num_pkt_marked;
+}
+\end{verbatim}
+\end{quote}
+\caption{Algorithm 2}
+\label{algo2}
+\end{figure}
 
 It is important to remember when looking at SCTP congestion control
 parameters that there
@@ -536,34 +568,40 @@ As noted earlier we also used a third algorithm. We termed this version dynamic 
 initial round trip time measured on the first data packet. SCTP uses this value to try to determine
 if the destination address is on a local LAN. If it thinks that it is on a local LAN (i.e.~having a round
 trip time of under 1.1ms), then it sets a flag. Our dynamic algorithm simply used
-that flag to switch between the algorithms shown in Equation [1] and Equation [2].
+that flag to switch between the algorithms shown in Figure~\ref{algo1} and Figure~\ref{algo2}.
 
 \section{Measurements}
 \label{measure}
 We first decided to examine incast and how the three algorithms (DCCC, DYN-DCCC and ECN) compared with
 running plain SCTP in our network. We started an incast\_server and elephant\_sink on each machine (bsd1--bsd11) and then 
-started an incast\_client passing it options to start collecting data. Once all incast servers were running, we started two elephant sources one on bsd3 the other on bsd4. With the switch configured to drop, i.e.~not do ecn, we
-then record all results and were able to obtain the plots show in Figure~\ref{fig:noEcnIncast}\footnote{Time below 15ms excluded}.
-\begin{figure}[h]
+started an incast\_client passing it options to start collecting data. Once all incast servers were running, we started two elephant sources one on bsd3 and the other on bsd4.
+
+\subsection{Runtime}
+With the switch configured to drop, i.e.~not do ecn, we
+then record all results and were able to obtain the plots shown in Figure~\ref{fig:noEcnIncast}\footnote{Time below 15ms excluded.}.
+
+\begin{figure}[!h]
 \centering
-\epsfig{file=noEcnIncast,scale=.95}
+\includegraphics[width=\textwidth]{noEcnIncast}
+%\epsfig{file=noEcnIncast,scale=.95}
 \caption{Normal SCTP transfers experiencing incast}
 \label{fig:noEcnIncast}
 \end{figure}
 
 In Figure~\ref{fig:noEcnIncast} we see incast occurring in cases where the time to complete a transfer exceeds
-300ms\footnote{The default RTO.min timeout value for SCTP}. In some cases we see more than
+300ms\footnote{The default RTO.min timeout value for SCTP.}. In some cases we see more than
 one retransmission. Clearly incast is occurring on a fairly regular basis. Counting the actual number
 of incast occurrences shows us 567 different incidents of incast  represented in Figure~\ref{fig:noEcnIncast}.
 
-\newpage
+%\newpage
 
 Next it was decided to turn on ECN in the switch with no changes to the congestion control algorithm. This
-lead to the results seen in Figure~\ref{fig:ecnIncast}\footnote{Time below 15ms excluded}.
+lead to the results seen in Figure~\ref{fig:ecnIncast}\footnote{Time below 15ms excluded.}.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=ecnIncast,scale=.95}
+\includegraphics[width=\textwidth]{ecnIncast}
+%\epsfig{file=ecnIncast,scale=.95}
 \caption{Normal SCTP with ECN experiencing incast}
 \label{fig:ecnIncast}
 \end{figure}
@@ -579,14 +617,15 @@ bsd4 is connected via Gigabit ethernet, clearly it must be caused by delays in t
 receiving the initial request to transfer the two packets back to it. Most likely this is caused by
 a lost setup message during the connection startup.
 
-\newpage
+%\newpage
 
 Next, the same tests were run, but this time using our DCCC algorithm in place in the SCTP stack. The
-results from this run can be seen in Figure~\ref{fig:dcccIncast}\footnote{Time below 15ms excluded}.
+results from this run can be seen in Figure~\ref{fig:dcccIncast}\footnote{Time below 15ms excluded.}.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=dcccIncast,scale=.95}
+\includegraphics[width=\textwidth]{dcccIncast}
+%\epsfig{file=dcccIncast,scale=.85}
 \caption{DCCC ECN experiencing incast}
 \label{fig:dcccIncast}
 \end{figure}
@@ -596,16 +635,17 @@ Surprisingly, the actually occurrence of incast increases in this graph to 34 se
 was unexpected, but with a look at some of our further graphs we will see possible
 reasons why so much unexpected incast is occuring.
 
-\newpage
+%\newpage
 
 Finally, we ran the tests again only this time we used our Dynamic DCCC algorithm. This allowed the
 SCTP stack to switch between normal ECN and DCCC ECN based on the round trip time
-seen when transfer of data first begins. The results of this test can be seen in Figure~\ref{fig:dynIncast}\footnote{Time below 15ms excluded}.
+seen when transfer of data first begins. The results of this test can be seen in Figure~\ref{fig:dynIncast}\footnote{Time below 15ms excluded.}.
 
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=dynIncast,scale=.95}
+\includegraphics[width=\textwidth]{dynIncast}
+%\epsfig{file=dynIncast,scale=.85}
 \caption{Dynamic DCCC ECN experiencing incast}
 \label{fig:dynIncast}
 \end{figure}
@@ -615,10 +655,13 @@ outcome since we had anticipated no differences between DCCC (with its 34 incide
 the dynamic version. If we turn, however, to the elephant graphs, we can reach a conclusion
 as to why these incidents are occurring.
 
-\newpage
-
+%\newpage
+\pagebreak
+\subsection{Bandwidth of Elephant Flows}
 Lets look at the four graphs of the elephant transfers that were being run while all
-the incast was occurring. Figure~\ref{fig:noEcnBw} shows a normal SCTP transfer with
+the incast was occurring. 
+
+Figure~\ref{fig:noEcnBw} shows a normal SCTP transfer with
 ECN disabled. Note the huge swings downward in throughput for both
 flows when the flows collide and share transfer to the same machine. 
 
@@ -631,15 +674,16 @@ a large number of T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of t
 cause an incident of incast since there is not enough data in the pipe to enable fast retransmits with
 only two packets being sent.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=noEcnBw,scale=.95}
+\includegraphics[width=\textwidth]{noEcnBw}
+%\epsfig{file=noEcnBw,scale=.95}
 \caption{Bandwidth of two flows no ECN}
 \label{fig:noEcnBw}
 \end{figure}
 
 
-\newpage
+%\newpage
 
 Figure~\ref{fig:ecnBw} show the data transfer when ECN is enabled on
 the switch but no alternate congestion control is running. In this graph,
@@ -648,15 +692,16 @@ the switch error counts we find that there occurred 1,079 DBL drops and 65 tail
 drops. SCTP's statistics also show 43 T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.},
 but far from the larger number seen in the instance of no ECN.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=ecnBw,scale=.95}
+\includegraphics[width=\textwidth]{ecnBw}
+%\epsfig{file=ecnBw,scale=.95}
 \caption{Bandwidth of two flows with ECN}
 \label{fig:ecnBw}
 \end{figure}
 
 
-\newpage
+%\newpage
 
 We enable our modified congestion control with DCCC, and the bandwidth
 results are seen in Figure~\ref{fig:dcccBw}, showing similar behavior to ECN but with a bit better performance in
@@ -667,24 +712,26 @@ transmit queues. The SCTP statistics show similar results of 422
 T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.}. 
 
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=dcccBw,scale=.95}
+%\epsfig{file=dcccBw,scale=.95}
+\includegraphics[width=\textwidth]{dcccBw}
 \caption{Bandwidth of two flows with DCCC}
 \label{fig:dcccBw}
 \end{figure}
 
 
-\newpage
+%\newpage
 
 Finally, the bandwidth of our Dynamic DCCC is shown in Figure~\ref{fig:dynBw}. Clearly the
 overall bandwidth is better than in any other of the tests. The switch error counters show that only 35 tail
 drops occurred and 1,028 DBL drops. SCTP statistics show only 42 T3-Timeouts\footnote{A T3-Timeout, in SCTP, is the firing of the SCTP data retransmission timer.}. 
 This would explain the lack of incast on our earlier incast chart for Dynamic DCCC.
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=dynBw,scale=.95}
+\includegraphics[width=\textwidth]{dynBw}
+%\epsfig{file=dynBw,scale=.95}
 \caption{Bandwidth of two flows with Dynamic DCCC}
 \label{fig:dynBw}
 \end{figure}
@@ -707,15 +754,17 @@ does not contain data. Thus our DBL drops could be lost SACK's or other connecti
 Without further information from Cisco, it is hard to tell if the DBL drop counter is strictly drops or
 if it also includes the number of ECN marked packets that would have been dropped.
 
+\subsection{Aggregate Bandwidth}
 
 Finally, Figure~\ref{fig:aggBw}  shows us an aggregate bandwidth comparison of the 
 overall throughput of the 4 different tests. Each of the two flows in the test are summed
 together to give an overall aggregate and then these are summed to give us the average
 goodput of the combined flow on a per second basis. 
 
-\begin{figure}[h]
+\begin{figure}[!h]
 \centering
-\epsfig{file=agg,scale=.95}
+\includegraphics[width=\textwidth]{agg}
+%\epsfig{file=agg,scale=.95}
 \caption{Aggregate Bandwidth Comparison}
 \label{fig:aggBw}
 \end{figure}
@@ -728,25 +777,24 @@ theoretical maximum. Note that the theoretical maximum includes a key assumption
 no two flows would be transferring to the same computer at the same time. This could only
 be achieved by flow coordination between the two elephant flows.
 
-\section{Conclusion and Future work}
+\section{Conclusion and Future Work}
 
 After examining the data presented here, packet traces, and respective
 graphs from those traces\footnote{Not shown for brevity, but tools to generate them from a wireshark trace are included in the source
-code drop for those wanting to recreate our results}, the most clear conclusion reached is that 
+code drop for those wanting to recreate our results.}, the most clear conclusion reached is that 
 with \emph{proper} configuration, enabling ECN will virtually eliminate incidents of
 incast in the datacenter. This is, of course, provided that the SCTP or
 TCP stack properly implements ECN within it. 
-\\
 
 So what should switch vendors take away from these results?
 
 \begin{enumerate}
 
 \item They should have an implementation of ECN for their datacenter
-  switches, and having one
-for non-datacenter switches could also be a benefit to their products. Many of the more modern switch an a chip's (e.g.~BCM56820)
-already support ECN in hardware and its just a matter of allowing its users access to those
-hardware features.
+  swit\-ches, and having one for non-datacenter switches could also be
+  a benefit to their products.
+  Many of the more modern chips (e.g.~BCM56820) already support ECN
+  in hardware and its just a matter of allowing its users access to those hardware features.
 
 \item Vendors need to allow configuration for both `network level settings' (i.e.~those classically called
 for by ECN) and `Datacenter settings'. Network level settings would allow the switch to use average queue
@@ -770,7 +818,7 @@ worth changing congestion control algorithms within the transport protocol? The 
 attractive since if it was implemented, it could easily exist on the
 internet with no impact, since it would switch itself
 off in cases of a longer RTT time\footnote{We used 1.1ms but would think something smaller, perhaps 700us would
-be better for general deployment}. 
+be better for general deployment.}. 
 
 In thinking of our limited switch configuration, if this was changed so that marking could begin at 5--10 packets
 would we see the same results? Clearly the dynamic DCCC would become less dynamic and might look more
@@ -788,9 +836,8 @@ Thanks to  Randall L. Stewart and Anne Stewart who have been inflicted upon by t
 
 \section*{Appendix A - Switch Configuration}
 
-For those interested in repeating our experiments, we show the Cisco CAT4500 CLI
-configuration for our switch.  Note that we varied the QOS DBL exceed action between
-ECN and no ECN.
+For those interested in repeating our experiments, we show the CLI configuration of the Cisco CAT4500 switch.
+Note that we varied the QOS DBL exceed action between ECN and no ECN.
 
 \subsubsection{QOS DBL CONFIGURATION}
  
@@ -814,7 +861,7 @@ DBL is enabled globally
 DBL flow does not include vlan
 DBL flow includes layer4-ports
 DBL uses ecn to indicate congestion
-DBL exceed-action probability: 100%
+DBL exceed-action probability: 100\%
 DBL max credits: 15
 DBL aggressive credit limit: 5
 DBL aggressive buffer limit: 255 packets
@@ -836,7 +883,8 @@ class-map match-all c1
 policy-map p2
  class c1 
   dbl  
-  police 1000 mbps 100 kbyte conform-action transmit exceed-action drop 
+  police 1000 mbps 100 kbyte conform-action transmit
+         exceed-action drop 
 \end{verbatim}
 \subsubsection {Example Interface Configuration}
 
@@ -884,8 +932,8 @@ flows.
 
 \item [per\_aggregator.c] This utility is yet another aggregator used in summing data.
 
-\item [read\_cap.c] This utility is a special pcap reader capable of reading a tcpdump\footnote{providing the -s0 option
-is used with the tcpdump} or tshark dump. It analyzes SCTP flow information and can create output for gnuplot
+\item [read\_cap.c] This utility is a special pcap reader capable of reading a tcpdump\footnote{Providing the
+\texttt{-s0} option is used with the tcpdump.} or tshark dump. It analyzes SCTP flow information and can create output for gnuplot
 to observe packets outstanding as well as packets outstanding when ECN Echo's occur.
 
 \item [sum\_aggregator.c] This is yet another aggregation utility.
@@ -906,31 +954,32 @@ to observe packets outstanding as well as packets outstanding when ECN Echo's oc
  ``Data Center TCP (DCTCP)'',
  In SIGCOMM, 2010.
  
-\bibitem{rfc3168}  K~Ramakrishnan, S~Floyd, D~Black,
+\bibitem{rfc3168}  K.~Ramakrishnan, S.~Floyd, D.~Black,
   ``The Addition of Explicit Congestion Notification (ECN) to IP'',
   \textit{RFC~3168},
   September~2001.
  
-\bibitem{rfc793}  J~Postel,
-  ``Transmission Control Protocol'',
-  \textit{RFC~793},
-  September~1981.
+\bibitem{rfc793}
+   J.~Postel,
+   ``Transmission Control Protocol'',
+   \textit{RFC~793},
+   September~1981.
   
 \bibitem{rfc4960} R.~Stewart,
   ``Stream Control Transmission Protocol'',
   \textit{RFC~4960},
  September~2007.
  
- \bibitem{jana}J Iyengar et. al.,
+ \bibitem{jana}J. Iyengar et. al.,
  ``Concurrent Multipath Transfer Using SCTP Multihoming'',
  In SPECTS, 2004.
  
- \bibitem{wireshark}M Scalisi,
+ \bibitem{wireshark}M. Scalisi,
  ``Track down network problems with Wireshark'',
- On line at http://www.computerworld.com/s/article/9144700/Track\_down\_network\_problems\_with\_Wireshark.
+  Retrieved on February 24th, 2011, at http://www.computerworld.com/s/article/ 9144700/Track\_down\_network\_problems\_with\_Wireshark.
  
- \bibitem{rfc896}  J~Nagle,
- ``Congestion Control in IP\/TCP Internetworks'',
+ \bibitem{rfc896}  J.~Nagle,
+ ``Congestion Control in IP/TCP Internetworks'',
   \textit{RFC~896},
  January~1984.
  
