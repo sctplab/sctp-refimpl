@@ -431,7 +431,11 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 * Old bw is in net->lbw and we calculate here the
 			 * new bw .. nbw.
 			 */
-			nbw = net->bw_bytes/net->bw_tot_time;
+			if (net->bw_tot_time) {
+				nbw = net->bw_bytes/net->bw_tot_time;
+			} else {
+				nbw = net->bw_bytes;
+			}
 			if(cc_bw_limit(net, nbw)) {
 				/* Hold here, no update */
 				goto skip_cwnd_update;
