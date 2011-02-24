@@ -189,10 +189,13 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 }
 
 #ifdef SCTP_HAS_RTTCC
+
+int sctp_cc_rtt_stats[5] = { 0, 0, 0, 0, 0 };
+
 static int
 cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 {
-	uint64_t bw_offset, rtt_offset;
+	uint64_t bw_offset, rtt_offset, rtt;
 	/*- 
 	 * Here we need to see if we want
 	 * to limit cwnd growth due to increase
@@ -230,6 +233,7 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 	 * RTT it stayed the same if it did not
 	 * change within 1/32nd
 	 */
+	rtt = ((net->last_measured_rtt.tv_sec  * 1000000) + net->last_measured_rtt.tv_usec);
 	bw_offset = net->lbw >> 6;
 	if (nbw > net->lbw+bw_offset) {
 		/* BW increased, so update and
@@ -238,7 +242,8 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 * update
 		 */
 		net->lbw = nbw;
-		net->bw_rtt = net->new_bw_rtt;
+		net->lbw_rtt = rtt;
+		sctp_cc_rtt_stats[0]++;
 		return(0);
 	}
 	if (nbw < net->lbw-bw_offset) {
@@ -249,41 +254,44 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 * for now not.
 		 */
 		net->lbw = nbw;
-		net->bw_rtt = net->new_bw_rtt;
+		net->lbw_rtt = rtt;
+		sctp_cc_rtt_stats[1]++;
 		return(0);
 	}
 	/* If we reach here then
 	 * we are in a situation where
 	 * the bw stayed the same.
 	 */
-	rtt_offset = net->bw_rtt >> 5;
-	if (net->new_bw_rtt  > net->bw_rtt+rtt_offset) {
+	rtt_offset = net->lbw_rtt >> 5;
+	if (rtt  > net->lbw_rtt+rtt_offset) {
 		/*
 		 * rtt increased 
-		 * we don't update bw.. its the same.
-		 * but we DO update RTT its larger.
+		 * we don't update bw.. so we don't
+		 * update the rtt either.
 		 */
-		net->bw_rtt = net->new_bw_rtt;
+		sctp_cc_rtt_stats[2]++;
 		return (1);
 	}
-	if (net->new_bw_rtt  < net->bw_rtt-rtt_offset) {
+	if (rtt  < net->bw_rtt-rtt_offset) {
 		/*
 		 * rtt decreased, there could be more room.
 		 * we update both the bw and the rtt here.
 		 */
 		net->lbw = nbw;
-		net->bw_rtt = net->new_bw_rtt;
+		net->lbw_rtt = rtt;
+		sctp_cc_rtt_stats[3]++;
 		return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update  to any */
+	sctp_cc_rtt_stats[4]++;
 	return (0);
 }
 #endif
 
 static void
 sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
-		 struct sctp_association *asoc,
-		 int accum_moved ,int reneged_all, int will_exit )
+			    struct sctp_association *asoc,
+			    int accum_moved ,int reneged_all, int will_exit )
 {
 	struct sctp_nets *net;
 	int old_cwnd;
@@ -368,7 +376,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state |= SCTP_ADDR_REACHABLE;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-				    SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
+						SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
 				/* now was it the primary? if so restore */
 				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
 					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
@@ -393,7 +401,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 					net, net->cwnd);
 				/* Since the cwnd value is explicitly set, skip the code that
-					updates the cwnd value. */
+				   updates the cwnd value. */
 				goto skip_cwnd_update;
 			}
 		}
@@ -402,10 +410,10 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
                 /* CMT fast recovery code
 		 */
 		/*
-		if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
-		     @@@ Do something
-		 }
-		 else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
+		  if (sctp_cmt_on_off > 0 && net->fast_retran_loss_recovery && net->will_exit_fast_recovery == 0) {
+		  @@@ Do something
+		  }
+		  else if (sctp_cmt_on_off == 0 && asoc->fast_retran_loss_recovery && will_exit == 0) {
 		*/
 #endif
 
@@ -422,23 +430,29 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 		/* 
 		 * Did any measurements go on for this network?
 		 */
-		if (net->tls_needs_set == 1) {
+		if (net->tls_needs_set > 0) {
 			uint64_t nbw;
 			/* 
-			 * At this point our bw_bytes has been updated and
-			 * our time as been updated. The time for this
-			 * ack is in net->new_bw_rtt, old value is net->bw_rtt.
-			 * Old bw is in net->lbw and we calculate here the
-			 * new bw .. nbw.
+			 * At this point our bw_bytes has been updated 
+			 * by incoming sack information.
+			 * 
+			 * But our bw may not yet be set.
+			 * 
 			 */
-			if (net->bw_tot_time) {
-				nbw = net->bw_bytes/net->bw_tot_time;
+			if (net->new_tot_time) {
+				nbw = net->bw_bytes/net->new_tot_time;
 			} else {
 				nbw = net->bw_bytes;
 			}
-			if(cc_bw_limit(net, nbw)) {
-				/* Hold here, no update */
-				goto skip_cwnd_update;
+			if (net->lbw) {
+				if(cc_bw_limit(net, nbw)) {
+					/* Hold here, no update */
+					goto skip_cwnd_update;
+				}
+			} else {
+				net->lbw = nbw;
+				net->lbw_rtt = ((net->last_measured_rtt.tv_sec  * 1000000) +
+					net->last_measured_rtt.tv_usec);
 			}
 		}
 #endif
@@ -488,7 +502,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				} else {
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
-							SCTP_CWND_LOG_NOADV_SS);
+							      SCTP_CWND_LOG_NOADV_SS);
 					}
 				}
 			} else {
@@ -520,22 +534,22 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 						  old_cwnd, net->cwnd);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->mtu,
-								SCTP_CWND_LOG_FROM_CA);
+							      SCTP_CWND_LOG_FROM_CA);
 					}
 				} else {
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 						sctp_log_cwnd(stcb, net, net->net_ack,
-							SCTP_CWND_LOG_NOADV_CA);
+							      SCTP_CWND_LOG_NOADV_CA);
 					}
 				}
 			}
 		} else {
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
-					SCTP_CWND_LOG_NO_CUMACK);
+					      SCTP_CWND_LOG_NO_CUMACK);
 			}
 		}
-skip_cwnd_update:
+	skip_cwnd_update:
 		/*
 		 * NOW, according to Karn's rule do we need to restore the
 		 * RTO timer back? Check our net_ack2. If not set then we
