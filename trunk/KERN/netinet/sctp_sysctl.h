@@ -537,7 +537,7 @@ struct sctp_sysctl {
 #define SCTPCTL_RTTVAR_BW_DESC	"Shift amount for bw smothing on rtt calc"
 #define SCTPCTL_RTTVAR_BW_MIN	0
 #define SCTPCTL_RTTVAR_BW_MAX	32
-#define SCTPCTL_RTTVAR_BW_DEFAULT	6
+#define SCTPCTL_RTTVAR_BW_DEFAULT	4
 
 /* rttvar smooth avg for bw calc  */
 #define SCTPCTL_RTTVAR_RTT_DESC	"Shift amount for rtt smothing on rtt calc"
