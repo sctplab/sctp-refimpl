@@ -189,7 +189,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 }
 #ifdef SCTP_HAS_RTTCC
 static int
-cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
+cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt;
 	/*- 
@@ -532,7 +532,7 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 				nbw = net->bw_bytes;
 			}
 			if (net->lbw) {
-				if(cc_bw_limit(net, nbw)) {
+				if(cc_bw_limit(stcb, net, nbw)) {
 					/* Hold here, no update */
 					goto skip_cwnd_update;
 				}
