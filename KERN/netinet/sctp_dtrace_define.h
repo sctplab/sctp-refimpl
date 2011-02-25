@@ -74,6 +74,21 @@ SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 3, "int");
 /* The new value of the cwnd */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 4, "int");
 
+
+/* ACK-INCREASE */
+SDT_PROBE_DEFINE(sctp, cwnd, net, rttvar, rttvar);
+/* The Vtag << 32 | localport << 16 | remoteport */
+SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 0, "uint64_t");
+/* Old nbw */
+SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 1, "uint64_t");
+/* new nbw */
+SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 2, "uint64_t");
+/* The value of the rtt in usec  */
+SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 3, "uint64_t");
+/* retval(0/1)<< 48) | (probepoint<<3)2 | cwnd */
+SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 4, "uint64_t");
+
+
 /* FastRetransmit-DECREASE */
 SDT_PROBE_DEFINE(sctp, cwnd, net, fr, fr);
 /* The Vtag for this end */

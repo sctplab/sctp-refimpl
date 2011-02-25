@@ -188,9 +188,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	}
 }
 #ifdef SCTP_HAS_RTTCC
-
-int sctp_cc_rtt_stats[8] = { 0, 0, 0, 0, 0 };
-
 static int
 cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 {
@@ -240,10 +237,18 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 * our table say to do the normal CC
 		 * update
 		 */
+		/* PROBE POINT 0 */
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  ((stcb->asoc.my_vtag<<32)|
+			   (stcb->sctp_ep->sctp_lport << 16)|
+			   (stcb->rport)), 
+			  net->lbw,
+			  nbw,
+			  rtt,
+			  ((0<<48)|(0<<32)|net->cwnd));
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
-		sctp_cc_rtt_stats[0]++;
 		return(0);
 	}
 	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
@@ -253,8 +258,17 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 			/* rtt increased */
 			/* Did we add more */
 			if (net->cwnd > net->cwnd_at_bw_set) {
-				/* We caused it maybe .. */
-				sctp_cc_rtt_stats[5]++;
+				/* We caused it maybe.. back off */
+				/* PROBE POINT 1 */
+				SDT_PROBE(sctp, cwnd, net, rttvar,
+					  ((stcb->asoc.my_vtag<<32)|
+					   (stcb->sctp_ep->sctp_lport << 16)|
+					   (stcb->rport)), 
+					  net->lbw,
+					  nbw,
+					  rtt,
+					  ((1<<48)|(1<<32)|net->cwnd));
+
 				net->lbw = nbw;
 				net->lbw_rtt = rtt;
 				net->cwnd = net->cwnd_at_bw_set;
@@ -264,22 +278,46 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 			net->lbw = nbw;
 			net->lbw_rtt = rtt;
 			net->cwnd_at_bw_set = net->cwnd;
-			sctp_cc_rtt_stats[1]++;
+			/* Probe point 2 */
+			SDT_PROBE(sctp, cwnd, net, rttvar,
+				  ((stcb->asoc.my_vtag<<32)|
+				   (stcb->sctp_ep->sctp_lport << 16)|
+				   (stcb->rport)), 
+				  net->lbw,
+				  nbw,
+				  rtt,
+				  ((0<<48)|(2<<32)|net->cwnd));
 			return(0);
 		} else  if (rtt  < net->lbw_rtt-rtt_offset) {
 			/* rtt decreased */
+			/* Probe point 3 */
+			SDT_PROBE(sctp, cwnd, net, rttvar,
+				  ((stcb->asoc.my_vtag<<32)|
+				   (stcb->sctp_ep->sctp_lport << 16)|
+				   (stcb->rport)), 
+				  net->lbw,
+				  nbw,
+				  rtt,
+				  ((0<<48)|(3<<32)|net->cwnd));
 			net->lbw = nbw;
 			net->lbw_rtt = rtt;
 			net->cwnd_at_bw_set = net->cwnd;
-			sctp_cc_rtt_stats[6]++;
 			return (0);
 		}
-		/* The bw decreased but rtt stated the same */
+		/* The bw decreased but rtt stayed the same */
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
-		sctp_cc_rtt_stats[7]++;
-		return (0);
+		/* Probe point 4 */
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  ((stcb->asoc.my_vtag<<32)|
+			   (stcb->sctp_ep->sctp_lport << 16)|
+			   (stcb->rport)), 
+			  net->lbw,
+			  nbw,
+			  rtt,
+			  ((0<<48)|(4<<32)|net->cwnd));
+		  return (0);
 	}
 	/* If we reach here then
 	 * we are in a situation where
@@ -291,7 +329,15 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 * we don't update bw.. so we don't
 		 * update the rtt either.
 		 */
-		sctp_cc_rtt_stats[2]++;
+		/* Probe point 5 */
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  ((stcb->asoc.my_vtag<<32)|
+			   (stcb->sctp_ep->sctp_lport << 16)|
+			   (stcb->rport)), 
+			  net->lbw,
+			  nbw,
+			  rtt,
+			  ((1<<48)|(5<<32)|net->cwnd));
 		return (1);
 	}
 	if (rtt  < net->lbw_rtt-rtt_offset) {
@@ -299,17 +345,32 @@ cc_bw_limit(struct sctp_nets *net, uint64_t nbw)
 		 * rtt decreased, there could be more room.
 		 * we update both the bw and the rtt here.
 		 */
+		/* Probe point 6 */
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  ((stcb->asoc.my_vtag<<32)|
+			   (stcb->sctp_ep->sctp_lport << 16)|
+			   (stcb->rport)), 
+			  net->lbw,
+			  nbw,
+			  rtt,
+			  ((0<<48)|(6<<32)|net->cwnd));
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
-		sctp_cc_rtt_stats[3]++;
 		return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update to any 
 	 * but save the latest cwnd.
 	 */
-	net->cwnd_at_bw_set = net->cwnd;
-	sctp_cc_rtt_stats[4]++;
+	/* Probe point 7 */
+	SDT_PROBE(sctp, cwnd, net, rttvar,
+		  ((stcb->asoc.my_vtag<<32)|
+		   (stcb->sctp_ep->sctp_lport << 16)|
+		   (stcb->rport)), 
+		  net->lbw,
+		  nbw,
+		  rtt,
+		  ((SCTP_BASE_SYSCTL(sctp_rttvar_eqret)<<48)|(7<<32)|net->cwnd));
 	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 }
 #endif
