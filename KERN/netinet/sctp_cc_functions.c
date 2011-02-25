@@ -243,8 +243,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		/* PROBE POINT 0 */
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  net->lbw,
-			  nbw,
+			  ((net->lbw << 32) | nbw),
+			  net->lbw_rtt,
 			  rtt,
 			  probepoint);
 		net->lbw = nbw;
@@ -264,8 +264,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				probepoint |=  ((1 << 16) | 1);
 				SDT_PROBE(sctp, cwnd, net, rttvar,
 					  vtag,
-					  net->lbw,
-					  nbw,
+					  ((net->lbw << 32) | nbw),
+					  net->lbw_rtt,
 					  rtt,
 					  probepoint);
 
@@ -274,18 +274,19 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				net->cwnd = net->cwnd_at_bw_set;
 				return (1);
 			} 
-			/* Someone else - fight for more? */
-			net->lbw = nbw;
-			net->lbw_rtt = rtt;
-			net->cwnd_at_bw_set = net->cwnd;
 			/* Probe point 2 */
 			probepoint |=  ((2 << 16) | 0);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
 				  vtag,
-				  net->lbw,
-				  nbw,
+				  ((net->lbw << 32) | nbw),
+				  net->lbw_rtt,
 				  rtt,
 				  probepoint);
+
+			/* Someone else - fight for more? */
+			net->lbw = nbw;
+			net->lbw_rtt = rtt;
+			net->cwnd_at_bw_set = net->cwnd;
 			return(0);
 		} else  if (rtt  < net->lbw_rtt-rtt_offset) {
 			/* rtt decreased */
@@ -293,8 +294,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			probepoint |=  ((3 << 16) | 0);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
 				  vtag,
-				  net->lbw,
-				  nbw,
+				  ((net->lbw << 32) | nbw),
+				  net->lbw_rtt,
 				  rtt,
 				  probepoint);
 			net->lbw = nbw;
@@ -310,8 +311,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		probepoint |=  ((4 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  net->lbw,
-			  nbw,
+			  ((net->lbw << 32) | nbw),
+			  net->lbw_rtt,
 			  rtt,
 			  probepoint);
 		  return (0);
@@ -330,8 +331,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		probepoint |=  ((5 << 16) | 1);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  net->lbw,
-			  nbw,
+			  ((net->lbw << 32) | nbw),
+			  net->lbw_rtt,
 			  rtt,
 			  probepoint);
 		return (1);
@@ -345,8 +346,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		probepoint |=  ((6 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  net->lbw,
-			  nbw,
+			  ((net->lbw << 32) | nbw),
+			  net->lbw_rtt,
 			  rtt,
 			  probepoint);
 		net->lbw = nbw;
@@ -361,8 +362,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	probepoint |=  ((7 << 16) | SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 	SDT_PROBE(sctp, cwnd, net, rttvar,
 		  vtag,
-		  net->lbw,
-		  nbw,
+		  ((net->lbw << 32) | nbw),
+		  net->lbw_rtt,
 		  rtt,
 		  probepoint);
 	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
@@ -520,8 +521,8 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 * But our bw may not yet be set.
 			 * 
 			 */
-			if (net->new_tot_time) {
-				nbw = net->bw_bytes/net->new_tot_time;
+			if ((net->new_tot_time/1000) > 0) {
+				nbw = net->bw_bytes/(net->new_tot_time/1000);
 			} else {
 				nbw = net->bw_bytes;
 			}
