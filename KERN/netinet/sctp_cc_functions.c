@@ -191,7 +191,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 static int
 cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
-	uint64_t bw_offset, rtt_offset, rtt;
+	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
 	/*- 
 	 * Here we need to see if we want
 	 * to limit cwnd growth due to increase
@@ -229,6 +229,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * RTT it stayed the same if it did not
 	 * change within 1/32nd
 	 */
+	rtt = stcb->asoc.my_vtag;
+	vtag = (rtt << 32) | (((uint32)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
+	probepoint = (((uint64_t)net->cwnd) << 32);
 	rtt = net->rtt;
 	bw_offset = net->lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	if (nbw > net->lbw+bw_offset) {
@@ -239,13 +242,11 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		 */
 		/* PROBE POINT 0 */
 		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  ((stcb->asoc.my_vtag<<32)|
-			   (stcb->sctp_ep->sctp_lport << 16)|
-			   (stcb->rport)), 
+			  vtag,
 			  net->lbw,
 			  nbw,
 			  rtt,
-			  ((0<<48)|(0<<32)|net->cwnd));
+			  probepoint);
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
@@ -260,14 +261,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			if (net->cwnd > net->cwnd_at_bw_set) {
 				/* We caused it maybe.. back off */
 				/* PROBE POINT 1 */
+				probepoint |=  ((1 << 16) | 1);
 				SDT_PROBE(sctp, cwnd, net, rttvar,
-					  ((stcb->asoc.my_vtag<<32)|
-					   (stcb->sctp_ep->sctp_lport << 16)|
-					   (stcb->rport)), 
+					  vtag,
 					  net->lbw,
 					  nbw,
 					  rtt,
-					  ((1<<48)|(1<<32)|net->cwnd));
+					  probepoint);
 
 				net->lbw = nbw;
 				net->lbw_rtt = rtt;
@@ -279,26 +279,24 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->lbw_rtt = rtt;
 			net->cwnd_at_bw_set = net->cwnd;
 			/* Probe point 2 */
+			probepoint |=  ((2 << 16) | 0);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
-				  ((stcb->asoc.my_vtag<<32)|
-				   (stcb->sctp_ep->sctp_lport << 16)|
-				   (stcb->rport)), 
+				  vtag,
 				  net->lbw,
 				  nbw,
 				  rtt,
-				  ((0<<48)|(2<<32)|net->cwnd));
+				  probepoint);
 			return(0);
 		} else  if (rtt  < net->lbw_rtt-rtt_offset) {
 			/* rtt decreased */
 			/* Probe point 3 */
+			probepoint |=  ((3 << 16) | 0);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
-				  ((stcb->asoc.my_vtag<<32)|
-				   (stcb->sctp_ep->sctp_lport << 16)|
-				   (stcb->rport)), 
+				  vtag,
 				  net->lbw,
 				  nbw,
 				  rtt,
-				  ((0<<48)|(3<<32)|net->cwnd));
+				  probepoint);
 			net->lbw = nbw;
 			net->lbw_rtt = rtt;
 			net->cwnd_at_bw_set = net->cwnd;
@@ -309,14 +307,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
 		/* Probe point 4 */
+		probepoint |=  ((4 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  ((stcb->asoc.my_vtag<<32)|
-			   (stcb->sctp_ep->sctp_lport << 16)|
-			   (stcb->rport)), 
+			  vtag,
 			  net->lbw,
 			  nbw,
 			  rtt,
-			  ((0<<48)|(4<<32)|net->cwnd));
+			  probepoint);
 		  return (0);
 	}
 	/* If we reach here then
@@ -330,14 +327,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		 * update the rtt either.
 		 */
 		/* Probe point 5 */
+		probepoint |=  ((5 << 16) | 1);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  ((stcb->asoc.my_vtag<<32)|
-			   (stcb->sctp_ep->sctp_lport << 16)|
-			   (stcb->rport)), 
+			  vtag,
 			  net->lbw,
 			  nbw,
 			  rtt,
-			  ((1<<48)|(5<<32)|net->cwnd));
+			  probepoint);
 		return (1);
 	}
 	if (rtt  < net->lbw_rtt-rtt_offset) {
@@ -346,14 +342,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		 * we update both the bw and the rtt here.
 		 */
 		/* Probe point 6 */
+		probepoint |=  ((6 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  ((stcb->asoc.my_vtag<<32)|
-			   (stcb->sctp_ep->sctp_lport << 16)|
-			   (stcb->rport)), 
+			  vtag,
 			  net->lbw,
 			  nbw,
 			  rtt,
-			  ((0<<48)|(6<<32)|net->cwnd));
+			  probepoint);
 		net->lbw = nbw;
 		net->lbw_rtt = rtt;
 		net->cwnd_at_bw_set = net->cwnd;
@@ -363,14 +358,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * but save the latest cwnd.
 	 */
 	/* Probe point 7 */
+	probepoint |=  ((7 << 16) | SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 	SDT_PROBE(sctp, cwnd, net, rttvar,
-		  ((stcb->asoc.my_vtag<<32)|
-		   (stcb->sctp_ep->sctp_lport << 16)|
-		   (stcb->rport)), 
+		  vtag,
 		  net->lbw,
 		  nbw,
 		  rtt,
-		  ((SCTP_BASE_SYSCTL(sctp_rttvar_eqret)<<48)|(7<<32)|net->cwnd));
+		  probepoint);
 	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
 }
 #endif
