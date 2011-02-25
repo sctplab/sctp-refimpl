@@ -278,8 +278,12 @@ main(int argc, char **argv)
 
 	memset(pkt_arry, 0, sizeof(pkt_arry));
 
-	while ((i = getopt(argc, argv, "emc:?")) != EOF) {
+	while ((i = getopt(argc, argv, "aemc:?")) != EOF) {
 		switch (i) {
+		case 'a':
+			initial_time_set = 1;
+			memset(&initial_time, 0, sizeof(initial_time));
+			break;
 		case 'e':
 			ecn_print = 1;
 			break;
@@ -292,9 +296,10 @@ main(int argc, char **argv)
 		case '?':
 		default:
 		use:
-			printf("Use %s -c capture-file [-e -m]\n", argv[0]);
+			printf("Use %s -c capture-file [-e -m -a]\n", argv[0]);
 			printf("  -e - only sacks with ECNE\n");
 			printf("  -m - time of rrt NOT in microseconds\n");
+			printf("  -a - use absolute time\n");
 			return (-1);
 			break;
 		};
