@@ -79,11 +79,11 @@ SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 4, "int");
 SDT_PROBE_DEFINE(sctp, cwnd, net, rttvar, rttvar);
 /* The Vtag << 32 | localport << 16 | remoteport */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, rttvar, 0, "uint64_t");
-/* Old nbw */
+/* obw | nbw */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, rttvar, 1, "uint64_t");
-/* new nbw */
+/* newrtt */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, rttvar, 2, "uint64_t");
-/* The value of the rtt in usec  */
+/* bwrtt  */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, rttvar, 3, "uint64_t");
 /* (cwnd << 32) | point << 16 | retval(0/1) */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, rttvar, 4, "uint64_t");
