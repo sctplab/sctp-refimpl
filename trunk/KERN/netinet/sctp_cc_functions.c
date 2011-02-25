@@ -230,7 +230,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * change within 1/32nd
 	 */
 	rtt = stcb->asoc.my_vtag;
-	vtag = (rtt << 32) | (((uint32)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
+	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
 	probepoint = (((uint64_t)net->cwnd) << 32);
 	rtt = net->rtt;
 	bw_offset = net->lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
