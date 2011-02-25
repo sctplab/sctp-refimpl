@@ -85,7 +85,7 @@ SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 1, "uint64_t");
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 2, "uint64_t");
 /* The value of the rtt in usec  */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 3, "uint64_t");
-/* retval(0/1)<< 48) | (probepoint<<3)2 | cwnd */
+/* (cwnd << 32) | point << 16 | retval(0/1) */
 SDT_PROBE_ARGTYPE(sctp, cwnd, net, ack, 4, "uint64_t");
 
 
