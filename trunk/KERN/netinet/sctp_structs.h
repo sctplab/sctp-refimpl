@@ -249,7 +249,6 @@ struct htcp {
 	uint32_t	lasttime;
 };
 
-
 struct sctp_nets {
 	TAILQ_ENTRY(sctp_nets) sctp_next;	/* next link */
 
@@ -257,15 +256,6 @@ struct sctp_nets {
 	 * Things on the top half may be able to be split into a common
 	 * structure shared by all.
 	 */
-#ifdef SCTP_HAS_RTTCC
-	struct timeval tls;   /* The time we started the sending  */
-	uint64_t lbw;         /* Our last estimated bw */
-	uint64_t lbw_rtt;     /* RTT at bw estimate */
-	uint64_t bw_bytes;    /* The total bytes since this sending began */
-	uint64_t bw_tot_time; /* The total time since sending began */
-	uint64_t new_tot_time;  /* temp holding the new value */
-	uint32_t cwnd_at_bw_set;
-#endif 
 	struct sctp_timer pmtu_timer;
 
 	/*
@@ -293,10 +283,9 @@ struct sctp_nets {
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
-
-	/* JRS - struct used in HTCP algorithm */
-	struct htcp htcp_ca;
-
+	union cc_control_data {
+		struct htcp htcp_ca; 	/* JRS - struct used in HTCP algorithm */
+	}cc_mod;
 	int ref_count;
 
 	/* Congestion stats per destination */
@@ -388,9 +377,6 @@ struct sctp_nets {
 	uint8_t RTO_measured;		/* Have we done the first measure */
 	uint8_t last_hs_used;	/* index into the last HS table entry we used */
 	uint8_t lan_type;
-#ifdef SCTP_HAS_RTTCC
-	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
-#endif
 #if defined(__FreeBSD__)
 	uint32_t flowid;
 #ifdef INVARIANTS
@@ -691,6 +677,15 @@ struct sctp_cc_functions {
 			struct sctp_nets *net, int burst_limit);
 	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp,
 			struct sctp_tcb *stcb, struct sctp_nets *net);
+	void (*sctp_cwnd_update_packet_transmitted)(struct sctp_tcb *stcb, 
+			struct sctp_nets *net);
+	void (*sctp_cwnd_update_tsn_acknowledged)(struct sctp_nets *net, 
+			struct sctp_tmit_chunk *);
+	void (*sctp_cwnd_new_transmission_begins)(struct sctp_tcb *stcb, 
+			struct sctp_nets *net);
+	void (*sctp_cwnd_prepare_net_for_sack)(struct sctp_tcb *stcb, 
+			struct sctp_nets *net);
+	int (*sctp_cwnd_socket_option)(struct sctp_tcb *stcb, int set, struct sctp_cc_option *);
 };
 
 /*
@@ -1207,6 +1202,7 @@ struct sctp_association {
 	uint8_t sctp_nr_sack_on_off;
 	/* JRS 5/21/07 - CMT PF variable */
 	uint8_t sctp_cmt_pf;
+	uint8_t use_precise_time;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

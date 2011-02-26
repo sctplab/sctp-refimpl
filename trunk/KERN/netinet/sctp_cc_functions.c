@@ -187,188 +187,6 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 		}
 	}
 }
-#ifdef SCTP_HAS_RTTCC
-static int
-cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
-{
-	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
-	/*- 
-	 * Here we need to see if we want
-	 * to limit cwnd growth due to increase
-	 * in overall rtt but no increase in bw.
-	 * We use the following table to figure
-	 * out what we should do. When we return
-	 * 0, cc update goes on as planned. If we
-	 * return 1, then no cc update happens and cwnd
-	 * stays where it is at.
-	 * ----------------------------------
-	 *   BW    |    RTT   | Action
-	 * *********************************
-	 *   INC   |    INC   | return 0
-	 * ----------------------------------
-	 *   INC   |    SAME  | return 0
-	 * ----------------------------------
-	 *   INC   |    DECR  | return 0 
-	 * ----------------------------------
-	 *   SAME  |    INC   | return 1
-	 * ----------------------------------
-	 *   SAME  |    SAME  | return 1
-	 * ----------------------------------
-	 *   SAME  |    DECR  | return 0
-	 * ----------------------------------
-	 *   DECR  |    INC   | return 0 or 1 based on if we caused.
-	 * ----------------------------------
-	 *   DECR  |    SAME  | return 0
-	 * ----------------------------------
-	 *   DECR  |    DECR  | return 0
-	 * ----------------------------------
-	 *
-	 * We are a bit fuzz on what an increase or
-	 * decrease is. For BW it is the same if
-	 * it did not change within 1/64th. For
-	 * RTT it stayed the same if it did not
-	 * change within 1/32nd
-	 */
-	rtt = stcb->asoc.my_vtag;
-	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
-	probepoint = (((uint64_t)net->cwnd) << 32);
-	rtt = net->rtt;
-	bw_offset = net->lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
-	if (nbw > net->lbw+bw_offset) {
-		/* BW increased, so update and
-		 * return 0, since all actions in 
-		 * our table say to do the normal CC
-		 * update
-		 */
-		/* PROBE POINT 0 */
-		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  vtag,
-			  ((net->lbw << 32) | nbw),
-			  net->lbw_rtt,
-			  rtt,
-			  probepoint);
-		net->lbw = nbw;
-		net->lbw_rtt = rtt;
-		net->cwnd_at_bw_set = net->cwnd;
-		return(0);
-	}
-	rtt_offset = net->lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
-	if (nbw < net->lbw-bw_offset) {
-		/* Bandwidth decreased.*/
-		if (rtt  > net->lbw_rtt+rtt_offset) {
-			/* rtt increased */
-			/* Did we add more */
-			if (net->cwnd > net->cwnd_at_bw_set) {
-				/* We caused it maybe.. back off */
-				/* PROBE POINT 1 */
-				probepoint |=  ((1 << 16) | 1);
-				SDT_PROBE(sctp, cwnd, net, rttvar,
-					  vtag,
-					  ((net->lbw << 32) | nbw),
-					  net->lbw_rtt,
-					  rtt,
-					  probepoint);
-
-				net->lbw = nbw;
-				net->lbw_rtt = rtt;
-				net->cwnd = net->cwnd_at_bw_set;
-				return (1);
-			} 
-			/* Probe point 2 */
-			probepoint |=  ((2 << 16) | 0);
-			SDT_PROBE(sctp, cwnd, net, rttvar,
-				  vtag,
-				  ((net->lbw << 32) | nbw),
-				  net->lbw_rtt,
-				  rtt,
-				  probepoint);
-
-			/* Someone else - fight for more? */
-			net->lbw = nbw;
-			net->lbw_rtt = rtt;
-			net->cwnd_at_bw_set = net->cwnd;
-			return(0);
-		} else  if (rtt  < net->lbw_rtt-rtt_offset) {
-			/* rtt decreased */
-			/* Probe point 3 */
-			probepoint |=  ((3 << 16) | 0);
-			SDT_PROBE(sctp, cwnd, net, rttvar,
-				  vtag,
-				  ((net->lbw << 32) | nbw),
-				  net->lbw_rtt,
-				  rtt,
-				  probepoint);
-			net->lbw = nbw;
-			net->lbw_rtt = rtt;
-			net->cwnd_at_bw_set = net->cwnd;
-			return (0);
-		}
-		/* The bw decreased but rtt stayed the same */
-		net->lbw = nbw;
-		net->lbw_rtt = rtt;
-		net->cwnd_at_bw_set = net->cwnd;
-		/* Probe point 4 */
-		probepoint |=  ((4 << 16) | 0);
-		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  vtag,
-			  ((net->lbw << 32) | nbw),
-			  net->lbw_rtt,
-			  rtt,
-			  probepoint);
-		  return (0);
-	}
-	/* If we reach here then
-	 * we are in a situation where
-	 * the bw stayed the same.
-	 */
-	if (rtt  > net->lbw_rtt+rtt_offset) {
-		/*
-		 * rtt increased 
-		 * we don't update bw.. so we don't
-		 * update the rtt either.
-		 */
-		/* Probe point 5 */
-		probepoint |=  ((5 << 16) | 1);
-		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  vtag,
-			  ((net->lbw << 32) | nbw),
-			  net->lbw_rtt,
-			  rtt,
-			  probepoint);
-		return (1);
-	}
-	if (rtt  < net->lbw_rtt-rtt_offset) {
-		/*
-		 * rtt decreased, there could be more room.
-		 * we update both the bw and the rtt here.
-		 */
-		/* Probe point 6 */
-		probepoint |=  ((6 << 16) | 0);
-		SDT_PROBE(sctp, cwnd, net, rttvar,
-			  vtag,
-			  ((net->lbw << 32) | nbw),
-			  net->lbw_rtt,
-			  rtt,
-			  probepoint);
-		net->lbw = nbw;
-		net->lbw_rtt = rtt;
-		net->cwnd_at_bw_set = net->cwnd;
-		return (0);
-	}
-	/* Ok bw and rtt remained the same .. no update to any 
-	 * but save the latest cwnd.
-	 */
-	/* Probe point 7 */
-	probepoint |=  ((7 << 16) | SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
-	SDT_PROBE(sctp, cwnd, net, rttvar,
-		  vtag,
-		  ((net->lbw << 32) | nbw),
-		  net->lbw_rtt,
-		  rtt,
-		  probepoint);
-	return (SCTP_BASE_SYSCTL(sctp_rttvar_eqret));
-}
-#endif
 
 static void
 sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
@@ -508,35 +326,6 @@ sctp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 */
 			goto skip_cwnd_update;
 		}
-#ifdef SCTP_HAS_RTTCC
-		/* 
-		 * Did any measurements go on for this network?
-		 */
-		if (net->tls_needs_set > 0) {
-			uint64_t nbw;
-			/* 
-			 * At this point our bw_bytes has been updated 
-			 * by incoming sack information.
-			 * 
-			 * But our bw may not yet be set.
-			 * 
-			 */
-			if ((net->new_tot_time/1000) > 0) {
-				nbw = net->bw_bytes/(net->new_tot_time/1000);
-			} else {
-				nbw = net->bw_bytes;
-			}
-			if (net->lbw) {
-				if(cc_bw_limit(stcb, net, nbw)) {
-					/* Hold here, no update */
-					goto skip_cwnd_update;
-				}
-			} else {
-				net->lbw = nbw;
-				net->lbw_rtt = net->rtt;
-			}
-		}
-#endif
 		/*
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
 		 * moved.
@@ -1341,10 +1130,10 @@ htcp_reset(struct htcp *ca)
 static uint32_t
 htcp_cwnd_undo(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	net->htcp_ca.last_cong = net->htcp_ca.undo_last_cong;
-	net->htcp_ca.maxRTT = net->htcp_ca.undo_maxRTT;
-	net->htcp_ca.old_maxB = net->htcp_ca.undo_old_maxB;
-	return max(net->cwnd, ((net->ssthresh/net->mtu<<7)/net->htcp_ca.beta)*net->mtu);
+	net->cc_mod.htcp_ca.last_cong = net->cc_mod.htcp_ca.undo_last_cong;
+	net->cc_mod.htcp_ca.maxRTT = net->cc_mod.htcp_ca.undo_maxRTT;
+	net->cc_mod.htcp_ca.old_maxB = net->cc_mod.htcp_ca.undo_old_maxB;
+	return max(net->cwnd, ((net->ssthresh/net->mtu<<7)/net->cc_mod.htcp_ca.beta)*net->mtu);
 }
 
 #endif
@@ -1355,15 +1144,15 @@ measure_rtt(struct sctp_tcb *stcb, struct sctp_nets *net)
 	uint32_t srtt = net->lastsa>>SCTP_RTT_SHIFT;
 
 	/* keep track of minimum RTT seen so far, minRTT is zero at first */
-	if (net->htcp_ca.minRTT > srtt || !net->htcp_ca.minRTT)
-		net->htcp_ca.minRTT = srtt;
+	if (net->cc_mod.htcp_ca.minRTT > srtt || !net->cc_mod.htcp_ca.minRTT)
+		net->cc_mod.htcp_ca.minRTT = srtt;
 
 	/* max RTT */
-	if (net->fast_retran_ip == 0 && net->ssthresh < 0xFFFF && htcp_ccount(&net->htcp_ca) > 3) {
-		if (net->htcp_ca.maxRTT < net->htcp_ca.minRTT)
-			net->htcp_ca.maxRTT = net->htcp_ca.minRTT;
-		if (net->htcp_ca.maxRTT < srtt && srtt <= net->htcp_ca.maxRTT+MSEC_TO_TICKS(20))
-			net->htcp_ca.maxRTT = srtt;
+	if (net->fast_retran_ip == 0 && net->ssthresh < 0xFFFF && htcp_ccount(&net->cc_mod.htcp_ca) > 3) {
+		if (net->cc_mod.htcp_ca.maxRTT < net->cc_mod.htcp_ca.minRTT)
+			net->cc_mod.htcp_ca.maxRTT = net->cc_mod.htcp_ca.minRTT;
+		if (net->cc_mod.htcp_ca.maxRTT < srtt && srtt <= net->cc_mod.htcp_ca.maxRTT+MSEC_TO_TICKS(20))
+			net->cc_mod.htcp_ca.maxRTT = srtt;
 	}
 }
 
@@ -1373,7 +1162,7 @@ measure_achieved_throughput(struct sctp_tcb *stcb, struct sctp_nets *net)
 	uint32_t now = sctp_get_tick_count();
 
 	if (net->fast_retran_ip == 0)
-		net->htcp_ca.bytes_acked = net->net_ack;
+		net->cc_mod.htcp_ca.bytes_acked = net->net_ack;
 
 	if (!use_bandwidth_switch)
 		return;
@@ -1381,33 +1170,33 @@ measure_achieved_throughput(struct sctp_tcb *stcb, struct sctp_nets *net)
 	/* achieved throughput calculations */
 	/* JRS - not 100% sure of this statement */
 	if (net->fast_retran_ip == 1) {
-		net->htcp_ca.bytecount = 0;
-		net->htcp_ca.lasttime = now;
+		net->cc_mod.htcp_ca.bytecount = 0;
+		net->cc_mod.htcp_ca.lasttime = now;
 		return;
 	}
 
-	net->htcp_ca.bytecount += net->net_ack;
+	net->cc_mod.htcp_ca.bytecount += net->net_ack;
 
 #if !defined(__Windows__)
-	if (net->htcp_ca.bytecount >= net->cwnd - ((net->htcp_ca.alpha>>7? : 1)*net->mtu)
+	if (net->cc_mod.htcp_ca.bytecount >= net->cwnd - ((net->cc_mod.htcp_ca.alpha>>7? : 1)*net->mtu)
 #else
-	if (net->htcp_ca.bytecount >= net->cwnd - (((net->htcp_ca.alpha >> 7) ? net->htcp_ca.alpha : 1) * net->mtu)
+	if (net->cc_mod.htcp_ca.bytecount >= net->cwnd - (((net->cc_mod.htcp_ca.alpha >> 7) ? net->cc_mod.htcp_ca.alpha : 1) * net->mtu)
 #endif
-			&& now - net->htcp_ca.lasttime >= net->htcp_ca.minRTT
-			&& net->htcp_ca.minRTT > 0) {
-		uint32_t cur_Bi = net->htcp_ca.bytecount/net->mtu*hz/(now - net->htcp_ca.lasttime);
-		if (htcp_ccount(&net->htcp_ca) <= 3) {
+			&& now - net->cc_mod.htcp_ca.lasttime >= net->cc_mod.htcp_ca.minRTT
+			&& net->cc_mod.htcp_ca.minRTT > 0) {
+		uint32_t cur_Bi = net->cc_mod.htcp_ca.bytecount/net->mtu*hz/(now - net->cc_mod.htcp_ca.lasttime);
+		if (htcp_ccount(&net->cc_mod.htcp_ca) <= 3) {
 			/* just after backoff */
-			net->htcp_ca.minB = net->htcp_ca.maxB = net->htcp_ca.Bi = cur_Bi;
+			net->cc_mod.htcp_ca.minB = net->cc_mod.htcp_ca.maxB = net->cc_mod.htcp_ca.Bi = cur_Bi;
 		} else {
-			net->htcp_ca.Bi = (3*net->htcp_ca.Bi + cur_Bi)/4;
-			if (net->htcp_ca.Bi > net->htcp_ca.maxB)
-				net->htcp_ca.maxB = net->htcp_ca.Bi;
-			if (net->htcp_ca.minB > net->htcp_ca.maxB)
-				net->htcp_ca.minB = net->htcp_ca.maxB;
+			net->cc_mod.htcp_ca.Bi = (3*net->cc_mod.htcp_ca.Bi + cur_Bi)/4;
+			if (net->cc_mod.htcp_ca.Bi > net->cc_mod.htcp_ca.maxB)
+				net->cc_mod.htcp_ca.maxB = net->cc_mod.htcp_ca.Bi;
+			if (net->cc_mod.htcp_ca.minB > net->cc_mod.htcp_ca.maxB)
+				net->cc_mod.htcp_ca.minB = net->cc_mod.htcp_ca.maxB;
 		}
-		net->htcp_ca.bytecount = 0;
-		net->htcp_ca.lasttime = now;
+		net->cc_mod.htcp_ca.bytecount = 0;
+		net->cc_mod.htcp_ca.lasttime = now;
 	}
 }
 
@@ -1474,22 +1263,22 @@ htcp_alpha_update(struct htcp *ca)
 static void
 htcp_param_update(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	uint32_t minRTT = net->htcp_ca.minRTT;
-	uint32_t maxRTT = net->htcp_ca.maxRTT;
+	uint32_t minRTT = net->cc_mod.htcp_ca.minRTT;
+	uint32_t maxRTT = net->cc_mod.htcp_ca.maxRTT;
 
-	htcp_beta_update(&net->htcp_ca, minRTT, maxRTT);
-	htcp_alpha_update(&net->htcp_ca);
+	htcp_beta_update(&net->cc_mod.htcp_ca, minRTT, maxRTT);
+	htcp_alpha_update(&net->cc_mod.htcp_ca);
 
 	/* add slowly fading memory for maxRTT to accommodate routing changes etc */
 	if (minRTT > 0 && maxRTT > minRTT)
-		net->htcp_ca.maxRTT = minRTT + ((maxRTT-minRTT)*95)/100;
+		net->cc_mod.htcp_ca.maxRTT = minRTT + ((maxRTT-minRTT)*95)/100;
 }
 
 static uint32_t
 htcp_recalc_ssthresh(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	htcp_param_update(stcb, net);
-	return max(((net->cwnd/net->mtu * net->htcp_ca.beta) >> 7)*net->mtu, 2U*net->mtu);
+	return max(((net->cwnd/net->mtu * net->cc_mod.htcp_ca.beta) >> 7)*net->mtu, 2U*net->mtu);
 }
 
 static void
@@ -1531,14 +1320,14 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 		 * In theory this is net->cwnd += alpha / net->cwnd
 		 */
 		/* What is snd_cwnd_cnt?? */
-		if (((net->partial_bytes_acked/net->mtu * net->htcp_ca.alpha) >> 7)*net->mtu >= net->cwnd) {
+		if (((net->partial_bytes_acked/net->mtu * net->cc_mod.htcp_ca.alpha) >> 7)*net->mtu >= net->cwnd) {
                         /*-
 			 * Does SCTP have a cwnd clamp?
 			 * if (net->snd_cwnd < net->snd_cwnd_clamp) - Nope (RRS).
 			 */
 			net->cwnd += net->mtu;
 			net->partial_bytes_acked = 0;
-			htcp_alpha_update(&net->htcp_ca);
+			htcp_alpha_update(&net->cc_mod.htcp_ca);
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 				sctp_log_cwnd(stcb, net, net->mtu,
 					SCTP_CWND_LOG_FROM_CA);
@@ -1551,7 +1340,7 @@ htcp_cong_avoid(struct sctp_tcb *stcb, struct sctp_nets *net)
 			}
 		}
 
-		net->htcp_ca.bytes_acked = net->mtu;
+		net->cc_mod.htcp_ca.bytes_acked = net->mtu;
 	}
 }
 
@@ -1567,11 +1356,11 @@ htcp_min_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net)
 static void
 htcp_init(struct sctp_tcb *stcb, struct sctp_nets *net)
 {
-	memset(&net->htcp_ca, 0, sizeof(struct htcp));
-	net->htcp_ca.alpha = ALPHA_BASE;
-	net->htcp_ca.beta = BETA_MIN;
-	net->htcp_ca.bytes_acked = net->mtu;
-	net->htcp_ca.last_cong = sctp_get_tick_count();
+	memset(&net->cc_mod.htcp_ca, 0, sizeof(struct htcp));
+	net->cc_mod.htcp_ca.alpha = ALPHA_BASE;
+	net->cc_mod.htcp_ca.beta = BETA_MIN;
+	net->cc_mod.htcp_ca.bytes_acked = net->mtu;
+	net->cc_mod.htcp_ca.last_cong = sctp_get_tick_count();
 }
 
 static void
@@ -1770,7 +1559,7 @@ sctp_htcp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 				int old_cwnd = net->cwnd;
 
 				/* JRS - reset as if state were changed */
-				htcp_reset(&net->htcp_ca);
+				htcp_reset(&net->cc_mod.htcp_ca);
 				net->ssthresh = htcp_recalc_ssthresh(stcb, net);
 				net->cwnd = net->ssthresh;
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
@@ -1824,7 +1613,7 @@ sctp_htcp_cwnd_update_after_timeout(struct sctp_tcb *stcb,
 		int old_cwnd = net->cwnd;
 
 		/* JRS - reset as if the state were being changed to timeout */
-		htcp_reset(&net->htcp_ca);
+		htcp_reset(&net->cc_mod.htcp_ca);
 		net->ssthresh = htcp_recalc_ssthresh(stcb, net);
 		net->cwnd = net->mtu;
 		net->partial_bytes_acked = 0;
@@ -1841,7 +1630,7 @@ sctp_htcp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
 	old_cwnd = net->cwnd;
 
 	sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR, SCTP_SO_NOT_LOCKED);
-	net->htcp_ca.last_cong = sctp_get_tick_count();
+	net->cc_mod.htcp_ca.last_cong = sctp_get_tick_count();
 	/*
 	 * make a small adjustment to cwnd and force to CA.
 	 */
@@ -1865,7 +1654,7 @@ sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
 
 	/* JRS - reset hctp as if state changed */
 	if (in_window == 0) {
-		htcp_reset(&net->htcp_ca);
+		htcp_reset(&net->cc_mod.htcp_ca);
 		SCTP_STAT_INCR(sctps_ecnereducedcwnd);
 		net->ssthresh = htcp_recalc_ssthresh(stcb, net);
 		if (net->ssthresh < net->mtu) {
