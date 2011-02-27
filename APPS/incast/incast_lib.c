@@ -268,6 +268,7 @@ struct elephant_sink_rec32 {
 	int number_bytes;
 };
 
+int no_cc_change=0;
 
 int 
 read_a_sink_rec(struct elephant_sink_rec *sink, FILE *io, int infile_size)
@@ -468,7 +469,7 @@ build_conn_into_kq(int kq, struct incast_control *ctrl)
 			       errno);
 			return(-1);
 		}
-		if (proto == IPPROTO_SCTP) {
+		if ((proto == IPPROTO_SCTP) && (no_cc_change == 0)) {
 			struct sctp_assoc_value av;
 			socklen_t optlen;
 			av.assoc_id = 0;
@@ -848,7 +849,7 @@ distribute_to_each_peer(struct incast_control *ctrl)
 			
 			return (-1);
 		}
-		if (proto == IPPROTO_SCTP) {
+		if ((proto == IPPROTO_SCTP) && (no_cc_change == 0)) {
 			struct sctp_assoc_value av;
 			socklen_t optlen;
 			av.assoc_id = 0;
