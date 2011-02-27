@@ -32,7 +32,7 @@
 #include <pthread.h>
 int verbose=0;
 int nap_time=0;
-
+int no_cc_change = 0;
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)
 {
@@ -157,8 +157,11 @@ main(int argc, char **argv)
 	int backlog=4;
 	socklen_t slen;
 	char *bindto = NULL;
-	while ((i = getopt(argc, argv, "S:B:b:tsp:?vT:")) != EOF) {
+	while ((i = getopt(argc, argv, "S:B:b:tsp:?vT:N")) != EOF) {
 		switch (i) {
+		case 'N':
+			no_cc_change = 1;
+			break;
 		case 'S':
 			nap_time = strtol(optarg, NULL, 0);
 			if (nap_time < 0) 
@@ -203,7 +206,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -b bind_address[-p port -t -s -B backlog]\n", 
+			printf("Use %s -b bind_address[-p port -t -s -B backlog -N]\n", 
 			       argv[0]);
 			exit(-1);
 			break;
@@ -225,7 +228,7 @@ main(int argc, char **argv)
 	/* Which protocol? */
 	if (use_sctp) {
 		sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
-		if (sd >= 0) {
+		if ((sd >= 0) && (no_cc_change == 0)) {
 			struct sctp_assoc_value av;
 			socklen_t optlen;
 			av.assoc_id = 0;
