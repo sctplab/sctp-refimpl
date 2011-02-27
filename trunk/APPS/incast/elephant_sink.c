@@ -200,6 +200,19 @@ main(int argc, char **argv)
 	/* Which protocol? */
 	if (use_sctp) {
 		sd = socket(AF_INET, SOCK_STREAM, IPPROTO_SCTP);
+		if (sd >= 0) {
+			struct sctp_assoc_value av;
+			socklen_t optlen;
+			av.assoc_id = 0;
+			av.assoc_value = SCTP_CC_RTCC;
+			optlen = sizeof(av);
+			if (setsockopt(sd, IPPROTO_SCTP,  SCTP_PLUGGABLE_CC,
+			       &av, optlen) == -1) {
+				printf("Can't turn on RTCC cc err:%d\n",
+				       errno);
+				exit(-1);
+			}
+		}
 	} else {
 		sd = socket(AF_INET, SOCK_STREAM, IPPROTO_TCP);
 	}
