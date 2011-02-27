@@ -210,6 +210,7 @@ main(int argc, char **argv)
 			av.assoc_id = 0;
 			av.assoc_value = SCTP_CC_RTCC;
 			optlen = sizeof(av);
+			printf("Setting on RTCC congestion control\n");
 			if (setsockopt(sd, IPPROTO_SCTP,  SCTP_PLUGGABLE_CC,
 			       &av, optlen) == -1) {
 				printf("Can't turn on RTCC cc err:%d\n",
