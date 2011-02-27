@@ -468,6 +468,19 @@ build_conn_into_kq(int kq, struct incast_control *ctrl)
 			       errno);
 			return(-1);
 		}
+		if (proto == IPPROTO_SCTP) {
+			struct sctp_assoc_value av;
+			socklen_t optlen;
+			av.assoc_id = 0;
+			av.assoc_value = SCTP_CC_RTCC;
+			optlen = sizeof(av);
+			if (setsockopt(peer->sd, proto,  SCTP_PLUGGABLE_CC,
+			       &av, optlen) == -1) {
+				printf("Can't turn on RTCC cc err:%d\n",
+				       errno);
+				exit(-1);
+			}
+		}
 		/* Set no delay */
 		optval = 1;
 		optlen = sizeof(optval);
@@ -834,6 +847,19 @@ distribute_to_each_peer(struct incast_control *ctrl)
 			       errno);
 			
 			return (-1);
+		}
+		if (proto == IPPROTO_SCTP) {
+			struct sctp_assoc_value av;
+			socklen_t optlen;
+			av.assoc_id = 0;
+			av.assoc_value = SCTP_CC_RTCC;
+			optlen = sizeof(av);
+			if (setsockopt(peer->sd, proto,  SCTP_PLUGGABLE_CC,
+			       &av, optlen) == -1) {
+				printf("Can't turn on RTCC cc err:%d\n",
+				       errno);
+				exit(-1);
+			}
 		}
 		/* Set no delay */
 		optval = 1;

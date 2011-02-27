@@ -121,7 +121,8 @@ find_next_entry()
 
 struct timeval initial_time;
 int initial_time_set=0;
-
+int bw_time_set=0;
+struct timeval bw_time;
 
 void
 process_data(struct pcap_pkthdr *phdr, 
@@ -169,12 +170,18 @@ process_sack(struct pcap_pkthdr *phdr,
 				initial_time = phdr->ts;
 				initial_time_set = 1;
 			}
+			if (bw_time_set == 0) {
+				bw_time = phdr->ts;
+				bw_time_set = 1;
+			}
 			cur_time = phdr->ts;
-			timevalsub(&cur_time, &initial_time);
+			timevalsub(&cur_time, &bw_time);
 			if (cur_time.tv_sec || cur_time.tv_usec) {
 				tti = ((1.0 * cur_time.tv_sec) + (cur_time.tv_usec / 1000000.0));
 				bw = total_acked/tti;
 			}
+			cur_time = phdr->ts;
+			timevalsub(&cur_time, &initial_time);
 			if (ecn_print) {
 				if (ecnseen) {
 					if (time_in_micro) {
