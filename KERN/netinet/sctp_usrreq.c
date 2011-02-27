@@ -2092,6 +2092,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			SCTP_TCB_UNLOCK(stcb);
 		}
 	}
+	break;
 	/* RS - Get socket option for pluggable stream scheduling */
 	case SCTP_PLUGGABLE_SS:
 	{
@@ -3359,6 +3360,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 	}
+	break;
 	case SCTP_CC_OPTION:
 	{
 		struct sctp_cc_option *cc_opt;
