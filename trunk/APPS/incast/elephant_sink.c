@@ -32,7 +32,7 @@
 #include <pthread.h>
 
 char *outfile=NULL;
-int no_cc_change = 0;
+extern int no_cc_change;
 
 void
 process_a_child(int sd, struct sockaddr_in *sin, int use_sctp)

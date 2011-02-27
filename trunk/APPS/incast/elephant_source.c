@@ -32,6 +32,8 @@
 
 struct incast_control ctrl;
 
+extern int no_cc_change;
+
 int
 main(int argc, char **argv)
 {
@@ -40,8 +42,11 @@ main(int argc, char **argv)
 	char *storeFile = NULL;
 	memset(&ctrl, 0, sizeof(ctrl));
 	
-	while ((i = getopt(argc, argv, "c:vS:w:?")) != EOF) {
+	while ((i = getopt(argc, argv, "Nc:vS:w:?")) != EOF) {
 		switch (i) {
+		case 'N':
+			no_cc_change = 1;
+			break;
 		case 'w':
 			storeFile = optarg;
 			break;
@@ -63,7 +68,7 @@ main(int argc, char **argv)
 		default:
 		case '?':
 		use:
-			printf("Use %s -c config-file [-w outfile -v -S nap]\n", argv[0]);
+			printf("Use %s -c config-file [-w outfile -v -S nap -N ]\n", argv[0]);
 			return (-1);
 			break;
 		};
