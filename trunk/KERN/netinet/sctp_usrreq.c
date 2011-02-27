@@ -3327,6 +3327,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			case SCTP_CC_RFC2581:
 			case SCTP_CC_HSTCP:
 			case SCTP_CC_HTCP:
+			case SCTP_CC_RTCC:
 				stcb->asoc.cc_functions = sctp_cc_functions[av->assoc_value];
 				stcb->asoc.congestion_control_module = av->assoc_value;
 				if (stcb->asoc.cc_functions.sctp_set_initial_cc_param != NULL) {
@@ -3346,6 +3347,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			case SCTP_CC_RFC2581:
 			case SCTP_CC_HSTCP:
 			case SCTP_CC_HTCP:
+			case SCTP_CC_RTCC:
 				SCTP_INP_WLOCK(inp);
 				inp->sctp_ep.sctp_default_cc_module = av->assoc_value;
 				SCTP_INP_WUNLOCK(inp);
