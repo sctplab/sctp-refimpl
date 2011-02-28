@@ -539,6 +539,19 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 					goto skip_cwnd_update;
 				}
 			} else {
+				uint64_t vtag, probepoint;
+				probepoint = (((uint64_t)net->cwnd) << 32);
+				probepoint |=  ((0xa << 16) | 0);
+				vtag = (net->rtt << 32) | 
+					(((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) |
+					(stcb->rport);
+
+				SDT_PROBE(sctp, cwnd, net, rttvar,
+					  vtag,
+					  nbw,
+					  0,
+					  net->rtt,
+					  probepoint);
 				net->cc_mod.rtcc.lbw = nbw;
 				net->cc_mod.rtcc.lbw_rtt = net->rtt;
 			}
@@ -1003,8 +1016,20 @@ static void
 sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb, 
 			       struct sctp_nets *net)
 {
+	uint64_t vtag, probepoint;
 	sctp_set_initial_cc_param(stcb, net);
 	stcb->asoc.use_precise_time = 1;
+	probepoint = (((uint64_t)net->cwnd) << 32);
+	probepoint |=  ((9 << 16) | 0);
+	vtag = (net->rtt << 32) | 
+		(((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | 
+		(stcb->rport);
+	SDT_PROBE(sctp, cwnd, net, rttvar,
+		  vtag,
+		  0,
+		  0,
+		  0,
+		  probepoint);
 	net->cc_mod.rtcc.lbw_rtt = 0;
 	net->cc_mod.rtcc.cwnd_at_bw_set = 0;
 	net->cc_mod.rtcc.lbw = 0;
