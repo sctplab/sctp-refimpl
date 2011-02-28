@@ -275,8 +275,12 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 
 				net->cc_mod.rtcc.lbw = nbw;
 				net->cc_mod.rtcc.lbw_rtt = rtt;
-				if (net->cc_mod.rtcc.cwnd_at_bw_set < net->cwnd)
-					net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
+				net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
+				if (net->cc_mod.rtcc.ret_from_eq) {
+					/* Switch over to CA if we are less aggressive */
+					net->ssthresh = net->cwnd-1;
+					net->partial_bytes_acked = 0;
+				}
 				return (1);
 			} 
 			/* Probe point 2 */
@@ -972,9 +976,20 @@ static void
 sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb, 
 				       struct sctp_nets *net)
 {
-
+	uint64_t vtag, probepoint;
 	if (net->cc_mod.rtcc.lbw) {
 		/* Clear the old bw.. we went to 0 in-flight */
+		vtag = (net->rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | 
+			(stcb->rport);
+		probepoint = (((uint64_t)net->cwnd) << 32);
+		/* Probe point 8 */
+		probepoint |=  ((8 << 16) | 0);
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  vtag,
+			  ((net->cc_mod.rtcc.lbw << 32) | 0),
+			  net->cc_mod.rtcc.lbw_rtt,
+			  0,
+			  probepoint);
 		net->cc_mod.rtcc.lbw_rtt = 0;
 		net->cc_mod.rtcc.cwnd_at_bw_set = 0;
 		net->cc_mod.rtcc.lbw = 0;
