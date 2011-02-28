@@ -700,7 +700,7 @@ sctp_cwnd_update_after_ecn_echo_common(struct sctp_tcb *stcb, struct sctp_nets *
 					    int in_window, int num_pkt_lost, int use_rtcc )
 {
 	int old_cwnd = net->cwnd;
-	if ((use_rtcc) && (net->lan_type == SCTP_LAN_LOCAL)) {
+	if ((use_rtcc) && (net->lan_type == SCTP_LAN_LOCAL) && (net->cc_mod.rtcc.use_dccc_ecn)) {
 		/* Data center Congestion Control */
 		if (in_window == 0) {
 			/* Go to CA with the cwnd at the point we sent
@@ -1014,6 +1014,14 @@ sctp_cwnd_rtcc_socket_option(struct sctp_tcb *stcb, int setorget,
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				net->cc_mod.rtcc.ret_from_eq = cc_opt->aid_value.assoc_value;
 			}
+		} else if (cc_opt->option == SCTP_CC_OPT_USE_DCCC_ECN) {
+			if ((cc_opt->aid_value.assoc_value != 0) &&
+			    (cc_opt->aid_value.assoc_value != 1)) {
+				return (EINVAL);
+			}
+			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+				net->cc_mod.rtcc.use_dccc_ecn = cc_opt->aid_value.assoc_value;
+			}
 		} else {
 			return (EINVAL);
 		}
@@ -1025,6 +1033,12 @@ sctp_cwnd_rtcc_socket_option(struct sctp_tcb *stcb, int setorget,
 				return (EFAULT);
 			}
 			cc_opt->aid_value.assoc_value = net->cc_mod.rtcc.ret_from_eq;
+		} else if (cc_opt->option == SCTP_CC_OPT_USE_DCCC_ECN) {
+			net = TAILQ_FIRST(&stcb->asoc.nets);
+			if (net == NULL) {
+				return (EFAULT);
+			}
+			cc_opt->aid_value.assoc_value = net->cc_mod.rtcc.use_dccc_ecn;
 		} else {
 			return (EINVAL);
 		}
