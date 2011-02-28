@@ -1,3 +1,4 @@
+#pragma D option switchrate=10hz
 
 sctp:cwnd:net:rttvar
 {
