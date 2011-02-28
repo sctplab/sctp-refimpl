@@ -257,7 +257,8 @@ struct rtcc_cc {
 	uint64_t bw_tot_time; /* The total time since sending began */
 	uint64_t new_tot_time;  /* temp holding the new value */
 	uint32_t cwnd_at_bw_set;
-        uint8_t ret_from_eq;
+        uint8_t  ret_from_eq;
+	uint8_t  use_dccc_ecn;
 	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
 };
 

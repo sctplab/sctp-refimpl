@@ -269,8 +269,8 @@ struct sctp_paramhdr {
 /* RTCC Congestion Control - RFC2581 plus */
 #define SCTP_CC_RTCC            0x00000003
 
-#define SCTP_CC_OPT_RTCC_SETMODE       0x00002000
-
+#define SCTP_CC_OPT_RTCC_SETMODE	0x00002000
+#define SCTP_CC_OPT_USE_DCCC_ECN	0x00002001
 
 /* RS - Supported stream scheduling modules for pluggable
  * stream scheduling
