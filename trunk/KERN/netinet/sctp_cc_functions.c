@@ -1009,6 +1009,24 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		net->cc_mod.rtcc.bw_tot_time = 0;
 		net->cc_mod.rtcc.bw_bytes = 0;
 		net->cc_mod.rtcc.tls_needs_set = 0;
+		if (net->cc_mod.rtcc.ret_from_eq) {
+			/* less aggressive one - reset cwnd too */
+			uint32_t cwnd_in_mtu;
+
+			cwnd_in_mtu = SCTP_BASE_SYSCTL(sctp_initial_cwnd);
+			if (cwnd_in_mtu == 0) {
+				/* Using 0 means that the value of RFC 4960 is used. */
+				net->cwnd = min((net->mtu * 4), max((2 * net->mtu), SCTP_INITIAL_CWND));
+			} else {
+				/*
+				 * We take the minimum of the burst limit and the
+				 * initial congestion window.
+				 */
+				if ((stcb->asoc.max_burst > 0) && (cwnd_in_mtu > stcb->asoc.max_burst))
+					cwnd_in_mtu = stcb->asoc.max_burst;
+				net->cwnd = (net->mtu - sizeof(struct sctphdr)) * cwnd_in_mtu;
+			}
+		}
 	}
 }
 
