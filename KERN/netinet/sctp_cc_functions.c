@@ -598,9 +598,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					}
 				}
 			}
-		} else {
-			net->cc_mod.rtcc.last_step_state = 7;
-			net->cc_mod.rtcc.step_cnt = 0;
 		}
 	}
 	return ((int)net->cc_mod.rtcc.ret_from_eq);
