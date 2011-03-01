@@ -286,6 +286,15 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					net->partial_bytes_acked = 0;
 				}
 				if (net->cc_mod.rtcc.steady_step) {
+					if ((net->cc_mod.rtcc.last_step_state == 5) &&
+					    (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step)) {
+						/* Step down failed.. we need to push more 
+						 * restore prev cwnd.
+						 */
+						if (net->cc_mod.rtcc.cwnd_at_step > net->cwnd) {
+							net->cwnd = net->cc_mod.rtcc.cwnd_at_step;
+						}
+					}
 					net->cc_mod.rtcc.last_step_state = 1;
 					net->cc_mod.rtcc.step_cnt = 0;
 				}
@@ -319,7 +328,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			}
 			return(0);
 		} else  if (rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
-			/* rtt decreased */
+			/* bw & rtt decreased */
 			/* Probe point 3 */
 			probepoint |=  ((3 << 16) | 0);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -332,6 +341,15 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.lbw_rtt = rtt;
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
+				if ((net->cc_mod.rtcc.last_step_state == 5) &&
+				    (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step)) {
+					/* Step down failed.. we need to push more 
+					 * restore prev cwnd.
+					 */
+					if (net->cc_mod.rtcc.cwnd_at_step > net->cwnd) {
+						net->cwnd = net->cc_mod.rtcc.cwnd_at_step;
+					}
+				}
 				net->cc_mod.rtcc.last_step_state = 3;
 				net->cc_mod.rtcc.step_cnt = 0;
 			}
@@ -350,6 +368,15 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.lbw_rtt = rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
+			if ((net->cc_mod.rtcc.last_step_state == 5) &&
+			    (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step)) {
+				/* Step down failed.. we need to push more 
+				 * restore prev cwnd.
+				 */
+				if (net->cc_mod.rtcc.cwnd_at_step > net->cwnd) {
+					net->cwnd = net->cc_mod.rtcc.cwnd_at_step;
+				}
+			}
 			net->cc_mod.rtcc.last_step_state = 4;
 			net->cc_mod.rtcc.step_cnt = 0;
 		}
