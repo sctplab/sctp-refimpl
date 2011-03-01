@@ -109,6 +109,8 @@ struct sctp_sysctl {
 	uint32_t sctp_rttvar_bw;
 	uint32_t sctp_rttvar_rtt;
 	uint32_t sctp_rttvar_eqret;
+	uint32_t sctp_steady_step;
+	uint32_t sctp_use_dccc_ecn;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	struct sctp_log *sctp_log;
@@ -546,6 +548,16 @@ struct sctp_sysctl {
 #define SCTPCTL_RTTVAR_EQRET_MIN	0
 #define SCTPCTL_RTTVAR_EQRET_MAX	1
 #define SCTPCTL_RTTVAR_EQRET_DEFAULT	0
+
+#define SCTPCTL_RTTVAR_STEADYS_DESC	"How many the sames it takes to try step down of cwnd"
+#define SCTPCTL_RTTVAR_STEADYS_MIN	0
+#define SCTPCTL_RTTVAR_STEADYS_MAX	0xFFFF
+#define SCTPCTL_RTTVAR_STEADYS_DEFAULT	0 /* 0 means disable feature */
+
+#define SCTPCTL_RTTVAR_DCCCECN_DESC	"Enable for RTCC CC datacenter ECN"
+#define SCTPCTL_RTTVAR_DCCCECN_MIN	0
+#define SCTPCTL_RTTVAR_DCCCECN_MAX	1
+#define SCTPCTL_RTTVAR_DCCCECN_DEFAULT	0 /* 0 means disable feature */
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
