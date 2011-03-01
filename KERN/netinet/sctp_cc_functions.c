@@ -373,8 +373,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
 				/* Try a step down */
 			step_again:
-				net->cwnd -= net->mtu;
-				net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+				if (net->cwnd > (4 * net->mtu)) {
+					net->cwnd -= net->mtu;
+					net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+				}
 			} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
 				/* Step down in progress */
 				if (net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) {
@@ -434,8 +436,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
 				/* Try a step down */
 			step_1_again:
-				net->cwnd -= net->mtu;
-				net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+				if (net->cwnd > (4 * net->mtu)) {
+						net->cwnd -= net->mtu;
+						net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+				}
 			} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
 				/* Step down in progress - stay there  */
 				if ((net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) == 0) {
