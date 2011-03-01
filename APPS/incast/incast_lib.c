@@ -949,7 +949,7 @@ store_elephant_peer(struct incast_control *ctrl, struct elephant_lead_hdr *hdr)
 }
 
 void 
-elephant_run_clients(struct incast_control *ctrl)
+elephant_run_clients(struct incast_control *ctrl, int first_size)
 {
 	int pass=0;
 	struct timespec ts;
@@ -969,6 +969,11 @@ elephant_run_clients(struct incast_control *ctrl)
 		/* Select some number of bytes to send 
 		 * we need a number between 1Meg - 100Meg
 		 */
+		if (first_size) {
+			ctrl->byte_cnt_req = first_size;
+			first_size = 0;
+			goto size_set;
+		}
 	choose_again:
 		randval = (random() & 0x1fffffff);
 		if (randval < 100000000) {
@@ -976,6 +981,7 @@ elephant_run_clients(struct incast_control *ctrl)
 		} else {
 			ctrl->byte_cnt_req = randval;
 		}
+	size_set:
 		ctrl->cnt_req = (ctrl->byte_cnt_req/ctrl->size) + 1;
 
 		hdr.number_of_bytes = ctrl->byte_cnt_req;
