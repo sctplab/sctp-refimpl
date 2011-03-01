@@ -196,6 +196,7 @@ static int
 cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
+	uint64_t oth;
 	/*- 
 	 * Here we need to see if we want
 	 * to limit cwnd growth due to increase
@@ -255,7 +256,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.lbw_rtt = rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
-			uint64_t oth;
 			oth = net->cc_mod.rtcc.cwnd_at_step;
 			oth << 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
@@ -297,7 +297,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					net->partial_bytes_acked = 0;
 				}
 				if (net->cc_mod.rtcc.steady_step) {
-					uint64_t oth;
 					oth = net->cc_mod.rtcc.cwnd_at_step;
 					oth << 16;
 					oth |= net->cc_mod.rtcc.step_cnt;
@@ -337,7 +336,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.lbw_rtt = rtt;
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
-				uint64_t oth;
 				oth = net->cc_mod.rtcc.cwnd_at_step;
 				oth << 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
@@ -375,7 +373,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.lbw_rtt = rtt;
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
-				uint64_t oth;
 				oth = net->cc_mod.rtcc.cwnd_at_step;
 				oth << 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
@@ -413,7 +410,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.lbw_rtt = rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
-			uint64_t oth;
 			oth = net->cc_mod.rtcc.cwnd_at_step;
 			oth << 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
@@ -518,7 +514,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  rtt,
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
-			uint64_t oth;
 			oth = net->cc_mod.rtcc.cwnd_at_step;
 			oth << 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
