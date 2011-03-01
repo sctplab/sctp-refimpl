@@ -257,6 +257,7 @@ struct rtcc_cc {
 	uint64_t bw_tot_time; /* The total time since sending began */
 	uint64_t new_tot_time;  /* temp holding the new value */
 	uint32_t cwnd_at_bw_set; /* Cwnd at last bw saved - lbw */
+	uint32_t cwnd_at_step;
 	uint16_t steady_step; /* The number required to be in steady state*/
 	uint16_t step_cnt;    /* The current number */
         uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
