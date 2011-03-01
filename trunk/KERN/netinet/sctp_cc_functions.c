@@ -572,31 +572,31 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		  net->flight_size,
 		  probepoint);
 	if (net->cc_mod.rtcc.steady_step) {
-		if (net->cc_mod.rtcc.ret_from_eq) {
-			if (net->cc_mod.rtcc.last_step_state == 5)
-				net->cc_mod.rtcc.step_cnt++;
-			else 
-				net->cc_mod.rtcc.step_cnt = 1;
-			net->cc_mod.rtcc.last_step_state = 5;
-			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
-				/* Try a step down */
+		if (net->cc_mod.rtcc.last_step_state == 5)
+			net->cc_mod.rtcc.step_cnt++;
+		else 
+			net->cc_mod.rtcc.step_cnt = 1;
+		net->cc_mod.rtcc.last_step_state = 5;
+		if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
+			/* Try a step down */
+			if (net->cwnd > (4 * net->mtu)) {
+				net->cc_mod.rtcc.cwnd_at_step = net->cwnd;
+				net->cwnd -= net->mtu;
+				net->cc_mod.rtcc.vol_reduce++;
+				return (1);
+			} else {
+				net->cc_mod.rtcc.step_cnt = 0;
+			}
+		} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
+			/* Step down in progress - stay there  */
+			if ((net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) == 0) {
 				if (net->cwnd > (4 * net->mtu)) {
-					net->cc_mod.rtcc.cwnd_at_step = net->cwnd;
 					net->cwnd -= net->mtu;
 					net->cc_mod.rtcc.vol_reduce++;
 				} else {
 					net->cc_mod.rtcc.step_cnt = 0;
 				}
-			} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
-				/* Step down in progress - stay there  */
-				if ((net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) == 0) {
-					if (net->cwnd > (4 * net->mtu)) {
-						net->cwnd -= net->mtu;
-						net->cc_mod.rtcc.vol_reduce++;
-					} else {
-						net->cc_mod.rtcc.step_cnt = 0;
-					}
-				}
+				return (1);
 			}
 		}
 	}
