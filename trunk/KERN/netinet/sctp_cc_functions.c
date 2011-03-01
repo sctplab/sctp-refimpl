@@ -252,9 +252,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->cc_mod.rtcc.lbw_rtt,
 			  rtt,
 			  probepoint);
-		net->cc_mod.rtcc.lbw = nbw;
-		net->cc_mod.rtcc.lbw_rtt = rtt;
-		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
 			oth <<= 16;
@@ -270,6 +267,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.last_step_state = 0;
 			net->cc_mod.rtcc.step_cnt = 0;
 		}
+		net->cc_mod.rtcc.lbw = nbw;
+		net->cc_mod.rtcc.lbw_rtt = rtt;
+		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		return(0);
 	}
 	rtt_offset = net->cc_mod.rtcc.lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
@@ -289,9 +289,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					  rtt,
 					  probepoint);
 
-				net->cc_mod.rtcc.lbw = nbw;
-				net->cc_mod.rtcc.lbw_rtt = rtt;
-				net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
 				if (net->cc_mod.rtcc.ret_from_eq) {
 					/* Switch over to CA if we are less aggressive */
 					net->ssthresh = net->cwnd-1;
@@ -322,6 +319,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					net->cc_mod.rtcc.last_step_state = 1;
 					net->cc_mod.rtcc.step_cnt = 0;
 				}
+				net->cc_mod.rtcc.lbw = nbw;
+				net->cc_mod.rtcc.lbw_rtt = rtt;
+				net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
 				return (1);
 			} 
 			/* Probe point 2 */
@@ -334,9 +334,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				  probepoint);
 
 			/* Someone else - fight for more? */
-			net->cc_mod.rtcc.lbw = nbw;
-			net->cc_mod.rtcc.lbw_rtt = rtt;
-			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
 				oth = net->cc_mod.rtcc.cwnd_at_step;
 				oth <<= 16;
@@ -361,6 +358,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				net->cc_mod.rtcc.last_step_state = 2;
 				net->cc_mod.rtcc.step_cnt = 0;
 			}
+			net->cc_mod.rtcc.lbw = nbw;
+			net->cc_mod.rtcc.lbw_rtt = rtt;
+			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			return(0);
 		} else  if (rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 			/* bw & rtt decreased */
@@ -372,9 +372,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				  net->cc_mod.rtcc.lbw_rtt,
 				  rtt,
 				  probepoint);
-			net->cc_mod.rtcc.lbw = nbw;
-			net->cc_mod.rtcc.lbw_rtt = rtt;
-			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
 				oth = net->cc_mod.rtcc.cwnd_at_step;
 				oth <<= 16;
@@ -399,6 +396,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				net->cc_mod.rtcc.last_step_state = 3;
 				net->cc_mod.rtcc.step_cnt = 0;
 			}
+			net->cc_mod.rtcc.lbw = nbw;
+			net->cc_mod.rtcc.lbw_rtt = rtt;
+			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			return (0);
 		}
 		/* The bw decreased but rtt stayed the same */
@@ -410,9 +410,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->cc_mod.rtcc.lbw_rtt,
 			  rtt,
 			  probepoint);
-		net->cc_mod.rtcc.lbw = nbw;
-		net->cc_mod.rtcc.lbw_rtt = rtt;
-		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
 			oth <<= 16;
@@ -437,6 +434,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.last_step_state = 4;
 			net->cc_mod.rtcc.step_cnt = 0;
 		}
+		net->cc_mod.rtcc.lbw = nbw;
+		net->cc_mod.rtcc.lbw_rtt = rtt;
+		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		return (0);
 	}
 	/* If we reach here then
@@ -497,12 +497,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 						  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
 						  oth,
 						  probepoint);
-					if (net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) {
-						if (net->cwnd > (4 * net->mtu)) {
-							net->cwnd -= net->mtu;
-						} else {
-							net->cc_mod.rtcc.step_cnt = 0;
-						}
+					if (net->cwnd > (4 * net->mtu)) {
+						net->cwnd -= net->mtu;
+					} else {
+						net->cc_mod.rtcc.step_cnt = 0;
 					}
 				}
 			}
