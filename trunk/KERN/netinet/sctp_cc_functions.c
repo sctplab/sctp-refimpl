@@ -254,6 +254,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.lbw = nbw;
 		net->cc_mod.rtcc.lbw_rtt = rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.last_step_state = 0;
+			net->cc_mod.rtcc.step_cnt = 0;
+		}
 		return(0);
 	}
 	rtt_offset = net->cc_mod.rtcc.lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
@@ -281,6 +285,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					net->ssthresh = net->cwnd-1;
 					net->partial_bytes_acked = 0;
 				}
+				if (net->cc_mod.rtcc.steady_step) {
+					net->cc_mod.rtcc.last_step_state = 1;
+					net->cc_mod.rtcc.step_cnt = 0;
+				}
 				return (1);
 			} 
 			/* Probe point 2 */
@@ -296,6 +304,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.lbw = nbw;
 			net->cc_mod.rtcc.lbw_rtt = rtt;
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+			if (net->cc_mod.rtcc.steady_step) {
+				net->cc_mod.rtcc.last_step_state = 2;
+				net->cc_mod.rtcc.step_cnt = 0;
+			}
 			return(0);
 		} else  if (rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 			/* rtt decreased */
@@ -310,12 +322,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.lbw = nbw;
 			net->cc_mod.rtcc.lbw_rtt = rtt;
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+			if (net->cc_mod.rtcc.steady_step) {
+				net->cc_mod.rtcc.last_step_state = 3;
+				net->cc_mod.rtcc.step_cnt = 0;
+			}
 			return (0);
 		}
 		/* The bw decreased but rtt stayed the same */
-		net->cc_mod.rtcc.lbw = nbw;
-		net->cc_mod.rtcc.lbw_rtt = rtt;
-		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		/* Probe point 4 */
 		probepoint |=  ((4 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -324,7 +337,14 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->cc_mod.rtcc.lbw_rtt,
 			  rtt,
 			  probepoint);
-		  return (0);
+		net->cc_mod.rtcc.lbw = nbw;
+		net->cc_mod.rtcc.lbw_rtt = rtt;
+		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.last_step_state = 4;
+			net->cc_mod.rtcc.step_cnt = 0;
+		}
+		return (0);
 	}
 	/* If we reach here then
 	 * we are in a situation where
@@ -344,6 +364,19 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->cc_mod.rtcc.lbw_rtt,
 			  rtt,
 			  probepoint);
+		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.last_step_state = 5;
+			if (net->cc_mod.rtcc.last_step_state == 5)
+				net->cc_mod.rtcc.step_cnt++;
+			else 
+				net->cc_mod.rtcc.step_cnt = 1;
+			if (net->cc_mod.rtcc.step_cnt >= net->cc_mod.rtcc.steady_step) {
+				/* Try a step down */
+				net->cc_mod.rtcc.step_cnt = 0;
+				net->cwnd -= net->mtu;
+				net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+			}
+		}
 		return (1);
 	}
 	if (rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
@@ -362,6 +395,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.lbw = nbw;
 		net->cc_mod.rtcc.lbw_rtt = rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.last_step_state = 6;
+			net->cc_mod.rtcc.step_cnt = 0;
+		}
 		return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update to any 
@@ -375,6 +412,20 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		  net->cc_mod.rtcc.lbw_rtt,
 		  rtt,
 		  probepoint);
+	if (net->cc_mod.rtcc.steady_step) {
+		net->cc_mod.rtcc.last_step_state = 5;
+		if (net->cc_mod.rtcc.last_step_state == 5)
+			net->cc_mod.rtcc.step_cnt++;
+		else 
+			net->cc_mod.rtcc.step_cnt = 1;
+		if ((net->cc_mod.rtcc.ret_from_eq) &&
+		    (net->cc_mod.rtcc.step_cnt >= net->cc_mod.rtcc.steady_step)) {
+			/* Try a step down */
+			net->cc_mod.rtcc.step_cnt = 0;
+			net->cwnd -= net->mtu;
+			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+		}
+	}
 	return ((int)net->cc_mod.rtcc.ret_from_eq);
 }
 
@@ -1009,6 +1060,10 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		net->cc_mod.rtcc.bw_tot_time = 0;
 		net->cc_mod.rtcc.bw_bytes = 0;
 		net->cc_mod.rtcc.tls_needs_set = 0;
+		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.step_cnt = 0;
+			net->cc_mod.rtcc.last_step_state = 0;
+		}
 		if (net->cc_mod.rtcc.ret_from_eq) {
 			/* less aggressive one - reset cwnd too */
 			uint32_t cwnd_in_mtu, cwnd;
@@ -1059,6 +1114,12 @@ sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 	net->cc_mod.rtcc.bw_bytes = 0;
 	net->cc_mod.rtcc.tls_needs_set = 0;
 	net->cc_mod.rtcc.ret_from_eq = SCTP_BASE_SYSCTL(sctp_rttvar_eqret);
+	net->cc_mod.rtcc.steady_step = SCTP_BASE_SYSCTL(sctp_steady_step);
+	net->cc_mod.rtcc.use_dccc_ecn = SCTP_BASE_SYSCTL(sctp_use_dccc_ecn);
+	net->cc_mod.rtcc.step_cnt = 0;
+	net->cc_mod.rtcc.last_step_state = 0;
+
+
 }
 
 static int
@@ -1084,6 +1145,10 @@ sctp_cwnd_rtcc_socket_option(struct sctp_tcb *stcb, int setorget,
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 				net->cc_mod.rtcc.use_dccc_ecn = cc_opt->aid_value.assoc_value;
 			}
+		} else if (cc_opt->option == SCTP_CC_OPT_STEADY_STEP) {
+			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+				net->cc_mod.rtcc.steady_step = cc_opt->aid_value.assoc_value;
+			}
 		} else {
 			return (EINVAL);
 		}
@@ -1101,6 +1166,12 @@ sctp_cwnd_rtcc_socket_option(struct sctp_tcb *stcb, int setorget,
 				return (EFAULT);
 			}
 			cc_opt->aid_value.assoc_value = net->cc_mod.rtcc.use_dccc_ecn;
+		} else if (cc_opt->option == SCTP_CC_OPT_STEADY_STEP) {
+			net = TAILQ_FIRST(&stcb->asoc.nets);
+			if (net == NULL) {
+				return (EFAULT);
+			}
+			cc_opt->aid_value.assoc_value = net->cc_mod.rtcc.steady_step;
 		} else {
 			return (EINVAL);
 		}

@@ -256,10 +256,13 @@ struct rtcc_cc {
 	uint64_t bw_bytes;    /* The total bytes since this sending began */
 	uint64_t bw_tot_time; /* The total time since sending began */
 	uint64_t new_tot_time;  /* temp holding the new value */
-	uint32_t cwnd_at_bw_set;
-        uint8_t  ret_from_eq;
-	uint8_t  use_dccc_ecn;
+	uint32_t cwnd_at_bw_set; /* Cwnd at last bw saved - lbw */
+	uint16_t steady_step; /* The number required to be in steady state*/
+	uint16_t step_cnt;    /* The current number */
+        uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
+	uint8_t  use_dccc_ecn;  /* Flag to enable DCCC ECN */
 	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
+	uint8_t  last_step_state; /* Last state if steady state stepdown is on */
 };
 
 
