@@ -60,6 +60,7 @@ SDT_PROBE_DECLARE(sctp, cwnd, net, ecn);
 SDT_PROBE_DECLARE(sctp, cwnd, net, pd);
 /* Rttvar probe declaration */
 SDT_PROBE_DECLARE(sctp, cwnd, net, rttvar);
+SDT_PROBE_DEFINE(sctp, cwnd, net, rttstep);
 
 /* One to track an associations rwnd */
 SDT_PROBE_DECLARE(sctp, rwnd, assoc, val);
