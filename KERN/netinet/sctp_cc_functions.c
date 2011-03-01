@@ -249,8 +249,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-			  net->cc_mod.rtcc.lbw_rtt,
-			  rtt,
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
@@ -285,8 +285,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				SDT_PROBE(sctp, cwnd, net, rttvar,
 					  vtag,
 					  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-					  net->cc_mod.rtcc.lbw_rtt,
-					  rtt,
+					  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+					  net->flight_size,
 					  probepoint);
 
 				if (net->cc_mod.rtcc.ret_from_eq) {
@@ -321,7 +321,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				}
 				net->cc_mod.rtcc.lbw = nbw;
 				net->cc_mod.rtcc.lbw_rtt = rtt;
-				net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
+				if (net->cc_mod.rtcc.cwnd_at_bw_set < net->cwnd) {
+					net->cwnd = net->cc_mod.rtcc.cwnd_at_bw_set;
+				}
 				return (1);
 			} 
 			/* Probe point 2 */
@@ -329,8 +331,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			SDT_PROBE(sctp, cwnd, net, rttvar,
 				  vtag,
 				  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-				  net->cc_mod.rtcc.lbw_rtt,
-				  rtt,
+				  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+				  net->flight_size,
 				  probepoint);
 
 			/* Someone else - fight for more? */
@@ -369,8 +371,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			SDT_PROBE(sctp, cwnd, net, rttvar,
 				  vtag,
 				  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-				  net->cc_mod.rtcc.lbw_rtt,
-				  rtt,
+				  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+				  net->flight_size,
 				  probepoint);
 			if (net->cc_mod.rtcc.steady_step) {
 				oth = net->cc_mod.rtcc.cwnd_at_step;
@@ -407,8 +409,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-			  net->cc_mod.rtcc.lbw_rtt,
-			  rtt,
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
@@ -454,8 +456,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-			  net->cc_mod.rtcc.lbw_rtt,
-			  rtt,
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
 			if (net->cc_mod.rtcc.last_step_state == 5)
@@ -519,8 +521,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-			  net->cc_mod.rtcc.lbw_rtt,
-			  rtt,
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
@@ -557,8 +559,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	SDT_PROBE(sctp, cwnd, net, rttvar,
 		  vtag,
 		  ((net->cc_mod.rtcc.lbw << 32) | nbw),
-		  net->cc_mod.rtcc.lbw_rtt,
-		  rtt,
+		  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+		  net->flight_size,
 		  probepoint);
 	if (net->cc_mod.rtcc.steady_step) {
 		if (net->cc_mod.rtcc.ret_from_eq) {
@@ -765,8 +767,8 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				SDT_PROBE(sctp, cwnd, net, rttvar,
 					  vtag,
 					  nbw,
-					  0,
-					  net->rtt,
+					  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+					  net->flight_size,
 					  probepoint);
 				net->cc_mod.rtcc.lbw = nbw;
 				net->cc_mod.rtcc.lbw_rtt = net->rtt;
@@ -1216,8 +1218,8 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | 0),
-			  net->cc_mod.rtcc.lbw_rtt,
-			  0,
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
 			  probepoint);
 		net->cc_mod.rtcc.lbw_rtt = 0;
 		net->cc_mod.rtcc.cwnd_at_bw_set = 0;
