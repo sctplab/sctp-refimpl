@@ -257,8 +257,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
-			oth << 16;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.last_step_state;
 			SDT_PROBE(sctp, cwnd, net, rttstep,
 				  vtag,
@@ -298,8 +299,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				}
 				if (net->cc_mod.rtcc.steady_step) {
 					oth = net->cc_mod.rtcc.cwnd_at_step;
-					oth << 16;
+					oth =<< 16;
 					oth |= net->cc_mod.rtcc.step_cnt;
+					oth =<< 16;
 					oth |= net->cc_mod.rtcc.last_step_state;
 					SDT_PROBE(sctp, cwnd, net, rttstep,
 						  vtag,
@@ -337,8 +339,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
 				oth = net->cc_mod.rtcc.cwnd_at_step;
-				oth << 16;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.last_step_state;
 				SDT_PROBE(sctp, cwnd, net, rttstep,
 					  vtag,
@@ -374,8 +377,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			if (net->cc_mod.rtcc.steady_step) {
 				oth = net->cc_mod.rtcc.cwnd_at_step;
-				oth << 16;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.last_step_state;
 				SDT_PROBE(sctp, cwnd, net, rttstep,
 					  vtag,
@@ -411,8 +415,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
-			oth << 16;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.last_step_state;
 			SDT_PROBE(sctp, cwnd, net, rttstep,
 				  vtag,
@@ -461,8 +466,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
 				/* Try a step down */
 				oth = net->cc_mod.rtcc.cwnd_at_step;
-				oth << 16;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.last_step_state;
 				SDT_PROBE(sctp, cwnd, net, rttstep,
 					  vtag,
@@ -480,8 +486,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				/* Step down in progress */
 				/* Try a step down */
 				oth = net->cc_mod.rtcc.cwnd_at_step;
-				oth << 16;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
+				oth =<< 16;
 				oth |= net->cc_mod.rtcc.last_step_state;
 				SDT_PROBE(sctp, cwnd, net, rttstep,
 					  vtag,
@@ -515,8 +522,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  probepoint);
 		if (net->cc_mod.rtcc.steady_step) {
 			oth = net->cc_mod.rtcc.cwnd_at_step;
-			oth << 16;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
+			oth =<< 16;
 			oth |= net->cc_mod.rtcc.last_step_state;
 			SDT_PROBE(sctp, cwnd, net, rttstep,
 				  vtag,
