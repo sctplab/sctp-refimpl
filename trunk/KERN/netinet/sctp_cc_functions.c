@@ -1238,6 +1238,7 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		net->cc_mod.rtcc.bw_bytes = 0;
 		net->cc_mod.rtcc.tls_needs_set = 0;
 		if (net->cc_mod.rtcc.steady_step) {
+			net->cc_mod.rtcc.vol_reduce = 0;
 			net->cc_mod.rtcc.step_cnt = 0;
 			net->cc_mod.rtcc.last_step_state = 0;
 		}
@@ -1286,6 +1287,7 @@ sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 		  probepoint);
 	net->cc_mod.rtcc.lbw_rtt = 0;
 	net->cc_mod.rtcc.cwnd_at_bw_set = 0;
+	net->cc_mod.rtcc.vol_reduce = 0;
 	net->cc_mod.rtcc.lbw = 0;
 	net->cc_mod.rtcc.bw_tot_time = 0;
 	net->cc_mod.rtcc.bw_bytes = 0;
