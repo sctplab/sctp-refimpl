@@ -40,10 +40,14 @@ main(int argc, char **argv)
 	int i;
 	char *configfile = NULL;
 	char *storeFile = NULL;
+	int first_size =0;
 	memset(&ctrl, 0, sizeof(ctrl));
 	
-	while ((i = getopt(argc, argv, "Nc:vS:w:?")) != EOF) {
+	while ((i = getopt(argc, argv, "Nc:vS:w:F:?")) != EOF) {
 		switch (i) {
+		case 'F':
+			first_size = strtol(optarg, NULL, 0);
+			break;
 		case 'N':
 			no_cc_change = 1;
 			break;
@@ -90,6 +94,6 @@ main(int argc, char **argv)
 		printf("Fatal error number of servers still 0\n");
 		return (-1);
 	}
-	elephant_run_clients(&ctrl);
+	elephant_run_clients(&ctrl, first_size);
 	return (0);
 }
