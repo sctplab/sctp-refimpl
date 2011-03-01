@@ -372,12 +372,14 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			net->cc_mod.rtcc.last_step_state = 5;
 			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
 				/* Try a step down */
-				net->cc_mod.rtcc.step_cnt = 0;
+			step_again:
 				net->cwnd -= net->mtu;
 				net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
 				/* Step down in progress */
-				net->cc_mod.rtcc.step_cnt = net->cc_mod.rtcc.steady_step + 1;
+				if (net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) {
+					goto step_again;
+				}
 			}
 		}
 		return (1);
@@ -431,11 +433,14 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		if (net->cc_mod.rtcc.ret_from_eq) {
 			if (net->cc_mod.rtcc.step_cnt == net->cc_mod.rtcc.steady_step) {
 				/* Try a step down */
+			step_1_again:
 				net->cwnd -= net->mtu;
 				net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 			} else if (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) {
 				/* Step down in progress - stay there  */
-				net->cc_mod.rtcc.step_cnt = net->cc_mod.rtcc.steady_step + 1;
+				if ((net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) == 0) {
+					goto step_1_again;
+				}
 			}
 		}
 	}
