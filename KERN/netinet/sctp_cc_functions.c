@@ -767,7 +767,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				SDT_PROBE(sctp, cwnd, net, rttvar,
 					  vtag,
 					  nbw,
-					  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+					  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 					  net->flight_size,
 					  probepoint);
 				net->cc_mod.rtcc.lbw = nbw;
@@ -1218,7 +1218,7 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | 0),
-			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 			  net->flight_size,
 			  probepoint);
 		net->cc_mod.rtcc.lbw_rtt = 0;
