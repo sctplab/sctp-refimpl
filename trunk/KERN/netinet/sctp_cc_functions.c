@@ -399,9 +399,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->cc_mod.rtcc.lbw_rtt,
 			  rtt,
 			  probepoint);
-		net->cc_mod.rtcc.lbw = nbw;
-		net->cc_mod.rtcc.lbw_rtt = rtt;
-		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		if (net->cc_mod.rtcc.steady_step) {
 			if ((net->cc_mod.rtcc.last_step_state == 5) &&
 			    (net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step)) {
@@ -413,6 +410,9 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 				net->cc_mod.rtcc.step_cnt = 0;
 			}
 		}
+		net->cc_mod.rtcc.lbw = nbw;
+		net->cc_mod.rtcc.lbw_rtt = rtt;
+		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
 		return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update to any 
