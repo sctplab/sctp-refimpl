@@ -260,6 +260,7 @@ struct rtcc_cc {
 	uint32_t cwnd_at_step;
 	uint16_t steady_step; /* The number required to be in steady state*/
 	uint16_t step_cnt;    /* The current number */
+	uint16_t vol_reduce;  /* cnt of voluntary reductions */
         uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
 	uint8_t  use_dccc_ecn;  /* Flag to enable DCCC ECN */
 	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
