@@ -197,7 +197,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
 	uint64_t bytes_for_this_rtt, inst_bw;
-	uint64_t oth;
+	uint64_t oth, div;
 	/*- 
 	 * Here we need to see if we want
 	 * to limit cwnd growth due to increase
@@ -240,11 +240,23 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	probepoint = (((uint64_t)net->cwnd) << 32);
 	rtt = net->rtt;
 	if (net->cc_mod.rtcc.rtt_set_this_sack) {
+		
 		net->cc_mod.rtcc.rtt_set_this_sack = 0;
 		bytes_for_this_rtt = net->cc_mod.rtcc.bw_bytes - net->cc_mod.rtcc.bw_bytes_at_last_rttc;
 		net->cc_mod.rtcc.bw_bytes_at_last_rttc = net->cc_mod.rtcc.bw_bytes;
-		inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt/1000);
-		probepoint |=  ((0xb << 16) | 0);
+		if (net->rtt) {
+			div = net->rtt/1000;
+			if (div) {
+				probepoint |=  ((0xb << 16) | 0);
+				inst_bw = bytes_for_this_rtt / div;
+			} else {
+				probepoint |=  ((0xc << 16) | 0);
+				inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt);
+			}
+		} else {
+			probepoint |=  ((0xd << 16) | 0);
+			inst_bw = bytes_for_this_rtt;
+		}
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((net->cc_mod.rtcc.lbw << 32) | inst_bw),
