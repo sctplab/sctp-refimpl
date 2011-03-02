@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 219057 2011-02-26 15:23:46Z rrs $");
 #endif
 #ifndef __sctp_dtrace_declare_h__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 900000
@@ -58,6 +58,9 @@ SDT_PROBE_DECLARE(sctp, cwnd, net, bl);
 SDT_PROBE_DECLARE(sctp, cwnd, net, ecn);
 /* update at a Packet-Drop -- decrease */
 SDT_PROBE_DECLARE(sctp, cwnd, net, pd);
+/* Rttvar probe declaration */
+SDT_PROBE_DECLARE(sctp, cwnd, net, rttvar);
+SDT_PROBE_DECLARE(sctp, cwnd, net, rttstep);
 
 /* One to track an associations rwnd */
 SDT_PROBE_DECLARE(sctp, rwnd, assoc, val);

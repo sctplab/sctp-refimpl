@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 219014 2011-02-24 22:58:15Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 219057 2011-02-26 15:23:46Z rrs $");
 #endif
 
 #define _IP_VHL
@@ -813,6 +813,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
 			/* Clear any time so NO RTT is being done */
+
+			if (chk->do_rtt) {
+				if (chk->whoTo->rto_needed == 0) {
+					chk->whoTo->rto_needed = 1;
+				}
+			}
 			chk->do_rtt = 0;
 			if (alt != net) {
 				sctp_free_remote_addr(chk->whoTo);
@@ -1010,17 +1016,10 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 	/* CMT FR loss recovery ended with the T3 */
 	net->fast_retran_loss_recovery = 0;
-#ifdef SCTP_HAS_RTTCC
-	if (net->lbw && (net->flight_size == 0)) {
-		/* Clear the old bw.. we went to 0 in-flight */
-		net->lbw_rtt = 0;
-		net->cwnd_at_bw_set = 0;
-		net->lbw = 0;
-		net->bw_tot_time = 0;
-		net->bw_bytes = 0;
-		net->tls_needs_set = 0;
+	if ((stcb->asoc.cc_functions.sctp_cwnd_new_transmission_begins) && 
+	    (net->flight_size == 0)) {
+		(*stcb->asoc.cc_functions.sctp_cwnd_new_transmission_begins)(stcb, net);
 	}
-#endif
 
 	/*
 	 * setup the sat loss recovery that prevents satellite cwnd advance.
