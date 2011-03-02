@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 219057 2011-02-26 15:23:46Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2809,7 +2809,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 			   int *num_frs,
 			   uint32_t *biggest_newly_acked_tsn,
 			   uint32_t  *this_sack_lowest_newack,
-			   int *ecn_seg_sums)
+			   int *ecn_seg_sums, int *rto_ok)
 {
 	struct sctp_tmit_chunk *tp1;
 	unsigned int theTSN;
@@ -2931,9 +2931,10 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 								       tp1->rec.data.TSN_seq);
 						}
 						sctp_flight_size_decrease(tp1);
-#ifdef SCTP_HAS_RTTCC
-						tp1->whoTo->bw_bytes += tp1->send_size;
-#endif
+						if (stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged) {
+							(*stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged)(tp1->whoTo,
+														     tp1);
+						}
 						sctp_total_flight_decrease(stcb, tp1);
 
 						tp1->whoTo->net_ack += tp1->send_size;
@@ -2947,13 +2948,19 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 							 * update RTO too ?
 							 */
 							if (tp1->do_rtt) {
-								tp1->whoTo->RTO =
-									sctp_calculate_rto(stcb,
-											   &stcb->asoc,
-											   tp1->whoTo,
-											   &tp1->sent_rcv_time,
-											   sctp_align_safe_nocopy,
-											   SCTP_DETERMINE_LL_OK);
+								if (*rto_ok) {
+									tp1->whoTo->RTO =
+										sctp_calculate_rto(stcb,
+												   &stcb->asoc,
+												   tp1->whoTo,
+												   &tp1->sent_rcv_time,
+												   sctp_align_safe_nocopy,
+												   SCTP_RTT_FROM_DATA);
+									*rto_ok = 0;
+								}
+								if (tp1->whoTo->rto_needed == 0) {
+									tp1->whoTo->rto_needed = 1;
+								}
 								tp1->do_rtt = 0;
 							}
 						}
@@ -3020,9 +3027,10 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 
 static int
 sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-		     uint32_t last_tsn, uint32_t *biggest_tsn_acked,
-		     uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-		     int num_seg, int num_nr_seg, int *ecn_seg_sums)
+		uint32_t last_tsn, uint32_t *biggest_tsn_acked,
+		uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
+		int num_seg, int num_nr_seg, int *ecn_seg_sums,
+		int *rto_ok)
 {
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
@@ -3068,7 +3076,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 		}
 		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
 		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
-		                               this_sack_lowest_newack, ecn_seg_sums)) {
+		                               this_sack_lowest_newack, ecn_seg_sums, rto_ok)) {
 			chunk_freed = 1;
 		}
 		prev_frag_end = frag_end;
@@ -3431,9 +3439,10 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			if (tp1->whoTo) {
 				tp1->whoTo->net_ack++;
 				sctp_flight_size_decrease(tp1);
-#ifdef SCTP_HAS_RTTCC
-				tp1->whoTo->bw_bytes += tp1->send_size;
-#endif
+				if (stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged) {
+					(*stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged)(tp1->whoTo,
+												     tp1);
+				}
 			}
 			
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_RWND_ENABLE) {
@@ -3554,6 +3563,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * this guy had a RTO calculation pending on
 				 * it, cancel it
 				 */
+				if(tp1->whoTo->rto_needed == 0) {
+					tp1->whoTo->rto_needed = 1;
+				}
 				tp1->do_rtt = 0;
 			}
 			if (alt != tp1->whoTo) {
@@ -3723,9 +3735,10 @@ sctp_window_probe_recovery(struct sctp_tcb *stcb,
 		return;
 	}
 	/* First setup this by shrinking flight */
-#ifdef SCTP_HAS_RTTCC
-	tp1->whoTo->bw_bytes += tp1->send_size;
-#endif
+	if (stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged) {
+		(*stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged)(tp1->whoTo,
+									     tp1);
+	}
 	sctp_flight_size_decrease(tp1);
 	sctp_total_flight_decrease(stcb, tp1);
 	/* Now mark for resend */
@@ -3752,6 +3765,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	int win_probe_recovery = 0;
 	int win_probe_recovered = 0;
 	int j, done_once = 0;
+	int rto_ok=1;
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
@@ -3800,15 +3814,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		 */
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
-#ifdef SCTP_HAS_RTTCC
-		if (net->tls_needs_set > 0) {
-			/* We had a bw measurment going on */
-			struct timeval ltls;
-			SCTP_GETPTIME_TIMEVAL(&ltls);
-			timevalsub(&ltls, &net->tls);
-			net->new_tot_time = (ltls.tv_sec * 1000000) + ltls.tv_usec;
+		if (stcb->asoc.cc_functions.sctp_cwnd_prepare_net_for_sack) {
+			(*stcb->asoc.cc_functions.sctp_cwnd_prepare_net_for_sack)(stcb, net);
 		}
-#endif
 	}
 	if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
 		uint32_t send_s;
@@ -3882,9 +3890,10 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 								       tp1->rec.data.TSN_seq);
 						}
 						sctp_flight_size_decrease(tp1);
-#ifdef SCTP_HAS_RTTCC
-						tp1->whoTo->bw_bytes += tp1->send_size;
-#endif
+						if (stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged) {
+							(*stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged)(tp1->whoTo,
+														     tp1);
+						}
 						/* sa_ignore NO_NULL_CHK */
 						sctp_total_flight_decrease(stcb, tp1);
 					}
@@ -3899,16 +3908,22 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 
 						/* update RTO too? */
 						if (tp1->do_rtt) {
-							tp1->whoTo->RTO =
-								/*
-								 * sa_ignore
-								 * NO_NULL_CHK
-								 */
-								sctp_calculate_rto(stcb,
-										   asoc, tp1->whoTo,
-										   &tp1->sent_rcv_time,
-										   sctp_align_safe_nocopy,
-										   SCTP_DETERMINE_LL_OK);
+							if (rto_ok) {
+								tp1->whoTo->RTO =
+									/*
+									 * sa_ignore
+									 * NO_NULL_CHK
+									 */
+									sctp_calculate_rto(stcb,
+											   asoc, tp1->whoTo,
+											   &tp1->sent_rcv_time,
+											   sctp_align_safe_nocopy,
+											   SCTP_RTT_FROM_DATA);
+								rto_ok = 0;
+							}
+							if (tp1->whoTo->rto_needed == 0) {
+								tp1->whoTo->rto_needed = 1;
+							}
 							tp1->do_rtt = 0;
 						}
 					}
@@ -4258,6 +4273,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	struct sctp_nets *net = NULL;
 	int ecn_seg_sums = 0;
 	int done_once;
+	int rto_ok=1;
 	uint8_t reneged_all = 0;
 	uint8_t cmt_dac_flag;
 	/*
@@ -4443,16 +4459,9 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		 */
 		net->new_pseudo_cumack = 0;
 		net->will_exit_fast_recovery = 0;
-#ifdef SCTP_HAS_RTTCC
-		if (net->tls_needs_set > 0) {
-			/* We had a bw measurment going on */
-			struct timeval ltls;
-			SCTP_GETPTIME_TIMEVAL(&ltls);
-			/* now add in the microseconds to our counter */
-			timevalsub(&ltls, &net->tls);
-			net->new_tot_time = (ltls.tv_sec * 1000000) + ltls.tv_usec;
+		if (stcb->asoc.cc_functions.sctp_cwnd_prepare_net_for_sack) {
+			(*stcb->asoc.cc_functions.sctp_cwnd_prepare_net_for_sack)(stcb, net);
 		}
-#endif
 	}
 	/* process the new consecutive TSN first */
 	TAILQ_FOREACH(tp1, &asoc->sent_queue, sctp_next) {
@@ -4489,9 +4498,10 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 						}
 						sctp_flight_size_decrease(tp1);
 						sctp_total_flight_decrease(stcb, tp1);
-#ifdef SCTP_HAS_RTTCC
-						tp1->whoTo->bw_bytes += tp1->send_size;
-#endif
+						if (stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged) {
+							(*stcb->asoc.cc_functions.sctp_cwnd_update_tsn_acknowledged)(tp1->whoTo,
+														     tp1);
+						}
 					}
 					tp1->whoTo->net_ack += tp1->send_size;
 
@@ -4509,12 +4519,18 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 
 						/* update RTO too? */
 						if (tp1->do_rtt) {
-							tp1->whoTo->RTO =
-								sctp_calculate_rto(stcb,
-								                   asoc, tp1->whoTo,
-								                   &tp1->sent_rcv_time,
-								                   sctp_align_safe_nocopy,
-										   SCTP_DETERMINE_LL_OK);
+							if (rto_ok) {
+								tp1->whoTo->RTO =
+									sctp_calculate_rto(stcb,
+											   asoc, tp1->whoTo,
+											   &tp1->sent_rcv_time,
+											   sctp_align_safe_nocopy,
+											   SCTP_RTT_FROM_DATA);
+								rto_ok = 0;
+							}
+							if (tp1->whoTo->rto_needed == 0) {
+								tp1->whoTo->rto_needed = 1;
+							}
 							tp1->do_rtt = 0;
 						}
 					}
@@ -4588,8 +4604,9 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
 		if (sctp_handle_segments(m, &offset_seg, stcb, asoc, last_tsn, &biggest_tsn_acked,
-		                         &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-		                         num_seg, num_nr_seg, &ecn_seg_sums)) {
+			&biggest_tsn_newly_acked, &this_sack_lowest_newack,
+			num_seg, num_nr_seg, &ecn_seg_sums,
+			    &rto_ok)) {
 			wake_him++;
 		}
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {

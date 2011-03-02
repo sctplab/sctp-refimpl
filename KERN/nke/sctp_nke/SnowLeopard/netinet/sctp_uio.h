@@ -33,7 +33,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 219057 2011-02-26 15:23:46Z rrs $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -558,6 +558,11 @@ struct sctp_authchunks {
 struct sctp_assoc_value {
 	sctp_assoc_t assoc_id;
 	uint32_t assoc_value;
+};
+
+struct sctp_cc_option {
+	int option;
+	struct sctp_assoc_value aid_value;
 };
 
 struct sctp_stream_value {

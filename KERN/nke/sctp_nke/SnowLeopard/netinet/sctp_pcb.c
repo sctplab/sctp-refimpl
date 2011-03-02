@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 218400 2011-02-07 15:04:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 219057 2011-02-26 15:23:46Z rrs $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4260,6 +4260,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	/* We set this to 0, the timer code knows that
 	 * this means its an initial value
 	 */
+	net->rto_needed = 1;
  	net->RTO = 0;
 	net->RTO_measured = 0;
 	stcb->asoc.numnets++;
@@ -4369,7 +4370,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	}
 
 	/* JRS - Use the congestion control given in the CC module */
-	stcb->asoc.cc_functions.sctp_set_initial_cc_param(stcb, net);
+	if (stcb->asoc.cc_functions.sctp_set_initial_cc_param != NULL) 
+		(*stcb->asoc.cc_functions.sctp_set_initial_cc_param)(stcb, net);
 
 	/*
 	 * CMT: CUC algo - set find_pseudo_cumack to TRUE (1) at beginning
