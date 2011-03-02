@@ -3027,9 +3027,10 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 
 static int
 sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct sctp_association *asoc,
-		     uint32_t last_tsn, uint32_t *biggest_tsn_acked,
-		     uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
-		     int num_seg, int num_nr_seg, int *ecn_seg_sums)
+		uint32_t last_tsn, uint32_t *biggest_tsn_acked,
+		uint32_t *biggest_newly_acked_tsn, uint32_t *this_sack_lowest_newack,
+		int num_seg, int num_nr_seg, int *ecn_seg_sums,
+		int *rto_ok)
 {
 	struct sctp_gap_ack_block *frag, block;
 	struct sctp_tmit_chunk *tp1;
@@ -3075,7 +3076,7 @@ sctp_handle_segments(struct mbuf *m, int *offset, struct sctp_tcb *stcb, struct 
 		}
 		if (sctp_process_segment_range(stcb, &tp1, last_tsn, frag_strt, frag_end,
 		                               non_revocable, &num_frs, biggest_newly_acked_tsn,
-		                               this_sack_lowest_newack, ecn_seg_sums, &rto_ok)) {
+		                               this_sack_lowest_newack, ecn_seg_sums, rto_ok)) {
 			chunk_freed = 1;
 		}
 		prev_frag_end = frag_end;
@@ -4603,8 +4604,9 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		 * used for CMT DAC algo. saw_newack will also change.
 		 */
 		if (sctp_handle_segments(m, &offset_seg, stcb, asoc, last_tsn, &biggest_tsn_acked,
-		                         &biggest_tsn_newly_acked, &this_sack_lowest_newack,
-		                         num_seg, num_nr_seg, &ecn_seg_sums)) {
+			&biggest_tsn_newly_acked, &this_sack_lowest_newack,
+			num_seg, num_nr_seg, &ecn_seg_sums,
+			    &rto_ok)) {
 			wake_him++;
 		}
 		if (SCTP_BASE_SYSCTL(sctp_strict_sacks)) {
