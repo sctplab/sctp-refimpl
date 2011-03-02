@@ -2958,6 +2958,9 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 												   SCTP_RTT_FROM_DATA);
 									*rto_ok = 0;
 								}
+								if (tp1->whoTo->rto_needed == 0) {
+									tp1->whoTo->rto_needed = 1;
+								}
 								tp1->do_rtt = 0;
 							}
 						}
@@ -3559,6 +3562,9 @@ sctp_strike_gap_ack_chunks(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 * this guy had a RTO calculation pending on
 				 * it, cancel it
 				 */
+				if(tp1->whoTo->rto_needed == 0) {
+					tp1->whoTo->rto_needed = 1;
+				}
 				tp1->do_rtt = 0;
 			}
 			if (alt != tp1->whoTo) {
@@ -3913,6 +3919,9 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 											   sctp_align_safe_nocopy,
 											   SCTP_RTT_FROM_DATA);
 								rto_ok = 0;
+							}
+							if (tp1->whoTo->rto_needed == 0) {
+								tp1->whoTo->rto_needed = 1;
 							}
 							tp1->do_rtt = 0;
 						}
@@ -4517,6 +4526,9 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 											   sctp_align_safe_nocopy,
 											   SCTP_RTT_FROM_DATA);
 								rto_ok = 0;
+							}
+							if (tp1->whoTo->rto_needed == 0) {
+								tp1->whoTo->rto_needed = 1;
 							}
 							tp1->do_rtt = 0;
 						}
