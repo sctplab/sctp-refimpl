@@ -1620,19 +1620,19 @@ void sysctl_setup_sctp(void)
 	    SCTPCTL_RTTVAR_BW_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "rttvar_rtt", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_rttvar_rtt, 0, sysctl_sctp_check,
+            &SCTP_BASE_SYSCTL(sctp_rttvar_rtt), 0, sysctl_sctp_check,
 	    SCTPCTL_RTTVAR_RTT_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "rttvar_eqret", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_rttvar_eqret, 0, sysctl_sctp_check,
+            &SCTP_BASE_SYSCTL(sctp_rttvar_eqret), 0, sysctl_sctp_check,
 	    SCTPCTL_RTTVAR_EQRET_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "rttvar_steady_step", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_steady_step, 0, sysctl_sctp_check,
+            &SCTP_BASE_SYSCTL(sctp_steady_step), 0, sysctl_sctp_check,
 	    SCTPCTL_RTTVAR_STEADYS_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "use_dcccecn", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_use_dccc_ecn, 0, sysctl_sctp_check,
+            &SCTP_BASE_SYSCTL(sctp_use_dccc_ecn), 0, sysctl_sctp_check,
 	    SCTPCTL_RTTVAR_DCCCECN_DESC);
 
 #ifdef SCTP_DEBUG
