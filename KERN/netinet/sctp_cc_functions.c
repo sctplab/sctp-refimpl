@@ -196,6 +196,7 @@ static int
 cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
+	uint64_t bytes_for_this_rtt, inst_bw;
 	uint64_t oth;
 	/*- 
 	 * Here we need to see if we want
@@ -238,6 +239,19 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
 	probepoint = (((uint64_t)net->cwnd) << 32);
 	rtt = net->rtt;
+	if (net->cc_mod.rtcc.rtt_set_this_sack) {
+		net->cc_mod.rtcc.rtt_set_this_sack = 0;
+		bytes_for_this_rtt = net->cc_mod.rtcc.bw_bytes - net->cc_mod.bw_bytes_at_last_rttc;
+		net->cc_mod.bw_bytes_at_last_rttc = net->cc_mod.rtcc.bw_bytes;
+		inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt/1000);
+		probepoint |=  ((0xb << 16) | 0);
+		SDT_PROBE(sctp, cwnd, net, rttvar,
+			  vtag,
+			  ((net->cc_mod.rtcc.lbw << 32) | inst_bw),
+			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
+			  net->flight_size,
+			  probepoint);
+	}
 	bw_offset = net->cc_mod.rtcc.lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	if (nbw > net->cc_mod.rtcc.lbw+bw_offset) {
 		/* BW increased, so update and
@@ -779,6 +793,10 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 					  probepoint);
 				net->cc_mod.rtcc.lbw = nbw;
 				net->cc_mod.rtcc.lbw_rtt = net->rtt;
+				if (net->cc_mod.rtcc.rtt_set_this_sack) {
+					net->cc_mod.rtcc.rtt_set_this_sack = 0;
+					net->cc_mod.rtcc.bw_bytes_at_last_rttc = net->cc_mod.rtcc.bw_bytes;
+				}
 			}
 		}
 		/*
@@ -1231,6 +1249,7 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 		net->cc_mod.rtcc.lbw_rtt = 0;
 		net->cc_mod.rtcc.cwnd_at_bw_set = 0;
 		net->cc_mod.rtcc.lbw = 0;
+		net->cc_mod.rtcc.bw_bytes_at_last_rttc = 0;
 		net->cc_mod.rtcc.bw_tot_time = 0;
 		net->cc_mod.rtcc.bw_bytes = 0;
 		net->cc_mod.rtcc.tls_needs_set = 0;
@@ -1286,6 +1305,7 @@ sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 	net->cc_mod.rtcc.cwnd_at_bw_set = 0;
 	net->cc_mod.rtcc.vol_reduce = 0;
 	net->cc_mod.rtcc.lbw = 0;
+	net->cc_mod.rtcc.bw_bytes_at_last_rttc = 0;
 	net->cc_mod.rtcc.bw_tot_time = 0;
 	net->cc_mod.rtcc.bw_bytes = 0;
 	net->cc_mod.rtcc.tls_needs_set = 0;
@@ -1374,6 +1394,12 @@ sctp_cwnd_update_rtcc_after_sack(struct sctp_tcb *stcb,
 	sctp_cwnd_update_after_sack_common(stcb, asoc, accum_moved ,reneged_all, will_exit, 1);
 }
 
+static void
+sctp_rtt_rtcc_calculated(struct sctp_tcb *stcb,
+			 struct sctp_nets *net, struct timeval now)
+{
+	net->cc_mod.rtcc.rtt_set_this_sack = 1;
+}
 
 /* Here starts Sally Floyds HS-TCP */
 
@@ -2451,7 +2477,8 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 	sctp_cwnd_update_rtcc_tsn_acknowledged,
 	sctp_cwnd_new_rtcc_transmission_begins,
 	sctp_cwnd_prepare_rtcc_net_for_sack,
-	sctp_cwnd_rtcc_socket_option
+	sctp_cwnd_rtcc_socket_option,
+	sctp_rtt_rtcc_calculated
 #else
 	.sctp_set_initial_cc_param = sctp_set_rtcc_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_cwnd_update_rtcc_after_sack,
@@ -2465,7 +2492,8 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 	.sctp_cwnd_update_tsn_acknowledged = sctp_cwnd_update_rtcc_tsn_acknowledged,
 	.sctp_cwnd_new_transmission_begins = sctp_cwnd_new_rtcc_transmission_begins,
 	.sctp_cwnd_prepare_net_for_sack = sctp_cwnd_prepare_rtcc_net_for_sack,
-	.sctp_cwnd_socket_option = sctp_cwnd_rtcc_socket_option
+	.sctp_cwnd_socket_option = sctp_cwnd_rtcc_socket_option,
+	.sctp_rtt_calculated = sctp_rtt_rtcc_calculated
 #endif
 }
 };
