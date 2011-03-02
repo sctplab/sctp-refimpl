@@ -264,6 +264,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->flight_size,
 			  probepoint);
 	}
+	probepoint = (((uint64_t)net->cwnd) << 32);
 	bw_offset = net->cc_mod.rtcc.lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	if (nbw > net->cc_mod.rtcc.lbw+bw_offset) {
 		/* BW increased, so update and
