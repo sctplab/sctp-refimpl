@@ -2553,7 +2553,7 @@ sctp_calculate_rto(struct sctp_tcb *stcb,
 	rtt = net->rtt / 1000;
 	if ((asoc->cc_functions.sctp_rtt_calculated) && (rtt_from_sack == SCTP_RTT_FROM_DATA) ){
 		/* Tell the CC module that a new update has just occurred from a sack */
-		(*asoc->cc_functions.sctp_rtt_calculated)(stcb, net, &now, net->rtt);
+		(*asoc->cc_functions.sctp_rtt_calculated)(stcb, net, &now);
 	}
 	/* Do we need to determine the lan? We do this only
 	 * on sacks i.e. RTT being determined from data not
