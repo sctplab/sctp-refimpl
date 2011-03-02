@@ -241,8 +241,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	rtt = net->rtt;
 	if (net->cc_mod.rtcc.rtt_set_this_sack) {
 		net->cc_mod.rtcc.rtt_set_this_sack = 0;
-		bytes_for_this_rtt = net->cc_mod.rtcc.bw_bytes - net->cc_mod.bw_bytes_at_last_rttc;
-		net->cc_mod.bw_bytes_at_last_rttc = net->cc_mod.rtcc.bw_bytes;
+		bytes_for_this_rtt = net->cc_mod.rtcc.bw_bytes - net->cc_mod.rtcc.bw_bytes_at_last_rttc;
+		net->cc_mod.rtcc.bw_bytes_at_last_rttc = net->cc_mod.rtcc.bw_bytes;
 		inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt/1000);
 		probepoint |=  ((0xb << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -1396,7 +1396,7 @@ sctp_cwnd_update_rtcc_after_sack(struct sctp_tcb *stcb,
 
 static void
 sctp_rtt_rtcc_calculated(struct sctp_tcb *stcb,
-			 struct sctp_nets *net, struct timeval now)
+			 struct sctp_nets *net, struct timeval *now)
 {
 	net->cc_mod.rtcc.rtt_set_this_sack = 1;
 }
