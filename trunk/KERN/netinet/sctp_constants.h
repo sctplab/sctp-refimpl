@@ -385,8 +385,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219120 2011-03-01 00:37:46
 /* RTO calculation flag to say if it
  * is safe to determine local lan or not.
  */
-#define SCTP_DETERMINE_LL_NOTOK 0
-#define SCTP_DETERMINE_LL_OK    1
+#define SCTP_RTT_FROM_NON_DATA 0
+#define SCTP_RTT_FROM_DATA     1
 
 
 /* IP hdr (20/40) + 12+2+2 (enet) + sctp common 12 */
