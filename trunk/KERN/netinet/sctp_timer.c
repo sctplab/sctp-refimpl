@@ -813,6 +813,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* reset the TSN for striking and other FR stuff */
 			chk->rec.data.doing_fast_retransmit = 0;
 			/* Clear any time so NO RTT is being done */
+
+			if (chk->do_rtt) {
+				if (chk->whoTo->rto_needed == 0) {
+					chk->whoTo->rto_needed = 1;
+				}
+			}
 			chk->do_rtt = 0;
 			if (alt != net) {
 				sctp_free_remote_addr(chk->whoTo);

@@ -3237,6 +3237,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				 * this guy had a RTO calculation
 				 * pending on it, cancel it
 				 */
+				if (tp1->whoTo->rto_needed == 0) {
+					tp1->whoTo->rto_needed = 1;
+				}
 				tp1->do_rtt = 0;
 			}
 			SCTP_STAT_INCR(sctps_pdrpmark);
