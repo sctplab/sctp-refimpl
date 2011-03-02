@@ -134,6 +134,11 @@ extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_vtag_time_wait;
 extern struct sysctl_oid sysctl__net_inet_sctp_buffer_splitting;
 extern struct sysctl_oid sysctl__net_inet_sctp_initial_cwnd;
+extern struct sysctl_oid sysctl__net_inet_sctp_rttvar_bw;
+extern struct sysctl_oid sysctl__net_inet_sctp_rttvar_rtt;
+extern struct sysctl_oid sysctl__net_inet_sctp_rttvar_eqret;
+extern struct sysctl_oid sysctl__net_inet_sctp_rttvar_steady_step;
+extern struct sysctl_oid sysctl__net_inet_sctp_use_dcccecn;
 #if defined(SCTP_DEBUG)
 extern struct sysctl_oid sysctl__net_inet_sctp_debug;
 #endif
@@ -418,6 +423,11 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sysctl_register_oid(&sysctl__net_inet_sctp_vtag_time_wait);
 	sysctl_register_oid(&sysctl__net_inet_sctp_buffer_splitting);
 	sysctl_register_oid(&sysctl__net_inet_sctp_initial_cwnd);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rttvar_bw);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rttvar_rtt);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rttvar_eqret);
+	sysctl_register_oid(&sysctl__net_inet_sctp_rttvar_steady_step);
+	sysctl_register_oid(&sysctl__net_inet_sctp_use_dcccecn);
 #ifdef SCTP_DEBUG
 	sysctl_register_oid(&sysctl__net_inet_sctp_debug);
 #endif
@@ -544,6 +554,11 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_vtag_time_wait);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_buffer_splitting);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_initial_cwnd);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rttvar_bw);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rttvar_rtt);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rttvar_eqret);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_rttvar_steady_step);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_use_dcccecn);
 #ifdef SCTP_DEBUG
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_debug);
 #endif
