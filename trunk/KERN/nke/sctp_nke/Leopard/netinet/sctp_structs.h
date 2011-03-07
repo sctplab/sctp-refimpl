@@ -258,15 +258,15 @@ struct rtcc_cc {
 	uint64_t new_tot_time;  /* temp holding the new value */
 	uint64_t bw_bytes_at_last_rttc; /* What bw_bytes was at last rtt calc */
 	uint32_t cwnd_at_bw_set; /* Cwnd at last bw saved - lbw */
-	uint32_t cwnd_at_step;
+	uint32_t vol_reduce;  /* cnt of voluntary reductions */
 	uint16_t steady_step; /* The number required to be in steady state*/
 	uint16_t step_cnt;    /* The current number */
-	uint16_t vol_reduce;  /* cnt of voluntary reductions */
         uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
 	uint8_t  use_dccc_ecn;  /* Flag to enable DCCC ECN */
 	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
 	uint8_t  last_step_state; /* Last state if steady state stepdown is on */
 	uint8_t  rtt_set_this_sack; /* Flag saying this sack had RTT calc on it */
+	uint8_t  last_inst_ind; /* Last saved inst indication */
 };
 
 
