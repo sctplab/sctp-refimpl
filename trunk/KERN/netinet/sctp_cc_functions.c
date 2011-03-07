@@ -564,7 +564,6 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		if (net->rtt) {
 			div = net->rtt/1000;
 			if (div) {
-				probepoint |=  ((0xb << 16) | 0);
 				inst_bw = bytes_for_this_rtt / div;
 				inst_off = inst_bw >> bw_shift;
 				if (inst_bw > nbw) 
@@ -573,21 +572,22 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					inst_ind = SCTP_INST_LOOSING;
 				else
 					inst_ind = SCTP_INST_NEUTRAL;
+				probepoint |=  ((0xb << 16) | inst_ind);
 			} else {
-				probepoint |=  ((0xc << 16) | 0);
 				inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt);
 				/* Can't determine do not change */
 				inst_ind = net->cc_mod.rtcc.last_inst_ind;
+				probepoint |=  ((0xc << 16) | inst_ind);
 			}
 		} else {
-			probepoint |=  ((0xd << 16) | 0);
 			inst_bw = bytes_for_this_rtt;
 			/* Can't determine do not change */
 			inst_ind = net->cc_mod.rtcc.last_inst_ind;
+			probepoint |=  ((0xd << 16) | inst_ind);
 		}
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  ((net->cc_mod.rtcc.lbw << 32) | inst_bw),
+			  ((nbw << 32) | inst_bw),
 			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
 			  net->flight_size,
 			  probepoint);
