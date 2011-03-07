@@ -1384,6 +1384,7 @@ sctp_iterator_worker(void)
 		CURVNET_SET(it->vn);
 #endif
 		sctp_iterator_work(it);
+		sctp_it_ctl.cur_it = NULL;
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
