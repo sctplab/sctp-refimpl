@@ -576,12 +576,14 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			} else {
 				probepoint |=  ((0xc << 16) | 0);
 				inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt);
-				inst_ind = SCTP_INST_NEUTRAL;
+				/* Can't determine do not change */
+				inst_ind = net->cc_mod.rtcc.last_inst_ind;
 			}
 		} else {
 			probepoint |=  ((0xd << 16) | 0);
 			inst_bw = bytes_for_this_rtt;
-			inst_ind = SCTP_INST_NEUTRAL;
+			/* Can't determine do not change */
+			inst_ind = net->cc_mod.rtcc.last_inst_ind;
 		}
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
@@ -590,6 +592,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			  net->flight_size,
 			  probepoint);
 	} else {
+		/* No rtt measurement, use last one */
 		inst_ind = net->cc_mod.rtcc.last_inst_ind;
 	}
 	bw_offset = net->cc_mod.rtcc.lbw >> bw_shift;
