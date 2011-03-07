@@ -235,23 +235,15 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 					  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 					  oth,
 					  probepoint);
-				if (inst_ind == SCTP_INST_GAINING) {
-					if (net->cwnd > (4 * net->mtu)) {
-						net->cwnd -= net->mtu;
-						net->cc_mod.rtcc.vol_reduce++;
-					} else {
-						net->cc_mod.rtcc.step_cnt = 0;
-					}
+				if (net->cwnd > (4 * net->mtu)) {
+					net->cwnd -= net->mtu;
+					net->cc_mod.rtcc.vol_reduce++;
+				} else {
+					net->cc_mod.rtcc.step_cnt = 0;
 				}
 			}
 		}
-	decision_out:
-		if (inst_ind == SCTP_INST_GAINING)
-			return (1);
-		else if (inst_ind == SCTP_INST_NEUTRAL) 
-			return (1);
-		else
-			return (0);
+		return (1);
 	}
 	if (net->rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 		/*
@@ -291,7 +283,12 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 		net->cc_mod.rtcc.lbw = nbw;
 		net->cc_mod.rtcc.lbw_rtt = net->rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
-		goto decision_out;
+		if (inst_ind == SCTP_INST_GAINING)
+			return (1);
+		else if (inst_ind == SCTP_INST_NEUTRAL) 
+			return (1);
+		else
+			return (0);
 	}
 	/* Ok bw and rtt remained the same .. no update to any 
 	 */
