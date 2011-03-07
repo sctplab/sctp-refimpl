@@ -214,7 +214,7 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 			  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 			  net->flight_size,
 			  probepoint);
-		if (net->cc_mod.rtcc.steady_step) {
+		if ((net->cc_mod.rtcc.steady_step) && (inst_ind != SCTP_INST_LOOSING)) {
 			if (net->cc_mod.rtcc.last_step_state == 5)
 				net->cc_mod.rtcc.step_cnt++;
 			else 
@@ -243,7 +243,10 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 				}
 			}
 		}
-		return (1);
+		if (inst_ind == SCTP_INST_LOOSING)
+			return (0);
+		else 
+			return (1);
 	}
 	if (net->rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 		/*
