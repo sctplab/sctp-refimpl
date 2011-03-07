@@ -196,7 +196,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 
 static int
 cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, 
-	   uint64_t rtt_offset, uint8_t inst_ind)
+	   uint64_t rtt_offset, uint64_t vtag, uint8_t inst_ind)
 {
 	uint64_t oth, probepoint;
 	probepoint = (((uint64_t)net->cwnd) << 32);
@@ -332,7 +332,7 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 
 static int
 cc_bw_decrease(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, uint64_t rtt_offset, 
-	       uint8_t inst_ind)
+	       uint64_t vtag, uint8_t inst_ind)
 {
 	uint64_t oth, probepoint;
 	/* Bandwidth decreased.*/
@@ -466,7 +466,8 @@ out_decision:
 }
 
 static int
-cc_bw_increase(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, uint8_t inst_ind)
+cc_bw_increase(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, 
+	       uint64_t vtag, uint8_t inst_ind)
 {
 	uint64_t oth, probepoint;
 	/* BW increased, so update and
@@ -593,19 +594,19 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	}
 	bw_offset = net->cc_mod.rtcc.lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	if (nbw > net->cc_mod.rtcc.lbw+bw_offset) {
-		ret = cc_bw_increase(stcb, net, nbw, inst_ind);
+		ret = cc_bw_increase(stcb, net, nbw, vtag, inst_ind);
 		goto out;
 	}
 	rtt_offset = net->cc_mod.rtcc.lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
 	if (nbw < net->cc_mod.rtcc.lbw-bw_offset) {
-		ret = cc_bw_decrease(stcb, net, nbw, rtt_offset, inst_ind);
+		ret = cc_bw_decrease(stcb, net, nbw, rtt_offset, vtag, inst_ind);
 		goto out;
 	}
 	/* If we reach here then
 	 * we are in a situation where
 	 * the bw stayed the same.
 	 */
-	ret = cc_bw_same(stcb, net, nbw, rtt_offset, inst_ind);
+	ret = cc_bw_same(stcb, net, nbw, rtt_offset, vtag, inst_ind);
 out:
 	net->cc_mod.rtcc.last_inst_ind = inst_ind;
 	return(ret);
