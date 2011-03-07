@@ -1385,13 +1385,11 @@ sctp_iterator_worker(void)
 #endif
 		sctp_iterator_work(it);
 		sctp_it_ctl.cur_it = NULL;
-
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
 #endif
 		SCTP_IPI_ITERATOR_WQ_LOCK();
 		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
-			sctp_it_ctl.cur_it = NULL;
 			break;
 		}
 	        /*sa_ignore FREED_MEMORY*/
