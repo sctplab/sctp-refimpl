@@ -511,7 +511,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
 	uint64_t bytes_for_this_rtt, inst_bw;
-	uint64_t div;
+	uint64_t div, inst_off;
+	int bw_shift;
 	uint8_t inst_ind;
 	int ret;
 	/*- 
@@ -551,6 +552,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * RTT it stayed the same if it did not
 	 * change within 1/32nd
 	 */
+	bw_shift = SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	rtt = stcb->asoc.my_vtag;
 	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
 	probepoint = (((uint64_t)net->cwnd) << 32);
@@ -564,9 +566,10 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			if (div) {
 				probepoint |=  ((0xb << 16) | 0);
 				inst_bw = bytes_for_this_rtt / div;
+				inst_off = inst_bw >> bw_shift;
 				if (inst_bw > nbw) 
 					inst_ind = SCTP_INST_GAINING; 
-				else if (inst_bw < nbw)
+				else if ((inst_bw+inst_off) < nbw)
 					inst_ind = SCTP_INST_LOOSING;
 				else
 					inst_ind = SCTP_INST_NEUTRAL;
@@ -589,7 +592,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	} else {
 		inst_ind = net->cc_mod.rtcc.last_inst_ind;
 	}
-	bw_offset = net->cc_mod.rtcc.lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
+	bw_offset = net->cc_mod.rtcc.lbw >> bw_shift;
 	if (nbw > net->cc_mod.rtcc.lbw+bw_offset) {
 		ret = cc_bw_increase(stcb, net, nbw, vtag, inst_ind);
 		goto out;
