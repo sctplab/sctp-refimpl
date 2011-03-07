@@ -322,9 +322,9 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 	if (inst_ind == SCTP_INST_GAINING)
 		return (1);
 	else if (inst_ind == SCTP_INST_NEUTRAL) 
-		return ((int)net->cc_mod.rtcc.ret_from_eq);
+		return (1);
 	else
-		return (0);
+		return ((int)net->cc_mod.rtcc.ret_from_eq);
 }
 
 static int
