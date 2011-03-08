@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 219120 2011-03-01 00:37:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 219397 2011-03-08 11:58:25Z rrs $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -552,12 +552,12 @@ struct sctp_sysctl {
 #define SCTPCTL_RTTVAR_STEADYS_DESC	"How many the sames it takes to try step down of cwnd"
 #define SCTPCTL_RTTVAR_STEADYS_MIN	0
 #define SCTPCTL_RTTVAR_STEADYS_MAX	0xFFFF
-#define SCTPCTL_RTTVAR_STEADYS_DEFAULT	0 /* 0 means disable feature */
+#define SCTPCTL_RTTVAR_STEADYS_DEFAULT	20 /* 0 means disable feature */
 
 #define SCTPCTL_RTTVAR_DCCCECN_DESC	"Enable for RTCC CC datacenter ECN"
 #define SCTPCTL_RTTVAR_DCCCECN_MIN	0
 #define SCTPCTL_RTTVAR_DCCCECN_MAX	1
-#define SCTPCTL_RTTVAR_DCCCECN_DEFAULT	0 /* 0 means disable feature */
+#define SCTPCTL_RTTVAR_DCCCECN_DEFAULT	1 /* 0 means disable feature */
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
