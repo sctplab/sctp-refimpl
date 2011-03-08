@@ -280,9 +280,11 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 				net->cc_mod.rtcc.step_cnt = 0;
 			}
 		}
+/*
 		net->cc_mod.rtcc.lbw = nbw;
 		net->cc_mod.rtcc.lbw_rtt = net->rtt;
 		net->cc_mod.rtcc.cwnd_at_bw_set = net->cwnd;
+*/
 		if (inst_ind == SCTP_INST_GAINING)
 			return (1);
 		else if (inst_ind == SCTP_INST_NEUTRAL) 
