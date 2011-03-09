@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219120 2011-03-01 00:37:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219397 2011-03-08 11:58:25Z rrs $");
 #endif
 
 #ifndef __sctp_constants_h__

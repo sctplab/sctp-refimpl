@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 219120 2011-03-01 00:37:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 219397 2011-03-08 11:58:25Z rrs $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -261,7 +261,7 @@ struct rtcc_cc {
 	uint32_t vol_reduce;  /* cnt of voluntary reductions */
 	uint16_t steady_step; /* The number required to be in steady state*/
 	uint16_t step_cnt;    /* The current number */
-        uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
+	uint8_t  ret_from_eq;  /* When all things are equal what do I return 0/1 - 1 no cc advance */
 	uint8_t  use_dccc_ecn;  /* Flag to enable DCCC ECN */
 	uint8_t  tls_needs_set; /* Flag to indicate we need to set tls 0 or 1 means set at send 2 not */
 	uint8_t  last_step_state; /* Last state if steady state stepdown is on */

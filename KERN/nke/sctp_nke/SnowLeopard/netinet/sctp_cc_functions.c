@@ -46,7 +46,7 @@
 #include <netinet/sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 219120 2011-03-01 00:37:46Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 219397 2011-03-08 11:58:25Z rrs $");
 #endif
 
 static void
@@ -214,7 +214,7 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 			  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 			  net->flight_size,
 			  probepoint);
-		if (net->cc_mod.rtcc.steady_step) {
+		if ((net->cc_mod.rtcc.steady_step) && (inst_ind != SCTP_INST_LOOSING)) {
 			if (net->cc_mod.rtcc.last_step_state == 5)
 				net->cc_mod.rtcc.step_cnt++;
 			else 
@@ -248,7 +248,8 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 	if (net->rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 		/*
 		 * rtt decreased, there could be more room.
-		 * we update both the bw and the rtt here.
+		 * we update both the bw and the rtt here to
+		 * lock this in as a good step down.
 		 */
 		/* Probe point 6 */
 		probepoint |=  ((6 << 16) | 0);
@@ -300,7 +301,8 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 		  ((net->cc_mod.rtcc.lbw_rtt << 32) | net->rtt),
 		  net->flight_size,
 		  probepoint);
-	if (net->cc_mod.rtcc.steady_step) {
+
+	if ((net->cc_mod.rtcc.steady_step) && (inst_ind != SCTP_INST_LOOSING)) {
 		if (net->cc_mod.rtcc.last_step_state == 5)
 			net->cc_mod.rtcc.step_cnt++;
 		else 
@@ -322,9 +324,9 @@ cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 	if (inst_ind == SCTP_INST_GAINING)
 		return (1);
 	else if (inst_ind == SCTP_INST_NEUTRAL) 
-		return ((int)net->cc_mod.rtcc.ret_from_eq);
+		return (1);
 	else
-		return (0);
+		return ((int)net->cc_mod.rtcc.ret_from_eq);
 }
 
 static int
@@ -511,7 +513,8 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset, rtt, vtag, probepoint;
 	uint64_t bytes_for_this_rtt, inst_bw;
-	uint64_t div;
+	uint64_t div, inst_off;
+	int bw_shift;
 	uint8_t inst_ind;
 	int ret;
 	/*- 
@@ -551,6 +554,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * RTT it stayed the same if it did not
 	 * change within 1/32nd
 	 */
+	bw_shift = SCTP_BASE_SYSCTL(sctp_rttvar_bw);
 	rtt = stcb->asoc.my_vtag;
 	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
 	probepoint = (((uint64_t)net->cwnd) << 32);
@@ -562,34 +566,38 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 		if (net->rtt) {
 			div = net->rtt/1000;
 			if (div) {
-				probepoint |=  ((0xb << 16) | 0);
 				inst_bw = bytes_for_this_rtt / div;
+				inst_off = inst_bw >> bw_shift;
 				if (inst_bw > nbw) 
 					inst_ind = SCTP_INST_GAINING; 
-				else if (inst_bw < nbw)
+				else if ((inst_bw+inst_off) < nbw)
 					inst_ind = SCTP_INST_LOOSING;
 				else
 					inst_ind = SCTP_INST_NEUTRAL;
+				probepoint |=  ((0xb << 16) | inst_ind);
 			} else {
-				probepoint |=  ((0xc << 16) | 0);
 				inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt);
-				inst_ind = SCTP_INST_NEUTRAL;
+				/* Can't determine do not change */
+				inst_ind = net->cc_mod.rtcc.last_inst_ind;
+				probepoint |=  ((0xc << 16) | inst_ind);
 			}
 		} else {
-			probepoint |=  ((0xd << 16) | 0);
 			inst_bw = bytes_for_this_rtt;
-			inst_ind = SCTP_INST_NEUTRAL;
+			/* Can't determine do not change */
+			inst_ind = net->cc_mod.rtcc.last_inst_ind;
+			probepoint |=  ((0xd << 16) | inst_ind);
 		}
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
-			  ((net->cc_mod.rtcc.lbw << 32) | inst_bw),
+			  ((nbw << 32) | inst_bw),
 			  ((net->cc_mod.rtcc.lbw_rtt << 32) | rtt),
 			  net->flight_size,
 			  probepoint);
 	} else {
+		/* No rtt measurement, use last one */
 		inst_ind = net->cc_mod.rtcc.last_inst_ind;
 	}
-	bw_offset = net->cc_mod.rtcc.lbw >> SCTP_BASE_SYSCTL(sctp_rttvar_bw);
+	bw_offset = net->cc_mod.rtcc.lbw >> bw_shift;
 	if (nbw > net->cc_mod.rtcc.lbw+bw_offset) {
 		ret = cc_bw_increase(stcb, net, nbw, vtag, inst_ind);
 		goto out;
