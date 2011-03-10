@@ -1484,7 +1484,7 @@ void sysctl_setup_sctp(void)
             &SCTP_BASE_SYSCTL(sctp_cmt_on_off), 0, sysctl_sctp_check,
 	    SCTPCTL_CMT_ON_OFF_DESC);
 
-	/* EY */	
+	/* EY */
 	sysctl_add_oid(&sysctl_oid_top, "nr_sack_on_off", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_nr_sack_on_off), 0, sysctl_sctp_check,
 	    SCTPCTL_NR_SACK_ON_OFF_DESC);
