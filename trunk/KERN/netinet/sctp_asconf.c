@@ -678,7 +678,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 
 	if (first) {
 		/* delete old cache */
-		SCTPDBG(SCTP_DEBUG_ASCONF1,"handle_asconf: Now processing firstASCONF. Try to delte old cache\n");
+		SCTPDBG(SCTP_DEBUG_ASCONF1,"handle_asconf: Now processing first ASCONF. Try to delete old cache\n");
 
 		TAILQ_FOREACH_SAFE(ack, &asoc->asconf_ack_sent, next, ack_next) {
 			if (ack->serial_number == serial_num)
