@@ -378,13 +378,17 @@ int sctp_disconnect(struct socket *so);
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void sctp_ctlinput __P((int, struct sockaddr *, void *));
 int sctp_ctloutput __P((struct socket *, struct sockopt *));
+#ifdef INET
 void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
+#endif
 #if defined(__APPLE__)
 #if defined(INET6)
 int sctp6_input_with_port __P((struct mbuf **, int *, uint16_t));
 #endif
 #endif
+#ifdef INET
 void sctp_input __P((struct mbuf *, int));
+#endif
 void sctp_pathmtu_adjustment __P((struct sctp_inpcb *, struct sctp_tcb *, struct sctp_nets *, uint16_t));
 #else
 #if defined(__Panda__)
