@@ -982,20 +982,31 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		return EINVAL;
 	}
 
-	if (addr) {
 #if !defined(__Windows__)
-		if ((addr->sa_family == AF_INET6) &&
-		   (addr->sa_len != sizeof(struct sockaddr_in6))) {
-			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
-			return EINVAL;
-		}
-		if ((addr->sa_family == AF_INET) &&
-		   (addr->sa_len != sizeof(struct sockaddr_in))) {
-			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
-			return EINVAL;
-		}
+	if (addr) {
+		switch (addr->sa_family) {
+#ifdef INET
+		case AF_INET:
+			if (addr->sa_len != sizeof(struct sockaddr_in)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+				return EINVAL;
+			}
+			break;
 #endif
+#ifdef INET6
+		case AF_INET6:
+			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+				return EINVAL;
+			}
+			break;
+#endif
+		default:
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+			return EINVAL;
+		}
 	}
+#endif
 	inp6 = (struct in6pcb *)inp;
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	inp6->inp_vflag &= ~INP_IPV4;
@@ -1005,7 +1016,9 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	inp->inp_vflag |= INP_IPV6;
 #endif
 	if ((addr != NULL) && (SCTP_IPV6_V6ONLY(inp6) == 0)) {
-		if (addr->sa_family == AF_INET) {
+		switch (addr->sa_family) {
+#ifdef INET
+		case AF_INET:
 			/* binding v4 addr to v6 socket, so reset flags */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 			inp6->inp_vflag |= INP_IPV4;
@@ -1014,7 +1027,11 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 			inp->inp_vflag |= INP_IPV4;
 			inp->inp_vflag &= ~INP_IPV6;
 #endif
-		} else {
+			break;
+#endif
+#ifdef INET6
+		case AF_INET6:
+		{
 			struct sockaddr_in6 *sin6_p;
 
 			sin6_p = (struct sockaddr_in6 *)addr;
@@ -1025,7 +1042,9 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #else
 				inp->inp_vflag |= INP_IPV4;
 #endif
-			} else if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr)) {
+			}
+#ifdef INET
+			if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr)) {
 				struct sockaddr_in sin;
 
 				in6_sin6_2_sin(&sin, sin6_p);
@@ -1039,24 +1058,31 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 				error = sctp_inpcb_bind(so, (struct sockaddr *)&sin, NULL, p);
 				return error;
 			}
+#endif
+			break;
+		}
+#endif
+		default:
+			break;
 		}
 	} else if (addr != NULL) {
+		struct sockaddr_in6 *sin6_p;
+
 		/* IPV6_V6ONLY socket */
+#ifdef INET
 		if (addr->sa_family == AF_INET) {
 			/* can't bind v4 addr to v6 only socket! */
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return EINVAL;
-		} else {
-			struct sockaddr_in6 *sin6_p;
+		}
+#endif
+		sin6_p = (struct sockaddr_in6 *)addr;
 
-			sin6_p = (struct sockaddr_in6 *)addr;
-
-			if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr)) {
-				/* can't bind v4-mapped addrs either! */
-				/* NOTE: we don't support SIIT */
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
-				return EINVAL;
-            }
+		if (IN6_IS_ADDR_V4MAPPED(&sin6_p->sin6_addr)) {
+			/* can't bind v4-mapped addrs either! */
+			/* NOTE: we don't support SIIT */
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+			return EINVAL;
 		}
 	}
 	error = sctp_inpcb_bind(so, addr, NULL, p);
@@ -1263,12 +1289,10 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	struct sctp_inpcb *inp;
 	struct in6pcb *inp6;
 	struct sctp_tcb *stcb;
-
 #ifdef INET
 	struct sockaddr_in6 *sin6;
 	struct sockaddr_storage ss;
-
-#endif				/* INET */
+#endif
 
 	inp6 = (struct in6pcb *)so->so_pcb;
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -1282,11 +1306,24 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EINVAL);
 	}
 #if !defined(__Windows__)
-	if ((addr->sa_family == AF_INET6) && (addr->sa_len != sizeof(struct sockaddr_in6))) {
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
-		return (EINVAL);
-	}
-	if ((addr->sa_family == AF_INET) && (addr->sa_len != sizeof(struct sockaddr_in))) {
+	switch (addr->sa_family) {
+#ifdef INET
+	case AF_INET:
+		if (addr->sa_len != sizeof(struct sockaddr_in)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+			return (EINVAL);
+		}
+		break;
+#endif
+#ifdef INET6
+	case AF_INET6:
+		if (addr->sa_len != sizeof(struct sockaddr_in6)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
+			return (EINVAL);
+		}
+		break;
+#endif
+	default:
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 		return (EINVAL);
 	}
@@ -1427,7 +1464,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	 * Do the malloc first in case it blocks.
 	 */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
-	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
+	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof(*sin6));
 	if (sin6 == NULL)
 		return ENOMEM;
 #elif defined(__Panda__)
@@ -1642,7 +1679,9 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 static int
 sctp6_in6getaddr(struct socket *so, struct sockaddr **nam)
 {
+#ifdef INET
 	struct sockaddr *addr;
+#endif
 #elif defined(__Panda__)
 int
 sctp6_in6getaddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
@@ -1664,6 +1703,7 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 
 	/* allow v6 addresses precedence */
 	error = sctp6_getaddr(so, nam);
+#ifdef INET
 	if (error) {
 		/* try v4 next if v6 failed */
 		error = sctp_ingetaddr(so, nam);
@@ -1679,18 +1719,9 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if defined(__Panda__)
-			*namelen = sizeof(sin6);
-#endif
-
-#if defined(__Panda__)
-			*namelen = sizeof(struct sockaddr_in);
-#endif
 		}
-#if defined(__Panda__)
-		*namelen = sizeof(struct sockaddr_in6);
-#endif
 	}
+#endif
 #if defined(__Panda__)
 	*namelen = nam->sa_len;
 #endif
@@ -1702,7 +1733,9 @@ sctp6_in6getaddr(struct socket *so, struct mbuf *nam)
 static int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr **nam)
 {
-	struct sockaddr *addr = *nam;
+#ifdef INET
+	struct sockaddr *addr;
+#endif
 #elif defined(__Panda__)
 int
 sctp6_getpeeraddr(struct socket *so, struct sockaddr *nam, uint32_t *namelen)
@@ -1725,29 +1758,25 @@ sctp6_getpeeraddr(struct socket *so, struct mbuf *nam)
 
 	/* allow v6 addresses precedence */
 	error = sctp6_peeraddr(so, nam);
+#ifdef INET
 	if (error) {
 		/* try v4 next if v6 failed */
 		error = sctp_peeraddr(so, nam);
 		if (error) {
 			return (error);
 		}
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+		addr = *nam;
+#endif
 		/* if I'm V6ONLY, convert it to v4-mapped */
 		if (SCTP_IPV6_V6ONLY(inp6)) {
 			struct sockaddr_in6 sin6;
 
 			in6_sin_2_v4mapsin6((struct sockaddr_in *)addr, &sin6);
 			memcpy(addr, &sin6, sizeof(struct sockaddr_in6));
-#if defined(__Panda__)
-			*namelen = sizeof(sin6);
-#endif
-#if defined(__Panda__)
-			*namelen = sizeof(struct sockaddr_in);
-#endif
 		}
-#if defined(__Panda__)
-		*namelen = sizeof(struct sockaddr_in6);
-#endif
 	}
+#endif
 #if defined(__Panda__)
 	*namelen = nam->sa_len;
 #endif
