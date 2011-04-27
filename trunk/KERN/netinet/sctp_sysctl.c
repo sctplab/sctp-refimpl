@@ -186,17 +186,33 @@ number_of_addresses(struct sctp_inpcb *inp)
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
-				if ((sctp_ifa->address.sa.sa_family == AF_INET) ||
-				    (sctp_ifa->address.sa.sa_family == AF_INET6)) {
+				switch (sctp_ifa->address.sa.sa_family) {
+#ifdef INET
+				case AF_INET:
+#endif
+#ifdef INET6
+				case AF_INET6:
+#endif
 					cnt++;
+					break;
+				default:
+					break;
 				}
 			}
 		}
 	} else {
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if ((laddr->ifa->address.sa.sa_family == AF_INET) ||
-			    (laddr->ifa->address.sa.sa_family == AF_INET6)) {
+			switch (laddr->ifa->address.sa.sa_family) {
+#ifdef INET
+			case AF_INET:
+#endif
+#ifdef INET6
+			case AF_INET6:
+#endif
 				cnt++;
+				break;
+			default:
+				break;
 			}
 		}
 	}
@@ -264,6 +280,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 						continue;
 				}
 				switch (sctp_ifa->address.sa.sa_family) {
+#ifdef INET
 				case AF_INET:
 					if (ipv4_addr_legal) {
 						struct sockaddr_in *sin;
@@ -277,6 +294,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 						continue;
 					}
 					break;
+#endif
 #ifdef INET6
 				case AF_INET6:
 					if (ipv6_addr_legal) {
@@ -609,6 +627,8 @@ skip:
 	else if ((var) >= (max)) { (var) = (max); }
 #endif
 
+/* XXX: Remove the #if after tunneling over IPv6 works also on FreeBSD. */
+#if !defined(__FreeBSD__) || defined(INET)
 static int
 #if defined (__APPLE__)
 sysctl_sctp_udp_tunneling_check SYSCTL_HANDLER_ARGS
@@ -648,6 +668,7 @@ sysctl_sctp_udp_tunneling_check(SYSCTL_HANDLER_ARGS)
 out:
 	return (error);
 }
+#endif
 
 #if defined (__APPLE__)
 int sctp_is_vmware_interface(struct ifnet *);
@@ -772,7 +793,10 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 #elif defined(__FreeBSD__) || defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_mobility_fasthandoff), SCTPCTL_MOBILITY_FASTHANDOFF_MIN, SCTPCTL_MOBILITY_FASTHANDOFF_MAX);
 #endif
+/* XXX: Remove the #if after tunneling over IPv6 works also on FreeBSD. */
+#if !defined(__FreeBSD__) || defined(INET)
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable), SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MIN, SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_MAX);
+#endif
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_enable_sack_immediately), SCTPCTL_SACK_IMMEDIATELY_ENABLE_MIN, SCTPCTL_SACK_IMMEDIATELY_ENABLE_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly), SCTPCTL_NAT_FRIENDLY_INITS_MIN, SCTPCTL_NAT_FRIENDLY_INITS_MAX);
 
@@ -1253,6 +1277,8 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_UINT | CTLFLAG_R
                  "Clear SCTP Logging buffer");
 #endif
 
+/* XXX: Remove the #if after tunneling over IPv6 works also on FreeBSD. */
+#if !defined(__FreeBSD__) || defined(INET)
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_udp_tunneling_for_client_enable), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_UDP_TUNNELING_FOR_CLIENT_ENABLE_DESC);
@@ -1260,6 +1286,7 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_for_client_enable, CTLT
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_port, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_udp_tunneling_port), 0, sysctl_sctp_udp_tunneling_check, "IU",
                  SCTPCTL_UDP_TUNNELING_PORT_DESC);
+#endif
 
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, enable_sack_immediately, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_enable_sack_immediately), 0, sysctl_sctp_check, "IU",
