@@ -199,6 +199,7 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 	}
 }
 
+#ifdef INET
 #if defined(__Panda__) || defined(__Windows__)
 void
 #else
@@ -273,7 +274,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 
 	SCTP_TCB_UNLOCK(stcb);
 }
-
+#endif
 
 void
 sctp_notify(struct sctp_inpcb *inp,
@@ -391,6 +392,7 @@ sctp_notify(struct sctp_inpcb *inp,
 	}
 }
 
+#ifdef INET
 #if !defined(__Panda__) && !defined(__Userspace__)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
@@ -488,6 +490,7 @@ sctp_ctlinput(cmd, sa, vip)
 #endif
 }
 #endif
+#endif
 
 #if defined(__FreeBSD__)
 static int
@@ -561,6 +564,7 @@ SYSCTL_PROC(_net_inet_sctp, OID_AUTO, getcred, CTLTYPE_OPAQUE | CTLFLAG_RW,
 #endif				/* #if defined(__FreeBSD__) */
 
 
+#ifdef INET
 #if defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 int
 #elif defined(__FreeBSD__) && __FreeBSD_version > 690000
@@ -754,6 +758,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	return error;
 }
 
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void
 sctp_close(struct socket *so)
@@ -876,7 +881,6 @@ sctp_detach(struct socket *so)
 	return(0);
 #endif
 }
-
 #endif
 
 #if defined(__Userspace__)
@@ -1460,6 +1464,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 					}
 				}
 				switch (sctp_ifa->address.sa.sa_family) {
+#ifdef INET
 				case AF_INET:
 					if (ipv4_addr_legal) {
 						struct sockaddr_in *sin;
@@ -1498,6 +1503,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 						continue;
 					}
 					break;
+#endif
 #ifdef INET6
 				case AF_INET6:
 					if (ipv6_addr_legal) {
@@ -1662,28 +1668,46 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 				/* Count them if they are the right type */
-				if (sctp_ifa->address.sa.sa_family == AF_INET) {
+				switch (sctp_ifa->address.sa.sa_family) {
+#ifdef INET
+				case AF_INET:
 					if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4))
 						cnt += sizeof(struct sockaddr_in6);
 					else
 						cnt += sizeof(struct sockaddr_in);
-
-				} else if (sctp_ifa->address.sa.sa_family == AF_INET6)
+					break;
+#endif
+#ifdef INET6
+				case AF_INET6:
 					cnt += sizeof(struct sockaddr_in6);
+					break;
+#endif
+				default:
+					break;
+				}
 			}
 		}
 	} else {
 		struct sctp_laddr *laddr;
 
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
-			if (laddr->ifa->address.sa.sa_family == AF_INET) {
+			switch (laddr->ifa->address.sa.sa_family) {
+#ifdef INET
+			case AF_INET:
 				if (sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4))
 					cnt += sizeof(struct sockaddr_in6);
 				else
 					cnt += sizeof(struct sockaddr_in);
-
-			} else if (laddr->ifa->address.sa.sa_family == AF_INET6)
+				break;
+#endif
+#ifdef INET6
+			case AF_INET6:
 				cnt += sizeof(struct sockaddr_in6);
+				break;
+#endif
+			default:
+				break;
+			}
 		}
 	}
 	return (cnt);
@@ -1829,10 +1853,20 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 	}
 	SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_WAIT);
 	/* move to second address */
-	if (sa->sa_family == AF_INET)
+	switch (sa->sa_family) {
+#ifdef INET
+	case AF_INET:
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in));
-	else
+		break;
+#endif
+#ifdef INET6
+	case AF_INET6:
 		sa = (struct sockaddr *)((caddr_t)sa + sizeof(struct sockaddr_in6));
+		break;
+#endif
+	default:
+		break;
+	}
 
 	error = 0;
 	added = sctp_connectx_helper_add(stcb, sa, (totaddr-1), &error);
@@ -2467,14 +2501,23 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			size = 0;
 			/* Count the sizes */
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) ||
-				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
+				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) {
 					size += sizeof(struct sockaddr_in6);
-				} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
-					size += sizeof(struct sockaddr_in);
 				} else {
-					/* huh */
-					break;
+					switch (((struct sockaddr *)&net->ro._l_addr)->sa_family) {
+#ifdef INET
+					case AF_INET:
+						size += sizeof(struct sockaddr_in);
+						break;
+#endif
+#ifdef INET6
+					case AF_INET6:
+						size += sizeof(struct sockaddr_in6);
+						break;
+#endif
+					default:
+						break;
+					}
 				}
 			}
 			SCTP_TCB_UNLOCK(stcb);
@@ -2506,21 +2549,34 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			sas = (struct sockaddr_storage *)&saddr->addr[0];
 
 			TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) ||
-				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET6)) {
+				if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) {
 					cpsz = sizeof(struct sockaddr_in6);
-				} else if (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET) {
-					cpsz = sizeof(struct sockaddr_in);
 				} else {
-					/* huh */
+					switch (((struct sockaddr *)&net->ro._l_addr)->sa_family) {
+#ifdef INET
+					case AF_INET:
+						cpsz = sizeof(struct sockaddr_in);
+						break;
+#endif
+#ifdef INET6
+					case AF_INET6:
+						cpsz = sizeof(struct sockaddr_in6);
+						break;
+#endif
+					default:
+						cpsz = 0;
+						break;
+					}
+				}
+				if (cpsz == 0) {
 					break;
 				}
 				if (left < cpsz) {
 					/* not enough room. */
 					break;
 				}
-#ifdef INET6
-				if ((sctp_is_feature_on(inp,SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) &&
+#if defined(INET) && defined(INET6)
+				if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NEEDS_MAPPED_V4)) &&
 				    (((struct sockaddr *)&net->ro._l_addr)->sa_family == AF_INET)) {
 					/* Must map the address */
 					in6_sin_2_v4mapsin6((struct sockaddr_in *)&net->ro._l_addr,
@@ -2528,7 +2584,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				} else {
 #endif
 					memcpy(sas, &net->ro._l_addr, cpsz);
-#ifdef INET6
+#if defined(INET) && defined(INET6)
 				}
 #endif
 				((struct sockaddr_in *)sas)->sin_port = stcb->rport;
@@ -2586,9 +2642,12 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		if (stcb && (net == NULL) ) {
 			struct sockaddr *sa;
+
 			sa = (struct sockaddr *)&paddrp->spp_address;
+#ifdef INET
 			if (sa->sa_family == AF_INET) {
 				struct sockaddr_in *sin;
+
 				sin = (struct sockaddr_in *)sa;
 				if (sin->sin_addr.s_addr) {
 					error = EINVAL;
@@ -2596,8 +2655,12 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
 					break;
 				}
-			} else if (sa->sa_family == AF_INET6) {
+			} else
+#endif
+#ifdef INET6
+			if (sa->sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin6;
+
 				sin6 = (struct sockaddr_in6 *)sa;
 				if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 					error = EINVAL;
@@ -2605,7 +2668,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
 					break;
 				}
-			} else {
+			} else
+#endif
+			{
 				error = EAFNOSUPPORT;
 				SCTP_TCB_UNLOCK(stcb);
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
@@ -4326,8 +4391,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		if (stcb && (net == NULL) ) {
 			struct sockaddr *sa;
+
 			sa = (struct sockaddr *)&paddrp->spp_address;
+#ifdef INET
 			if (sa->sa_family == AF_INET) {
+
 				struct sockaddr_in *sin;
 				sin = (struct sockaddr_in *)sa;
 				if (sin->sin_addr.s_addr) {
@@ -4336,8 +4404,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					error = EINVAL;
 					break;
 				}
-			} else if (sa->sa_family == AF_INET6) {
+			} else
+#endif
+#ifdef INET6
+			if (sa->sa_family == AF_INET6) {
 				struct sockaddr_in6 *sin6;
+
 				sin6 = (struct sockaddr_in6 *)sa;
 				if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
@@ -4345,7 +4417,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					error = EINVAL;
 					break;
 				}
-			} else {
+			} else
+#endif
+			{
 				error = EAFNOSUPPORT;
 				SCTP_TCB_UNLOCK(stcb);
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
@@ -4809,6 +4883,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses,
 				    optsize);
+#ifdef INET
 		if (addrs->addr->sa_family == AF_INET) {
 			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in);
 			if (optsize < sz) {
@@ -4822,8 +4897,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				break;
 			}
 #endif
+		} else
+#endif
 #ifdef INET6
-		} else if (addrs->addr->sa_family == AF_INET6) {
+		if (addrs->addr->sa_family == AF_INET6) {
 			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in6);
 			if (optsize < sz) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
@@ -4837,8 +4914,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			  break;
 			}
 #endif
+		} else
 #endif
-		} else {
+		{
 		       error = EAFNOSUPPORT;
   		       break;
 		}
@@ -4857,6 +4935,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 #endif
 		SCTP_CHECK_AND_CAST(addrs, optval, struct sctp_getaddresses, optsize);
+#ifdef INET
 		if (addrs->addr->sa_family == AF_INET) {
 			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in);
 			if (optsize < sz) {
@@ -4870,8 +4949,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				break;
 			}
 #endif
+		} else
+#endif
 #ifdef INET6
-		} else if (addrs->addr->sa_family == AF_INET6) {
+		if (addrs->addr->sa_family == AF_INET6) {
 			sz = sizeof(struct sctp_getaddresses) - sizeof(struct sockaddr) + sizeof(struct sockaddr_in6);
 			if (optsize < sz) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
@@ -4885,8 +4966,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			  break;
 			}
 #endif
+		} else
 #endif
-		} else {
+		{
 			error = EAFNOSUPPORT;
 			break;
 		}
@@ -4937,9 +5019,13 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 #ifdef INET6
 		if (INP_CHECK_SOCKAF(so, AF_INET6))
 			error = ip6_ctloutput(so, sopt);
-		else
 #endif				/* INET6 */
+#if defined(INET) && defined (INET6)
+		else
+#endif
+#ifdef INET
 			error = ip_ctloutput(so, sopt);
+#endif
 		return (error);
 	}
 	optsize = sopt->sopt_valsize;
@@ -4979,7 +5065,7 @@ out:
 }
 #endif
 
-
+#ifdef INET
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
 sctp_connect(struct socket *so, struct sockaddr *addr, struct thread *p)
@@ -5030,8 +5116,10 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
         /* TODO __Userspace__ falls into this code for IPv6 stuff at the moment... */
 #endif
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+	switch (addr->sa_family) {
 #ifdef INET6
-	if (addr->sa_family == AF_INET6) {
+	case AF_INET6:
+	{
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in6 *sin6p;
 
@@ -5047,9 +5135,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			return (error);
 		}
 #endif
-	} else
+		break;
+	}
 #endif
-	if (addr->sa_family == AF_INET) {
+#ifdef INET
+	case AF_INET:
+	{
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		struct sockaddr_in *sinp;
 
@@ -5064,8 +5155,11 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
 			return (error);
 		}
+		break;
 #endif
-	} else {
+	}
+#endif
+	default:
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EAFNOSUPPORT);
  		return (EAFNOSUPPORT);
 	}
@@ -5192,6 +5286,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	SCTP_INP_DECR_REF(inp);
 	return error;
 }
+#endif
 
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
@@ -5235,10 +5330,23 @@ sctp_listen(struct socket *so, struct proc *p)
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 			/* not bound all */
 			struct sctp_laddr *laddr;
-	
+
 			LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
 				memcpy(&store, &laddr->ifa->address, sizeof(store));
-				sp->sin.sin_port = inp->sctp_lport;
+				switch (sp->sa.sa_family) {
+#ifdef INET
+				case AF_INET:
+					sp->sin.sin_port = inp->sctp_lport;
+					break;
+#endif
+#ifdef INET6
+				case AF_INET6:
+					sp->sin6.sin6_port = inp->sctp_lport;
+					break;
+#endif
+				default:
+					break;
+				}
 				tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 				if (tinp && (tinp != inp) &&
 				    ((tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
@@ -5254,7 +5362,20 @@ sctp_listen(struct socket *so, struct proc *p)
 		} else {
 			/* Setup a local addr bound all */
 			memset(&store, 0, sizeof(store));
-			store.sin.sin_port = inp->sctp_lport;
+			switch (sp->sa.sa_family) {
+#ifdef INET
+			case AF_INET:
+				store.sin.sin_port = inp->sctp_lport;
+				break;
+#endif
+#ifdef INET6
+			case AF_INET6:
+				sp->sin6.sin6_port = inp->sctp_lport;
+				break;
+#endif
+			default:
+				break;
+			}
 #ifdef INET6
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				store.sa.sa_family = AF_INET6;
@@ -5263,12 +5384,14 @@ sctp_listen(struct socket *so, struct proc *p)
 #endif
 			}
 #endif
+#ifdef INET
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				store.sa.sa_family = AF_INET;
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
 				store.sa.sa_len = sizeof(struct sockaddr_in);
 #endif
 			}
+#endif
 			tinp = sctp_pcb_findep(&sp->sa, 0, 0, inp->def_vrf_id);
 			if (tinp && (tinp != inp) &&
 			    ((tinp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) == 0) &&
@@ -5406,6 +5529,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	stcb->asoc.state &= ~SCTP_STATE_IN_ACCEPT_QUEUE;
 	SCTP_TCB_UNLOCK(stcb);
 	switch (store.sa.sa_family) {
+#ifdef INET
 	case AF_INET:
 	{
 		struct sockaddr_in *sin;
@@ -5431,6 +5555,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 		break;
 	}
+#endif
 #ifdef INET6
 	case AF_INET6:
 	{
@@ -5536,6 +5661,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 	return (0);
 }
 
+#ifdef INET
 int
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_ingetaddr(struct socket *so, struct sockaddr **addr)
@@ -5752,6 +5878,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 }
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+#ifdef INET
 struct pr_usrreqs sctp_usrreqs = {
 #if __FreeBSD_version >= 600000
 	.pru_abort = sctp_abort,
@@ -5818,6 +5945,7 @@ struct pr_usrreqs sctp_usrreqs = {
 #endif
 #endif
 };
+#endif
 #elif !defined(__Panda__) && !defined(__Userspace__)
 int
 sctp_usrreq(so, req, m, nam, control)
@@ -5942,4 +6070,5 @@ sctp_usrreq(so, req, m, nam, control)
 	return (error);
 }
 
+#endif
 #endif
