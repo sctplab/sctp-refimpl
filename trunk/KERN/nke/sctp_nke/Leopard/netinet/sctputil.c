@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 219397 2011-03-08 11:58:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 221249 2011-04-30 11:18:16Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5017,6 +5017,7 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 			continue;
 		if (addr->sa_family != laddr->ifa->address.sa.sa_family)
 			continue;
+#ifdef INET
 		if (addr->sa_family == AF_INET) {
 			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
 			    laddr->ifa->address.sin.sin_addr.s_addr) {
@@ -5028,6 +5029,7 @@ sctp_find_ifa_in_ep(struct sctp_inpcb *inp, struct sockaddr *addr,
 				break;
 			}
 		}
+#endif
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
@@ -5121,6 +5123,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 		}
 		if (addr->sa_family != sctp_ifap->address.sa.sa_family)
 			continue;
+#ifdef INET
 		if (addr->sa_family == AF_INET) {
 			if (((struct sockaddr_in *)addr)->sin_addr.s_addr ==
 			    sctp_ifap->address.sin.sin_addr.s_addr) {
@@ -5131,6 +5134,7 @@ sctp_find_ifa_by_addr(struct sockaddr *addr, uint32_t vrf_id, int holds_lock)
 				break;
 			}
 		}
+#endif
 #ifdef INET6
 		if (addr->sa_family == AF_INET6) {
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)addr,
@@ -7318,7 +7322,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 	struct ip *iph;
 	struct mbuf *sp, *last;
 	struct udphdr *uhdr;
-	uint16_t port=0, len;
+	uint16_t port=0;
 	int header_size = sizeof(struct udphdr) + sizeof(struct sctphdr);
 
 	/* Split out the mbuf chain. Leave the
@@ -7368,8 +7372,11 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 	/* Now its ready for sctp_input or sctp6_input */
 	iph = mtod(m, struct ip *);
 	switch (iph->ip_v) {
+#ifdef INET
 		case IPVERSION:
 		{
+			uint16_t len;
+
 			/* its IPv4 */
 			len = SCTP_GET_IPV4_LENGTH(iph);
 			len -= sizeof(struct udphdr);
@@ -7377,6 +7384,7 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 			sctp_input_with_port(m, off, port);
 			break;
 		}
+#endif
 #ifdef INET6
 		case IPV6_VERSION >> 4:
 		{
