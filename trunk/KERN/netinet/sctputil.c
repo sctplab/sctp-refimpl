@@ -7353,6 +7353,7 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 
 #endif
 #if defined(__FreeBSD__)
+/* XXX: Currently the UDP encapsulation is only supported for IPv4 */
 #ifdef INET
 /* We will need to add support
  * to bind the ports and such here
