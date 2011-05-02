@@ -7353,6 +7353,7 @@ sctp_log_trace(uint32_t subsys, const char *str SCTP_UNUSED, uint32_t a, uint32_
 
 #endif
 #if defined(__FreeBSD__)
+#ifdef INET
 /* We will need to add support
  * to bind the ports and such here
  * so we can do UDP tunneling. In
@@ -7456,7 +7457,6 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 }
 #endif
 
-#ifdef INET
 void 
 sctp_over_udp_stop(void)
 {
