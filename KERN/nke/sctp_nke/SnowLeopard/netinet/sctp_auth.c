@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 221411 2011-05-03 20:34:02Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1956,9 +1956,6 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 				case SCTP_ASCONF:
 				case SCTP_ASCONF_ACK:
 					peer_supports_asconf = 1;
-					break;
-				case SCTP_AUTHENTICATION:
-					peer_supports_auth = 1;
 					break;
 				default:
 					/* one we don't care about */
