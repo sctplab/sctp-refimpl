@@ -103,9 +103,9 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 	/* MT FIXME: Don't compute this over and over again */
 	t_ssthresh = 0;
 	t_cwnd = 0;
+	t_ucwnd_sbw = 0;
 	if ((asoc->sctp_cmt_on_off == SCTP_CMT_RPV1) ||
 	    (asoc->sctp_cmt_on_off == SCTP_CMT_RPV2)) {
-		t_ucwnd_sbw = 0;
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			t_ssthresh += net->ssthresh;
 			t_cwnd += net->cwnd;
@@ -1734,7 +1734,7 @@ sctp_hs_cwnd_decrease(struct sctp_tcb *stcb, struct sctp_nets *net)
 
 static void
 sctp_hs_cwnd_update_after_fr(struct sctp_tcb *stcb,
-		struct sctp_association *asoc)
+                             struct sctp_association *asoc)
 {
 	struct sctp_nets *net;
 		/*
