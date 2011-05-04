@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 219397 2011-03-08 11:58:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 221460 2011-05-04 21:27:05Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -272,6 +272,13 @@ struct sctp_paramhdr {
 #define SCTP_CC_OPT_RTCC_SETMODE	0x00002000
 #define SCTP_CC_OPT_USE_DCCC_ECN	0x00002001
 #define SCTP_CC_OPT_STEADY_STEP         0x00002002
+
+#define SCTP_CMT_OFF            0
+#define SCTP_CMT_BASE           1
+#define SCTP_CMT_RPV1           2
+#define SCTP_CMT_RPV2           3
+#define SCTP_CMT_MPTCP          4
+#define SCTP_CMT_MAX            SCTP_CMT_MPTCP
 
 /* RS - Supported stream scheduling modules for pluggable
  * stream scheduling
