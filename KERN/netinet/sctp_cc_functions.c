@@ -670,6 +670,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 	t_cwnd = 0;
 	t_ucwnd_sbw = 0;
 	t_path_mptcp = 0;
+	mptcp_like_alpha = 1;
 	if ((stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV1) ||
 	    (stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV2) ||
 	    (stcb->asoc.sctp_cmt_on_off == SCTP_CMT_MPTCP)) {
@@ -683,12 +684,12 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				uint64_t tmp;
 
 				t_ucwnd_sbw += (uint64_t)net->cwnd / (uint64_t)srtt;
-            			t_path_mptcp += (((uint64_t)net->cwnd) << SHIFT_MPTCP_MULTI_Z) /
+				t_path_mptcp += (((uint64_t)net->cwnd) << SHIFT_MPTCP_MULTI_Z) /
 				                (((uint64_t)net->mtu) * (uint64_t)srtt);
 				tmp = (((uint64_t)net->cwnd) << SHIFT_MPTCP_MULTI_N) /
 				      ((uint64_t)net->mtu * (uint64_t)(srtt * srtt));
-            			if (tmp > max_path) {
-					max_path = tmp;  
+				if (tmp > max_path) {
+					max_path = tmp;
 				}
 			}
 		}
@@ -904,7 +905,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						                    (uint64_t)SCTP_BASE_SYSCTL(sctp_L2_abc_variable) *
 						                    (uint64_t)net->cwnd) /
 						                   ((uint64_t)srtt * t_ucwnd_sbw));
-								   /* INCREASE FACTOR */
+						                   /* INCREASE FACTOR */
 						incr = (uint32_t)(((uint64_t)net->net_ack *
 						                   (uint64_t)net->cwnd ) /
 						                  ((uint64_t)srtt * t_ucwnd_sbw ));
