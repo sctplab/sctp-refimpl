@@ -668,11 +668,11 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 	/* MT FIXME: Don't compute this over and over again */
 	t_ssthresh = 0;
 	t_cwnd = 0;
+	t_ucwnd_sbw = 0;
+	t_path_mptcp = 0;
 	if ((stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV1) ||
 	    (stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV2) ||
 	    (stcb->asoc.sctp_cmt_on_off == SCTP_CMT_MPTCP)) {
-		t_ucwnd_sbw = 0;
-		t_path_mptcp = 0;
 		max_path = 0;
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			t_ssthresh += net->ssthresh;
