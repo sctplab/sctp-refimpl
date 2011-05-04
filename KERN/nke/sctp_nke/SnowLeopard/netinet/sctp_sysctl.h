@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 219397 2011-03-08 11:58:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 221460 2011-05-04 21:27:05Z tuexen $");
 #endif
 
 #ifndef __sctp_sysctl_h__
@@ -348,9 +348,9 @@ struct sctp_sysctl {
 
 /* cmt_on_off: CMT on/off flag */
 #define SCTPCTL_CMT_ON_OFF_DESC		"CMT settings"
-#define SCTPCTL_CMT_ON_OFF_MIN		0
-#define SCTPCTL_CMT_ON_OFF_MAX		2
-#define SCTPCTL_CMT_ON_OFF_DEFAULT	0
+#define SCTPCTL_CMT_ON_OFF_MIN		SCTP_CMT_OFF
+#define SCTPCTL_CMT_ON_OFF_MAX		SCTP_CMT_MAX
+#define SCTPCTL_CMT_ON_OFF_DEFAULT	SCTP_CMT_OFF
 
 /* EY - nr_sack_on_off: NR_SACK on/off flag */
 #define SCTPCTL_NR_SACK_ON_OFF_DESC	"NR_SACK on/off flag"
