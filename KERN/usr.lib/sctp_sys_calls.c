@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 209709 2010-07-05 03:55:49Z brucec $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 221512 2011-05-05 19:49:27Z tuexen $");
 #endif
 #include <stdio.h>
 #include <string.h>
