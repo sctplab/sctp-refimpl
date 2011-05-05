@@ -1,33 +1,35 @@
-/*	$KAME: sctp_sys_calls.c,v 1.9 2004/08/17 06:08:53 itojun Exp $ */
-
-/*
- * Copyright (C) 2002-2007 Cisco Systems Inc,
- * All rights reserved.
+/*-
+ * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
+ * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
- * modification, are permitted provided that the following conditions
- * are met:
- * 1. Redistributions of source code must retain the above copyright
- *    notice, this list of conditions and the following disclaimer.
- * 2. Redistributions in binary form must reproduce the above copyright
- *    notice, this list of conditions and the following disclaimer in the
- *    documentation and/or other materials provided with the distribution.
- * 3. Neither the name of the project nor the names of its contributors
- *    may be used to endorse or promote products derived from this software
- *    without specific prior written permission.
+ * modification, are permitted provided that the following conditions are met:
  *
- * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
- * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
- * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
- * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
- * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
- * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
- * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
- * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
- * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
- * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
- * SUCH DAMAGE.
+ * a) Redistributions of source code must retain the above copyright notice,
+ *    this list of conditions and the following disclaimer.
+ *
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
+ *    the documentation and/or other materials provided with the distribution.
+ *
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
+ *    from this software without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
+ * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
+ * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
+ * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
+ * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
+ * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 209709 2010-07-05 03:55:49Z brucec $");
@@ -60,7 +62,6 @@ __FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 209709 2010-07-05 03:55:4
 #define SCTP_CONTROL_VEC_SIZE_SND   8192
 #define SCTP_CONTROL_VEC_SIZE_RCV  16384
 #define SCTP_STACK_BUF_SIZE         2048
-#define SCTP_SMALL_IOVEC_SIZE          2
 
 #ifdef SCTP_DEBUG_PRINT_ADDRESS
 
@@ -401,6 +402,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 	case SCTP_LOCAL_AUTH_CHUNKS:
 		((struct sctp_authchunks *)arg)->gauth_assoc_id = id;
 		break;
+	case SCTP_TIMEOUTS:
+		((struct sctp_timeouts *)arg)->stimo_assoc_id = id;
+		break;
 	default:
 		break;
 	}
@@ -557,7 +561,7 @@ sctp_sendmsg(int s,
 	ssize_t sz;
 	struct msghdr msg;
 	struct sctp_sndrcvinfo *s_info;
-	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
+	struct iovec iov;
 	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
 	struct cmsghdr *cmsg;
 	struct sockaddr *who = NULL;
@@ -604,10 +608,8 @@ sctp_sendmsg(int s,
 		who = (struct sockaddr *)&addr;
 	}
 	 
-	iov[0].iov_base = (char *)data;
-	iov[0].iov_len = len;
-	iov[1].iov_base = NULL;
-	iov[1].iov_len = 0;
+	iov.iov_base = (char *)data;
+	iov.iov_len = len;
 
 	if (who) {
 		msg.msg_name = (caddr_t)who;
@@ -616,7 +618,7 @@ sctp_sendmsg(int s,
 		msg.msg_name = (caddr_t)NULL;
 		msg.msg_namelen = 0;
 	}
-	msg.msg_iov = iov;
+	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
 
@@ -675,7 +677,7 @@ sctp_send(int sd, const void *data, size_t len,
 #else
 	ssize_t sz;
 	struct msghdr msg;
-	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
+	struct iovec iov;
 	struct sctp_sndrcvinfo *s_info;
 	char controlVector[SCTP_CONTROL_VEC_SIZE_SND];
 	struct cmsghdr *cmsg;
@@ -684,14 +686,12 @@ sctp_send(int sd, const void *data, size_t len,
 		errno = EINVAL;
 		return (-1);
 	}
-	iov[0].iov_base = (char *)data;
-	iov[0].iov_len = len;
-	iov[1].iov_base = NULL;
-	iov[1].iov_len = 0;
+	iov.iov_base = (char *)data;
+	iov.iov_len = len;
 
 	msg.msg_name = 0;
 	msg.msg_namelen = 0;
-	msg.msg_iov = iov;
+	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
 
@@ -730,7 +730,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 	}
 
 #ifdef SYS_sctp_generic_sendmsg
-	if (addrcnt < SCTP_SMALL_IOVEC_SIZE) {
+	if (addrcnt == 1) {
 		socklen_t l;
 
 		/*
@@ -836,18 +836,18 @@ sctp_recvmsg(int s,
     int *msg_flags)
 {
 #ifdef SYS_sctp_generic_recvmsg
-	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
+	struct iovec iov;
 
-	iov[0].iov_base = dbuf;
-	iov[0].iov_len = len;
+	iov.iov_base = dbuf;
+	iov.iov_len = len;
 	return (syscall(SYS_sctp_generic_recvmsg, s,
-	    iov, 1, from, fromlen, sinfo, msg_flags));
+	    &iov, 1, from, fromlen, sinfo, msg_flags));
 #else
 	struct sctp_sndrcvinfo *s_info;
 	ssize_t sz;
 	int sinfo_found = 0;
 	struct msghdr msg;
-	struct iovec iov[SCTP_SMALL_IOVEC_SIZE];
+	struct iovec iov;
 	char controlVector[SCTP_CONTROL_VEC_SIZE_RCV];
 	struct cmsghdr *cmsg;
 
@@ -856,16 +856,14 @@ sctp_recvmsg(int s,
 		return (-1);
 	}
 	msg.msg_flags = 0;
-	iov[0].iov_base = dbuf;
-	iov[0].iov_len = len;
-	iov[1].iov_base = NULL;
-	iov[1].iov_len = 0;
+	iov.iov_base = dbuf;
+	iov.iov_len = len;
 	msg.msg_name = (caddr_t)from;
 	if (fromlen == NULL)
 		msg.msg_namelen = 0;
 	else
 		msg.msg_namelen = *fromlen;
-	msg.msg_iov = iov;
+	msg.msg_iov = &iov;
 	msg.msg_iovlen = 1;
 	msg.msg_control = (caddr_t)controlVector;
 	msg.msg_controllen = sizeof(controlVector);
@@ -973,4 +971,3 @@ sctp_peeloff(int sd, sctp_assoc_t assoc_id)
 #undef SCTP_CONTROL_VEC_SIZE_SND
 #undef SCTP_CONTROL_VEC_SIZE_RCV
 #undef SCTP_STACK_BUF_SIZE
-#undef SCTP_SMALL_IOVEC_SIZE
