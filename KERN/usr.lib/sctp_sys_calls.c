@@ -187,7 +187,7 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 	cpto = ((caddr_t)buf + sizeof(int));
 	/* validate all the addresses and get the size */
 	for (i = 0; i < addrcnt; i++) {
-		if (at->sa_family == AF_INET) { 
+		if (at->sa_family == AF_INET) {
 			if (at->sa_len != sizeof(struct sockaddr_in)) {
 				errno = EINVAL;
 				return (-1);
@@ -246,7 +246,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 	struct sockaddr_in *sin;
 	struct sockaddr_in6 *sin6;
 	int i, sz, argsz;
-	uint16_t sport=0;
+	uint16_t sport = 0;
 
 	/* validate the flags */
 	if ((flags != SCTP_BINDX_ADD_ADDR) &&
@@ -302,20 +302,19 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 					sport = sin6->sin6_port;
 				}
 			}
-
 		} else {
 			/* invalid address family specified */
 			goto out_error;
 		}
-		
-		 sa = (struct sockaddr *)((caddr_t)sa + sz);		
+
+		sa = (struct sockaddr *)((caddr_t)sa + sz);
 	}
 	sa = addrs;
-	/* Now if there was a port mentioned, assure that
-	 * the first address has that port to make sure it fails
-	 * or succeeds correctly.
+	/*
+	 * Now if there was a port mentioned, assure that the first address
+	 * has that port to make sure it fails or succeeds correctly.
 	 */
- 	if (sport) {
+	if (sport) {
 		sin = (struct sockaddr_in *)sa;
 		sin->sin_port = sport;
 	}
@@ -329,7 +328,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 				goto out_error;
 		} else {
 			/* invalid address family specified */
-		out_error:
+	out_error:
 			free(gaddrs);
 			errno = EINVAL;
 			return (-1);
@@ -429,7 +428,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	asoc = id;
 	siz = sizeof(sctp_assoc_t);
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
-	    &asoc,  &siz) != 0) {
+	    &asoc, &siz) != 0) {
 		return (-1);
 	}
 	/* size required is returned in 'asoc' */
@@ -442,7 +441,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
-	    addrs,  &siz) != 0) {
+	    addrs, &siz) != 0) {
 		free(addrs);
 		return (-1);
 	}
@@ -458,7 +457,7 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	return (cnt);
 }
 
-void 
+void
 sctp_freepaddrs(struct sockaddr *addrs)
 {
 	/* Take away the hidden association id */
@@ -522,7 +521,7 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	return (cnt);
 }
 
-void 
+void
 sctp_freeladdrs(struct sockaddr *addrs)
 {
 	/* Take away the hidden association id */
@@ -575,7 +574,6 @@ sctp_sendmsg(int s,
 		errno = EINVAL;
 		return -1;
 	}
-		
 	if (to && (tolen > 0)) {
 		if (to->sa_family == AF_INET) {
 			if (tolen != sizeof(struct sockaddr_in)) {
@@ -718,6 +716,7 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
     struct sctp_sndrcvinfo *sinfo,
     int flags)
 {
+	struct sctp_sndrcvinfo __sinfo;
 	ssize_t ret;
 	int i, cnt, *aa, saved_errno;
 	char *buf;
@@ -728,7 +727,6 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 		errno = EINVAL;
 		return (-1);
 	}
-
 #ifdef SYS_sctp_generic_sendmsg
 	if (addrcnt == 1) {
 		socklen_t l;
@@ -785,6 +783,10 @@ sctp_sendx(int sd, const void *msg, size_t msg_len,
 		return (ret);
 	}
 continue_send:
+	if (sinfo == NULL) {
+		sinfo = &__sinfo;
+		memset(&__sinfo, 0, sizeof(__sinfo));
+	}
 	sinfo->sinfo_assoc_id = sctp_getassocid(sd, addrs);
 	if (sinfo->sinfo_assoc_id == 0) {
 		printf("Huh, can't get associd? TSNH!\n");
