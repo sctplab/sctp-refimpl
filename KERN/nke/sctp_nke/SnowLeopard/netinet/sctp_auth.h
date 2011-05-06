@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 221549 2011-05-06 20:40:33Z tuexen $");
 #endif
 
 #ifndef __SCTP_AUTH_H__
@@ -91,7 +91,7 @@ typedef struct sctp_hmaclist {
 } sctp_hmaclist_t;
 
 /* authentication info */
-typedef struct sctp_authinfo {
+typedef struct sctp_authinformation {
 	sctp_key_t *random;	/* local random key (concatenated) */
 	uint32_t random_len;	/* local random number length for param */
 	sctp_key_t *peer_random;/* peer's random key (concatenated) */
