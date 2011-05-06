@@ -91,7 +91,7 @@ typedef struct sctp_hmaclist {
 } sctp_hmaclist_t;
 
 /* authentication info */
-typedef struct sctp_authinfo {
+typedef struct sctp_authinformation {
 	sctp_key_t *random;	/* local random key (concatenated) */
 	uint32_t random_len;	/* local random number length for param */
 	sctp_key_t *peer_random;/* peer's random key (concatenated) */
