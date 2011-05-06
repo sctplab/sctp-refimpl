@@ -5159,8 +5159,8 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
 			return (error);
 		}
-		break;
 #endif
+		break;
 	}
 #endif
 	default:
