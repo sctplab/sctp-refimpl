@@ -376,7 +376,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 				chk->data = NULL;
 			}
 			/* Now free the address and data */
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
         		/*sa_ignore FREED_MEMORY*/
 		}
 		return;
@@ -480,7 +480,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 		/* free up the chk */
 		chk->data = NULL;
-		sctp_free_a_chunk(stcb, chk);
+		sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 
 		if (asoc->fragmented_delivery_inprogress == 0) {
 			/*
@@ -1009,7 +1009,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 			return;
 		} else {
 			last_flags = at->rec.data.rcv_flags;
@@ -2406,7 +2406,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 			                stcb->sctp_ep, stcb, NULL, SCTP_FROM_SCTP_INDATA+SCTP_LOC_18);
 		}
 		sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
-		sctp_send_sack(stcb);
+		sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
 	} else {
 		int is_a_gap;
 
@@ -2457,7 +2457,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap, int *abort_flag)
 				 * duplicates.
 				 */
 				(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
-				sctp_send_sack(stcb);
+				sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
 			}
 		} else {
 			if (!SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
@@ -3973,7 +3973,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						      SCTP_LOG_FREE_SENT);
 				}
 				asoc->sent_queue_cnt--;
-				sctp_free_a_chunk(stcb, tp1);
+				sctp_free_a_chunk(stcb, tp1, SCTP_SO_NOT_LOCKED);
 			} else {
 				break;
 			}
@@ -4683,7 +4683,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			              0,
 			              SCTP_LOG_FREE_SENT);
 		}
-		sctp_free_a_chunk(stcb, tp1);
+		sctp_free_a_chunk(stcb, tp1, SCTP_SO_NOT_LOCKED);
 		wake_him++;
 	}
 	if (TAILQ_EMPTY(&asoc->sent_queue) && (asoc->total_flight > 0)) {
@@ -5234,7 +5234,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 		} else if (SCTP_SSN_GT(chk->rec.data.stream_seq, seq)) {
 			/* If the stream_seq is > than the purging one, we are done */
 			break;
@@ -5403,7 +5403,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 		} else {
 			/*
 			 * Ok we have gone beyond the end of the

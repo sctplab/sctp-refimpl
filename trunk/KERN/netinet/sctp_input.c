@@ -201,7 +201,11 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
  */
 
 int
-sctp_is_there_unsent_data(struct sctp_tcb *stcb)
+sctp_is_there_unsent_data(struct sctp_tcb *stcb, int so_locked
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+	SCTP_UNUSED
+#endif
+)
 {
 	int unsent_data = 0;
 	unsigned int i;
@@ -248,7 +252,7 @@ sctp_is_there_unsent_data(struct sctp_tcb *stcb)
 					sctp_m_freem(sp->data);
 					sp->data = NULL;
 				}
-				sctp_free_a_strmoq(stcb, sp);
+				sctp_free_a_strmoq(stcb, sp, so_locked);
 			} else {
 				unsent_data++;
 				break;
@@ -308,7 +312,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 						chk->data = NULL;
 					}
 				}
-				sctp_free_a_chunk(stcb, chk);
+				sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 				/*sa_ignore FREED_MEMORY*/
 			}
 		}
@@ -330,7 +334,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb,
 						sp->net = NULL;
 					}
 					/* Free the chunk */
-					sctp_free_a_strmoq(stcb, sp);
+					sctp_free_a_strmoq(stcb, sp, SCTP_SO_NOT_LOCKED);
 					/*sa_ignore FREED_MEMORY*/
 				}
 			}
@@ -898,7 +902,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		sctp_timer_stop(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_8);
 	}
 	/* Now is there unsent data on a stream somewhere? */
-	some_on_streamwheel = sctp_is_there_unsent_data(stcb);
+	some_on_streamwheel = sctp_is_there_unsent_data(stcb, SCTP_SO_NOT_LOCKED);
 
 	if (!TAILQ_EMPTY(&asoc->send_queue) ||
 	    !TAILQ_EMPTY(&asoc->sent_queue) ||
@@ -3141,7 +3145,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb, struct sct
 				chk->data = NULL;
 			}
 			stcb->asoc.ctrl_queue_cnt--;
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 			if (override == 0) {
 				break;
 			}
@@ -3379,13 +3383,13 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 	case SCTP_SELECTIVE_ACK:
 	case SCTP_NR_SELECTIVE_ACK:
 		/* resend the sack */
-		sctp_send_sack(stcb);
+		sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_HEARTBEAT_REQUEST:
 		/* resend a demand HB */
 		if ((stcb->asoc.overall_error_count + 3) < stcb->asoc.max_send_times) {
 			/* Only retransmit if we KNOW we wont destroy the tcb */
-			(void)sctp_send_hb(stcb, 1, net);
+			(void)sctp_send_hb(stcb, 1, net, SCTP_SO_NOT_LOCKED);
 		}
 		break;
 	case SCTP_SHUTDOWN:
@@ -3556,7 +3560,7 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 		chk->data = NULL;
 	}
 	asoc->ctrl_queue_cnt--;
-	sctp_free_a_chunk(stcb, chk);
+	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
         /*sa_ignore NO_NULL_CHK*/
 	stcb->asoc.str_reset = NULL;
 }
@@ -3998,7 +4002,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
 		}
-		sctp_free_a_chunk(stcb, chk);
+		sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 		return (ret_code);
 	}
 	SCTP_BUF_RESV_UF(chk->data, SCTP_MIN_OVERHEAD);
