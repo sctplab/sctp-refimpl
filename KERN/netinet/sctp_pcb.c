@@ -5432,7 +5432,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 			sctp_free_spbufspace(stcb, asoc, sp);
 			if (sp->holds_key_ref)
-				sctp_auth_key_release(stcb, sp->auth_keyid);
+				sctp_auth_key_release(stcb, sp->auth_keyid, SCTP_SO_LOCKED);
 			/* Free the zone stuff  */
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_strmoq), sp);
 			SCTP_DECR_STRMOQ_COUNT();
@@ -5465,7 +5465,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk->data = NULL;
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
 		atomic_subtract_int(&SCTP_BASE_INFO(ipi_free_chunks), 1);
@@ -5487,7 +5487,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		if (chk->whoTo) {
 			sctp_free_remote_addr(chk->whoTo);
 			chk->whoTo = NULL;
@@ -5511,7 +5511,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			}
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		sctp_free_remote_addr(chk->whoTo);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
@@ -5525,7 +5525,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk->data = NULL;
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		sctp_free_remote_addr(chk->whoTo);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
@@ -5539,7 +5539,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk->data = NULL;
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		sctp_free_remote_addr(chk->whoTo);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
@@ -5552,7 +5552,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 			chk->data = NULL;
 		}
 		if (chk->holds_key_ref)
-			sctp_auth_key_release(stcb, chk->auth_keyid);
+			sctp_auth_key_release(stcb, chk->auth_keyid, SCTP_SO_LOCKED);
 		sctp_free_remote_addr(chk->whoTo);
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_chunk), chk);
 		SCTP_DECR_CHK_COUNT();
@@ -7511,7 +7511,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
 			}
-			sctp_free_a_chunk(stcb, chk);
+			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 		}
 	}
 	/* Ok that was fun, now we will drain all the inbound streams? */
@@ -7573,7 +7573,7 @@ sctp_drain_mbufs(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		asoc->last_revoke_count = cnt;
 		(void)SCTP_OS_TIMER_STOP(&stcb->asoc.dack_timer.timer);
 		/*sa_ignore NO_NULL_CHK*/
-		sctp_send_sack(stcb);
+		sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
 		sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_DRAIN, SCTP_SO_NOT_LOCKED);
 		reneged_asoc_ids[reneged_at] = sctp_get_associd(stcb);
 		reneged_at++;
