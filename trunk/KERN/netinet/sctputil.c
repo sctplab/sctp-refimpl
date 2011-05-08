@@ -6839,8 +6839,8 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 				*bad_addr = 1;
 				return (NULL);
 			}
-			break;
 #endif
+			break;
 #endif
 #ifdef INET6
 		case AF_INET6:
