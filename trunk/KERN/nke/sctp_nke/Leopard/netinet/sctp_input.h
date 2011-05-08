@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.h 221627 2011-05-08 09:11:59Z tuexen $");
 #endif
 
 #ifndef __sctp_input_h__
@@ -54,7 +54,7 @@ void sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries,
     uint16_t *list);
 
 
-int sctp_is_there_unsent_data(struct sctp_tcb *stcb);
+int sctp_is_there_unsent_data(struct sctp_tcb *stcb, int so_locked);
 
 #endif
 #endif
