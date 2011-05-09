@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.39 2011-02-07 08:18:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/sctpAdaptor.c,v 1.40 2011-05-09 09:42:07 randall Exp $ */
 
 /*
  * Copyright (C) 2002 Cisco Systems Inc,
@@ -88,7 +88,8 @@ int scope_id = 0;	/* scope_id for destination and local binds */
 static struct sctp_sndrcvinfo o_info;
 
 static void
-handle_notification(int fd,char *notify_buf) {
+handle_notification(int fd,char *notify_buf) 
+{
 	union sctp_notification *snp;
 	struct sctp_assoc_change *sac;
 	struct sctp_paddr_change *spc;
