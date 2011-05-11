@@ -2306,7 +2306,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 {
 	uint8_t dest_is_global=0;
 
-	/*
+	/**
 	 * Here we determine if its a acceptable address. A acceptable
 	 * address means it is the same scope or higher scope but we can
 	 * allow for NAT which means its ok to have a global dest and a
@@ -3136,7 +3136,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	struct sockaddr_in6 *to6 = (struct sockaddr_in6 *)&ro->ro_dst;
 #endif
 
-	/*-
+	/**
 	 * Rules: - Find the route if needed, cache if I can. - Look at
 	 * interface address in route, Is it in the bound list. If so we
 	 * have the best source. - If not we must rotate amongst the
@@ -3531,7 +3531,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
     )
 /* nofragment_flag to tell if IP_DF should be set (IPv4 only) */
 {
-	/*
+	/**
 	 * Given a mbuf chain (via SCTP_BUF_NEXT()) that holds a packet header
 	 * WITH an SCTPHDR but no IP header, endpoint inp and sa structure:
 	 * - fill in the HMAC digest of any AUTH chunk in the packet.
