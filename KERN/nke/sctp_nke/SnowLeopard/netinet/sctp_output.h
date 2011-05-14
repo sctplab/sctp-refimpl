@@ -47,6 +47,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.h 221627 2011-05-08 09:11:59Z t
 
 struct mbuf *
 sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp,
+                           struct sctp_tcb *stcb,
 			   struct sctp_scoping *scope,
 			   struct mbuf *m_at,
 			   int cnt_inits_to);
