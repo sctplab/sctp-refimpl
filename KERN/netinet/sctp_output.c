@@ -2898,7 +2898,9 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	struct sctp_ifa *sctp_ifa, *sifa;
 	uint32_t ifn_index;
 	struct sctp_vrf *vrf;
+#ifdef INET
 	int retried = 0;
+#endif
 	/*-
 	 * For boundall we can use any address in the association.
 	 * If non_asoc_addr_ok is set we can use any address (at least in
@@ -3028,10 +3030,10 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 		}
 		atomic_add_int(&sifa->refcount, 1);
 		return (sifa);
-
 	}
-
-again_with_private_addresses_allowed:	
+#ifdef INET
+again_with_private_addresses_allowed:
+#endif
 	/* plan_c: do we have an acceptable address on the emit interface */
 	SCTPDBG(SCTP_DEBUG_OUTPUT2,"Trying Plan C: find acceptable on interface\n");
 	if (emit_ifn == NULL) {
@@ -3128,6 +3130,7 @@ again_with_private_addresses_allowed:
 			return (sifa);
 		}
 	}
+#ifdef INET
 	if ((retried == 0) && (stcb->asoc.ipv4_local_scope == 0)) {
 		stcb->asoc.ipv4_local_scope = 1;
 		retried = 1;
@@ -3135,6 +3138,7 @@ again_with_private_addresses_allowed:
 	} else if (retried == 1) {
 		stcb->asoc.ipv4_local_scope = 0;
 	}
+#endif
 	/*
 	 * Ok we can find NO address to source from that is not on our
 	 * restricted list and non_asoc_address is NOT ok, or it is on
