@@ -2898,6 +2898,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	struct sctp_ifa *sctp_ifa, *sifa;
 	uint32_t ifn_index;
 	struct sctp_vrf *vrf;
+	int retried = 0;
 	/*-
 	 * For boundall we can use any address in the association.
 	 * If non_asoc_addr_ok is set we can use any address (at least in
@@ -3030,6 +3031,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 
 	}
 
+again_with_private_addresses_allowed:	
 	/* plan_c: do we have an acceptable address on the emit interface */
 	SCTPDBG(SCTP_DEBUG_OUTPUT2,"Trying Plan C: find acceptable on interface\n");
 	if (emit_ifn == NULL) {
@@ -3054,7 +3056,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			                             stcb->asoc.ipv4_addr_legal,
 			                             stcb->asoc.ipv6_addr_legal,
 			                             stcb->asoc.loopback_scope,
-			                             1, /* For this plan we allow a ipv4 private addr */
+			                             stcb->asoc.ipv4_local_scope,
 			                             stcb->asoc.local_scope,
 			                             stcb->asoc.site_scope, 0) == 0) {
 				SCTPDBG(SCTP_DEBUG_OUTPUT2, "NOT in scope\n");
@@ -3105,7 +3107,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 				                             stcb->asoc.ipv4_addr_legal,
 				                             stcb->asoc.ipv6_addr_legal,
 				                             stcb->asoc.loopback_scope,
-				                             1, /* Same as Plan C */
+				                             stcb->asoc.ipv4_local_scope,
 				                             stcb->asoc.local_scope,
 				                             stcb->asoc.site_scope, 0) == 0) {
 					continue;
@@ -3125,6 +3127,13 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 			atomic_add_int(&sifa->refcount, 1);
 			return (sifa);
 		}
+	}
+	if ((retried == 0) && (stcb->asoc.ipv4_local_scope == 0)) {
+		stcb->asoc.ipv4_local_scope = 1;
+		retried = 1;
+		goto again_with_private_addresses_allowed;
+	} else if (retried == 1) {
+		stcb->asoc.ipv4_local_scope = 0;
 	}
 	/*
 	 * Ok we can find NO address to source from that is not on our
