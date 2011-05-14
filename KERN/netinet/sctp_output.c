@@ -2338,9 +2338,14 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 
 	if (ifa->address.sa.sa_family != fam) {
 		/* forget non matching family */
+		SCTPDBG(SCTP_DEBUG_OUTPUT3, "ifa_fam:%d fam:%d\n",
+			ifa->address.sa.sa_family, fam);
 		return (NULL);
 	}
 	/* Ok the address may be ok */
+	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT3, &ifa->address.sa);
+	SCTPDBG(SCTP_DEBUG_OUTPUT3, "dst_is_loop:%d dest_is_priv:%d\n",
+		dest_is_loop, dest_is_priv);
 	if ((dest_is_loop == 0) && (dest_is_priv == 0)) {
 		dest_is_global = 1;
 	}
@@ -2362,12 +2367,19 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 	 * This could in theory be done slicker (it used to be), but this
 	 * is straightforward and easier to validate :-)
 	 */
+	SCTPDBG(SCTP_DEBUG_OUTPUT3, "ifa->src_is_loop:%d dest_is_priv:%d\n", 
+		ifa->src_is_loop,
+		dest_is_priv);
 	if ((ifa->src_is_loop == 1) && (dest_is_priv)) {
 		return (NULL);
 	}
+	SCTPDBG(SCTP_DEBUG_OUTPUT3, "ifa->src_is_loop:%d dest_is_glob:%d\n", 
+		ifa->src_is_loop,
+		dest_is_global);
 	if ((ifa->src_is_loop == 1) && (dest_is_global)) {
 		return (NULL);
 	}
+	SCTPDBG(SCTP_DEBUG_OUTPUT3, "address is acceptable\n");
 	/* its an acceptable address */
 	return (ifa);
 }
@@ -2906,6 +2918,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 
 	ifn = SCTP_GET_IFN_VOID_FROM_ROUTE(ro);
 	ifn_index = SCTP_GET_IF_INDEX_FROM_ROUTE(ro);
+	SCTPDBG(SCTP_DEBUG_OUTPUT2,"ifn from route:%p ifn_index:%d\n", ifn, ifn_index);
 	emit_ifn = looked_at = sctp_ifn = sctp_find_ifn(ifn, ifn_index);
 	if (sctp_ifn == NULL) {
 		/* ?? We don't have this guy ?? */
@@ -3020,24 +3033,31 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	/* plan_c: do we have an acceptable address on the emit interface */
 	SCTPDBG(SCTP_DEBUG_OUTPUT2,"Trying Plan C: find acceptable on interface\n");
 	if (emit_ifn == NULL) {
+		SCTPDBG(SCTP_DEBUG_OUTPUT2,"Jump to Plan D - no emit_ifn\n");
 		goto plan_d;
 	}
 	LIST_FOREACH(sctp_ifa, &emit_ifn->ifalist, next_ifa) {
+		SCTPDBG(SCTP_DEBUG_OUTPUT2, "ifa:%p\n", sctp_ifa);
 		if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) &&
-		    (non_asoc_addr_ok == 0))
+		    (non_asoc_addr_ok == 0)) {
+			SCTPDBG(SCTP_DEBUG_OUTPUT2,"Defer\n");
 			continue;
+		}
 		sifa = sctp_is_ifa_addr_acceptable(sctp_ifa, dest_is_loop,
 						   dest_is_priv, fam);
-		if (sifa == NULL)
+		if (sifa == NULL) {
+			SCTPDBG(SCTP_DEBUG_OUTPUT2, "IFA not acceptable\n");
 			continue;
+		}
 		if (stcb) {
 			if (sctp_is_address_in_scope(sifa,
 			                             stcb->asoc.ipv4_addr_legal,
 			                             stcb->asoc.ipv6_addr_legal,
 			                             stcb->asoc.loopback_scope,
-			                             stcb->asoc.ipv4_local_scope,
+			                             1, /* For this plan we allow a ipv4 private addr */
 			                             stcb->asoc.local_scope,
 			                             stcb->asoc.site_scope, 0) == 0) {
+				SCTPDBG(SCTP_DEBUG_OUTPUT2, "NOT in scope\n");
 				continue;
 			}
 			if (((non_asoc_addr_ok == 0) &&
@@ -3049,8 +3069,11 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 				 * It is restricted for some
 				 * reason.. probably not yet added.
 				 */
+				SCTPDBG(SCTP_DEBUG_OUTPUT2, "Its resticted\n");
 				continue;
 			}
+		} else {
+			printf("Stcb is null - no print\n");
 		}
 		atomic_add_int(&sifa->refcount, 1);
 		return (sifa);
@@ -3062,17 +3085,12 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 	 * Go out and see if we can find an acceptable address somewhere
 	 * amongst all interfaces.
 	 */
-	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Trying Plan D\n");
+	SCTPDBG(SCTP_DEBUG_OUTPUT2, "Trying Plan D looked_at is %p\n", looked_at);
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 		if (dest_is_loop == 0 && SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
 			/* wrong base scope */
 			continue;
 		}
-
-		if ((sctp_ifn == looked_at) && looked_at)
-			/* already looked at this guy */
-			continue;
-
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			if ((sctp_ifa->localifa_flags & SCTP_ADDR_DEFER_USE) &&
 			    (non_asoc_addr_ok == 0))
@@ -3087,7 +3105,7 @@ sctp_choose_boundall(struct sctp_inpcb *inp,
 				                             stcb->asoc.ipv4_addr_legal,
 				                             stcb->asoc.ipv6_addr_legal,
 				                             stcb->asoc.loopback_scope,
-				                             stcb->asoc.ipv4_local_scope,
+				                             1, /* Same as Plan C */
 				                             stcb->asoc.local_scope,
 				                             stcb->asoc.site_scope, 0) == 0) {
 					continue;
