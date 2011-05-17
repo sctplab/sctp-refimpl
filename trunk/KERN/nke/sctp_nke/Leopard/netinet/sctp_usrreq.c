@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 222029 2011-05-17 15:57:31Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -2824,6 +2824,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			paddri->spinfo_srtt = net->lastsa >> SCTP_RTT_SHIFT;
 			paddri->spinfo_rto = net->RTO;
 			paddri->spinfo_assoc_id = sctp_get_associd(stcb);
+			paddri->spinfo_mtu = net->mtu;
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
 			if (stcb) {
