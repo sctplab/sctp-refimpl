@@ -35,7 +35,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 221328 2011-05-02 15:53:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 222459 2011-05-29 18:41:06Z tuexen $");
 #endif
 #ifndef __sctputil_h__
 #define __sctputil_h__
@@ -346,19 +346,6 @@ sctp_soreceive(struct socket *so, struct sockaddr **psa,
     struct mbuf **mp0,
     struct mbuf **controlp,
     int *flagsp);
-
-
-/* For those not passing mbufs, this does the
- * translations for you. Caller owns memory
- * of size controllen returned in controlp.
- */
-int sctp_l_soreceive(struct socket *so,
-		     struct sockaddr **name,
-		     struct uio *uio,
-		     char **controlp,
-		     int *controllen,
-		     int *flag);
-
 
 void
 sctp_misc_ints(uint8_t from, uint32_t a, uint32_t b, uint32_t c, uint32_t d);
