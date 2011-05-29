@@ -6460,7 +6460,7 @@ sctp_dynamic_set_primary(struct sockaddr *sa, uint32_t vrf_id)
 }
 
 #if defined(__Userspace__)
-/* no sctp_soreceive or sctp_l_soreceive for __Userspace__ now */
+/* no sctp_soreceive for __Userspace__ now */
 #endif
 
 #if !defined(__Userspace__)
@@ -6536,86 +6536,6 @@ sctp_soreceive(	struct socket *so,
 #endif
 	return (error);
 }
-
-
-int sctp_l_soreceive(struct socket *so,
-		     struct sockaddr **name,
-		     struct uio *uio,
-		     char **controlp,
-		     int *controllen,
-		     int *flag)
-{
-	int error, fromlen;
-	uint8_t sockbuf[256];
-	struct sockaddr *from;
-	struct sctp_extrcvinfo sinfo;
-	int filling_sinfo = 1;
-	struct sctp_inpcb *inp;
-
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	/* pickup the assoc we are reading from */
-	if (inp == NULL) {
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
-		return (EINVAL);
-	}
-	if ((sctp_is_feature_off(inp,
-	    SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
-	    (controlp == NULL)) {
-		/* user does not want the sndrcv ctl */
-		filling_sinfo = 0;
-	}
-	if (name) {
-		from = (struct sockaddr *)sockbuf;
-		fromlen = sizeof(sockbuf);
-#if !defined(__Windows__)
-		from->sa_len = 0;
-#endif
-	} else {
-		from = NULL;
-		fromlen = 0;
-	}
-
-#if defined(__APPLE__)
-	SCTP_SOCKET_LOCK(so, 1);
-#endif
-	error = sctp_sorecvmsg(so, uio,
-			       (struct mbuf **)NULL,
-			       from, fromlen, flag,
-			       (struct sctp_sndrcvinfo *)&sinfo,
-			       filling_sinfo);
-	if ((controlp) && (filling_sinfo)) {
-		/* copy back the sinfo in a CMSG format
-		 * note that the caller has reponsibility for
-		 * freeing the memory.
-		 */
-		if (filling_sinfo)
-			*controlp = sctp_build_ctl_cchunk(inp,
-			                                  controllen,
-			                                  (struct sctp_sndrcvinfo *)&sinfo);
-	}
-	if (name) {
-		/* copy back the address info */
-#if !defined(__Windows__)
-		if (from && from->sa_len) {
-#else
-		if (from) {
-#endif
-#if (defined(__FreeBSD__) && __FreeBSD_version > 500000) || defined(__Windows__)
-			*name = sodupsockaddr(from, M_WAIT);
-#else
-			*name = dup_sockaddr(from, M_WAIT);
-#endif
-		} else {
-			*name = NULL;
-		}
-	}
-#if defined(__APPLE__)
-	SCTP_SOCKET_UNLOCK(so, 1);
-#endif
-	return (error);
-}
-
-
 
 
 #if (defined(__FreeBSD__) && __FreeBSD_version < 603000) || defined(__Windows__)
