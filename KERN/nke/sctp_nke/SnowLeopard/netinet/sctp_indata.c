@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 222459 2011-05-29 18:41:06Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -248,49 +248,6 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	return (ret);
 }
 
-
-char *
-sctp_build_ctl_cchunk(struct sctp_inpcb *inp,
-		      int *control_len,
-		      struct sctp_sndrcvinfo *sinfo)
-{
-	struct sctp_sndrcvinfo *outinfo;
-	struct cmsghdr *cmh;
-	char *buf;
-	int len;
-	int use_extended = 0;
-	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
-		/* user does not want the sndrcv ctl */
-		return (NULL);
-	}
-
-	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
-		use_extended = 1;
-		len = CMSG_LEN(sizeof(struct sctp_extrcvinfo));
-	} else {
-		len = CMSG_LEN(sizeof(struct sctp_sndrcvinfo));
-	}
-	SCTP_MALLOC(buf, char *, len, SCTP_M_CMSG);
-	if (buf == NULL) {
-		/* No space */
-		return (buf);
-	}
-	/* We need a CMSG header followed by the struct  */
-	cmh = (struct cmsghdr *)buf;
-	outinfo = (struct sctp_sndrcvinfo *)CMSG_DATA(cmh);
-	cmh->cmsg_level = IPPROTO_SCTP;
-	if (use_extended) {
-		cmh->cmsg_type = SCTP_EXTRCV;
-		cmh->cmsg_len = len;
-		memcpy(outinfo, sinfo, len);
-	} else {
-		cmh->cmsg_type = SCTP_SNDRCV;
-		cmh->cmsg_len = len;
-		*outinfo = *sinfo;
-	}
-	*control_len = len;
-	return (buf);
-}
 
 static void
 sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
