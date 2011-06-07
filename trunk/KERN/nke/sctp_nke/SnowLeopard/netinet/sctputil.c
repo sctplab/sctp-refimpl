@@ -6506,7 +6506,7 @@ sctp_soreceive(	struct socket *so,
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
-	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
+	    (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo);
 	if ((controlp) && (filling_sinfo)) {
 		/* copy back the sinfo in a CMSG format */
 		if (filling_sinfo)

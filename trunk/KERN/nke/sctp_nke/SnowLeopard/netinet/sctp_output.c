@@ -12707,6 +12707,71 @@ out_now:
 	return (sp);
 }
 
+#if 0
+
+static int
+sctp_find_cmsgs(struct mbuf *control, )
+{
+	struct cmsghdr cmh;
+	int tlen, at;
+
+	tlen = SCTP_BUF_LEN(control);
+	at = 0;
+	while (at < tlen) {
+		if ((tlen - at) < (int)CMSG_ALIGN(sizeof(cmh))) {
+			/* not enough room for one more we are done. */
+			return (0);
+		}
+		m_copydata(control, at, sizeof(cmh), (caddr_t)&cmh);
+		if (((int)cmh.cmsg_len + at) > tlen) {
+			/*
+			 * this is real messed up since there is not enough
+			 * data here to cover the cmsg header. We are done.
+			 */
+			return (1);
+		}
+		if (cmh.cmsg_level == IPPROTO_SCTP) {
+			switch (cmh.cmsg_level) {
+			case SCTP_SNDINFO:
+				break;
+			case SCTP_PRINFO:
+				break;
+			case SCTP_AUTHINFO:
+				break;
+			case SCTP_SNDRCV:
+				break;
+			case SCTP_DSTADDRV4:
+				break;
+			case SCTP_DSTADDRV6:
+				break;
+			default:
+				break;
+                        }
+                }
+                if ((cmh.cmsg_level == IPPROTO_SCTP) &&
+                    (c_type == cmh.cmsg_type)) {
+                        /* found the one we want, copy it out */
+                        at += CMSG_ALIGN(sizeof(struct cmsghdr));
+                        if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
+                                /*
+                                 * space of cmsg_len after header not big
+                                 * enough
+                                 */
+                                return (0);
+                        }
+                        m_copydata(control, at, cpsize, data);
+                        return (1);
+                } else {
+                        at += CMSG_ALIGN(cmh.cmsg_len);
+                        if (cmh.cmsg_len == 0) {
+                                break;
+                        }
+                }
+        }
+        /* not found */
+        return (0);
+}
+#endif
 
 int
 sctp_sosend(struct socket *so,
@@ -12746,7 +12811,10 @@ sctp_sosend(struct socket *so,
 	struct proc *p = current_proc();
 #endif
 	int error, use_rcvinfo = 0;
-	struct sctp_sndrcvinfo srcv;
+	struct sctp_sndrcvinfo sndrcvninfo;
+	struct sctp_sndinfo sndinfo;
+	struct sctp_prinfo prinfo;
+	struct sctp_authinfo authinfo;
 	struct sockaddr *addr_to_use;
 #if defined(INET) && defined(INET6)
 	struct sockaddr_in sin;
@@ -12760,8 +12828,8 @@ sctp_sosend(struct socket *so,
 #endif
 	if (control) {
 		/* process cmsg snd/rcv info (maybe a assoc-id) */
-		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&srcv, control,
-		    sizeof(srcv))) {
+		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&sndrcvninfo, control,
+		    sizeof(sndrcvninfo))) {
 			/* got one */
 			use_rcvinfo = 1;
 		}
@@ -12789,7 +12857,7 @@ sctp_sosend(struct socket *so,
 				  control,
 #endif
 				  flags,
-				  use_rcvinfo ? &srcv: NULL
+				  use_rcvinfo ? &sndrcvninfo: NULL
 #if !( defined(__Panda__) || defined(__Userspace__) )
 				  , p
 #endif

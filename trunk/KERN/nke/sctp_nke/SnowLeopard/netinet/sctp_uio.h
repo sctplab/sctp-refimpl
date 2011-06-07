@@ -65,6 +65,16 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 219057 2011-02-26 15:23:46Z rrs 
 
 typedef uint32_t sctp_assoc_t;
 
+#define SCTP_FUTURE_ASSOC  0
+#define SCTP_CURRENT_ASSOC 1
+#define SCTP_ALL_ASSOC     2
+
+struct sctp_event {
+	sctp_assoc_t se_assoc_id;
+	uint16_t     se_type;
+	uint8_t      se_on;
+};
+
 /* Compatibility to previous define's */
 #define sctp_stream_reset_events sctp_stream_reset_event
 
@@ -87,6 +97,12 @@ struct sctp_event_subscribe {
 #define SCTP_INIT	0x0001
 #define SCTP_SNDRCV	0x0002
 #define SCTP_EXTRCV	0x0003
+#define SCTP_SNDINFO    0x0004
+#define SCTP_PRINFO     0x0005
+#define SCTP_AUTHINFO   0x0006
+#define SCTP_DSTADDRV4  0x0007
+#define SCTP_DSTADDRV6  0x0008
+
 /*
  * ancillary data structures
  */
@@ -140,7 +156,9 @@ struct sctp_extrcvinfo {
 	uint16_t sinfo_stream;
 	uint16_t sinfo_ssn;
 	uint16_t sinfo_flags;
+#if defined(__FreeBSD__) && __FreeBSD_version < 800000
 	uint16_t sinfo_pr_policy;
+#endif
 	uint32_t sinfo_ppid;
 	uint32_t sinfo_context;
 	uint32_t sinfo_timetolive;
@@ -153,6 +171,42 @@ struct sctp_extrcvinfo {
 	uint32_t sreinfo_next_length;
 	uint32_t sreinfo_next_ppid;
 	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
+};
+
+struct sctp_sndinfo {
+	uint16_t snd_sid;
+	uint16_t snd_flags;
+	uint32_t snd_ppid;
+	uint32_t snd_context;
+	sctp_assoc_t snd_assoc_id;
+};
+
+struct sctp_prinfo {
+	uint16_t pr_policy;
+	uint32_t pr_value;
+};
+
+struct sctp_authinfo {
+	uint16_t auth_keyid;
+};
+
+struct sctp_rcvinfo {
+	uint16_t rcv_sid;
+	uint16_t rcv_ssn;
+	uint16_t rcv_flags;
+	uint32_t rcv_ppid;
+	uint32_t rcv_tsn;
+	uint32_t rcv_cumtsn;
+	uint32_t rcv_context;
+	sctp_assoc_t rcv_assoc_id;
+};
+
+struct sctp_nxtinfo {
+	uint16_t nxt_sid;
+	uint16_t nxt_flags;
+	uint32_t nxt_ppid;
+	uint32_t nxt_length;
+	sctp_assoc_t nxt_assoc_id;
 };
 
 #define SCTP_NO_NEXT_MSG           0x0000
@@ -1168,36 +1222,38 @@ sctp_sorecvmsg(struct socket *so,
 #if !(defined(_KERNEL)) && !(defined(__Userspace__))
 
 __BEGIN_DECLS
-int sctp_peeloff __P((int, sctp_assoc_t));
-int sctp_bindx __P((int, struct sockaddr *, int, int));
-int sctp_connectx __P((int, const struct sockaddr *, int, sctp_assoc_t *));
-int sctp_getaddrlen __P((sa_family_t));
-int sctp_getpaddrs __P((int, sctp_assoc_t, struct sockaddr **));
-void sctp_freepaddrs __P((struct sockaddr *));
-int sctp_getladdrs __P((int, sctp_assoc_t, struct sockaddr **));
-void sctp_freeladdrs __P((struct sockaddr *));
-int sctp_opt_info __P((int, sctp_assoc_t, int, void *, socklen_t *));
+int	sctp_peeloff __P((int, sctp_assoc_t));
+int	sctp_bindx __P((int, struct sockaddr *, int, int));
+int	sctp_connectx __P((int, const struct sockaddr *, int, sctp_assoc_t *));
+int	sctp_getaddrlen __P((sa_family_t));
+int	sctp_getpaddrs __P((int, sctp_assoc_t, struct sockaddr **));
+void	sctp_freepaddrs __P((struct sockaddr *));
+int	sctp_getladdrs __P((int, sctp_assoc_t, struct sockaddr **));
+void	sctp_freeladdrs __P((struct sockaddr *));
+int	sctp_opt_info __P((int, sctp_assoc_t, int, void *, socklen_t *));
 
-ssize_t sctp_sendmsg __P((int, const void *, size_t,
-    const struct sockaddr *,
-    socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
+ssize_t	sctp_sendmsg __P((int, const void *, size_t, const struct sockaddr *,
+	    socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
-ssize_t sctp_send __P((int sd, const void *msg, size_t len,
-    const struct sctp_sndrcvinfo *sinfo, int flags));
+ssize_t	sctp_send __P((int, const void *, size_t,
+	    const struct sctp_sndrcvinfo *, int));
 
-ssize_t	sctp_sendx __P((int sd, const void *msg, size_t len,
-    struct sockaddr *addrs, int addrcnt,
-    struct sctp_sndrcvinfo *sinfo, int flags));
+ssize_t	sctp_sendx __P((int, const void *, size_t, struct sockaddr *,
+	    int, struct sctp_sndrcvinfo *, int));
 
-ssize_t	sctp_sendmsgx __P((int sd, const void *, size_t,
-    struct sockaddr *, int,
-    uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
+ssize_t	sctp_sendmsgx __P((int sd, const void *, size_t, struct sockaddr *,
+	    int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
-sctp_assoc_t sctp_getassocid __P((int sd, struct sockaddr *sa));
+sctp_assoc_t	sctp_getassocid __P((int, struct sockaddr *));
 
-ssize_t sctp_recvmsg __P((int, void *, size_t, struct sockaddr *,
-    socklen_t *, struct sctp_sndrcvinfo *, int *));
+ssize_t	sctp_recvmsg __P((int, void *, size_t, struct sockaddr *, socklen_t *,
+	    struct sctp_sndrcvinfo *, int *));
 
+ssize_t	sctp_sendv __P((int, const struct iovec *, int, struct sockaddr *,
+	    int, void *, socklen_t, unsigned int, int));
+
+ssize_t	sctp_recvv __P((int, const struct iovec *, int, struct sockaddr *,
+	    socklen_t *, void *, socklen_t *, unsigned int *, int *));
 __END_DECLS
 
 #endif				/* !_KERNEL */
