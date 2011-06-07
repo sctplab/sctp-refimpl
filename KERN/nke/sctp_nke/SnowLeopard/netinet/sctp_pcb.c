@@ -4614,12 +4614,12 @@ sctp_aloc_a_assoc_id(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		SCTP_INP_WUNLOCK(inp);
 		return (0);
 	}
-	/* We don't allow assoc id to be 0, this
-	 * is needed otherwise if the id were to wrap
-	 * we would have issues with some socket options.
+	/*
+	 * We don't allow assoc id to be one of SCTP_FUTURE_ASSOC,
+	 * SCTP_CURRENT_ASSOC and SCTP_ALL_ASSOC.
 	 */
-	if (inp->sctp_associd_counter == 0) {
-		inp->sctp_associd_counter++;
+	if (inp->sctp_associd_counter <= SCTP_ALL_ASSOC) {
+		inp->sctp_associd_counter = SCTP_ALL_ASSOC + 1;
 	}
 	id = inp->sctp_associd_counter;
 	inp->sctp_associd_counter++;

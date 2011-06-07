@@ -211,6 +211,7 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp,
 	struct mbuf *ret;
 	int len;
 	int use_extended = 0;
+
 	if (sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
 		/* user does not want the sndrcv ctl */
 		return (NULL);
