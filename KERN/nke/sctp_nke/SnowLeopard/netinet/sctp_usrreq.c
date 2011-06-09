@@ -3293,78 +3293,61 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		SCTP_CHECK_AND_CAST(event, optval, struct sctp_event, *optsize);
 		SCTP_FIND_STCB(inp, stcb, event->se_assoc_id);
 
-		if (stcb) {
-			switch (event->se_type) {
-			case SCTP_ASSOC_CHANGE:
-			case SCTP_PEER_ADDR_CHANGE:
-			case SCTP_REMOTE_ERROR:
-			case SCTP_SEND_FAILED:
-			case SCTP_SHUTDOWN_EVENT:
-			case SCTP_ADAPTATION_INDICATION:
-			case SCTP_PARTIAL_DELIVERY_EVENT:
-			case SCTP_AUTHENTICATION_EVENT:
-			case SCTP_STREAM_RESET_EVENT:
-			case SCTP_SENDER_DRY_EVENT:
-			case SCTP_NOTIFICATIONS_STOPPED_EVENT:
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
-				error = ENOTSUP;
-				break;
-			default:
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-				error = EINVAL;
-				break;
-			}
-			SCTP_TCB_UNLOCK(stcb);
-		} else {
-			if (event->se_assoc_id == SCTP_FUTURE_ASSOC) {
-				switch (event->se_type) {
-				case SCTP_ASSOC_CHANGE:
-					event_type = SCTP_PCB_FLAGS_RECVASSOCEVNT;
-					break;				
-				case SCTP_PEER_ADDR_CHANGE:
-					event_type = SCTP_PCB_FLAGS_RECVPADDREVNT;
-					break;				
-				case SCTP_REMOTE_ERROR:
-					event_type = SCTP_PCB_FLAGS_RECVPEERERR;
-					break;				
-				case SCTP_SEND_FAILED:
-					event_type = SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
-					break;				
-				case SCTP_SHUTDOWN_EVENT:
-					event_type = SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
-					break;				
-				case SCTP_ADAPTATION_INDICATION:
-					event_type = SCTP_PCB_FLAGS_ADAPTATIONEVNT;
-					break;				
-				case SCTP_PARTIAL_DELIVERY_EVENT:
-					event_type = SCTP_PCB_FLAGS_PDAPIEVNT;
-					break;				
-				case SCTP_AUTHENTICATION_EVENT:
-					event_type = SCTP_PCB_FLAGS_AUTHEVNT;
-					break;				
-				case SCTP_STREAM_RESET_EVENT:
-					event_type = SCTP_PCB_FLAGS_STREAM_RESETEVNT;
-					break;				
-				case SCTP_SENDER_DRY_EVENT:
-					event_type = SCTP_PCB_FLAGS_DRYEVNT;
-					break;				
-				case SCTP_NOTIFICATIONS_STOPPED_EVENT:
-					event_type = 0;
-					break;
-				default:
-					event_type = 0;
+		switch (event->se_type) {
+		case SCTP_ASSOC_CHANGE:
+			event_type = SCTP_PCB_FLAGS_RECVASSOCEVNT;
+			break;				
+		case SCTP_PEER_ADDR_CHANGE:
+			event_type = SCTP_PCB_FLAGS_RECVPADDREVNT;
+			break;				
+		case SCTP_REMOTE_ERROR:
+			event_type = SCTP_PCB_FLAGS_RECVPEERERR;
+			break;				
+		case SCTP_SEND_FAILED:
+			event_type = SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
+			break;				
+		case SCTP_SHUTDOWN_EVENT:
+			event_type = SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
+			break;				
+		case SCTP_ADAPTATION_INDICATION:
+			event_type = SCTP_PCB_FLAGS_ADAPTATIONEVNT;
+			break;				
+		case SCTP_PARTIAL_DELIVERY_EVENT:
+			event_type = SCTP_PCB_FLAGS_PDAPIEVNT;
+			break;				
+		case SCTP_AUTHENTICATION_EVENT:
+			event_type = SCTP_PCB_FLAGS_AUTHEVNT;
+			break;				
+		case SCTP_STREAM_RESET_EVENT:
+			event_type = SCTP_PCB_FLAGS_STREAM_RESETEVNT;
+			break;				
+		case SCTP_SENDER_DRY_EVENT:
+			event_type = SCTP_PCB_FLAGS_DRYEVNT;
+			break;				
+		case SCTP_NOTIFICATIONS_STOPPED_EVENT:
+			event_type = 0;
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
+			error = ENOTSUP;
+			break;
+		default:
+			event_type = 0;
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
+			break;
+		}
+		if (event_type > 0) {
+			if (stcb) {
+				event->se_on = sctp_stcb_is_feature_on(inp, stcb, event_type);
+				SCTP_TCB_UNLOCK(stcb);
+			} else {
+				if (event->se_assoc_id == SCTP_FUTURE_ASSOC) {
+					SCTP_INP_RLOCK(inp);
+					event->se_on = sctp_is_feature_on(inp, event_type);
+					SCTP_INP_RUNLOCK(inp);
+				} else {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 					error = EINVAL;
-					break;
 				}
-				if (event_type > 0) {
-					SCTP_INP_RLOCK(inp);
-					event->se_on = sctp_feature_on(inp, event_type);
-					SCTP_INP_RUNLOCK(inp);
-				}
-			} else {
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-				error = EINVAL;
 			}
 		}
 		if (error == 0) {
@@ -4677,22 +4660,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		if (events->sctp_sender_dry_event) {
 			sctp_feature_on(inp, SCTP_PCB_FLAGS_DRYEVNT);
-			if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-				stcb = LIST_FIRST(&inp->sctp_asoc_list);
-				if (stcb) {
-					SCTP_TCB_LOCK(stcb);
-				}
-				if (stcb &&
-				    TAILQ_EMPTY(&stcb->asoc.send_queue) &&
-				    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
-				    (stcb->asoc.stream_queue_cnt == 0)) {
-					sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_LOCKED);
-				}
-				if (stcb) {
-					SCTP_TCB_UNLOCK(stcb);
-				}
-			}
 		} else {
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_DRYEVNT);
 		}
@@ -4703,6 +4670,79 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			sctp_feature_off(inp, SCTP_PCB_FLAGS_STREAM_RESETEVNT);
 		}
 		SCTP_INP_WUNLOCK(inp);
+
+		SCTP_INP_RLOCK(inp);
+		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+			SCTP_TCB_LOCK(stcb);
+			if (events->sctp_association_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_RECVASSOCEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_RECVASSOCEVNT);
+			}
+			if (events->sctp_address_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_RECVPADDREVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_RECVPADDREVNT);
+			}
+			if (events->sctp_send_failure_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT);
+			}
+			if (events->sctp_peer_error_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_RECVPEERERR);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_RECVPEERERR);
+			}
+			if (events->sctp_shutdown_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT);
+			}
+			if (events->sctp_partial_delivery_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_PDAPIEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_PDAPIEVNT);
+			}
+			if (events->sctp_adaptation_layer_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_ADAPTATIONEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_ADAPTATIONEVNT);
+			}
+			if (events->sctp_authentication_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_AUTHEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_AUTHEVNT);
+			}
+			if (events->sctp_sender_dry_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_DRYEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_DRYEVNT);
+			}
+			if (events->sctp_stream_reset_event) {
+				sctp_stcb_feature_on(inp, stcb, SCTP_PCB_FLAGS_STREAM_RESETEVNT);
+			} else {
+				sctp_stcb_feature_off(inp, stcb, SCTP_PCB_FLAGS_STREAM_RESETEVNT);
+			}
+			SCTP_TCB_UNLOCK(stcb);
+		}
+		/* Send up the sender dry event only for 1-to-1 style sockets. */
+		if (events->sctp_sender_dry_event) {
+			if ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
+			    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
+				stcb = LIST_FIRST(&inp->sctp_asoc_list);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
+					if (TAILQ_EMPTY(&stcb->asoc.send_queue) &&
+					    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
+					    (stcb->asoc.stream_queue_cnt == 0)) {
+						sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_LOCKED);
+					}
+					SCTP_TCB_UNLOCK(stcb);
+				}
+			}
+		}
+		SCTP_INP_RUNLOCK(inp);
 		break;
 	}
 	case SCTP_ADAPTATION_LAYER:
@@ -5403,89 +5443,99 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		SCTP_CHECK_AND_CAST(event, optval, struct sctp_event, optsize);
 		SCTP_FIND_STCB(inp, stcb, event->se_assoc_id);
-
-		if (stcb) {
-			switch (event->se_type) {
-			case SCTP_ASSOC_CHANGE:
-			case SCTP_PEER_ADDR_CHANGE:
-			case SCTP_REMOTE_ERROR:
-			case SCTP_SEND_FAILED:
-			case SCTP_SHUTDOWN_EVENT:
-			case SCTP_ADAPTATION_INDICATION:
-			case SCTP_PARTIAL_DELIVERY_EVENT:
-			case SCTP_AUTHENTICATION_EVENT:
-			case SCTP_STREAM_RESET_EVENT:
-			case SCTP_NOTIFICATIONS_STOPPED_EVENT:
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
-				error = ENOTSUP;
-				break;
-			case SCTP_SENDER_DRY_EVENT:
+		switch (event->se_type) {
+		case SCTP_ASSOC_CHANGE:
+			event_type = SCTP_PCB_FLAGS_RECVASSOCEVNT;
+			break;				
+		case SCTP_PEER_ADDR_CHANGE:
+			event_type = SCTP_PCB_FLAGS_RECVPADDREVNT;
+			break;				
+		case SCTP_REMOTE_ERROR:
+			event_type = SCTP_PCB_FLAGS_RECVPEERERR;
+			break;				
+		case SCTP_SEND_FAILED:
+			event_type = SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
+			break;				
+		case SCTP_SHUTDOWN_EVENT:
+			event_type = SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
+			break;				
+		case SCTP_ADAPTATION_INDICATION:
+			event_type = SCTP_PCB_FLAGS_ADAPTATIONEVNT;
+			break;				
+		case SCTP_PARTIAL_DELIVERY_EVENT:
+			event_type = SCTP_PCB_FLAGS_PDAPIEVNT;
+			break;				
+		case SCTP_AUTHENTICATION_EVENT:
+			event_type = SCTP_PCB_FLAGS_AUTHEVNT;
+			break;				
+		case SCTP_STREAM_RESET_EVENT:
+			event_type = SCTP_PCB_FLAGS_STREAM_RESETEVNT;
+			break;				
+		case SCTP_SENDER_DRY_EVENT:
+			event_type = SCTP_PCB_FLAGS_DRYEVNT;
+			break;				
+		case SCTP_NOTIFICATIONS_STOPPED_EVENT:
+			event_type = 0;
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
+			error = ENOTSUP;
+			break;
+		default:
+			event_type = 0;
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
+			break;
+		}
+		if (event_type > 0) {
+			if (stcb) {
 				if (event->se_on) {
-					sctp_feature_on(inp, SCTP_PCB_FLAGS_DRYEVNT);
-					if (TAILQ_EMPTY(&stcb->asoc.send_queue) &&
-					    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
-					    (stcb->asoc.stream_queue_cnt == 0)) {
-						sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_LOCKED);
+					sctp_stcb_feature_on(inp, stcb, event_type);
+					if (event_type == SCTP_PCB_FLAGS_DRYEVNT) {
+						if (TAILQ_EMPTY(&stcb->asoc.send_queue) &&
+						    TAILQ_EMPTY(&stcb->asoc.sent_queue) &&
+						    (stcb->asoc.stream_queue_cnt == 0)) {
+							sctp_ulp_notify(SCTP_NOTIFY_SENDER_DRY, stcb,  0, NULL, SCTP_SO_LOCKED);
+						}
 					}
 				} else {
-					sctp_feature_off(inp, SCTP_PCB_FLAGS_DRYEVNT);
+					sctp_stcb_feature_off(inp, stcb, event_type);
 				}
-				break;				
-			default:
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-				error = EINVAL;
-				break;
-			}
-			SCTP_TCB_UNLOCK(stcb);
-		} else {
-			switch (event->se_type) {
-			case SCTP_ASSOC_CHANGE:
-				event_type = SCTP_PCB_FLAGS_RECVASSOCEVNT;
-				break;				
-			case SCTP_PEER_ADDR_CHANGE:
-				event_type = SCTP_PCB_FLAGS_RECVPADDREVNT;
-				break;				
-			case SCTP_REMOTE_ERROR:
-				event_type = SCTP_PCB_FLAGS_RECVPEERERR;
-				break;				
-			case SCTP_SEND_FAILED:
-				event_type = SCTP_PCB_FLAGS_RECVSENDFAILEVNT;
-				break;				
-			case SCTP_SHUTDOWN_EVENT:
-				event_type = SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT;
-				break;				
-			case SCTP_ADAPTATION_INDICATION:
-				event_type = SCTP_PCB_FLAGS_ADAPTATIONEVNT;
-				break;				
-			case SCTP_PARTIAL_DELIVERY_EVENT:
-				event_type = SCTP_PCB_FLAGS_PDAPIEVNT;
-				break;				
-			case SCTP_AUTHENTICATION_EVENT:
-				event_type = SCTP_PCB_FLAGS_AUTHEVNT;
-				break;				
-			case SCTP_STREAM_RESET_EVENT:
-				event_type = SCTP_PCB_FLAGS_STREAM_RESETEVNT;
-				break;				
-			case SCTP_SENDER_DRY_EVENT:
-				event_type = SCTP_PCB_FLAGS_DRYEVNT;
-				break;				
-			case SCTP_NOTIFICATIONS_STOPPED_EVENT:
-				event_type = 0;
-				break;
-			default:
-				event_type = 0;
-				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-				error = EINVAL;
-				break;
-			}
-			if (event_type > 0) {
-				SCTP_INP_WLOCK(inp);
-				if (event->se_on) {
-					sctp_feature_on(inp, event_type);
-				} else {
-					sctp_feature_off(inp, event_type);
+				SCTP_TCB_UNLOCK(stcb);
+			} else {
+				/*
+				 * We don't want to send up a storm of events,
+				 * so return an error for sender dry events
+				 */
+				if ((event_type == SCTP_PCB_FLAGS_DRYEVNT) &&
+				    ((event->se_assoc_id == SCTP_ALL_ASSOC) || 
+				     (event->se_assoc_id == SCTP_CURRENT_ASSOC))) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
+					error = ENOTSUP;
+					break;
 				}
-				SCTP_INP_WUNLOCK(inp);
+				if ((event->se_assoc_id == SCTP_FUTURE_ASSOC) ||
+				    (event->se_assoc_id == SCTP_ALL_ASSOC)) {
+					SCTP_INP_WLOCK(inp);
+					if (event->se_on) {
+						sctp_feature_on(inp, event_type);
+					} else {
+						sctp_feature_off(inp, event_type);
+					}
+					SCTP_INP_WUNLOCK(inp);
+				}
+				if ((event->se_assoc_id == SCTP_CURRENT_ASSOC) ||
+				    (event->se_assoc_id == SCTP_ALL_ASSOC)) {
+					SCTP_INP_RLOCK(inp);
+					LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+						SCTP_TCB_LOCK(stcb);
+						if (event->se_on) {
+							sctp_stcb_feature_on(inp, stcb, event_type);
+						} else {
+							sctp_stcb_feature_off(inp, stcb, event_type);
+						}
+						SCTP_TCB_UNLOCK(stcb);
+					}
+					SCTP_INP_RUNLOCK(inp);
+				}
 			}
 		}
 		break;

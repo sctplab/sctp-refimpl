@@ -1227,6 +1227,7 @@ struct sctp_association {
 	/* JRS 5/21/07 - CMT PF variable */
 	uint8_t sctp_cmt_pf;
 	uint8_t use_precise_time;
+	uint32_t sctp_features;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

@@ -5233,7 +5233,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 					/* Held for PD-API clear that. */
 					sq->pdapi_aborted = 1;
 					sq->held_length = 0;
-					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT) && (so != NULL)) {
+					if (sctp_stcb_is_feature_on(inp, stcb, SCTP_PCB_FLAGS_PDAPIEVNT) && (so != NULL)) {
 						/*
 						 * Need to add a PD-API aborted indication.
 						 * Setting the control_pdapi assures that it will

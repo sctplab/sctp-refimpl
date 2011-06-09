@@ -1232,20 +1232,25 @@ int	sctp_getladdrs __P((int, sctp_assoc_t, struct sockaddr **));
 void	sctp_freeladdrs __P((struct sockaddr *));
 int	sctp_opt_info __P((int, sctp_assoc_t, int, void *, socklen_t *));
 
+/* deprecated */
 ssize_t	sctp_sendmsg __P((int, const void *, size_t, const struct sockaddr *,
 	    socklen_t, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
+/* deprecated */
 ssize_t	sctp_send __P((int, const void *, size_t,
 	    const struct sctp_sndrcvinfo *, int));
 
+/* deprecated */
 ssize_t	sctp_sendx __P((int, const void *, size_t, struct sockaddr *,
 	    int, struct sctp_sndrcvinfo *, int));
 
+/* deprecated */
 ssize_t	sctp_sendmsgx __P((int sd, const void *, size_t, struct sockaddr *,
 	    int, uint32_t, uint32_t, uint16_t, uint32_t, uint32_t));
 
 sctp_assoc_t	sctp_getassocid __P((int, struct sockaddr *));
 
+/* deprecated */
 ssize_t	sctp_recvmsg __P((int, void *, size_t, struct sockaddr *, socklen_t *,
 	    struct sctp_sndrcvinfo *, int *));
 
