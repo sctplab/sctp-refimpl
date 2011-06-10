@@ -5732,7 +5732,8 @@ sctp_sorecvmsg(struct socket *so,
 	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO) ||
+		    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVNXTINFO)) {
 			struct sctp_extrcvinfo *s_extra;
 			s_extra = (struct sctp_extrcvinfo *)sinfo;
 			if ((nxt) &&
@@ -6317,7 +6318,8 @@ sctp_sorecvmsg(struct socket *so,
 	if (((out_flags & MSG_EOR) == 0) &&
 	    ((in_flags & MSG_PEEK) == 0) &&
 	    (sinfo) &&
-	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO))) {
+	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO) ||
+	     sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVNXTINFO))) {
 		struct sctp_extrcvinfo *s_extra;
 		s_extra = (struct sctp_extrcvinfo *)sinfo;
 		s_extra->sreinfo_next_flags = SCTP_NO_NEXT_MSG;
@@ -6486,8 +6488,9 @@ sctp_soreceive(	struct socket *so,
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
 	}
-	if ((sctp_is_feature_off(inp,
-	    SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT) &&
+	     sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVRCVINFO) &&
+	     sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVNXTINFO)) ||
 	    (controlp == NULL)) {
 		/* user does not want the sndrcv ctl */
 		filling_sinfo = 0;
