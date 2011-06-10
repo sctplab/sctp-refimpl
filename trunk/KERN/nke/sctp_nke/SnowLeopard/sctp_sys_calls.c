@@ -922,6 +922,89 @@ sctp_recvmsg(int s,
 #endif
 }
 
+ssize_t sctp_recvv(int sd,
+                   const struct iovec *iov,
+                   int iovlen,
+                   struct sockaddr *from,
+                   socklen_t *fromlen,
+                   void *info,
+                   socklen_t *infolen,
+                   unsigned int *infotype,
+                   int *flags)
+{
+	char ctlbuf[SCTP_CONTROL_VEC_SIZE_RCV];
+	struct msghdr msg;
+	struct cmsghdr *cmsg;
+	ssize_t n;
+	struct sctp_rcvinfo *rcvinfo;
+	struct sctp_nxtinfo *nxtinfo;
+
+	if (infotype) {
+		*infotype = SCTP_RECVV_NOINFO;
+	}
+	msg.msg_name = from;
+	if (fromlen == NULL) {
+		msg.msg_namelen = 0;
+	} else {
+		msg.msg_namelen = *fromlen;
+	}
+	msg.msg_iov = (struct iovec *)iov;
+	msg.msg_iovlen = iovlen;
+	msg.msg_control = ctlbuf;
+	msg.msg_controllen = sizeof(ctlbuf);
+	errno = 0;
+	n = recvmsg(sd, &msg, *flags);
+	*flags = msg.msg_flags;
+	if ((n > 0) &&
+	    (msg.msg_controllen > 0) &&
+	    (infotype != NULL) &&
+	    (infolen != NULL) &&
+	    (*infolen > 0)) {
+		rcvinfo = NULL;
+		nxtinfo = NULL;
+		for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
+			if (cmsg->cmsg_level != IPPROTO_SCTP) {
+				continue;
+			}
+			if (cmsg->cmsg_type == SCTP_RCVINFO) {
+				rcvinfo = (struct sctp_rcvinfo *)CMSG_DATA(cmsg);
+			}
+			if (cmsg->cmsg_type == SCTP_NXTINFO) {
+				nxtinfo = (struct sctp_nxtinfo *)CMSG_DATA(cmsg);
+			}
+			if (rcvinfo && nxtinfo) {
+				break;
+			}
+		}
+		if (rcvinfo) {
+			if (nxtinfo) {
+				if (*infolen >= sizeof(struct sctp_recvv_rn)) {
+					struct sctp_recvv_rn *rn_info;
+
+					rn_info = (struct sctp_recvv_rn *)info;
+					rn_info->recvv_rcvinfo = *rcvinfo;
+					rn_info->recvv_nxtinfo = *nxtinfo;
+					*infolen = (socklen_t)sizeof(struct sctp_recvv_rn);
+					*infotype = SCTP_RECVV_RN;
+				}
+			} else {
+				if (*infolen >= sizeof(struct sctp_rcvinfo)) {
+					memcpy(info, rcvinfo, sizeof(struct sctp_rcvinfo));
+					*infolen = (socklen_t)sizeof(struct sctp_rcvinfo);
+					*infotype = SCTP_RECVV_RCVINFO;
+				}
+			}
+		} else if (nxtinfo) {
+			if (*infolen >= sizeof(struct sctp_rcvinfo)) {
+				memcpy(info, nxtinfo, sizeof(struct sctp_nxtinfo));
+				*infolen = (socklen_t)sizeof(struct sctp_nxtinfo);
+				*infotype = SCTP_RECVV_NXTINFO;
+			}
+		}
+	}
+	return (n);
+}
+
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>

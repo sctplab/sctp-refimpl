@@ -98,10 +98,12 @@ struct sctp_event_subscribe {
 #define SCTP_SNDRCV	0x0002
 #define SCTP_EXTRCV	0x0003
 #define SCTP_SNDINFO    0x0004
-#define SCTP_PRINFO     0x0005
-#define SCTP_AUTHINFO   0x0006
-#define SCTP_DSTADDRV4  0x0007
-#define SCTP_DSTADDRV6  0x0008
+#define SCTP_RCVINFO    0x0005
+#define SCTP_NXTINFO    0x0006
+#define SCTP_PRINFO     0x0007
+#define SCTP_AUTHINFO   0x0008
+#define SCTP_DSTADDRV4  0x0009
+#define SCTP_DSTADDRV6  0x000a
 
 /*
  * ancillary data structures
@@ -215,6 +217,16 @@ struct sctp_nxtinfo {
 #define SCTP_NEXT_MSG_IS_UNORDERED 0x0004
 #define SCTP_NEXT_MSG_IS_NOTIFICATION 0x0008
 
+struct sctp_recvv_rn {
+	struct sctp_rcvinfo recvv_rcvinfo;
+	struct sctp_nxtinfo recvv_nxtinfo;
+};
+
+#define SCTP_RECVV_NOINFO  0
+#define SCTP_RECVV_RCVINFO 1
+#define SCTP_RECVV_NXTINFO 2
+#define SCTP_RECVV_RN      3
+
 struct sctp_snd_all_completes {
 	uint16_t sall_stream;
 	uint16_t sall_flags;
@@ -225,6 +237,8 @@ struct sctp_snd_all_completes {
 };
 
 /* Flags that go into the sinfo->sinfo_flags field */
+#define SCTP_NOTIFICATION     0x0010 /* next message is a notification */
+#define SCTP_COMPLETE         0x0020 /* next message is complete */
 #define SCTP_EOF              0x0100 /* Start shutdown procedures */
 #define SCTP_ABORT            0x0200 /* Send an ABORT to peer */
 #define SCTP_UNORDERED        0x0400 /* Message is un-ordered */
@@ -233,7 +247,7 @@ struct sctp_snd_all_completes {
 #define SCTP_EOR              0x2000 /* end of message signal */
 #define SCTP_SACK_IMMEDIATELY 0x4000 /* Set I-Bit */
 
-#define INVALID_SINFO_FLAG(x) (((x) & 0xffffff00 \
+#define INVALID_SINFO_FLAG(x) (((x) & 0xfffffff0 \
                                     & ~(SCTP_EOF | SCTP_ABORT | SCTP_UNORDERED |\
 				        SCTP_ADDR_OVER | SCTP_SENDALL | SCTP_EOR |\
 					SCTP_SACK_IMMEDIATELY)) != 0)
@@ -244,7 +258,7 @@ struct sctp_snd_all_completes {
 #define SCTP_PR_SCTP_BUF  0x0002/* Buffer based PR-SCTP */
 #define SCTP_PR_SCTP_RTX  0x0003/* Number of retransmissions based PR-SCTP */
 
-#define PR_SCTP_POLICY(x)         ((x) & 0xff)
+#define PR_SCTP_POLICY(x)         ((x) & 0x0f)
 #define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != 0)
 #define PR_SCTP_TTL_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_TTL)
 #define PR_SCTP_BUF_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_BUF)
