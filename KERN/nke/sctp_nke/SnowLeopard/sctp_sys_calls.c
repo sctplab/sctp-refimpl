@@ -143,7 +143,7 @@ in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 int
 sctp_getaddrlen(sa_family_t family)
 {
-	int error, sd;
+	int ret, sd;
 	socklen_t siz;
 	struct sctp_assoc_value av;
 
@@ -153,13 +153,15 @@ sctp_getaddrlen(sa_family_t family)
 	sd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP);
 #elif defined(AF_INET6)
 	sd = socket(AF_INET6, SOCK_SEQPACKET, IPPROTO_SCTP);
+#else
+	sd = -1;
 #endif
 	if (sd == -1) {
 		return (-1);
 	}
-	error = getsockopt(sd, IPPROTO_SCTP, SCTP_GET_ADDR_LEN, &av, &siz);
+	ret = getsockopt(sd, IPPROTO_SCTP, SCTP_GET_ADDR_LEN, &av, &siz);
 	close(sd);
-	if (error == 0) {
+	if (ret == 0) {
 		return ((int)av.assoc_value);
 	} else {
 		return (-1);
@@ -403,6 +405,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		break;
 	case SCTP_TIMEOUTS:
 		((struct sctp_timeouts *)arg)->stimo_assoc_id = id;
+		break;
+	case SCTP_EVENT:
+		((struct sctp_event *)arg)->se_assoc_id = id;
 		break;
 	default:
 		break;
