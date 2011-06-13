@@ -135,8 +135,8 @@ struct sctp_initmsg {
  */
 
 
-#define SCTP_ALIGN_RESV_PAD 96
-#define SCTP_ALIGN_RESV_PAD_SHORT 80
+#define SCTP_ALIGN_RESV_PAD 92
+#define SCTP_ALIGN_RESV_PAD_SHORT 76
 
 struct sctp_sndrcvinfo {
 	uint16_t sinfo_stream;
@@ -151,6 +151,8 @@ struct sctp_sndrcvinfo {
 	uint32_t sinfo_tsn;
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
+	uint16_t sinfo_keynumber;
+	uint16_t sinfo_keynumber_valid;
 	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD];
 };
 
@@ -172,6 +174,8 @@ struct sctp_extrcvinfo {
 	uint32_t sreinfo_next_aid;
 	uint32_t sreinfo_next_length;
 	uint32_t sreinfo_next_ppid;
+	uint16_t sinfo_keynumber;
+	uint16_t sinfo_keynumber_valid;
 	uint8_t  __reserve_pad[SCTP_ALIGN_RESV_PAD_SHORT];
 };
 
