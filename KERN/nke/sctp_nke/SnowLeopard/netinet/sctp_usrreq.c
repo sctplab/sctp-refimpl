@@ -1897,7 +1897,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
  out_now:
 	if (creat_lock_on) {
 		SCTP_ASOC_CREATE_UNLOCK(inp);
-    }
+	}
 	SCTP_INP_DECR_REF(inp);
 	return error;
 }

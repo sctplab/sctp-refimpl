@@ -6100,7 +6100,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		struct mbuf *m,
 		struct sctp_sndrcvinfo *srcv, int hold_stcb_lock)
 {
-	int error=0, holds_lock;
+	int error = 0, holds_lock;
 	struct mbuf *at;
 	struct sctp_stream_queue_pending *sp = NULL;
 	struct sctp_stream_out *strm;
@@ -6157,18 +6157,25 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sp->some_taken = 0;
 	sp->data = m;
 	sp->tail_mbuf = NULL;
-	sp->length = 0;
-	at = m;
 	sctp_set_prsctp_policy(sp);
 	/* We could in theory (for sendall) sifa the length
 	 * in, but we would still have to hunt through the
 	 * chain since we need to setup the tail_mbuf
 	 */
- 	while(at) {
+	sp->length = 0;
+	for (at = m; at; at = SCTP_BUF_NEXT(at)) {
 		if (SCTP_BUF_NEXT(at) == NULL)
 			sp->tail_mbuf = at;
 		sp->length += SCTP_BUF_LEN(at);
-		at = SCTP_BUF_NEXT(at);
+	}
+	if (srcv->sinfo_keynumber_valid) {
+		sp->auth_keyid = srcv->sinfo_keynumber;
+	} else {
+		sp->auth_keyid = stcb->asoc.authinfo.active_keyid;
+	}
+	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks)) {
+		sctp_auth_key_acquire(stcb, sp->auth_keyid);
+		sp->holds_key_ref = 1;
 	}
 	SCTP_TCB_SEND_LOCK(stcb);
 	sctp_snd_sb_alloc(stcb, sp->length);
@@ -6627,7 +6634,9 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	memset(ca, 0, sizeof(struct sctp_copy_all));
 
 	ca->inp = inp;
-	memcpy(&ca->sndrcv, srcv, sizeof(struct sctp_nonpad_sndrcvinfo));
+	if (srcv) {
+		memcpy(&ca->sndrcv, srcv, sizeof(struct sctp_nonpad_sndrcvinfo));
+	}
 	/*
 	 * take off the sendall flag, it would be bad if we failed to do
 	 * this :-0
@@ -12615,8 +12624,9 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	 * sb is locked however. When data is copied the protocol processing
 	 * should be enabled since this is a slower operation...
 	 */
-	struct sctp_stream_queue_pending *sp=NULL;
+	struct sctp_stream_queue_pending *sp = NULL;
 	int resv_in_first;
+
 	*error = 0;
 	/* Now can we send this? */
 	if ((SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_SENT) ||
@@ -12678,9 +12688,13 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 		*error = 0;
 		goto skip_copy;
 	}
-	sp->auth_keyid = stcb->asoc.authinfo.active_keyid;
+	if (srcv->sinfo_keynumber_valid) {
+		sp->auth_keyid = srcv->sinfo_keynumber;
+	} else {
+		sp->auth_keyid = stcb->asoc.authinfo.active_keyid;
+	}
 	if (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.peer_auth_chunks)) {
-		sctp_auth_key_acquire(stcb, stcb->asoc.authinfo.active_keyid);
+		sctp_auth_key_acquire(stcb, sp->auth_keyid);
 		sp->holds_key_ref = 1;
 	}
 #if defined(__APPLE__)
