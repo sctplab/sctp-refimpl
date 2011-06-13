@@ -3375,10 +3375,14 @@ static int
 sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 {
 	struct cmsghdr cmh;
-	int tlen, at;
+	int tlen, at, found;
+	struct sctp_sndinfo sndinfo;
+	struct sctp_prinfo prinfo;
+	struct sctp_authinfo authinfo;
 
 	tlen = SCTP_BUF_LEN(control);
 	at = 0;
+	found = 0;
 	/*
 	 * Independent of how many mbufs, find the c_type inside the control
 	 * structure and copy out the data.
@@ -3386,7 +3390,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 	while (at < tlen) {
 		if ((tlen - at) < (int)CMSG_ALIGN(sizeof(cmh))) {
 			/* not enough room for one more we are done. */
-			return (0);
+			return (found);
 		}
 		m_copydata(control, at, sizeof(cmh), (caddr_t)&cmh);
 		if (((int)cmh.cmsg_len + at) > tlen) {
@@ -3394,30 +3398,77 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 			 * this is real messed up since there is not enough
 			 * data here to cover the cmsg header. We are done.
 			 */
-			return (0);
+			return (found);
 		}
 		if ((cmh.cmsg_level == IPPROTO_SCTP) &&
-		    (c_type == cmh.cmsg_type)) {
-			/* found the one we want, copy it out */
-			at += CMSG_ALIGN(sizeof(struct cmsghdr));
-			if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
-				/*
-				 * space of cmsg_len after header not big
-				 * enough
-				 */
-				return (0);
-			}
-			m_copydata(control, at, cpsize, data);
-			return (1);
-		} else {
-			at += CMSG_ALIGN(cmh.cmsg_len);
-			if (cmh.cmsg_len == 0) {
-				break;
+		    ((c_type == cmh.cmsg_type) ||
+		     ((c_type == SCTP_SNDRCV) &&
+		      ((cmh.cmsg_type == SCTP_SNDINFO) ||
+		       (cmh.cmsg_type == SCTP_PRINFO) ||
+		       (cmh.cmsg_type == SCTP_AUTHINFO))))) {
+			/* found one we want, check if it completely there */
+			if (c_type == cmh.cmsg_type) {
+				if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
+					/*
+					 * space of cmsg_len after header not big
+					 * enough
+					 */
+					return (found);
+				}
+				/* it is exactly what we want. Copy it out */
+				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), cpsize, data);
+				return (1);
+			} else {
+				struct sctp_sndrcvinfo *sndrcvinfo;
+
+				sndrcvinfo = (struct sctp_sndrcvinfo *)data;
+				if (found == 0) {
+					if (cpsize < sizeof(struct sctp_sndrcvinfo)) {
+						return (found);
+					}
+					memset(sndrcvinfo, 0, sizeof(struct sctp_sndrcvinfo));
+				}
+				switch (cmh.cmsg_type) {
+				case SCTP_SNDINFO:
+					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_sndinfo)) {
+						return (found);
+					}					
+					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_sndinfo), &sndinfo);
+                			sndrcvinfo->sinfo_stream = sndinfo.snd_sid;
+			                sndrcvinfo->sinfo_flags = sndinfo.snd_flags;
+			                sndrcvinfo->sinfo_ppid = sndinfo.snd_ppid;
+			                sndrcvinfo->sinfo_context = sndinfo.snd_context;
+			                sndrcvinfo->sinfo_assoc_id = sndinfo.snd_assoc_id;
+ 					break;
+				case SCTP_PRINFO:
+					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_prinfo)) {
+						return (found);
+					}					
+					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_prinfo), &prinfo);
+					sndrcvinfo->sinfo_timetolive = prinfo.pr_value;
+					sndrcvinfo->sinfo_flags |= prinfo.pr_policy;
+					break;
+				case SCTP_AUTHINFO:
+					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_authinfo)) {
+						return (found);
+					}					
+					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_authinfo), &authinfo);
+					sndrcvinfo->sinfo_keynumber_valid = 1;
+					sndrcvinfo->sinfo_keynumber = authinfo.auth_keyid;
+					break;
+				default:
+					return (found);
+				}				
+				found = 1;
 			}
 		}
+		at += CMSG_ALIGN(cmh.cmsg_len);
+		if (cmh.cmsg_len == 0) {
+			break;
+		}
+
 	}
-	/* not found */
-	return (0);
+	return (found);
 }
 
 static struct mbuf *
@@ -12721,71 +12772,6 @@ out_now:
 	return (sp);
 }
 
-#if 0
-
-static int
-sctp_find_cmsgs(struct mbuf *control, )
-{
-	struct cmsghdr cmh;
-	int tlen, at;
-
-	tlen = SCTP_BUF_LEN(control);
-	at = 0;
-	while (at < tlen) {
-		if ((tlen - at) < (int)CMSG_ALIGN(sizeof(cmh))) {
-			/* not enough room for one more we are done. */
-			return (0);
-		}
-		m_copydata(control, at, sizeof(cmh), (caddr_t)&cmh);
-		if (((int)cmh.cmsg_len + at) > tlen) {
-			/*
-			 * this is real messed up since there is not enough
-			 * data here to cover the cmsg header. We are done.
-			 */
-			return (1);
-		}
-		if (cmh.cmsg_level == IPPROTO_SCTP) {
-			switch (cmh.cmsg_level) {
-			case SCTP_SNDINFO:
-				break;
-			case SCTP_PRINFO:
-				break;
-			case SCTP_AUTHINFO:
-				break;
-			case SCTP_SNDRCV:
-				break;
-			case SCTP_DSTADDRV4:
-				break;
-			case SCTP_DSTADDRV6:
-				break;
-			default:
-				break;
-                        }
-                }
-                if ((cmh.cmsg_level == IPPROTO_SCTP) &&
-                    (c_type == cmh.cmsg_type)) {
-                        /* found the one we want, copy it out */
-                        at += CMSG_ALIGN(sizeof(struct cmsghdr));
-                        if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
-                                /*
-                                 * space of cmsg_len after header not big
-                                 * enough
-                                 */
-                                return (0);
-                        }
-                        m_copydata(control, at, cpsize, data);
-                        return (1);
-                } else {
-                        at += CMSG_ALIGN(cmh.cmsg_len);
-                        if (cmh.cmsg_len == 0) {
-                                break;
-                        }
-                }
-        }
-        /* not found */
-        return (0);
-}
-#endif
 
 int
 sctp_sosend(struct socket *so,
@@ -12824,11 +12810,8 @@ sctp_sosend(struct socket *so,
 #if defined(__APPLE__)
 	struct proc *p = current_proc();
 #endif
-	int error, use_rcvinfo = 0;
+	int error, use_sndinfo = 0;
 	struct sctp_sndrcvinfo sndrcvninfo;
-	struct sctp_sndinfo sndinfo;
-	struct sctp_prinfo prinfo;
-	struct sctp_authinfo authinfo;
 	struct sockaddr *addr_to_use;
 #if defined(INET) && defined(INET6)
 	struct sockaddr_in sin;
@@ -12845,7 +12828,7 @@ sctp_sosend(struct socket *so,
 		if (sctp_find_cmsg(SCTP_SNDRCV, (void *)&sndrcvninfo, control,
 		    sizeof(sndrcvninfo))) {
 			/* got one */
-			use_rcvinfo = 1;
+			use_sndinfo = 1;
 		}
 	}
 	addr_to_use = addr;
@@ -12871,7 +12854,7 @@ sctp_sosend(struct socket *so,
 				  control,
 #endif
 				  flags,
-				  use_rcvinfo ? &sndrcvninfo: NULL
+				  use_sndinfo ? &sndrcvninfo: NULL
 #if !( defined(__Panda__) || defined(__Userspace__) )
 				  , p
 #endif
