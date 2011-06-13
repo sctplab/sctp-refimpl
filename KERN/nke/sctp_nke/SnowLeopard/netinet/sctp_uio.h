@@ -231,6 +231,22 @@ struct sctp_recvv_rn {
 #define SCTP_RECVV_NXTINFO 2
 #define SCTP_RECVV_RN      3
 
+#define SCTP_SENDV_SNDINFO  1
+#define SCTP_SENDV_PRINFO   2
+#define SCTP_SENDV_AUTHINFO 3
+#define SCTP_SENDV_SPA      4
+
+struct sctp_sendv_spa {
+	uint32_t sendv_flags;
+	struct sctp_sndinfo sendv_sndinfo;
+	struct sctp_prinfo sendv_prinfo;
+	struct sctp_authinfo sendv_authinfo;
+};
+
+#define SCTP_SEND_SNDINFO_VALID  0x00000001
+#define SCTP_SEND_PRINFO_VALID   0x00000002
+#define SCTP_SEND_AUTHINFO_VALID 0x00000004
+
 struct sctp_snd_all_completes {
 	uint16_t sall_stream;
 	uint16_t sall_flags;
