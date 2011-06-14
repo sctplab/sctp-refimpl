@@ -3372,7 +3372,7 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 }
 
 static int
-sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
+sctp_find_cmsg(int c_type, void *data, struct mbuf *control, size_t cpsize)
 {
 	struct cmsghdr cmh;
 	int tlen, at, found;
@@ -3389,15 +3389,16 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 	 */
 	while (at < tlen) {
 		if ((tlen - at) < (int)CMSG_ALIGN(sizeof(cmh))) {
-			/* not enough room for one more we are done. */
+			/* There is not enough room for one more. */
 			return (found);
 		}
 		m_copydata(control, at, sizeof(cmh), (caddr_t)&cmh);
+		if (cmh.cmsg_len < CMSG_ALIGN(sizeof(struct cmsghdr))) {
+			/* We dont't have a complete CMSG header. */
+			return (found);
+		}
 		if (((int)cmh.cmsg_len + at) > tlen) {
-			/*
-			 * this is real messed up since there is not enough
-			 * data here to cover the cmsg header. We are done.
-			 */
+			/* We don't have the complete CMSG. */
 			return (found);
 		}
 		if ((cmh.cmsg_level == IPPROTO_SCTP) &&
@@ -3406,16 +3407,11 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 		      ((cmh.cmsg_type == SCTP_SNDINFO) ||
 		       (cmh.cmsg_type == SCTP_PRINFO) ||
 		       (cmh.cmsg_type == SCTP_AUTHINFO))))) {
-			/* found one we want, check if it completely there */
 			if (c_type == cmh.cmsg_type) {
-				if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
-					/*
-					 * space of cmsg_len after header not big
-					 * enough
-					 */
+				if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < cpsize) {
 					return (found);
 				}
-				/* it is exactly what we want. Copy it out */
+				/* It is exactly what we want. Copy it out. */
 				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), cpsize, data);
 				return (1);
 			} else {
@@ -3430,7 +3426,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 				}
 				switch (cmh.cmsg_type) {
 				case SCTP_SNDINFO:
-					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_sndinfo)) {
+					if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_sndinfo)) {
 						return (found);
 					}					
 					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_sndinfo), &sndinfo);
@@ -3441,7 +3437,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 			                sndrcvinfo->sinfo_assoc_id = sndinfo.snd_assoc_id;
  					break;
 				case SCTP_PRINFO:
-					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_prinfo)) {
+					if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_prinfo)) {
 						return (found);
 					}					
 					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_prinfo), &prinfo);
@@ -3449,7 +3445,7 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 					sndrcvinfo->sinfo_flags |= prinfo.pr_policy;
 					break;
 				case SCTP_AUTHINFO:
-					if ((int)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_authinfo)) {
+					if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct sctp_authinfo)) {
 						return (found);
 					}					
 					m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct sctp_authinfo), &authinfo);
@@ -3463,10 +3459,6 @@ sctp_find_cmsg(int c_type, void *data, struct mbuf *control, int cpsize)
 			}
 		}
 		at += CMSG_ALIGN(cmh.cmsg_len);
-		if (cmh.cmsg_len == 0) {
-			break;
-		}
-
 	}
 	return (found);
 }
