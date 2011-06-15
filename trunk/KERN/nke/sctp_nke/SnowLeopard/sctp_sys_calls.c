@@ -1168,6 +1168,9 @@ sctp_sendv(int sd,
 			addr = (struct sockaddr *)((caddr_t)addr + addr_len);
 		}
 	}
+	if (msg.msg_controllen == 0) {
+		msg.msg_control = NULL;
+	}
 	msg.msg_iov = (struct iovec *)iov;
 	msg.msg_iovlen = iovcnt;
 	msg.msg_flags = 0;
