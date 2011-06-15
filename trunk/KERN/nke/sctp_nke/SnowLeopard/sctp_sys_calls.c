@@ -1130,6 +1130,11 @@ sctp_sendv(int sd,
 		case AF_INET:
 			addr_len = (socklen_t)sizeof(struct sockaddr_in);
 			addr_in = (struct sockaddr_in *)addr;
+			if (addr_in->sin_len != addr_len) {
+				free(cmsgbuf);
+				errno = EINVAL;
+				return (-1);
+			}
 			if (i == 0) {
 				port = addr_in->sin_port;
 			} else {
@@ -1150,6 +1155,11 @@ sctp_sendv(int sd,
 		case AF_INET6:
 			addr_len = (socklen_t)sizeof(struct sockaddr_in6);
 			addr_in6 = (struct sockaddr_in6 *)addr;
+			if (addr_in6->sin6_len != addr_len) {
+				free(cmsgbuf);
+				errno = EINVAL;
+				return (-1);
+			}
 			if (i == 0) {
 				port = addr_in6->sin6_port;
 			} else {
