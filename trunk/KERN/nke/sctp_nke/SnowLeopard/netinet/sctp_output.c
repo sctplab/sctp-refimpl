@@ -3532,21 +3532,6 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 						stcb->asoc.pre_open_streams = stcb->asoc.streamoutcnt;
 					}
 					for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
-						/*-
-						 * inbound side must be set
-						 * to 0xffff, also NOTE when
-						 * we get the INIT-ACK back
-						 * (for INIT sender) we MUST
-						 * reduce the count
-						 * (streamoutcnt) but first
-						 * check if we sent to any
-						 * of the upper streams that
-						 * were dropped (if some
-						 * were). Those that were
-						 * dropped must be notified
-						 * to the upper layer as
-						 * failed to send.
-						 */
 						stcb->asoc.strmout[i].next_sequence_sent = 0;
 						TAILQ_INIT(&stcb->asoc.strmout[i].outqueue);
 						stcb->asoc.strmout[i].stream_no = i;
@@ -3628,6 +3613,98 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 	return (0);
 }
 
+static struct sctp_tcb *
+sctp_findassociation_cmsgs(struct sctp_inpcb **inp_p,
+                           in_port_t port,
+                           struct mbuf *control,
+                           struct sctp_nets **net_p,
+                           int *error)
+{
+	struct cmsghdr cmh;
+	int tlen, at;
+	struct sctp_tcb *stcb;
+	struct sockaddr *addr;
+#ifdef INET
+	struct sockaddr_in sin;
+#endif
+#ifdef INET6
+	struct sockaddr_in6 sin6;
+#endif
+
+	tlen = SCTP_BUF_LEN(control);
+	at = 0;
+	while (at < tlen) {
+		if ((tlen - at) < (int)CMSG_ALIGN(sizeof(cmh))) {
+			/* There is not enough room for one more. */
+			*error = EINVAL;
+			return (NULL);
+		}
+		m_copydata(control, at, sizeof(cmh), (caddr_t)&cmh);
+		if (cmh.cmsg_len < CMSG_ALIGN(sizeof(struct cmsghdr))) {
+			/* We dont't have a complete CMSG header. */
+			*error = EINVAL;
+			return (NULL);
+		}
+		if (((int)cmh.cmsg_len + at) > tlen) {
+			/* We don't have the complete CMSG. */
+			*error = EINVAL;
+			return (NULL);
+		}
+		if (cmh.cmsg_level == IPPROTO_SCTP) {
+			switch (cmh.cmsg_type) {
+#ifdef INET
+			case SCTP_DSTADDRV4:
+				if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct in_addr)) {
+					*error = EINVAL;
+					return (NULL);
+				}
+				memset(&sin, 0, sizeof(struct sockaddr_in));
+				sin.sin_family = AF_INET;
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+				sin.sin_len = sizeof(struct sockaddr_in);
+#endif
+				sin.sin_port = port;
+				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct in_addr), (caddr_t)&sin.sin_addr);
+				addr = (struct sockaddr *)&sin;
+				break;
+#endif
+#ifdef INET6
+			case SCTP_DSTADDRV6:
+				if ((size_t)(cmh.cmsg_len - CMSG_ALIGN(sizeof(struct cmsghdr))) < sizeof(struct in6_addr)) {
+					*error = EINVAL;
+					return (NULL);
+				}
+				memset(&sin6, 0, sizeof(struct sockaddr_in6));
+				sin6.sin6_family = AF_INET6;
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+				sin6.sin6_len = sizeof(struct sockaddr_in6);
+#endif
+				sin6.sin6_port = port;
+				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct in6_addr), (caddr_t)&sin6.sin6_addr);
+#ifdef INET
+				if (IN6_IS_ADDR_V4MAPPED(&sin6.sin6_addr)) {
+					in6_sin6_2_sin(&sin, &sin6);
+					addr = (struct sockaddr *)&sin;
+				} else
+#endif
+					addr = (struct sockaddr *)&sin6;
+				break;
+#endif
+			default:
+				addr = NULL;
+				break;
+			}
+			if (addr) {
+				stcb = sctp_findassociation_ep_addr(inp_p, addr, net_p, NULL, NULL);
+				if (stcb != NULL) {
+					return (stcb);
+				}
+			}
+		}
+		at += CMSG_ALIGN(cmh.cmsg_len);
+	}
+	return (NULL);
+}
 
 static struct mbuf *
 sctp_add_cookie(struct sctp_inpcb *inp, struct mbuf *init, int init_offset,
@@ -13288,11 +13365,9 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_INP_WUNLOCK(inp);
 		/* With the lock applied look again */
 		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
-#if 0
-		if ((stcb == NULL) && (control != NULL) {
-			stcb = sctp_findassociation_cmsgs(&t_inp, control, &net, &error);
+		if ((stcb == NULL) && (control != NULL) && (port > 0)) {
+			stcb = sctp_findassociation_cmsgs(&t_inp, port, control, &net, &error);
 		}
-#endif
 		if (stcb == NULL) {
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
