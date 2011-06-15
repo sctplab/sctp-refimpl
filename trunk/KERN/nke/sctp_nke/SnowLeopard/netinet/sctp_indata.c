@@ -242,6 +242,8 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 			use_extended = 0;
 			len += CMSG_SPACE(sizeof(struct sctp_sndrcvinfo));
 		}
+	} else {
+		use_extended = 0;
 	}
 
 	ret = sctp_get_mbuf_for_msg(len, 0, M_DONTWAIT, 1, MT_DATA);
