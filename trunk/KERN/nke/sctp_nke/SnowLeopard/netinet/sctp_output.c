@@ -3568,7 +3568,9 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 #endif
 				sin.sin_port = stcb->rport;
 				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct in_addr), (caddr_t)&sin.sin_addr);
-				if (sin.sin_addr.s_addr == 0) {
+				if ((sin.sin_addr.s_addr == INADDR_ANY) ||
+				    (sin.sin_addr.s_addr == INADDR_BROADCAST) ||
+				    IN_MULTICAST(ntohl(sin.sin_addr.s_addr))) {
 					*error = EINVAL;
 					return (-1);
 				}
@@ -3591,14 +3593,17 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 #endif
 				sin6.sin6_port = stcb->rport;
 				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct in6_addr), (caddr_t)&sin6.sin6_addr);
-				if (IN6_IS_ADDR_UNSPECIFIED(&sin6.sin6_addr)) {
+				if (IN6_IS_ADDR_UNSPECIFIED(&sin6.sin6_addr) ||
+				    IN6_IS_ADDR_MULTICAST(&sin6.sin6_addr)) {
 					*error = EINVAL;
 					return (-1);
 				}
 #ifdef INET
 				if (IN6_IS_ADDR_V4MAPPED(&sin6.sin6_addr)) {
 					in6_sin6_2_sin(&sin, &sin6);
-					if (sin.sin_addr.s_addr == 0) {
+					if ((sin.sin_addr.s_addr == INADDR_ANY) ||
+					    (sin.sin_addr.s_addr == INADDR_BROADCAST) ||
+					    IN_MULTICAST(ntohl(sin.sin_addr.s_addr))) {
 						*error = EINVAL;
 						return (-1);
 					}
