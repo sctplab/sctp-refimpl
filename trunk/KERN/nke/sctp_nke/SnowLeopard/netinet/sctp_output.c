@@ -3587,10 +3587,19 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 #endif
 				sin6.sin6_port = stcb->rport;
 				m_copydata(control, at + CMSG_ALIGN(sizeof(struct cmsghdr)), sizeof(struct in6_addr), (caddr_t)&sin6.sin6_addr);
-				if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin6, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
-					*error = ENOBUFS;
-					return (1);
-				}
+#ifdef INET
+				if (IN6_IS_ADDR_V4MAPPED(&sin6.sin6_addr)) {
+					in6_sin6_2_sin(&sin, &sin6);
+					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+						*error = ENOBUFS;
+						return (1);
+					}
+				} else
+#endif
+					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin6, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+						*error = ENOBUFS;
+						return (1);
+					}
 				break;
 #endif
 			default:
@@ -13239,12 +13248,6 @@ sctp_lower_sosend(struct socket *so,
 			hold_tcblock = 1;
 		}
 	}
-#if 0
-	if (stcb == NULL) {
-		stcb = sctp_findassociation_cmsgs(&t_inp, &first_addr, &net);
-		/* What about error causes? */
-	}
-#endif
 	if ((stcb == NULL) && (addr)) {
 		/* Possible implicit send? */
 		SCTP_ASOC_CREATE_LOCK(inp);
@@ -13268,12 +13271,20 @@ sctp_lower_sosend(struct socket *so,
 		SCTP_INP_WUNLOCK(inp);
 		/* With the lock applied look again */
 		stcb = sctp_findassociation_ep_addr(&t_inp, addr, &net, NULL, NULL);
+#if 0
+		if ((stcb == NULL) && (control != NULL) {
+			stcb = sctp_findassociation_cmsgs(&t_inp, control, &net, &error);
+		}
+#endif
 		if (stcb == NULL) {
 			SCTP_INP_WLOCK(inp);
 			SCTP_INP_DECR_REF(inp);
 			SCTP_INP_WUNLOCK(inp);
 		} else {
 			hold_tcblock = 1;
+		}
+		if (error) {
+			goto out_unlocked;
 		}
 		if (t_inp != inp) {
 			SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, ENOTCONN);
