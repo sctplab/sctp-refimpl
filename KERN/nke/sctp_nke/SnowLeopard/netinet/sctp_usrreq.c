@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 223162 2011-06-16 21:12:36Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -3403,6 +3403,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		if (stcb) {
 			info->snd_sid = stcb->asoc.def_send.sinfo_stream;
 			info->snd_flags = stcb->asoc.def_send.sinfo_flags;
+			info->snd_flags &= 0xfff0;
 			info->snd_ppid = stcb->asoc.def_send.sinfo_ppid;
 			info->snd_context = stcb->asoc.def_send.sinfo_context;
 			SCTP_TCB_UNLOCK(stcb);
@@ -3411,6 +3412,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				SCTP_INP_RLOCK(inp);
 				info->snd_sid = inp->def_send.sinfo_stream;
 				info->snd_flags = inp->def_send.sinfo_flags;
+				info->snd_flags &= 0xfff0;
 				info->snd_ppid = inp->def_send.sinfo_ppid;
 				info->snd_context = inp->def_send.sinfo_context;
 				SCTP_INP_RUNLOCK(inp);
@@ -3421,6 +3423,33 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		if (error == 0) {
 			*optsize = sizeof(struct sctp_sndinfo);
+		}
+		break;
+	}
+	case SCTP_DEFAULT_PRINFO:
+	{
+		struct sctp_default_prinfo *info;
+
+		SCTP_CHECK_AND_CAST(info, optval, struct sctp_default_prinfo, *optsize);
+		SCTP_FIND_STCB(inp, stcb, info->pr_assoc_id);
+
+		if (stcb) {
+			info->pr_policy = PR_SCTP_POLICY(stcb->asoc.def_send.sinfo_flags);
+			info->pr_value = stcb->asoc.def_send.sinfo_timetolive;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			if (info->pr_assoc_id == SCTP_FUTURE_ASSOC) {
+				SCTP_INP_RLOCK(inp);
+				info->pr_policy = PR_SCTP_POLICY(inp->def_send.sinfo_flags);
+				info->pr_value = inp->def_send.sinfo_timetolive;
+				SCTP_INP_RUNLOCK(inp);
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+			}
+		}
+		if (error == 0) {
+			*optsize = sizeof(struct sctp_default_prinfo);
 		}
 		break;
 	}
@@ -5571,6 +5600,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	case SCTP_DEFAULT_SNDINFO:
 	{
 		struct sctp_sndinfo *info;
+		uint16_t policy;
 
 		SCTP_CHECK_AND_CAST(info, optval, struct sctp_sndinfo, optsize);
 		SCTP_FIND_STCB(inp, stcb, info->snd_assoc_id);
@@ -5578,7 +5608,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		if (stcb) {
 			if (info->snd_sid < stcb->asoc.streamoutcnt) {
 				stcb->asoc.def_send.sinfo_stream = info->snd_sid;
+				policy = PR_SCTP_POLICY(stcb->asoc.def_send.sinfo_flags);
 				stcb->asoc.def_send.sinfo_flags = info->snd_flags;
+				stcb->asoc.def_send.sinfo_flags |= policy;
 				stcb->asoc.def_send.sinfo_ppid = info->snd_ppid;
 				stcb->asoc.def_send.sinfo_context = info->snd_context;
 			} else {
@@ -5591,7 +5623,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			    (info->snd_assoc_id == SCTP_ALL_ASSOC)) {
 				SCTP_INP_WLOCK(inp);
 				inp->def_send.sinfo_stream = info->snd_sid;
+				policy = PR_SCTP_POLICY(inp->def_send.sinfo_flags);
 				inp->def_send.sinfo_flags = info->snd_flags;
+				inp->def_send.sinfo_flags |= policy;
 				inp->def_send.sinfo_ppid = info->snd_ppid;
 				inp->def_send.sinfo_context = info->snd_context;
 				SCTP_INP_WUNLOCK(inp);
@@ -5603,10 +5637,50 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					SCTP_TCB_LOCK(stcb);
 					if (info->snd_sid < stcb->asoc.streamoutcnt) {
 						stcb->asoc.def_send.sinfo_stream = info->snd_sid;
+						policy = PR_SCTP_POLICY(stcb->asoc.def_send.sinfo_flags);
 						stcb->asoc.def_send.sinfo_flags = info->snd_flags;
+						stcb->asoc.def_send.sinfo_flags |= policy;
 						stcb->asoc.def_send.sinfo_ppid = info->snd_ppid;
 						stcb->asoc.def_send.sinfo_context = info->snd_context;
 					}
+					SCTP_TCB_UNLOCK(stcb);
+				}
+				SCTP_INP_RUNLOCK(inp);
+			}
+		}
+		break;
+	}
+	case SCTP_DEFAULT_PRINFO:
+	{
+		struct sctp_default_prinfo *info;
+
+		SCTP_CHECK_AND_CAST(info, optval, struct sctp_default_prinfo, optsize);
+		SCTP_FIND_STCB(inp, stcb, info->pr_assoc_id);
+
+		if (PR_SCTP_INVALID_POLICY(info->pr_policy)) {
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			error = EINVAL;
+			break;
+		}
+		if (stcb) {
+			stcb->asoc.def_send.sinfo_flags &= 0xfff0;
+			stcb->asoc.def_send.sinfo_flags |= info->pr_policy;
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			if ((info->pr_assoc_id == SCTP_FUTURE_ASSOC) ||
+			    (info->pr_assoc_id == SCTP_ALL_ASSOC)) {
+				SCTP_INP_WLOCK(inp);
+				inp->def_send.sinfo_flags &= 0xfff0;
+				inp->def_send.sinfo_flags |= info->pr_policy;
+				SCTP_INP_WUNLOCK(inp);
+			}
+			if ((info->pr_assoc_id == SCTP_CURRENT_ASSOC) ||
+			    (info->pr_assoc_id == SCTP_ALL_ASSOC)) {
+				SCTP_INP_RLOCK(inp);
+				LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
+					SCTP_TCB_LOCK(stcb);
+					stcb->asoc.def_send.sinfo_flags &= 0xfff0;
+					stcb->asoc.def_send.sinfo_flags |= info->pr_policy;
 					SCTP_TCB_UNLOCK(stcb);
 				}
 				SCTP_INP_RUNLOCK(inp);
