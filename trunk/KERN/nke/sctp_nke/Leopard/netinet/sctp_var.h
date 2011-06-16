@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_var.h 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_VAR_H_
@@ -54,6 +54,30 @@ extern struct pr_usrreqs sctp_usrreqs;
 #define sctp_is_feature_on(inp, feature) ((inp->sctp_features & feature) == feature)
 #define sctp_is_feature_off(inp, feature) ((inp->sctp_features & feature) == 0)
 
+#define sctp_stcb_feature_on(inp, stcb, feature) {\
+	if (stcb) { \
+		stcb->asoc.sctp_features |= feature; \
+	} else { \
+		inp->sctp_features |= feature; \
+	} \
+}
+#define sctp_stcb_feature_off(inp, stcb, feature) {\
+	if (stcb) { \
+		stcb->asoc.sctp_features &= ~feature; \
+	} else { \
+		inp->sctp_features &= ~feature; \
+	} \
+}
+#define sctp_stcb_is_feature_on(inp, stcb, feature) \
+	(((stcb != NULL) && \
+	  ((stcb->asoc.sctp_features & feature) == feature)) || \
+	 ((stcb == NULL) && \
+	  ((inp->sctp_features & feature) == feature)))
+#define sctp_stcb_is_feature_off(inp, stcb, feature) \
+	(((stcb != NULL) && \
+	  ((stcb->asoc.sctp_features & feature) == 0)) || \
+	 ((stcb == NULL) && \
+	  ((inp->sctp_features & feature) == 0)))
 
 /* managing mobility_feature in inpcb (by micchie) */
 #define sctp_mobility_feature_on(inp, feature)  (inp->sctp_mobility_features |= feature)

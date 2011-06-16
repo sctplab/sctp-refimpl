@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 222459 2011-05-29 18:41:06Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -931,6 +931,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_nr_sack_on_off = (uint8_t)SCTP_BASE_SYSCTL(sctp_nr_sack_on_off);
 	asoc->sctp_cmt_pf = (uint8_t)SCTP_BASE_SYSCTL(sctp_cmt_pf);
 	asoc->sctp_frag_point = m->sctp_frag_point;
+	asoc->sctp_features = m->sctp_features;
 #ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
@@ -2801,7 +2802,7 @@ sctp_notify_assoc_change(uint32_t event, struct sctp_tcb *stcb,
 #endif
 	}
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVASSOCEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -2873,7 +2874,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	struct sctp_paddr_change *spc;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVPADDREVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVPADDREVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -2965,7 +2966,7 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	int length;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3050,7 +3051,7 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	int length;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3121,7 +3122,7 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb,
 	struct sctp_adaptation_event *sai;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_ADAPTATIONEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_ADAPTATIONEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3173,7 +3174,7 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	struct sockbuf *sb;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3287,7 +3288,7 @@ sctp_notify_shutdown_event(struct sctp_tcb *stcb)
 		SCTP_SOCKET_UNLOCK(so, 1);
 #endif
 	}
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSHUTDOWNEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3335,7 +3336,7 @@ sctp_notify_sender_dry_event(struct sctp_tcb *stcb,
 	struct sctp_sender_dry_event *event;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_DRYEVNT)) {
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_DRYEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -5731,7 +5732,8 @@ sctp_sorecvmsg(struct socket *so,
 	if ((sinfo) && filling_sinfo) {
 		memcpy(sinfo, control, sizeof(struct sctp_nonpad_sndrcvinfo));
 		nxt = TAILQ_NEXT(control, next);
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO)) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO) ||
+		    sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVNXTINFO)) {
 			struct sctp_extrcvinfo *s_extra;
 			s_extra = (struct sctp_extrcvinfo *)sinfo;
 			if ((nxt) &&
@@ -6316,7 +6318,8 @@ sctp_sorecvmsg(struct socket *so,
 	if (((out_flags & MSG_EOR) == 0) &&
 	    ((in_flags & MSG_PEEK) == 0) &&
 	    (sinfo) &&
-	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO))) {
+	    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXT_RCVINFO) ||
+	     sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVNXTINFO))) {
 		struct sctp_extrcvinfo *s_extra;
 		s_extra = (struct sctp_extrcvinfo *)sinfo;
 		s_extra->sreinfo_next_flags = SCTP_NO_NEXT_MSG;
@@ -6485,8 +6488,9 @@ sctp_soreceive(	struct socket *so,
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 		return (EINVAL);
 	}
-	if ((sctp_is_feature_off(inp,
-	    SCTP_PCB_FLAGS_RECVDATAIOEVNT)) ||
+	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT) &&
+	     sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVRCVINFO) &&
+	     sctp_is_feature_off(inp, SCTP_PCB_FLAGS_RECVNXTINFO)) ||
 	    (controlp == NULL)) {
 		/* user does not want the sndrcv ctl */
 		filling_sinfo = 0;
@@ -6506,7 +6510,7 @@ sctp_soreceive(	struct socket *so,
 	SCTP_SOCKET_LOCK(so, 1);
 #endif
 	error = sctp_sorecvmsg(so, uio, mp0, from, fromlen, flagsp,
-	    (struct sctp_sndrcvinfo *)&sinfo,filling_sinfo);
+	    (struct sctp_sndrcvinfo *)&sinfo, filling_sinfo);
 	if ((controlp) && (filling_sinfo)) {
 		/* copy back the sinfo in a CMSG format */
 		if (filling_sinfo)

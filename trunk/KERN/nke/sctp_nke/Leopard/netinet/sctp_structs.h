@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 219397 2011-03-08 11:58:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -675,6 +675,8 @@ struct sctp_nonpad_sndrcvinfo {
 	uint32_t sinfo_tsn;
 	uint32_t sinfo_cumtsn;
 	sctp_assoc_t sinfo_assoc_id;
+	uint16_t sinfo_keynumber;
+	uint16_t sinfo_keynumber_valid;
 };
 
 /*
@@ -1227,6 +1229,7 @@ struct sctp_association {
 	/* JRS 5/21/07 - CMT PF variable */
 	uint8_t sctp_cmt_pf;
 	uint8_t use_precise_time;
+	uint32_t sctp_features;
 	/*
 	 * The mapping array is used to track out of order sequences above
 	 * last_acked_seq. 0 indicates packet missing 1 indicates packet

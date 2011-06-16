@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 221512 2011-05-05 19:49:27Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -1187,6 +1187,9 @@ sctp_sendv(int sd,
 			msg.msg_namelen = addr_len;
 		}
 		addr = (struct sockaddr *)((caddr_t)addr + addr_len);
+	}
+	if (msg.msg_controllen == 0) {
+		msg.msg_control = NULL;
 	}
 	if (msg.msg_controllen == 0) {
 		msg.msg_control = NULL;
