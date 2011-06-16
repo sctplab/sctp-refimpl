@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1874,7 +1874,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 		return;
 	}
 
-	if (sctp_is_feature_off(stcb->sctp_ep, SCTP_PCB_FLAGS_AUTHEVNT))
+	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_AUTHEVNT))
 		/* event not enabled */
 		return;
 

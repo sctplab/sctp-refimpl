@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 223132 2011-06-15 23:50:27Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4614,12 +4614,12 @@ sctp_aloc_a_assoc_id(struct sctp_inpcb *inp, struct sctp_tcb *stcb)
 		SCTP_INP_WUNLOCK(inp);
 		return (0);
 	}
-	/* We don't allow assoc id to be 0, this
-	 * is needed otherwise if the id were to wrap
-	 * we would have issues with some socket options.
+	/*
+	 * We don't allow assoc id to be one of SCTP_FUTURE_ASSOC,
+	 * SCTP_CURRENT_ASSOC and SCTP_ALL_ASSOC.
 	 */
-	if (inp->sctp_associd_counter == 0) {
-		inp->sctp_associd_counter++;
+	if (inp->sctp_associd_counter <= SCTP_ALL_ASSOC) {
+		inp->sctp_associd_counter = SCTP_ALL_ASSOC + 1;
 	}
 	id = inp->sctp_associd_counter;
 	inp->sctp_associd_counter++;
@@ -5233,7 +5233,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 					/* Held for PD-API clear that. */
 					sq->pdapi_aborted = 1;
 					sq->held_length = 0;
-					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_PDAPIEVNT) && (so != NULL)) {
+					if (sctp_stcb_is_feature_on(inp, stcb, SCTP_PCB_FLAGS_PDAPIEVNT) && (so != NULL)) {
 						/*
 						 * Need to add a PD-API aborted indication.
 						 * Setting the control_pdapi assures that it will
