@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 223152 2011-06-16 15:36:09Z tuexen $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -944,6 +944,12 @@ ssize_t sctp_recvv(int sd,
 	struct sctp_rcvinfo *rcvinfo;
 	struct sctp_nxtinfo *nxtinfo;
 
+	if (((info != NULL) && (infolen == NULL)) |
+	    ((info == NULL) && (infolen != NULL) && (*infolen != 0)) ||
+	    ((info != NULL) && (infotype == NULL))) {
+		errno = EINVAL;
+		return (-1);
+	}
 	if (infotype) {
 		*infotype = SCTP_RECVV_NOINFO;
 	}
@@ -1019,16 +1025,22 @@ sctp_sendv(int sd,
 {
 	ssize_t ret;
 	int i;
-	size_t addr_len;
-	struct sctp_sendv_spa *spa_info;
+	socklen_t addr_len;
 	struct msghdr msg;
+	in_port_t port;
+	struct sctp_sendv_spa *spa_info;
 	struct cmsghdr *cmsg;
 	char *cmsgbuf;
 	struct sockaddr *addr;
 	struct sockaddr_in *addr_in;
 	struct sockaddr_in6 *addr_in6;
 
-	if ((addrcnt < 0) || (iovcnt < 0)) {
+	if ((addrcnt < 0) ||
+	    (iovcnt < 0) ||
+	    ((addr == NULL) && (addrcnt > 0)) ||
+	    ((addr != NULL) && (addrcnt == 0)) ||
+	    ((iov == NULL) && (iovcnt > 0)) ||
+	    ((iov != NULL) && (iovcnt == 0))) {
 		errno = EINVAL;
 		return (-1);
 	}
@@ -1044,8 +1056,15 @@ sctp_sendv(int sd,
 	msg.msg_controllen = 0;
 	cmsg = (struct cmsghdr *)cmsgbuf;
 	switch (infotype) {
+	case SCTP_SENDV_NOINFO:
+		if ((infolen != 0) || (info != NULL)) {
+			free(cmsgbuf);
+			errno = EINVAL;
+			return (-1);			
+		}
+		break;
 	case SCTP_SENDV_SNDINFO:
-		if (infolen < sizeof(struct sctp_sndinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_sndinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1058,7 +1077,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_sndinfo)));		
 		break;
 	case SCTP_SENDV_PRINFO:
-		if (infolen < sizeof(struct sctp_prinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_prinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1071,7 +1090,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_prinfo)));		
 		break;
 	case SCTP_SENDV_AUTHINFO:
-		if (infolen < sizeof(struct sctp_authinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_authinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1084,7 +1103,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_authinfo)));		
 		break;
 	case SCTP_SENDV_SPA:
-		if (infolen < sizeof(struct sctp_sendv_spa)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_sendv_spa))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1121,52 +1140,74 @@ sctp_sendv(int sd,
 		return (-1);
 	}
 	addr = addrs;
-	if (addrcnt == 1) {
-		msg.msg_name = addr;
+	msg.msg_name = NULL;
+	msg.msg_namelen = 0;
+
+	for (i = 0; i < addrcnt; i++) {
 		switch (addr->sa_family) {
 		case AF_INET:
-			msg.msg_namelen = sizeof(struct sockaddr_in);
+			addr_len = (socklen_t)sizeof(struct sockaddr_in);
+			addr_in = (struct sockaddr_in *)addr;
+			if (addr_in->sin_len != addr_len) {
+				free(cmsgbuf);
+				errno = EINVAL;
+				return (-1);
+			}
+			if (i == 0) {
+				port = addr_in->sin_port;
+			} else {
+				if (port == addr_in->sin_port) {
+					cmsg->cmsg_level = IPPROTO_SCTP;
+					cmsg->cmsg_type = SCTP_DSTADDRV4;
+					cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
+					memcpy(CMSG_DATA(cmsg), &addr_in->sin_addr, sizeof(struct in_addr));
+					msg.msg_controllen += CMSG_SPACE(sizeof(struct in_addr));
+					cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct in_addr)));
+				} else {
+					free(cmsgbuf);
+					errno = EINVAL;
+					return (-1);
+				}
+			}
 			break;
 		case AF_INET6:
-			msg.msg_namelen = sizeof(struct sockaddr_in6);
+			addr_len = (socklen_t)sizeof(struct sockaddr_in6);
+			addr_in6 = (struct sockaddr_in6 *)addr;
+			if (addr_in6->sin6_len != addr_len) {
+				free(cmsgbuf);
+				errno = EINVAL;
+				return (-1);
+			}
+			if (i == 0) {
+				port = addr_in6->sin6_port;
+			} else {
+				if (port == addr_in6->sin6_port) {
+					cmsg->cmsg_level = IPPROTO_SCTP;
+					cmsg->cmsg_type = SCTP_DSTADDRV6;
+					cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
+					memcpy(CMSG_DATA(cmsg), &addr_in6->sin6_addr, sizeof(struct in6_addr));
+					msg.msg_controllen += CMSG_SPACE(sizeof(struct in6_addr));
+					cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct in6_addr)));
+				} else {
+					free(cmsgbuf);
+					errno = EINVAL;
+					return (-1);
+				}
+			}
 			break;
 		default:
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);
 		}
-	} else {
-		msg.msg_name = NULL;
-		msg.msg_namelen = 0;
-		for (i = 0; i < addrcnt; i++) {
-			switch (addr->sa_family) {
-			case AF_INET:
-				addr_len = sizeof(struct sockaddr_in);
-				addr_in = (struct sockaddr_in *)addr;
-				cmsg->cmsg_level = IPPROTO_SCTP;
-				cmsg->cmsg_type = SCTP_DSTADDRV4;
-				cmsg->cmsg_len = CMSG_LEN(sizeof(struct in_addr));
-				memcpy(CMSG_DATA(cmsg), &addr_in->sin_addr, sizeof(struct in_addr));
-				msg.msg_controllen += CMSG_SPACE(sizeof(struct in_addr));
-				cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct in_addr)));		
-				break;
-			case AF_INET6:
-				addr_len = sizeof(struct sockaddr_in6);
-				addr_in6 = (struct sockaddr_in6 *)addr;
-				cmsg->cmsg_level = IPPROTO_SCTP;
-				cmsg->cmsg_type = SCTP_DSTADDRV6;
-				cmsg->cmsg_len = CMSG_LEN(sizeof(struct in6_addr));
-				memcpy(CMSG_DATA(cmsg), &addr_in6->sin6_addr, sizeof(struct in6_addr));
-				msg.msg_controllen += CMSG_SPACE(sizeof(struct in6_addr));
-				cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct in6_addr)));		
-				break;
-			default:
-				free(cmsgbuf);
-				errno = EINVAL;
-				return (-1);
-			}
-			addr = (struct sockaddr *)((caddr_t)addr + addr_len);
+		if (i == 0) {
+			msg.msg_name = addr;
+			msg.msg_namelen = addr_len;
 		}
+		addr = (struct sockaddr *)((caddr_t)addr + addr_len);
+	}
+	if (msg.msg_controllen == 0) {
+		msg.msg_control = NULL;
 	}
 	if (msg.msg_controllen == 0) {
 		msg.msg_control = NULL;
