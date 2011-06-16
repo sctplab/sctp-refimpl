@@ -33,7 +33,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223152 2011-06-16 15:36:09Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -231,6 +231,7 @@ struct sctp_recvv_rn {
 #define SCTP_RECVV_NXTINFO 2
 #define SCTP_RECVV_RN      3
 
+#define SCTP_SENDV_NOINFO   0
 #define SCTP_SENDV_SNDINFO  1
 #define SCTP_SENDV_PRINFO   2
 #define SCTP_SENDV_AUTHINFO 3

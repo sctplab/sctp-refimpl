@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 223152 2011-06-16 15:36:09Z tuexen $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -944,6 +944,12 @@ ssize_t sctp_recvv(int sd,
 	struct sctp_rcvinfo *rcvinfo;
 	struct sctp_nxtinfo *nxtinfo;
 
+	if (((info != NULL) && (infolen == NULL)) |
+	    ((info == NULL) && (infolen != NULL) && (*infolen != 0)) ||
+	    ((info != NULL) && (infotype == NULL))) {
+		errno = EINVAL;
+		return (-1);
+	}
 	if (infotype) {
 		*infotype = SCTP_RECVV_NOINFO;
 	}
@@ -1029,7 +1035,12 @@ sctp_sendv(int sd,
 	struct sockaddr_in *addr_in;
 	struct sockaddr_in6 *addr_in6;
 
-	if ((addrcnt < 0) || (iovcnt < 0)) {
+	if ((addrcnt < 0) ||
+	    (iovcnt < 0) ||
+	    ((addr == NULL) && (addrcnt > 0)) ||
+	    ((addr != NULL) && (addrcnt == 0)) ||
+	    ((iov == NULL) && (iovcnt > 0)) ||
+	    ((iov != NULL) && (iovcnt == 0))) {
 		errno = EINVAL;
 		return (-1);
 	}
@@ -1045,8 +1056,15 @@ sctp_sendv(int sd,
 	msg.msg_controllen = 0;
 	cmsg = (struct cmsghdr *)cmsgbuf;
 	switch (infotype) {
+	case SCTP_SENDV_NOINFO:
+		if ((infolen != 0) || (info != NULL)) {
+			free(cmsgbuf);
+			errno = EINVAL;
+			return (-1);			
+		}
+		break;
 	case SCTP_SENDV_SNDINFO:
-		if (infolen < sizeof(struct sctp_sndinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_sndinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1059,7 +1077,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_sndinfo)));		
 		break;
 	case SCTP_SENDV_PRINFO:
-		if (infolen < sizeof(struct sctp_prinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_prinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1072,7 +1090,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_prinfo)));		
 		break;
 	case SCTP_SENDV_AUTHINFO:
-		if (infolen < sizeof(struct sctp_authinfo)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_authinfo))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
@@ -1085,7 +1103,7 @@ sctp_sendv(int sd,
 		cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_authinfo)));		
 		break;
 	case SCTP_SENDV_SPA:
-		if (infolen < sizeof(struct sctp_sendv_spa)) {
+		if ((info == NULL) || (infolen < sizeof(struct sctp_sendv_spa))) {
 			free(cmsgbuf);
 			errno = EINVAL;
 			return (-1);			
