@@ -287,7 +287,7 @@ struct sctp_snd_all_completes {
 #define SCTP_PR_SCTP_RTX  0x0003 /* Number of retransmissions based PR-SCTP */
 
 #define PR_SCTP_POLICY(x)         ((x) & 0x0f)
-#define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != 0)
+#define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != SCTP_PR_SCTP_NONE)
 #define PR_SCTP_TTL_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_TTL)
 #define PR_SCTP_BUF_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_BUF)
 #define PR_SCTP_RTX_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_RTX)
