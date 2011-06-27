@@ -33,7 +33,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223162 2011-06-16 21:12:36Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223613 2011-06-27 22:03:33Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -281,12 +281,13 @@ struct sctp_snd_all_completes {
 /* for the endpoint */
 
 /* The lower byte is an enumeration of PR-SCTP policies */
-#define SCTP_PR_SCTP_TTL  0x0001/* Time based PR-SCTP */
-#define SCTP_PR_SCTP_BUF  0x0002/* Buffer based PR-SCTP */
-#define SCTP_PR_SCTP_RTX  0x0003/* Number of retransmissions based PR-SCTP */
+#define SCTP_PR_SCTP_NONE 0x0000 /* Reliable transfer */
+#define SCTP_PR_SCTP_TTL  0x0001 /* Time based PR-SCTP */
+#define SCTP_PR_SCTP_BUF  0x0002 /* Buffer based PR-SCTP */
+#define SCTP_PR_SCTP_RTX  0x0003 /* Number of retransmissions based PR-SCTP */
 
 #define PR_SCTP_POLICY(x)         ((x) & 0x0f)
-#define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != 0)
+#define PR_SCTP_ENABLED(x)        (PR_SCTP_POLICY(x) != SCTP_PR_SCTP_NONE)
 #define PR_SCTP_TTL_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_TTL)
 #define PR_SCTP_BUF_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_BUF)
 #define PR_SCTP_RTX_ENABLED(x)    (PR_SCTP_POLICY(x) == SCTP_PR_SCTP_RTX)
