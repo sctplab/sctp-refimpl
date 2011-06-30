@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 223162 2011-06-16 21:12:36Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 223697 2011-06-30 16:56:55Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -4058,8 +4058,18 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		size_t size;
 
 		SCTP_CHECK_AND_CAST(sca, optval, struct sctp_authkey, optsize);
+		if (sca->sca_keylength == 0) {
+			size = optsize - sizeof(struct sctp_authkey);
+		} else {
+		        if (sca->sca_keylength + sizeof(struct sctp_authkey) <= optsize) {
+				size = sca->sca_keylength;
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+				break;
+			}
+		}
 		SCTP_FIND_STCB(inp, stcb, sca->sca_assoc_id);
-		size = optsize - sizeof(struct sctp_authkey);
 
 		if (stcb) {
 			shared_keys = &stcb->asoc.shared_keys;
