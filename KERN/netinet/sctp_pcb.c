@@ -2689,8 +2689,12 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 
 	so->so_pcb = (caddr_t)inp;
 
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 	if ((SCTP_SO_TYPE(so) == SOCK_DGRAM) ||
 	    (SCTP_SO_TYPE(so) == SOCK_SEQPACKET)) {
+#else
+	if (SCTP_SO_TYPE(so) == SOCK_SEQPACKET) {
+#endif
 		/* UDP style socket */
 		inp->sctp_flags = (SCTP_PCB_FLAGS_UDPTYPE |
 		    SCTP_PCB_FLAGS_UNBOUND);
@@ -4074,15 +4078,13 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 		ip_pcb->inp_route.ro_rt = 0;
 	}
 #endif
+#if defined(__FreeBSD__) && __FreeBSD_version < 900000
 #ifdef INET
 	if (ip_pcb->inp_moptions) {
-#if defined(__FreeBSD__) &&  __FreeBSD_version > 602000
 		inp_freemoptions(ip_pcb->inp_moptions);
-#else
-		ip_freemoptions(ip_pcb->inp_moptions);
-#endif
 		ip_pcb->inp_moptions = 0;
 	}
+#endif
 #endif
 #endif
 
