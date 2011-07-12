@@ -1624,7 +1624,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (SCTP_TSN_GT(tsn, asoc->highest_tsn_inside_nr_map)) {
 			asoc->highest_tsn_inside_nr_map = tsn;
 		}
-		if (tsn == (asoc->cumulative_tsn+1)) {
+		if (tsn == (asoc->cumulative_tsn + 1)) {
 			/* Update cum-ack */
 			asoc->cumulative_tsn = tsn;
 		}
@@ -1807,7 +1807,7 @@ failed_express_del:
 				end = 1;
 			}
 			cumack = asoc->cumulative_tsn;
-			if ((cumack+1) == tsn)
+			if ((cumack + 1) == tsn)
 				cumack = tsn;
 
 			if (sctp_append_to_readq(stcb->sctp_ep, stcb, control, dmbuf, end,
