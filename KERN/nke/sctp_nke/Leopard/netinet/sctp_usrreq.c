@@ -98,13 +98,17 @@ sctp_init(void)
 	 * Allow a user to take no more than 1/2 the number of clusters or
 	 * the SB_MAX whichever is smaller for the send window.
 	 */
-#if defined (__APPLE__)
+#if defined(__APPLE__)
 	sb_max_adj = (u_long)((u_quad_t) (sb_max) * MCLBYTES / (MSIZE + MCLBYTES));
 #else
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 #endif
+#if defined(__APPLE__)
+	SCTP_BASE_SYSCTL(sctp_sendspace) = sb_max_adj;
+#else
 	SCTP_BASE_SYSCTL(sctp_sendspace) = min(sb_max_adj,
 	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
+#endif
 	/*
 	 * Now for the recv window, should we take the same amount? or
 	 * should I do 1/2 the SB_MAX instead in the SB_MAX min above. For
