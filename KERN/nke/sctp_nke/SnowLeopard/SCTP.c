@@ -160,11 +160,9 @@ extern struct protosw *ip6_protox[];
 #endif
 extern struct sctp_epinfo sctppcinfo;
 
-struct protosw sctp4_dgram;
 struct protosw sctp4_seqpacket;
 struct protosw sctp4_stream;
 #ifdef INET6
-struct protosw sctp6_dgram;
 struct protosw sctp6_seqpacket;
 struct protosw sctp6_stream;
 #endif
@@ -195,33 +193,31 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	old_pr6  = ip6_protox[IPPROTO_SCTP];
 #endif
 
-	bzero(&sctp4_dgram,     sizeof(struct protosw));
 	bzero(&sctp4_seqpacket, sizeof(struct protosw));
 	bzero(&sctp4_stream,    sizeof(struct protosw));
 #ifdef INET6
-	bzero(&sctp6_dgram,     sizeof(struct protosw));
 	bzero(&sctp6_seqpacket, sizeof(struct protosw));
 	bzero(&sctp6_stream,    sizeof(struct protosw));
 #endif
 
-	sctp4_dgram.pr_type          = SOCK_SEQPACKET;
-	sctp4_dgram.pr_domain        = &inetdomain;
-	sctp4_dgram.pr_protocol      = IPPROTO_SCTP;
-	sctp4_dgram.pr_flags         = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
-	sctp4_dgram.pr_input         = sctp_input;
-	sctp4_dgram.pr_output        = NULL;
-	sctp4_dgram.pr_ctlinput      = sctp_ctlinput;
-	sctp4_dgram.pr_ctloutput     = sctp_ctloutput;
-	sctp4_dgram.pr_ousrreq       = NULL;
-	sctp4_dgram.pr_init          = sctp_init;
-	sctp4_dgram.pr_fasttimo      = NULL;
-	sctp4_dgram.pr_slowtimo      = sctp_slowtimo;
-	sctp4_dgram.pr_drain         = sctp_drain;
-	sctp4_dgram.pr_sysctl        = NULL;
-	sctp4_dgram.pr_usrreqs       = &sctp_usrreqs;
-	sctp4_dgram.pr_lock          = sctp_lock;
-	sctp4_dgram.pr_unlock        = sctp_unlock;
-	sctp4_dgram.pr_getlock       = sctp_getlock;
+	sctp4_seqpacket.pr_type      = SOCK_SEQPACKET;
+	sctp4_seqpacket.pr_domain    = &inetdomain;
+	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
+	sctp4_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
+	sctp4_seqpacket.pr_input     = sctp_input;
+	sctp4_seqpacket.pr_output    = NULL;
+	sctp4_seqpacket.pr_ctlinput  = sctp_ctlinput;
+	sctp4_seqpacket.pr_ctloutput = sctp_ctloutput;
+	sctp4_seqpacket.pr_ousrreq   = NULL;
+	sctp4_seqpacket.pr_init      = sctp_init;
+	sctp4_seqpacket.pr_fasttimo  = NULL;
+	sctp4_seqpacket.pr_slowtimo  = sctp_slowtimo;
+	sctp4_seqpacket.pr_drain     = sctp_drain;
+	sctp4_seqpacket.pr_sysctl    = NULL;
+	sctp4_seqpacket.pr_usrreqs   = &sctp_usrreqs;
+	sctp4_seqpacket.pr_lock      = sctp_lock;
+	sctp4_seqpacket.pr_unlock    = sctp_unlock;
+	sctp4_seqpacket.pr_getlock   = sctp_getlock;
 
 	sctp4_stream.pr_type         = SOCK_STREAM;
 	sctp4_stream.pr_domain       = &inetdomain;
@@ -291,11 +287,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	lck_mtx_lock(inet6domain.dom_mtx);
 #endif
 
-	err  = net_add_proto(&sctp4_dgram,     &inetdomain);
-	err |= net_add_proto(&sctp4_seqpacket, &inetdomain);
+	err  = net_add_proto(&sctp4_seqpacket, &inetdomain);
 	err |= net_add_proto(&sctp4_stream,    &inetdomain);
 #ifdef INET6
-	err |= net_add_proto(&sctp6_dgram,     &inet6domain);
 	err |= net_add_proto(&sctp6_seqpacket, &inet6domain);
 	err |= net_add_proto(&sctp6_stream,    &inet6domain);
 #endif
@@ -308,9 +302,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 		return KERN_FAILURE;
 	}
 
-	ip_protox[IPPROTO_SCTP]  = &sctp4_dgram;
+	ip_protox[IPPROTO_SCTP]  = &sctp4_seqpacket;
 #ifdef INET6
-	ip6_protox[IPPROTO_SCTP] = &sctp6_dgram;
+	ip6_protox[IPPROTO_SCTP] = &sctp6_seqpacket;
 #endif
 
 #ifdef INET6
@@ -547,11 +541,9 @@ SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	ip6_protox[IPPROTO_SCTP] = old_pr6;
 #endif
 
-	err  = net_del_proto(sctp4_dgram.pr_type,     sctp4_dgram.pr_protocol,     &inetdomain);
-	err |= net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, &inetdomain);
+	err  = net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, &inetdomain);
 	err |= net_del_proto(sctp4_stream.pr_type,    sctp4_stream.pr_protocol,    &inetdomain);
 #ifdef INET6
-	err |= net_del_proto(sctp6_dgram.pr_type,     sctp6_dgram.pr_protocol,     &inet6domain);
 	err |= net_del_proto(sctp6_seqpacket.pr_type, sctp6_seqpacket.pr_protocol, &inet6domain);
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
 #endif
