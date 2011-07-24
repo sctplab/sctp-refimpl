@@ -219,7 +219,7 @@ struct sctp_net_route {
 	void *ro_lle;
 #endif
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	uint32_t ro_flags;
 #endif
 #endif
