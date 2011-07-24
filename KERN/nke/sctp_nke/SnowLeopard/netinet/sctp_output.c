@@ -71,6 +71,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 223132 2011-06-15 23:50:27Z t
 #define APPLE_FILE_NO 3
 #endif
 
+#if defined(APPLE_LION)
+#define SCTP_MAX_LINKHDR 16
+#endif
 
 #define SCTP_MAX_GAPS_INARRAY 4
 struct sack_track {
@@ -4345,7 +4348,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 		/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL, NULL) != 0)
+#else
 		if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
+#endif
 #elif defined(SCTP_KAME)
 		if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
 #else
@@ -4407,7 +4414,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 				/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+				if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL, NULL) != 0)
+#else
 				if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
+#endif
 #elif defined(SCTP_KAME)
 				if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
 #else
@@ -4448,7 +4459,11 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			sin6 = (struct sockaddr_in6 *)&ro->ro_dst;
 			/* KAME hack: embed scopeid */
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+			if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL, NULL) != 0)
+#else
 			if (in6_embedscope(&sin6->sin6_addr, sin6, NULL, NULL) != 0)
+#endif
 #elif defined(SCTP_KAME)
 			if (sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone)) != 0)
 #else
@@ -4681,7 +4696,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if !defined(__Panda__) && !defined(__Userspace__)
 			else if (ifp) {
 #if defined(__APPLE__)
-#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)
 #define ND_IFINFO(ifp) (&nd_ifinfo[ifp->if_index])
 #endif
 #elif defined(__Windows__)
@@ -5747,8 +5762,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif /* not SCTP_KAME */
 				stc.scope_id = sin6->sin6_scope_id;
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
+					       NULL, NULL);
+#else
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
+#endif
 #elif defined(SCTP_KAME)
 				sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone));
 #else
@@ -5792,8 +5812,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #endif /* not SCTP_KAME */
 				stc.scope_id = sin6->sin6_scope_id;
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
+					       NULL, NULL);
+#else
 				in6_embedscope(&sin6->sin6_addr, sin6, NULL,
 					       NULL);
+#endif
 #elif defined(SCTP_KAME)
 				sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone));
 #else
@@ -6931,7 +6956,7 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 	/* get length and mbuf chain */
 	if (uio) {
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		ca->sndlen = uio_resid(uio);
 #else
 		ca->sndlen = uio->uio_resid;
@@ -11007,11 +11032,19 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 	if (port) {
 		len += sizeof(struct udphdr);
 	}
+#if defined(APPLE_LION)
+	mout = sctp_get_mbuf_for_msg(len + SCTP_MAX_LINKHDR, 1, M_DONTWAIT, 1, MT_DATA);
+#else
 	mout = sctp_get_mbuf_for_msg(len + max_linkhdr, 1, M_DONTWAIT, 1, MT_DATA);
+#endif
 	if (mout == NULL) {
 		return;
 	}
+#if defined(APPLE_LION)
+	SCTP_BUF_RESV_UF(mout, SCTP_MAX_LINKHDR);
+#else
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
+#endif
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = NULL;
 #if defined(__FreeBSD__)
@@ -12150,14 +12183,22 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	if (port) {
 		len += sizeof(struct udphdr);
 	}
+#if defined(APPLE_LION)
+	mout = sctp_get_mbuf_for_msg(len + SCTP_MAX_LINKHDR, 1, M_DONTWAIT, 1, MT_DATA);
+#else
 	mout = sctp_get_mbuf_for_msg(len + max_linkhdr, 1, M_DONTWAIT, 1, MT_DATA);
+#endif
 	if (mout == NULL) {
 		if (err_cause) {
 			sctp_m_freem(err_cause);
 		}
 		return;
 	}
+#if defined(APPLE_LION)
+	SCTP_BUF_RESV_UF(mout, SCTP_MAX_LINKHDR);
+#else
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
+#endif
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = err_cause;
 #if defined(__FreeBSD__)
@@ -12452,14 +12493,22 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 	if (port) {
 		len += sizeof(struct udphdr);
 	}
+#if defined(APPLE_LION)
+	mout = sctp_get_mbuf_for_msg(len + SCTP_MAX_LINKHDR, 1, M_DONTWAIT, 1, MT_DATA);
+#else
 	mout = sctp_get_mbuf_for_msg(len + max_linkhdr, 1, M_DONTWAIT, 1, MT_DATA);
+#endif
 	if (mout == NULL) {
 		if (scm) {
 			sctp_m_freem(scm);
 		}
 		return;
 	}
+#if defined(APPLE_LION)
+	SCTP_BUF_RESV_UF(mout, SCTP_MAX_LINKHDR);
+#else
 	SCTP_BUF_RESV_UF(mout, max_linkhdr);
+#endif
 	SCTP_BUF_LEN(mout) = len;
 	SCTP_BUF_NEXT(mout) = scm;
 #if defined(__FreeBSD__)
@@ -12745,7 +12794,7 @@ sctp_copy_resume(struct sctp_stream_queue_pending *sp,
 	struct mbuf *m,*prev, *head;
 
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
         left = min(uio_resid(uio), max_send_len);
 #else
         left = min(uio->uio_resid, max_send_len);
@@ -12941,7 +12990,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 
 	sp->stream = srcv->sinfo_stream;
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	sp->length = min(uio_resid(uio), max_send_len);
 #else
 	sp->length = min(uio->uio_resid, max_send_len);
@@ -12950,7 +12999,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->length = min(uio->uio_resid, max_send_len);
 #endif
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	if ((sp->length == (uint32_t)uio_resid(uio)) &&
 #else
 	if ((sp->length == (uint32_t)uio->uio_resid) &&
@@ -13181,7 +13230,7 @@ sctp_lower_sosend(struct socket *so,
 	atomic_add_int(&inp->total_sends, 1);
 	if (uio) {
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		if (uio_resid(uio) < 0) {
 #else
 		if (uio->uio_resid < 0) {
@@ -13193,7 +13242,7 @@ sctp_lower_sosend(struct socket *so,
 			return (EINVAL);
 		}
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		sndlen = uio_resid(uio);
 #else
 		sndlen = uio->uio_resid;
@@ -13878,7 +13927,7 @@ skip_preblock:
 			}
 		}
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		while (uio_resid(uio) > 0) {
 #else
 		while (uio->uio_resid > 0) {
@@ -13897,7 +13946,7 @@ skip_preblock:
 			if ((max_len > SCTP_BASE_SYSCTL(sctp_add_more_threshold)) ||
 			    (max_len && (SCTP_SB_LIMIT_SND(so) < SCTP_BASE_SYSCTL(sctp_add_more_threshold))) ||
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 			    (uio_resid(uio) && (uio_resid(uio) <= (int)max_len))) {
 #else
 			    (uio->uio_resid && (uio->uio_resid <= (int)max_len))) {
@@ -13953,7 +14002,7 @@ skip_preblock:
 
 				/* Did we reach EOR? */
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 				if ((uio_resid(uio) == 0) &&
 #else
 				if ((uio->uio_resid == 0) &&
@@ -13971,7 +14020,7 @@ skip_preblock:
 				SCTP_TCB_SEND_UNLOCK(stcb);
 			}
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 			if (uio_resid(uio) == 0) {
 #else
 			if (uio->uio_resid == 0) {
@@ -14111,7 +14160,7 @@ skip_preblock:
 						      min(SCTP_BASE_SYSCTL(sctp_add_more_threshold), SCTP_SB_LIMIT_SND(so)))) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_BLK_LOGGING_ENABLE) {
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 					sctp_log_block(SCTP_BLOCK_LOG_INTO_BLK,
 						       so, asoc, uio_resid(uio));
 #else
@@ -14176,7 +14225,7 @@ skip_preblock:
 		}
 		SCTP_TCB_SEND_UNLOCK(stcb);
 #if defined(__APPLE__)
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		if (uio_resid(uio) == 0) {
 #else
 		if (uio->uio_resid == 0) {
