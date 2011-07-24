@@ -83,11 +83,19 @@ SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	struct in6_addr tmp_a, tmp_b;
 
 	tmp_a = a->sin6_addr;
+#if defined(APPLE_LION)
+	if (in6_embedscope(&tmp_a, a, NULL, NULL, NULL) != 0) {
+#else
 	if (in6_embedscope(&tmp_a, a, NULL, NULL) != 0) {
+#endif
 		return 0;
 	}
 	tmp_b = b->sin6_addr;
+#if defined(APPLE_LION)
+	if (in6_embedscope(&tmp_b, b, NULL, NULL, NULL) != 0) {
+#else
 	if (in6_embedscope(&tmp_b, b, NULL, NULL) != 0) {
+#endif
 		return 0;
 	}
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
@@ -2334,7 +2342,11 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #else
 		(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+		(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL, NULL);
+#else
 		(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
+#endif
 #else
 		(void)in6_embedscope(&from6->sin6_addr, from6);
 #endif
@@ -2392,7 +2404,11 @@ sctp_findassociation_addr(struct mbuf *m, int iphlen, int offset,
 #else
 		(void)in6_recoverscope(to6, &to6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL, NULL);
+#else
 		(void)in6_embedscope(&to6->sin6_addr, to6, NULL, NULL);
+#endif
 #else
 		(void)in6_embedscope(&to6->sin6_addr, to6);
 #endif
@@ -2763,6 +2779,10 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 
 #if defined(__APPLE__)
 	/* LOCK init's */
+
+#if defined(APPLE_LION)
+	lck_mtx_init(&inp->ip_inp.inp.inpcb_mtx, SCTP_BASE_INFO(mtx_grp), SCTP_BASE_INFO(mtx_attr));
+#else
 	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(SCTP_BASE_INFO(mtx_grp), SCTP_BASE_INFO(mtx_attr));
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%p\n", so);
@@ -2776,6 +2796,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		return (ENOMEM);
 	}
+#endif
 #endif
 	SCTP_INP_INFO_WLOCK();
 	SCTP_INP_LOCK_INIT(inp);
@@ -3136,8 +3157,13 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					return (EINVAL);
 				}
 #elif defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
 				if (in6_embedscope(&sin6->sin6_addr, sin6,
-						   ip_inp, NULL) != 0) {
+						   ip_inp, NULL, NULL) != 0) {
+#else
+				if (in6_embedscope(&sin6->sin6_addr, sin6,
+				                   ip_inp, NULL) != 0) {
+#endif
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 					return (EINVAL);
 				}
@@ -4420,8 +4446,13 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 
 		sin6 = (struct sockaddr_in6 *)&net->ro._l_addr;
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
 		(void)in6_embedscope(&sin6->sin6_addr, sin6,
-		    &stcb->sctp_ep->ip_inp.inp, NULL);
+		    &stcb->sctp_ep->ip_inp.inp, NULL, NULL);
+#else
+		(void)in6_embedscope(&sin6->sin6_addr, sin6,
+				     &stcb->sctp_ep->ip_inp.inp, NULL);
+#endif
 #elif defined(SCTP_KAME)
 		(void)sa6_embedscope(sin6, MODULE_GLOBAL(ip6_use_defzone));
 #else

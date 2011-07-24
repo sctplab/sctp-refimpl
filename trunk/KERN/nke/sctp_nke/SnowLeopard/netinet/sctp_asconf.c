@@ -910,7 +910,11 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 #else
 			(void)in6_recoverscope(from6, &from6->sin6_addr, NULL);
 #if defined(SCTP_BASE_FREEBSD) || defined(__APPLE__)
+#if defined(APPLE_LION)
+			(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL, NULL);
+#else
 			(void)in6_embedscope(&from6->sin6_addr, from6, NULL, NULL);
+#endif
 #else
 			(void)in6_embedscope(&from6->sin6_addr, from6);
 #endif
