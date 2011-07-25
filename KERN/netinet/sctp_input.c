@@ -2695,10 +2695,6 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			send_int_conf = 1;
 		}
 	}
-	if (*stcb) {
-		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, *inp_p,
-		    *stcb, NULL);
-	}
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (!had_a_existing_tcb ||
 		    (((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
