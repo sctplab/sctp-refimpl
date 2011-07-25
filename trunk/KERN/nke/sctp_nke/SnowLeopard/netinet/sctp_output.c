@@ -11264,120 +11264,22 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 }
 
-static struct sctp_nets *
-sctp_select_hb_destination(struct sctp_tcb *stcb, struct timeval *now)
-{
-	struct sctp_nets *net, *hnet;
-	int ms_goneby, highest_ms, state_overide = 0;
-
-	(void)SCTP_GETTIME_TIMEVAL(now);
-	highest_ms = 0;
-	hnet = NULL;
-	SCTP_TCB_LOCK_ASSERT(stcb);
-	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-		if (
-		    ((net->dest_state & SCTP_ADDR_NOHB) && ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0)) ||
-		    (net->dest_state & SCTP_ADDR_OUT_OF_SCOPE)
-		    ) {
-			/*
-			 * Skip this guy from consideration if HB is off AND
-			 * its confirmed
-			 */
-			continue;
-		}
-		if (sctp_destination_is_reachable(stcb, (struct sockaddr *)&net->ro._l_addr) == 0) {
-			/* skip this dest net from consideration */
-			continue;
-		}
-		if (net->last_sent_time.tv_sec) {
-			/* Sent to so we subtract */
-			ms_goneby = (now->tv_sec - net->last_sent_time.tv_sec) * 1000;
-		} else
-			/* Never been sent to */
-			ms_goneby = 0x7fffffff;
-		/*-
-		 * When the address state is unconfirmed but still
-		 * considered reachable, we HB at a higher rate. Once it
-		 * goes confirmed OR reaches the "unreachable" state, thenw
-		 * we cut it back to HB at a more normal pace.
-		 */
-		if ((net->dest_state & (SCTP_ADDR_UNCONFIRMED | SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED) {
-			state_overide = 1;
-		} else {
-			state_overide = 0;
-		}
-
-		if ((((unsigned int)ms_goneby >= net->RTO) || (state_overide)) &&
-		    (ms_goneby > highest_ms)) {
-			highest_ms = ms_goneby;
-			hnet = net;
-		}
-	}
-	if (hnet &&
-	    ((hnet->dest_state & (SCTP_ADDR_UNCONFIRMED | SCTP_ADDR_NOT_REACHABLE)) == SCTP_ADDR_UNCONFIRMED)) {
-		state_overide = 1;
-	} else {
-		state_overide = 0;
-	}
-
-	if (hnet && highest_ms && (((unsigned int)highest_ms >= hnet->RTO) || state_overide)) {
-		/*-
-		 * Found the one with longest delay bounds OR it is
-		 * unconfirmed and still not marked unreachable.
-		 */
-		SCTPDBG(SCTP_DEBUG_OUTPUT4, "net:%p is the hb winner -", hnet);
-#ifdef SCTP_DEBUG
-		if (hnet) {
-			SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT4,
-				     (struct sockaddr *)&hnet->ro._l_addr);
-		} else {
-			SCTPDBG(SCTP_DEBUG_OUTPUT4, " none\n");
-		}
-#endif
-		/* update the timer now */
-		hnet->last_sent_time = *now;
-		return (hnet);
-	}
-	/* Nothing to HB */
-	return (NULL);
-}
-
 int
-sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net,int so_locked
+sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
 	SCTP_UNUSED
 #endif
 )
 {
 	struct sctp_tmit_chunk *chk;
-	struct sctp_nets *net;
 	struct sctp_heartbeat_chunk *hb;
 	struct timeval now;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
-	if (user_req == 0) {
-		net = sctp_select_hb_destination(stcb, &now);
-		if (net == NULL) {
-			/*-
-			 * All our busy none to send to, just start the
-			 * timer again.
-			 */
-			if (stcb->asoc.state == 0) {
-				return (0);
-			}
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
-					 stcb->sctp_ep,
-					 stcb,
-					 net);
-			return (0);
-		}
-	} else {
-		net = u_net;
-		if (net == NULL) {
-			return (0);
-		}
-		(void)SCTP_GETTIME_TIMEVAL(&now);
+	if (net == NULL) {
+		return (0);
 	}
+	(void)SCTP_GETTIME_TIMEVAL(&now);
 	switch (net->ro._l_addr.sa.sa_family) {
 #ifdef INET
 	case AF_INET:
@@ -11426,7 +11328,6 @@ sctp_send_hb(struct sctp_tcb *stcb, int user_req, struct sctp_nets *u_net,int so
 	hb->heartbeat.hb_info.time_value_1 = now.tv_sec;
 	hb->heartbeat.hb_info.time_value_2 = now.tv_usec;
 	/* Did our user request this one, put it in */
-	hb->heartbeat.hb_info.user_req = user_req;
 	hb->heartbeat.hb_info.addr_family = net->ro._l_addr.sa.sa_family;
 #if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
 	hb->heartbeat.hb_info.addr_len = net->ro._l_addr.sa.sa_len;

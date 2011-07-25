@@ -3004,7 +3004,6 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	 * them.
 	 */
 
-	stcb->asoc.hb_timer.ep = (void *)new_inp;
 	stcb->asoc.dack_timer.ep = (void *)new_inp;
 	stcb->asoc.asconf_timer.ep = (void *)new_inp;
 	stcb->asoc.strreset_timer.ep = (void *)new_inp;
@@ -4432,10 +4431,17 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	if (newaddr->sa_family == AF_INET6)
 		net->tos_flowlabel = stcb->asoc.default_flowlabel;
 #endif
+	if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DONOT_HEARTBEAT)) {
+		net->dest_state |= SCTP_ADDR_NOHB;
+	} else {
+		net->dest_state &= ~SCTP_ADDR_NOHB;
+	}
+	net->heart_beat_delay = stcb->asoc.heart_beat_delay;
 	/* Init the timer structure */
 	SCTP_OS_TIMER_INIT(&net->rxt_timer.timer);
 	SCTP_OS_TIMER_INIT(&net->fr_timer.timer);
 	SCTP_OS_TIMER_INIT(&net->pmtu_timer.timer);
+	SCTP_OS_TIMER_INIT(&net->hb_timer.timer);
 
 	/* Now generate a route for this guy */
 #ifdef INET6
@@ -4613,8 +4619,8 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		/* No route to current primary adopt new primary */
 		stcb->asoc.primary_destination = net;
 	}
-	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb,
-	    net);
+	sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb, net);
+	sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
 	/* Validate primary is first */
 	net = TAILQ_FIRST(&stcb->asoc.nets);
 	if ((net != stcb->asoc.primary_destination) &&
@@ -4891,7 +4897,6 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 		return (NULL);
 	}
 	/* Init all the timers */
-	SCTP_OS_TIMER_INIT(&asoc->hb_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->dack_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->strreset_timer.timer);
 	SCTP_OS_TIMER_INIT(&asoc->asconf_timer.timer);
@@ -5219,8 +5224,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		}
 	}
 	/* now clean up any other timers */
-	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
-	asoc->hb_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	asoc->dack_timer.self = NULL;
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
@@ -5250,6 +5253,8 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		net->rxt_timer.self = NULL;
 		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 		net->pmtu_timer.self = NULL;
+		(void)SCTP_OS_TIMER_STOP(&net->hb_timer.timer);
+		net->hb_timer.self = NULL;
 	}
 	/* Now the read queue needs to be cleaned up (only once) */
 	if ((stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED) == 0) {
@@ -5420,7 +5425,6 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	 * this is paranoia at is finest!
 	 */
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
-	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
@@ -5431,6 +5435,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->rxt_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->hb_timer.timer);
 	}
 
 	asoc->strreset_timer.type = SCTP_TIMER_TYPE_NONE;

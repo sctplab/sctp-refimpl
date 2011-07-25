@@ -1052,7 +1052,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 					 * no recent feed back in an RTO or
 					 * more, request a RTT update
 					 */
-					if (sctp_send_hb(stcb, 1, net, SCTP_SO_NOT_LOCKED) < 0)
+					if (sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED) < 0)
 						/* Less than 0 means we lost the assoc */
 						return (1);
 				}
@@ -1113,7 +1113,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		 * JRS 5/14/07 - If the destination hasn't failed completely but is in PF
 		 *  state, a PF-heartbeat needs to be sent manually.
 		 */
-		if (sctp_send_hb(stcb, 1, net, SCTP_SO_NOT_LOCKED) < 0)
+		if (sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED) < 0)
 		    /* Return less than 0 means we lost the association */
 			return (1);
 	}
@@ -1561,9 +1561,8 @@ sctp_audit_stream_queues_for_size(struct sctp_inpcb *inp,
 
 int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net, int cnt_of_unconf)
+    struct sctp_nets *net)
 {
-	int ret;
 	if (net) {
 		if (net->hb_responded == 0) {
 			if (net->ro._s_addr) {
@@ -1586,41 +1585,8 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    (TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 		sctp_audit_stream_queues_for_size(inp, stcb);
 	}
-	/* Send a new HB, this will do threshold managment, pick a new dest */
-	if (cnt_of_unconf == 0) {
-		if (sctp_send_hb(stcb, 0, NULL, SCTP_SO_NOT_LOCKED) < 0) {
+	if (sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED) < 0) {
 			return (1);
-		}
-	} else {
-		/*
-		 * this will send out extra hb's up to maxburst if there are
-		 * any unconfirmed addresses.
-		 */
-		uint32_t cnt_sent = 0;
-
-		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-			if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-			    (net->dest_state & SCTP_ADDR_REACHABLE)) {
-				cnt_sent++;
-				if (net->hb_responded == 0) {
-					/* Did we respond last time? */
-					if (net->ro._s_addr) {
-						sctp_free_ifa(net->ro._s_addr);
-						net->ro._s_addr = NULL;
-						net->src_addr_selected = 0;
-					}
-				}
-				ret = sctp_send_hb(stcb, 1, net, SCTP_SO_NOT_LOCKED);
-				if (ret < 0)
-					return 1;
-				else if (ret == 0) {
-					break;
-				}
-				if (SCTP_BASE_SYSCTL(sctp_hb_maxburst) &&
-				    (cnt_sent >= SCTP_BASE_SYSCTL(sctp_hb_maxburst)))
-					break;
-			}
-		}
 	}
 	return (0);
 }
