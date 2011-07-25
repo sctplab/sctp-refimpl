@@ -278,6 +278,7 @@ struct sctp_nets {
 	 * structure shared by all.
 	 */
 	struct sctp_timer pmtu_timer;
+	struct sctp_timer hb_timer;
 
 	/*
 	 * The following two in combination equate to a route entry for v6
@@ -353,6 +354,7 @@ struct sctp_nets {
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
 	uint32_t marked_fastretrans;
+	uint32_t heart_beat_delay;      /* Heart Beat delay in ms */
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
@@ -781,7 +783,6 @@ struct sctp_association {
 	struct sctp_nonpad_sndrcvinfo def_send;
 
 	/* timers and such */
-	struct sctp_timer hb_timer;		/* hb timer */
 	struct sctp_timer dack_timer;		/* Delayed ack timer */
 	struct sctp_timer asconf_timer;		/* asconf */
 	struct sctp_timer strreset_timer;	/* stream reset */
@@ -1049,8 +1050,8 @@ struct sctp_association {
 	unsigned int size_on_all_streams;
 	unsigned int cnt_on_all_streams;
 
-	/* Heart Beat delay in ticks */
-	unsigned int heart_beat_delay;
+	/* Heart Beat delay in ms */
+      	uint32_t heart_beat_delay;
 
 	/* autoclose */
 	unsigned int sctp_autoclose_ticks;
@@ -1159,7 +1160,6 @@ struct sctp_association {
 	uint8_t last_flags_delivered;
 	uint8_t hb_ect_randombit;
 	uint8_t hb_random_idx;
-	uint8_t hb_is_disabled;		/* is the hb disabled? */
 	uint8_t default_tos;
 	uint8_t asconf_del_pending;	/* asconf delete last addr pending */
 

@@ -566,9 +566,11 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
 				xraddr.rtt = net->rtt / 1000;
+				xraddr.heartbeat_interval = net->heart_beat_delay;
 #endif
 #else
 				xraddr.rtt = net->rtt / 1000;
+				xraddr.heartbeat_interval = net->heart_beat_delay;
 #endif
 				xraddr.start_time.tv_sec = (uint32_t)net->start_time.tv_sec;
 				xraddr.start_time.tv_usec = (uint32_t)net->start_time.tv_usec;
