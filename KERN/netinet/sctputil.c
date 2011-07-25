@@ -748,7 +748,6 @@ sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 
 	asoc = &stcb->asoc;
 
-	(void)SCTP_OS_TIMER_STOP(&asoc->hb_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->dack_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->strreset_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->asconf_timer.timer);
@@ -757,6 +756,7 @@ sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
+		(void)SCTP_OS_TIMER_STOP(&net->hb_timer.timer);
 	}
 }
 
@@ -957,11 +957,6 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->my_vtag_nonce = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport, 0);
 	asoc->peer_vtag_nonce = sctp_select_a_tag(m, stcb->sctp_ep->sctp_lport, stcb->rport, 0);
 	asoc->vrf_id = vrf_id;
-
-	if (sctp_is_feature_on(m, SCTP_PCB_FLAGS_DONOT_HEARTBEAT))
-		asoc->hb_is_disabled = 1;
-	else
-		asoc->hb_is_disabled = 0;
 
 #ifdef SCTP_ASOCLOG_OF_TSNS
 	asoc->tsn_in_at = 0;
@@ -1690,32 +1685,20 @@ sctp_timeout_handler(void *t)
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
 		{
-			struct sctp_nets *lnet;
-			int cnt_of_unconf = 0;
-
-			if ((stcb == NULL) || (inp == NULL)) {
+			if ((stcb == NULL) || (inp == NULL) || (net == NULL)) {
 				break;
 			}
 			SCTP_STAT_INCR(sctps_timoheartbeat);
 			stcb->asoc.timoheartbeat++;
-			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-				if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-				    (lnet->dest_state & SCTP_ADDR_REACHABLE)) {
-					cnt_of_unconf++;
-				}
-			}
-			if (cnt_of_unconf == 0) {
-				if (sctp_heartbeat_timer(inp, stcb, lnet,
-							 cnt_of_unconf)) {
-					/* no need to unlock on tcb its gone */
-					goto out_decr;
-				}
+			if (sctp_heartbeat_timer(inp, stcb, net)) {
+				/* no need to unlock on tcb its gone */
+				goto out_decr;
 			}
 #ifdef SCTP_AUDITING_ENABLED
-			sctp_auditing(4, inp, stcb, lnet);
+			sctp_auditing(4, inp, stcb, net);
 #endif
 			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
-					 stcb->sctp_ep, stcb, lnet);
+					 stcb->sctp_ep, stcb, net);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR, SCTP_SO_NOT_LOCKED);
 		}
 		break;
@@ -2026,71 +2009,37 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * though we use a different timer. We also add the HB timer
 		 * PLUS a random jitter.
 		 */
-		if ((inp == NULL) || (stcb == NULL)) {
+		if ((inp == NULL) || (stcb == NULL) || (net == NULL)) {
 			return;
 		} else {
 			uint32_t rndval;
-			uint8_t this_random;
-			int cnt_of_unconf = 0;
-			struct sctp_nets *lnet;
+			uint32_t jitter;
 
-			TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-				if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-				    (lnet->dest_state & SCTP_ADDR_REACHABLE)) {
-					cnt_of_unconf++;
-				}
-			}
-			if (cnt_of_unconf) {
-				net = lnet = NULL;
-				(void)sctp_heartbeat_timer(inp, stcb, lnet, cnt_of_unconf);
-			}
-			if (stcb->asoc.hb_random_idx > 3) {
-				rndval = sctp_select_initial_TSN(&inp->sctp_ep);
-				memcpy(stcb->asoc.hb_random_values, &rndval,
-				    sizeof(stcb->asoc.hb_random_values));
-				stcb->asoc.hb_random_idx = 0;
-			}
-			this_random = stcb->asoc.hb_random_values[stcb->asoc.hb_random_idx];
-			stcb->asoc.hb_random_idx++;
-			stcb->asoc.hb_ect_randombit = 0;
-			/*
-			 * this_random will be 0 - 256 ms RTO is in ms.
-			 */
-			if ((stcb->asoc.hb_is_disabled) &&
-			    (cnt_of_unconf == 0)) {
+			if ((net->dest_state & SCTP_ADDR_NOHB) &&
+			    !(net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 				return;
 			}
-			if (net) {
-				int delay;
-
-				delay = stcb->asoc.heart_beat_delay;
-				TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-					if ((lnet->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-					    ((lnet->dest_state & SCTP_ADDR_OUT_OF_SCOPE) == 0) &&
-					    (lnet->dest_state & SCTP_ADDR_REACHABLE)) {
-						delay = 0;
-					}
-				}
-				if (net->RTO == 0) {
-					/* Never been checked */
-					to_ticks = this_random + stcb->asoc.initial_rto + delay;
-				} else {
-					/* set rto_val to the ms */
-					to_ticks = delay + net->RTO + this_random;
-				}
+			if (net->RTO == 0) {
+				to_ticks = stcb->asoc.initial_rto;
 			} else {
-				if (cnt_of_unconf) {
-					to_ticks = this_random + stcb->asoc.initial_rto;
-				} else {
-					to_ticks = stcb->asoc.heart_beat_delay + this_random + stcb->asoc.initial_rto;
-				}
+				to_ticks = net->RTO;
 			}
+			rndval = sctp_select_initial_TSN(&inp->sctp_ep);
+			jitter = (to_ticks > 1) & rndval;
+			if (rndval & 0x80000000) {
+				to_ticks = (uint32_t)(to_ticks - jitter);
+			} else {
+				to_ticks = to_ticks + jitter;
+			}
+			if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+				to_ticks += net->heart_beat_delay;
+			} 
 			/*
 			 * Now we must convert the to_ticks that are now in
 			 * ms to ticks.
 			 */
 			to_ticks = MSEC_TO_TICKS(to_ticks);
-			tmr = &stcb->asoc.hb_timer;
+			tmr = &net->hb_timer;
 		}
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
@@ -2350,10 +2299,10 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		tmr = &net->rxt_timer;
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
-		if (stcb == NULL) {
+		if ((stcb == NULL) || (net == NULL)) {
 			return;
 		}
-		tmr = &stcb->asoc.hb_timer;
+		tmr = &net->hb_timer;
 		break;
 	case SCTP_TIMER_TYPE_COOKIE:
 		if ((stcb == NULL) || (net == NULL)) {
