@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.113 2010-01-14 19:59:05 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.114 2011-07-25 19:58:06 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3975,7 +3975,7 @@ print_peer_addr_info(struct sctp_paddrinfo *so)
     printf("Failed to get HB info err:%d\n",errno);
     return 0;
   }
-  siz = sizeof(so);
+  siz = sizeof(struct sctp_paddrinfo);
   if(getsockopt(adap->fd,IPPROTO_SCTP,
 		SCTP_GET_PEER_ADDR_INFO, so, &siz) != 0) {
     printf("Failed to get dest info err:%d\n",errno);
@@ -4017,12 +4017,12 @@ cmd_heart(char *argv[], int argc)
 
 	if(strcmp(bool, "on") == 0){
 		print_peer_addr_info(&so);
-		if(so.spinfo_state & SCTP_ADDR_NOHB){
+		if((so.spinfo_state & SCTP_ADDR_NOHB) == 0){
 			siz = sizeof(sp);
 			memcpy((caddr_t)&sp.spp_address, sa, sa_len);
 			if(sp.spp_hbinterval == 0){
 				/* Set to a postive value */
-				sp.spp_hbinterval = 30000;
+				sp.spp_hbinterval = 2000;
 				sp.spp_flags = SPP_HB_ENABLE;
 			}
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
@@ -4031,14 +4031,13 @@ cmd_heart(char *argv[], int argc)
 				return 0;
 			}
 		} else {
-			printf("Heartbeat is already off\n");
+			printf("Heartbeat is already on\n");
 		}
 	}else if(strcmp(bool, "off") == 0) {
 		print_peer_addr_info(&so);
 		if(so.spinfo_state & SCTP_ADDR_NOHB){
 			printf("Destination is already NOT heartbeating\n");
 		}else{
-			sp.spp_hbinterval = 0;
 			sp.spp_flags = SPP_HB_DISABLE;
 			siz = sizeof(sp);
 			memcpy((caddr_t)&sp.spp_address, sa, sa_len);
@@ -4057,7 +4056,6 @@ cmd_heart(char *argv[], int argc)
 		}
 		if(sp.spp_hbinterval){
 			memset((caddr_t)&sp,0,sizeof(sp));
-			sp.spp_hbinterval = 0;
 			sp.spp_flags = SPP_HB_DISABLE;
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
 				      SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
@@ -4088,7 +4086,7 @@ cmd_heart(char *argv[], int argc)
 		}else{
 			/* set to the default 30 seconds */
 			memset((caddr_t)&sp.spp_address,0,sizeof(sp.spp_address));
-			sp.spp_hbinterval = 30000;
+			sp.spp_hbinterval = 2000;
 			if(setsockopt(adap->fd,IPPROTO_SCTP,
 				      SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
 				printf("Failed to set option %d\n",errno);
@@ -4156,7 +4154,8 @@ cmd_heartdelay(char *argv[], int argc)
   printf("Current HB interval is %d\n",sp.spp_hbinterval);
   /* Disable this so we don't change it */
   sp.spp_pathmaxrxt = 0;
-  memset((caddr_t)&sp.spp_address,0,sizeof(sp.spp_address));
+  if (setaddr != 1)
+     memset((caddr_t)&sp.spp_address,0,sizeof(sp.spp_address));
   sp.spp_hbinterval = val;
   if(setsockopt(adap->fd,IPPROTO_SCTP,
 		    SCTP_PEER_ADDR_PARAMS, &sp, siz) != 0) {
