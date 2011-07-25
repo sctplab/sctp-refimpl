@@ -1922,7 +1922,7 @@ void
 sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
-	int to_ticks;
+	uint32_t to_ticks;
 	struct sctp_timer *tmr;
 
 	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL))
@@ -2024,16 +2024,21 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			} else {
 				to_ticks = net->RTO;
 			}
+			printf("to_ticks initially %u.\n", to_ticks);
 			rndval = sctp_select_initial_TSN(&inp->sctp_ep);
-			jitter = (to_ticks > 1) & rndval;
-			if (rndval & 0x80000000) {
-				to_ticks = (uint32_t)(to_ticks - jitter);
+			jitter = rndval % to_ticks;
+			printf("jitter is %u.\n", jitter);
+			if (jitter >= (to_ticks >> 1)) {
+				to_ticks = to_ticks + (jitter - (to_ticks >> 1));
+				printf("Adding jitter results in %u.\n", to_ticks);
 			} else {
-				to_ticks = to_ticks + jitter;
+				to_ticks = to_ticks - jitter;
+				printf("Subtracting jitter results in %u.\n", to_ticks);
 			}
 			if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 				to_ticks += net->heart_beat_delay;
-			} 
+			}
+			printf("This means including HB.delay: %u.\n", to_ticks);
 			/*
 			 * Now we must convert the to_ticks that are now in
 			 * ms to ticks.
