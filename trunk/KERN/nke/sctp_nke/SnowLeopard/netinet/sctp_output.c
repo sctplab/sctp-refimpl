@@ -3562,7 +3562,8 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 					*error = EINVAL;
 					return (-1);
 				}
-				if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+				if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin, NULL,
+				                         SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 					*error = ENOBUFS;
 					return (1);
 				}
@@ -3595,13 +3596,15 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 						*error = EINVAL;
 						return (-1);
 					}
-					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin, NULL,
+					                         SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 						*error = ENOBUFS;
 						return (1);
 					}
 				} else
 #endif
-					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin6, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
+					if (sctp_add_remote_addr(stcb, (struct sockaddr *)&sin6, NULL,
+					                         SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 						*error = ENOBUFS;
 						return (1);
 					}
