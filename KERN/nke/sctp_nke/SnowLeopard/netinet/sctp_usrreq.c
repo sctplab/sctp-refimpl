@@ -4959,13 +4959,16 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					net->dest_state |= SCTP_ADDR_NOHB;
 				}
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
+					if (paddrp->spp_hbinterval) {
+						net->heart_beat_delay = paddrp->spp_hbinterval;
+					} else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
+						net->heart_beat_delay = 0;
+					}
+					sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
+					                SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					net->dest_state &= ~SCTP_ADDR_NOHB;
 				}
-				if (paddrp->spp_hbinterval)
-					net->heart_beat_delay = paddrp->spp_hbinterval;
-				else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
-					net->heart_beat_delay = 0;
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
@@ -5005,10 +5008,17 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					stcb->asoc.def_net_failure = paddrp->spp_pathmaxrxt;
 
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
+					if (paddrp->spp_hbinterval) {
+						stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
+					} else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
+						stcb->asoc.heart_beat_delay = 0;
+					}
 					/* Turn back on the timer */
 					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 						if (net->dest_state & SCTP_ADDR_NOHB) {
 							net->dest_state &= ~SCTP_ADDR_NOHB;
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
+							                SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
 							sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 						}
 					}
@@ -5023,11 +5033,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 							}
 						}
 					}
-				}
-				if (paddrp->spp_hbinterval) {
-					stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
-				} else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
-					stcb->asoc.heart_beat_delay = 0;
 				}
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
@@ -5082,8 +5087,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				}
 
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
+					if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = 0;
+					} else if (paddrp->spp_hbinterval) {
+						inp->sctp_ep.sctp_timeoutticks[SCTP_TIMER_HEARTBEAT] = MSEC_TO_TICKS(paddrp->spp_hbinterval);
+					}
 					sctp_feature_off(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
-
 				} else if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					sctp_feature_on(inp, SCTP_PCB_FLAGS_DONOT_HEARTBEAT);
 				}
