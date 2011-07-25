@@ -626,6 +626,8 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		}
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_CONFIRMED,
 		    stcb, 0, (void *)r_net, SCTP_SO_NOT_LOCKED);
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);
 	}
 	r_net->error_count = 0;
 	r_net->hb_responded = 1;
