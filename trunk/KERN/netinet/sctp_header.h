@@ -102,7 +102,6 @@ struct sctp_heartbeat_info_param {
 	uint32_t time_value_2;
 	uint32_t random_value1;
 	uint32_t random_value2;
-	uint16_t user_req;
 	uint8_t addr_family;
 	uint8_t addr_len;
 	char address[SCTP_ADDRMAX];

@@ -2731,7 +2731,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 
 		if (stcb) {
-			/* Applys to the specific association */
+			/* Applies to the specific association */
 			paddrp->spp_flags = 0;
 			if (net) {
 				int ovh;
@@ -2772,7 +2772,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				 * No destination so return default
 				 * value
 				 */
-				int cnt=0;
+				int cnt = 0;
+
 				paddrp->spp_pathmaxrxt = stcb->asoc.def_net_failure;
 				paddrp->spp_pathmtu = sctp_get_frag_point(stcb, &stcb->asoc);
 #ifdef INET
@@ -2784,11 +2785,12 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				paddrp->spp_flags |= SPP_IPV6_FLOWLABEL;
 #endif
 				/* default settings should be these */
-				if (stcb->asoc.hb_is_disabled == 0) {
-					paddrp->spp_flags |= SPP_HB_ENABLE;
-				} else {
+				if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DONOT_HEARTBEAT)) {
 					paddrp->spp_flags |= SPP_HB_DISABLE;
+				} else {
+					paddrp->spp_flags |= SPP_HB_ENABLE;
 				}
+				paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
 				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						cnt++;
@@ -2798,7 +2800,6 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					paddrp->spp_flags |= SPP_PMTUD_ENABLE;
 				}
 			}
-			paddrp->spp_hbinterval = stcb->asoc.heart_beat_delay;
 			paddrp->spp_assoc_id = sctp_get_associd(stcb);
 			SCTP_TCB_UNLOCK(stcb);
 		} else {
@@ -4848,7 +4849,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		break;
 	}
 	case SCTP_PEER_ADDR_PARAMS:
-		/* Applys to the specific association */
+		/* Applies to the specific association */
 	{
 		struct sctp_paddrparams *paddrp;
 		struct sctp_nets *net;
@@ -4937,17 +4938,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				ovh = SCTP_MED_V4_OVERHEAD;
 			}
 
-			if (paddrp->spp_hbinterval)
-				stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
-			else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
-				stcb->asoc.heart_beat_delay = 0;
-
 			/* network sets ? */
 			if (net) {
 				/************************NET SPECIFIC SET ******************/
 				if (paddrp->spp_flags & SPP_HB_DEMAND) {
 					/* on demand HB */
-					if (sctp_send_hb(stcb, 1, net, SCTP_SO_LOCKED) < 0) {
+					if (sctp_send_hb(stcb, net, SCTP_SO_LOCKED) < 0) {
 						/* asoc destroyed */
 						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 						error = EINVAL;
@@ -4955,11 +4951,21 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					}
 				}
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
+					if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+					    !(net->dest_state & SCTP_ADDR_NOHB)) {
+						sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
+								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
+					}
 					net->dest_state |= SCTP_ADDR_NOHB;
 				}
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
+					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					net->dest_state &= ~SCTP_ADDR_NOHB;
 				}
+				if (paddrp->spp_hbinterval)
+					net->heart_beat_delay = paddrp->spp_hbinterval;
+				else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO)
+					net->heart_beat_delay = 0;
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
@@ -5000,8 +5006,28 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
 					/* Turn back on the timer */
-					stcb->asoc.hb_is_disabled = 0;
-					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (net->dest_state & SCTP_ADDR_NOHB) {
+							net->dest_state &= ~SCTP_ADDR_NOHB;
+							sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+						}
+					}
+				}
+				if (paddrp->spp_flags & SPP_HB_DISABLE) {
+					/* Turn back on the timer */
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (!(net->dest_state & SCTP_ADDR_NOHB)) {
+							net->dest_state |= SCTP_ADDR_NOHB;
+							if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+								sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
+							}
+						}
+					}
+				}
+				if (paddrp->spp_hbinterval) {
+					stcb->asoc.heart_beat_delay = paddrp->spp_hbinterval;
+				} else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
+					stcb->asoc.heart_beat_delay = 0;
 				}
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
@@ -5022,35 +5048,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 						if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 							sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 						}
-					}
-				}
-
-				if (paddrp->spp_flags & SPP_HB_DISABLE) {
-					int cnt_of_unconf = 0;
-					struct sctp_nets *lnet;
-
-					stcb->asoc.hb_is_disabled = 1;
-					TAILQ_FOREACH(lnet, &stcb->asoc.nets, sctp_next) {
-						if (lnet->dest_state & SCTP_ADDR_UNCONFIRMED) {
-							cnt_of_unconf++;
-						}
-					}
-					/*
-					 * stop the timer ONLY if we
-					 * have no unconfirmed
-					 * addresses
-					 */
-					if (cnt_of_unconf == 0) {
-						TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
-								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_11);
-						}
-					}
-				}
-				if (paddrp->spp_flags & SPP_HB_ENABLE) {
-					/* start up the timer. */
-					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
-						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					}
 				}
 #ifdef INET
