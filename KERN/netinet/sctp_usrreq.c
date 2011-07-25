@@ -2741,7 +2741,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 					ovh = SCTP_MED_V4_OVERHEAD;
 				}
 
-
+				paddrp->spp_hbinterval = net->heart_beat_delay;
 				paddrp->spp_pathmaxrxt = net->failure_threshold;
 				paddrp->spp_pathmtu = net->mtu - ovh;
 				/* get flags for HB */
