@@ -207,8 +207,9 @@ sctp_asconf_error_response(uint32_t id, uint16_t cause, uint8_t *error_tlv,
 
 static struct mbuf *
 sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
-                           struct sctp_tcb *stcb, int response_required)
+                           struct sctp_tcb *stcb, int send_hb, int response_required)
 {
+	struct sctp_nets *net;
 	struct mbuf *m_reply = NULL;
 	struct sockaddr_storage sa_source, sa_store;
 	struct sctp_paramhdr *ph;
@@ -293,7 +294,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, sa);
 	}
 	/* add the address */
-	if (sctp_add_remote_addr(stcb, sa, SCTP_DONOT_SETSCOPE,
+	if (sctp_add_remote_addr(stcb, sa, &net, SCTP_DONOT_SETSCOPE,
 	                         SCTP_ADDR_DYNAMIC_ADDED) != 0) {
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"process_asconf_add_ip: error adding address\n");
@@ -307,10 +308,12 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 			m_reply =
 			    sctp_asconf_success_response(aph->correlation_id);
 		}
-		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb,
-		                NULL, SCTP_FROM_SCTP_ASCONF+SCTP_LOC_1 );
+		sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb, net);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep,
-		                 stcb, NULL);
+		                 stcb, net);
+		if (send_hb) {
+			sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+		}
 	}
 	return m_reply;
 }
@@ -636,7 +639,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	struct sctp_asconf_ack_chunk *ack_cp;
 	struct sctp_asconf_paramhdr *aph, *ack_aph;
 	struct sctp_ipv6addr_param *p_addr;
-	unsigned int asconf_limit;
+	unsigned int asconf_limit, cnt;
 	int error = 0;		/* did an error occur? */
 
 	/* asconf param buffer */
@@ -733,6 +736,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		goto send_reply;
 	}
 	/* process through all parameters */
+	cnt = 0;
 	while (aph != NULL) {
 		unsigned int param_length, param_type;
 
@@ -765,7 +769,8 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 		case SCTP_ADD_IP_ADDRESS:
 			asoc->peer_supports_asconf = 1;
 			m_result = sctp_process_asconf_add_ip(m, aph, stcb,
-			    error);
+			    (cnt < SCTP_BASE_SYSCTL(sctp_hb_maxburst)), error);
+			cnt++;
 			break;
 		case SCTP_DEL_IP_ADDRESS:
 			asoc->peer_supports_asconf = 1;
