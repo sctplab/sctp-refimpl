@@ -826,6 +826,32 @@ sctp_handle_abort(struct sctp_abort_chunk *cp,
 }
 
 static void
+sctp_start_net_timers(struct sctp_tcb *stcb)
+{
+	uint32_t cnt_hb_sent;
+	struct sctp_nets *net;
+
+	cnt_hb_sent = 0;
+	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+		/* For each network start:
+		 * 1) A pmtu timer.
+		 * 2) A HB timer
+		 * 3) If the dest in unconfirmed send
+		 *    a hb as well if under max_hb_burst have
+		 *    been sent.
+		 */
+		sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb, net);
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+		if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+		    (cnt_hb_sent < SCTP_BASE_SYSCTL(sctp_hb_maxburst))){
+			sctp_send_hb(stcb, net, 0);
+			cnt_hb_sent++;
+		}
+	}
+}
+
+
+static void
 sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
     struct sctp_tcb *stcb, struct sctp_nets *net, int *abort_flag)
 {
@@ -2695,6 +2721,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			send_int_conf = 1;
 		}
 	}
+	sctp_start_net_timers(*stcb);
 	if ((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		if (!had_a_existing_tcb ||
 		    (((*inp_p)->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
@@ -2907,6 +2934,7 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
 		/* state change only needed when I am in right state */
 		SCTPDBG(SCTP_DEBUG_INPUT2, "moving to OPEN state\n");
 		SCTP_SET_STATE(asoc, SCTP_STATE_OPEN);
+		sctp_start_net_timers(stcb);
 		if (asoc->state & SCTP_STATE_SHUTDOWN_PENDING) {
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
 					 stcb->sctp_ep, stcb, asoc->primary_destination);
