@@ -754,7 +754,6 @@ sctp_stop_timers_for_shutdown(struct sctp_tcb *stcb)
 	(void)SCTP_OS_TIMER_STOP(&asoc->autoclose_timer.timer);
 	(void)SCTP_OS_TIMER_STOP(&asoc->delayed_event_timer.timer);
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		(void)SCTP_OS_TIMER_STOP(&net->fr_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->pmtu_timer.timer);
 		(void)SCTP_OS_TIMER_STOP(&net->hb_timer.timer);
 	}
@@ -1794,14 +1793,6 @@ sctp_timeout_handler(void *t)
 		SCTP_STAT_INCR(sctps_timostrmrst);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_TMR, SCTP_SO_NOT_LOCKED);
 		break;
-	case SCTP_TIMER_TYPE_EARLYFR:
-		/* Need to do FR of things for net */
-		if ((stcb == NULL) || (inp == NULL)) {
-			break;
-		}
-		SCTP_STAT_INCR(sctps_timoearlyfr);
-		sctp_early_fr_timer(inp, stcb, net);
-		break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		if ((stcb == NULL) || (inp == NULL)) {
 			break;
@@ -2140,35 +2131,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		}
 		tmr = &stcb->asoc.strreset_timer;
 		break;
-
-	case SCTP_TIMER_TYPE_EARLYFR:
-		{
-			unsigned int msec;
-
-			if ((stcb == NULL) || (net == NULL)) {
-				return;
-			}
-			if (net->flight_size > net->cwnd) {
-				/* no need to start */
-				return;
-			}
-			SCTP_STAT_INCR(sctps_earlyfrstart);
-			if (net->lastsa == 0) {
-				/* Hmm no rtt estimate yet? */
-				msec = stcb->asoc.initial_rto >> 2;
-			} else {
-				msec = ((net->lastsa >> 2) + net->lastsv) >> 1;
-			}
-			if (msec < SCTP_BASE_SYSCTL(sctp_early_fr_msec)) {
-				msec = SCTP_BASE_SYSCTL(sctp_early_fr_msec);
-				if (msec < SCTP_MINFR_MSEC_FLOOR) {
-					msec = SCTP_MINFR_MSEC_FLOOR;
-				}
-			}
-			to_ticks = MSEC_TO_TICKS(msec);
-			tmr = &net->fr_timer;
-		}
-		break;
 	case SCTP_TIMER_TYPE_ASCONF:
 		/*
 		 * Here the timer comes from the stcb but its value is from
@@ -2266,13 +2228,6 @@ sctp_timer_stop(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		break;
 	case SCTP_TIMER_TYPE_ADDR_WQ:
 		tmr = &SCTP_BASE_INFO(addr_wq_timer);
-		break;
-	case SCTP_TIMER_TYPE_EARLYFR:
-		if ((stcb == NULL) || (net == NULL)) {
-			return;
-		}
-		tmr = &net->fr_timer;
-		SCTP_STAT_INCR(sctps_earlyfrstop);
 		break;
 	case SCTP_TIMER_TYPE_SEND:
 		if ((stcb == NULL) || (net == NULL)) {

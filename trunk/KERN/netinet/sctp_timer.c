@@ -63,104 +63,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 221627 2011-05-08 09:11:59Z tu
 #endif
 
 void
-sctp_early_fr_timer(struct sctp_inpcb *inp,
-    struct sctp_tcb *stcb,
-    struct sctp_nets *net)
-{
-	struct sctp_tmit_chunk *chk, *pchk;
-	struct timeval now, min_wait, tv;
-	unsigned int cur_rto, cnt = 0, cnt_resend = 0;
-
-	/* an early FR is occuring. */
-	(void)SCTP_GETTIME_TIMEVAL(&now);
-	/* get cur rto in micro-seconds */
-	if (net->lastsa == 0) {
-		/* Hmm no rtt estimate yet? */
-		cur_rto = stcb->asoc.initial_rto >> 2;
-	} else {
-
-		cur_rto = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
-	}
-	if (cur_rto < SCTP_BASE_SYSCTL(sctp_early_fr_msec)) {
-		cur_rto = SCTP_BASE_SYSCTL(sctp_early_fr_msec);
-	}
-	cur_rto *= 1000;
-	tv.tv_sec = cur_rto / 1000000;
-	tv.tv_usec = cur_rto % 1000000;
-#ifndef __FreeBSD__
-	timersub(&now, &tv, &min_wait);
-#else
-	min_wait = now;
-	timevalsub(&min_wait, &tv);
-#endif
-	if (min_wait.tv_sec < 0 || min_wait.tv_usec < 0) {
-		/*
-		 * if we hit here, we don't have enough seconds on the clock
-		 * to account for the RTO. We just let the lower seconds be
-		 * the bounds and don't worry about it. This may mean we
-		 * will mark a lot more than we should.
-		 */
-		min_wait.tv_sec = min_wait.tv_usec = 0;
-	}
-	TAILQ_FOREACH_REVERSE_SAFE(chk, &stcb->asoc.sent_queue, sctpchunk_listhead, sctp_next, pchk) {
-		if (chk->whoTo != net) {
-			continue;
-		}
-		if (chk->sent == SCTP_DATAGRAM_RESEND)
-			cnt_resend++;
-		else if ((chk->sent > SCTP_DATAGRAM_UNSENT) &&
-		    (chk->sent < SCTP_DATAGRAM_RESEND)) {
-			/* pending, may need retran */
-			if (chk->sent_rcv_time.tv_sec > min_wait.tv_sec) {
-				/*
-				 * we have reached a chunk that was sent
-				 * some seconds past our min.. forget it we
-				 * will find no more to send.
-				 */
-				continue;
-			} else if (chk->sent_rcv_time.tv_sec == min_wait.tv_sec) {
-				/*
-				 * we must look at the micro seconds to
-				 * know.
-				 */
-				if (chk->sent_rcv_time.tv_usec >= min_wait.tv_usec) {
-					/*
-					 * ok it was sent after our boundary
-					 * time.
-					 */
-					continue;
-				}
-			}
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_EARLYFR_LOGGING_ENABLE) {
-				sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
-					    4, SCTP_FR_MARKED_EARLY);
-			}
-			SCTP_STAT_INCR(sctps_earlyfrmrkretrans);
-			chk->sent = SCTP_DATAGRAM_RESEND;
-			sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
-			/* double book size since we are doing an early FR */
-			chk->book_size_scale++;
-			cnt += chk->send_size;
-			if ((cnt + net->flight_size) > net->cwnd) {
-				/* Mark all we could possibly resend */
-				break;
-			}
-		}
-	}
-	if (cnt) {
-		/* JRS - Use the congestion control given in the congestion control module */
-		stcb->asoc.cc_functions.sctp_cwnd_update_after_fr_timer(inp, stcb, net);
-	} else if (cnt_resend) {
-		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR, SCTP_SO_NOT_LOCKED);
-	}
-	/* Restart it? */
-	if (net->flight_size < net->cwnd) {
-		SCTP_STAT_INCR(sctps_earlyfrstrtmr);
-		sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
-	}
-}
-
-void
 sctp_audit_retranmission_queue(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
@@ -630,15 +532,12 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	/* get cur rto in micro-seconds */
 	cur_rto = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
 	cur_rto *= 1000;
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(cur_rto,
 			    stcb->asoc.peers_rwnd,
 			    window_probe,
 			    SCTP_FR_T3_MARK_TIME);
-		sctp_log_fr(net->flight_size,
-			    SCTP_OS_TIMER_PENDING(&net->fr_timer.timer),
-			    SCTP_OS_TIMER_ACTIVE(&net->fr_timer.timer),
-			    SCTP_FR_CWND_REPORT);
+		sctp_log_fr(net->flight_size, 0, 0, SCTP_FR_CWND_REPORT);
 		sctp_log_fr(net->flight_size, net->cwnd, stcb->asoc.total_flight, SCTP_FR_CWND_REPORT);
 	}
 	tv.tv_sec = cur_rto / 1000000;
@@ -658,7 +557,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		 */
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
 		sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 	}
@@ -705,7 +604,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			 */
 
 			/* validate its been outstanding long enough */
-			if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 				sctp_log_fr(chk->rec.data.TSN_seq,
 					    chk->sent_rcv_time.tv_sec,
 					    chk->sent_rcv_time.tv_usec,
@@ -717,7 +616,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 * some seconds past our min.. forget it we
 				 * will find no more to send.
 				 */
-				if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 					sctp_log_fr(0,
 						    chk->sent_rcv_time.tv_sec,
 						    chk->sent_rcv_time.tv_usec,
@@ -735,12 +634,6 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					 * ok it was sent after our boundary
 					 * time.
 					 */
-					if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
-						sctp_log_fr(0,
-							    chk->sent_rcv_time.tv_sec,
-							    chk->sent_rcv_time.tv_usec,
-							    SCTP_FR_T3_STOPPED);
-					}
 					continue;
 				}
 			}
@@ -783,7 +676,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					tsnfirst = chk->rec.data.TSN_seq;
 				}
 				tsnlast = chk->rec.data.TSN_seq;
-				if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 					sctp_log_fr(chk->rec.data.TSN_seq, chk->snd_count,
 						    0, SCTP_FR_T3_MARKED);
 				}
@@ -853,7 +746,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		audit_tf = 1;
 	}
 
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_EARLYFR_LOGGING_ENABLE|SCTP_FR_LOGGING_ENABLE)) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 		sctp_log_fr(tsnfirst, tsnlast, num_mk, SCTP_FR_T3_TIMEOUT);
 	}
 #ifdef SCTP_DEBUG

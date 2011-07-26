@@ -44,10 +44,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 218319 2011-02-05 12:12:51Z rr
 #define SCTP_RTT_SHIFT 3
 #define SCTP_RTT_VAR_SHIFT 2
 
-void
-sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net);
-
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *,
     struct sctp_nets *, int mode);
