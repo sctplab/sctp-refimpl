@@ -373,6 +373,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	int cntDel;
 	struct sctp_queued_to_read *control, *ctl, *nctl;
 
+I_AM_HERE;
 	if (stcb == NULL)
 		return;
 
@@ -403,6 +404,7 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH_SAFE(chk, &asoc->reasmqueue, sctp_next, nchk) {
+printf("Considering TSN %X.\n", chk->rec.data.TSN_seq);
 		if (chk->rec.data.TSN_seq != (asoc->tsn_last_delivered + 1)) {
 			/* Can't deliver more :< */
 			return;
@@ -2677,6 +2679,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						      last_chunk)) {
 				num_chunks++;
 			}
+sctp_print_mapping_array(asoc);
 			if (abort_flag)
 				return (2);
 
@@ -4035,9 +4038,46 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	}
 
 	/* JRS - Use the congestion control given in the CC module */
-	if ((asoc->last_acked_seq != cumack) && (ecne_seen == 0))
+	if ((asoc->last_acked_seq != cumack) && (ecne_seen == 0)) {
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+			if (net->net_ack2 > 0) {
+				/*
+				 * Karn's rule applies to clearing error count, this
+				 * is optional.
+				 */
+				net->error_count = 0;
+				if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
+				    SCTP_ADDR_NOT_REACHABLE) {
+					/* addr came good */
+					net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+					net->dest_state |= SCTP_ADDR_REACHABLE;
+					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
+					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
+					/* now was it the primary? if so restore */
+					if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
+						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
+					}
+				}
+				if ((asoc->sctp_cmt_on_off > 0) &&
+				    (asoc->sctp_cmt_pf > 0) &&
+				    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
+					net->dest_state &= ~SCTP_ADDR_PF;
+					asoc->cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
+					/* Done with this net */
+					net->net_ack = 0;
+				}
+				/* restore any doubled timers */
+				net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
+				if (net->RTO < stcb->asoc.minrto) {
+					net->RTO = stcb->asoc.minrto;
+				}
+				if (net->RTO > stcb->asoc.maxrto) {
+					net->RTO = stcb->asoc.maxrto;
+				}
+			}
+		}
 		asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, 1, 0, 0);
-
+	}
 	asoc->last_acked_seq = cumack;
 
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
@@ -4104,13 +4144,6 @@ again:
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				                stcb, net,
 				                SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
-			}
-			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
-				}
 			}
 		}
 	}
@@ -4356,7 +4389,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		              num_dup,
 		              SCTP_LOG_NEW_SACK);
 	}
-	if ((num_dup) && (SCTP_BASE_SYSCTL(sctp_logging_level) & (SCTP_FR_LOGGING_ENABLE | SCTP_EARLYFR_LOGGING_ENABLE))) {
+	if ((num_dup) && (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE)) {
 		uint16_t i;
 		uint32_t *dupdata, dblock;
 
@@ -4443,13 +4476,6 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 			                stcb, net, SCTP_FROM_SCTP_INDATA + SCTP_LOC_26);
-			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck1);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_26);
-				}
-			}
 			net->partial_bytes_acked = 0;
 			net->flight_size = 0;
 		}
@@ -4807,20 +4833,51 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		asoc->saw_sack_with_nr_frags = 0;
 
 	/* JRS - Use the congestion control given in the CC module */
-	if (ecne_seen == 0)
+	if (ecne_seen == 0) {
+		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
+			if (net->net_ack2 > 0) {
+				/*
+				 * Karn's rule applies to clearing error count, this
+				 * is optional.
+				 */
+				net->error_count = 0;
+				if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
+				    SCTP_ADDR_NOT_REACHABLE) {
+					/* addr came good */
+					net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+					net->dest_state |= SCTP_ADDR_REACHABLE;
+					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
+					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
+					/* now was it the primary? if so restore */
+					if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
+						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
+					}
+				}
+				if ((asoc->sctp_cmt_on_off > 0) &&
+				    (asoc->sctp_cmt_pf > 0) &&
+				    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
+					net->dest_state &= ~SCTP_ADDR_PF;
+					asoc->cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
+					/* Done with this net */
+					net->net_ack = 0;
+				}
+				/* restore any doubled timers */
+				net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
+				if (net->RTO < stcb->asoc.minrto) {
+					net->RTO = stcb->asoc.minrto;
+				}
+				if (net->RTO > stcb->asoc.maxrto) {
+					net->RTO = stcb->asoc.maxrto;
+				}
+			}
+		}
 		asoc->cc_functions.sctp_cwnd_update_after_sack(stcb, asoc, accum_moved, reneged_all, will_exit_fast_recovery);
+	}
 
 	if (TAILQ_EMPTY(&asoc->sent_queue)) {
 		/* nothing left in-flight */
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/* stop all timers */
-			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_29);
-				}
-			}
 			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 			                stcb, net, SCTP_FROM_SCTP_INDATA + SCTP_LOC_30);
 			net->flight_size = 0;
@@ -5029,13 +5086,6 @@ again:
 				sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
 				                stcb, net,
 				                SCTP_FROM_SCTP_INDATA + SCTP_LOC_22);
-			}
-			if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck4);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-					                SCTP_FROM_SCTP_INDATA + SCTP_LOC_23);
-				}
 			}
 		}
 	}

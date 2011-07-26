@@ -301,7 +301,6 @@ struct sctp_nets {
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
 	struct sctp_timer rxt_timer;
-	struct sctp_timer fr_timer;	/* for early fr */
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
@@ -691,6 +690,7 @@ struct sctp_cc_functions {
 	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
 		 	struct sctp_association *asoc,
 		 	int accum_moved ,int reneged_all, int will_exit);
+	void (*sctp_cwnd_update_exit_pf)(struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
 			struct sctp_association *asoc);
 	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
@@ -702,8 +702,6 @@ struct sctp_cc_functions {
 			uint32_t *bottle_bw, uint32_t *on_queue);
 	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, int burst_limit);
-	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp,
-			struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_packet_transmitted)(struct sctp_tcb *stcb, 
 			struct sctp_nets *net);
 	void (*sctp_cwnd_update_tsn_acknowledged)(struct sctp_nets *net, 

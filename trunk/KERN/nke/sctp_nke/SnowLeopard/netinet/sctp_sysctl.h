@@ -84,8 +84,6 @@ struct sctp_sysctl {
 	uint32_t sctp_nr_sack_on_off;
 	uint32_t sctp_cmt_pf;
 	uint32_t sctp_use_cwnd_based_maxburst;
-	uint32_t sctp_early_fr;
-	uint32_t sctp_early_fr_msec;
 	uint32_t sctp_asconf_auth_nochk;
 	uint32_t sctp_auth_disable;
 	uint32_t sctp_nat_friendly;
@@ -375,18 +373,6 @@ struct sctp_sysctl {
 #define SCTPCTL_CWND_MAXBURST_MIN	0
 #define SCTPCTL_CWND_MAXBURST_MAX	1
 #define SCTPCTL_CWND_MAXBURST_DEFAULT	1
-
-/* early_fast_retran: Early Fast Retransmit with timer */
-#define SCTPCTL_EARLY_FAST_RETRAN_DESC	"Early Fast Retransmit with timer"
-#define SCTPCTL_EARLY_FAST_RETRAN_MIN	0
-#define SCTPCTL_EARLY_FAST_RETRAN_MAX	0xFFFFFFFF
-#define SCTPCTL_EARLY_FAST_RETRAN_DEFAULT	0
-
-/* early_fast_retran_msec: Early Fast Retransmit minimum timer value */
-#define SCTPCTL_EARLY_FAST_RETRAN_MSEC_DESC	"Early Fast Retransmit minimum timer value"
-#define SCTPCTL_EARLY_FAST_RETRAN_MSEC_MIN	0
-#define SCTPCTL_EARLY_FAST_RETRAN_MSEC_MAX	0xFFFFFFFF
-#define SCTPCTL_EARLY_FAST_RETRAN_MSEC_DEFAULT	SCTP_MINFR_MSEC_TIMER
 
 /* asconf_auth_nochk: Disable SCTP ASCONF AUTH requirement */
 #define SCTPCTL_ASCONF_AUTH_NOCHK_DESC	"Disable SCTP ASCONF AUTH requirement"

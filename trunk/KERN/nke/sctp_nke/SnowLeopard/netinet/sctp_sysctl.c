@@ -98,8 +98,6 @@ sctp_init_sysctls()
 	SCTP_BASE_SYSCTL(sctp_cmt_use_dac) = SCTPCTL_CMT_USE_DAC_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_cmt_pf) = SCTPCTL_CMT_PF_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst) = SCTPCTL_CWND_MAXBURST_DEFAULT;
-	SCTP_BASE_SYSCTL(sctp_early_fr) = SCTPCTL_EARLY_FAST_RETRAN_DEFAULT;
-	SCTP_BASE_SYSCTL(sctp_early_fr_msec) = SCTPCTL_EARLY_FAST_RETRAN_MSEC_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk) = SCTPCTL_ASCONF_AUTH_NOCHK_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_auth_disable) = SCTPCTL_AUTH_DISABLE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_nat_friendly) = SCTPCTL_NAT_FRIENDLY_DEFAULT;
@@ -760,8 +758,6 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_cmt_use_dac), SCTPCTL_CMT_USE_DAC_MIN, SCTPCTL_CMT_USE_DAC_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_cmt_pf), SCTPCTL_CMT_PF_MIN, SCTPCTL_CMT_PF_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), SCTPCTL_CWND_MAXBURST_MIN, SCTPCTL_CWND_MAXBURST_MAX);
-		RANGECHK(SCTP_BASE_SYSCTL(sctp_early_fr), SCTPCTL_EARLY_FAST_RETRAN_MIN, SCTPCTL_EARLY_FAST_RETRAN_MAX);
-		RANGECHK(SCTP_BASE_SYSCTL(sctp_early_fr_msec), SCTPCTL_EARLY_FAST_RETRAN_MSEC_MIN, SCTPCTL_EARLY_FAST_RETRAN_MSEC_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk), SCTPCTL_ASCONF_AUTH_NOCHK_MIN, SCTPCTL_ASCONF_AUTH_NOCHK_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_auth_disable), SCTPCTL_AUTH_DISABLE_MIN, SCTPCTL_AUTH_DISABLE_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_nat_friendly), SCTPCTL_NAT_FRIENDLY_MIN, SCTPCTL_NAT_FRIENDLY_MAX);
@@ -924,17 +920,6 @@ sysctl_stat_get(SYSCTL_HANDLER_ARGS)
 		sb.sctps_timoautoclose += sarry->sctps_timoautoclose;
 		sb.sctps_timoassockill += sarry->sctps_timoassockill;
 		sb.sctps_timoinpkill += sarry->sctps_timoinpkill;
-		sb.sctps_earlyfrstart += sarry->sctps_earlyfrstart;
-		sb.sctps_earlyfrstop += sarry->sctps_earlyfrstop;
-		sb.sctps_earlyfrmrkretrans += sarry->sctps_earlyfrmrkretrans;
-		sb.sctps_earlyfrstpout += sarry->sctps_earlyfrstpout;
-		sb.sctps_earlyfrstpidsck1 += sarry->sctps_earlyfrstpidsck1;
-		sb.sctps_earlyfrstpidsck2 += sarry->sctps_earlyfrstpidsck2;
-		sb.sctps_earlyfrstpidsck3 += sarry->sctps_earlyfrstpidsck3;
-		sb.sctps_earlyfrstpidsck4 += sarry->sctps_earlyfrstpidsck4;
-		sb.sctps_earlyfrstrid += sarry->sctps_earlyfrstrid;
-		sb.sctps_earlyfrstrout += sarry->sctps_earlyfrstrout;
-		sb.sctps_earlyfrstrtmr += sarry->sctps_earlyfrstrtmr;
 		sb.sctps_hdrops += sarry->sctps_hdrops;
 		sb.sctps_badsum += sarry->sctps_badsum;
 		sb.sctps_noport += sarry->sctps_noport;
@@ -1180,14 +1165,6 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, cmt_pf, CTLTYPE_UINT|CTLFLAG_RW,
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_CWND_MAXBURST_DESC);
-
-SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, early_fast_retran, CTLTYPE_UINT|CTLFLAG_RW,
-                 &SCTP_BASE_SYSCTL(sctp_early_fr), 0, sysctl_sctp_check, "IU",
-                 SCTPCTL_EARLY_FAST_RETRAN_DESC);
-
-SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, early_fast_retran_msec, CTLTYPE_UINT|CTLFLAG_RW,
-                 &SCTP_BASE_SYSCTL(sctp_early_fr_msec), 0, sysctl_sctp_check, "IU",
-                 SCTPCTL_EARLY_FAST_RETRAN_MSEC_DESC);
 
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, asconf_auth_nochk, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk), 0, sysctl_sctp_check, "IU",
@@ -1529,14 +1506,6 @@ void sysctl_setup_sctp(void)
 	sysctl_add_oid(&sysctl_oid_top, "cwnd_maxburst", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), 0, sysctl_sctp_check,
 	    SCTPCTL_CWND_MAXBURST_DESC);
-
-	sysctl_add_oid(&sysctl_oid_top, "early_fast_retran", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_early_fr), 0, sysctl_sctp_check,
-	    SCTPCTL_EARLY_FAST_RETRAN_DESC);
-
-	sysctl_add_oid(&sysctl_oid_top, "early_fast_retran_msec", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_early_fr_msec), 0, sysctl_sctp_check,
-	    SCTPCTL_EARLY_FAST_RETRAN_MSEC_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "asconf_auth_nochk", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk), 0, sysctl_sctp_check,
