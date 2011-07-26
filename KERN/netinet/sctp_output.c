@@ -8912,24 +8912,6 @@ again_one_more_time:
 				}
 				SCTP_STAT_INCR_BY(sctps_senddata, bundle_at);
 				sctp_clean_up_datalist(stcb, asoc, data_list, bundle_at, net);
-				if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-					if (net->flight_size < net->cwnd) {
-						/* start or restart it */
-						if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
-									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_2 );
-						}
-						SCTP_STAT_INCR(sctps_earlyfrstrout);
-						sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net);
-					} else {
-						/* stop it if its running */
-						if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-							SCTP_STAT_INCR(sctps_earlyfrstpout);
-							sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, inp, stcb, net,
-									SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_3 );
-						}
-					}
-				}
 			}
 			if (one_chunk) {
 				break;

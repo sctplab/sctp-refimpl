@@ -986,18 +986,8 @@ struct sctpstat {
 	uint32_t  sctps_timoautoclose;       /* Number of times auto close timer fired */
 	uint32_t  sctps_timoassockill;       /* Number of asoc free timers expired */
 	uint32_t  sctps_timoinpkill;         /* Number of inp free timers expired */
-	/* Early fast retransmission counters */
-	uint32_t  sctps_earlyfrstart;
-	uint32_t  sctps_earlyfrstop;
-	uint32_t  sctps_earlyfrmrkretrans;
-	uint32_t  sctps_earlyfrstpout;
-	uint32_t  sctps_earlyfrstpidsck1;
-	uint32_t  sctps_earlyfrstpidsck2;
-	uint32_t  sctps_earlyfrstpidsck3;
-	uint32_t  sctps_earlyfrstpidsck4;
-	uint32_t  sctps_earlyfrstrid;
-	uint32_t  sctps_earlyfrstrout;
-	uint32_t  sctps_earlyfrstrtmr;
+	/* former early FR counters */
+	uint32_t  sctps_spare[11];
 	/* others */
 	uint32_t  sctps_hdrops;	          /* packet shorter than header */
 	uint32_t  sctps_badsum;	          /* checksum error             */
