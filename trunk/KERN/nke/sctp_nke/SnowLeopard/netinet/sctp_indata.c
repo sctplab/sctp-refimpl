@@ -373,7 +373,6 @@ sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	int cntDel;
 	struct sctp_queued_to_read *control, *ctl, *nctl;
 
-I_AM_HERE;
 	if (stcb == NULL)
 		return;
 
@@ -404,7 +403,6 @@ I_AM_HERE;
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH_SAFE(chk, &asoc->reasmqueue, sctp_next, nchk) {
-printf("Considering TSN %X.\n", chk->rec.data.TSN_seq);
 		if (chk->rec.data.TSN_seq != (asoc->tsn_last_delivered + 1)) {
 			/* Can't deliver more :< */
 			return;
@@ -2679,7 +2677,6 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 						      last_chunk)) {
 				num_chunks++;
 			}
-sctp_print_mapping_array(asoc);
 			if (abort_flag)
 				return (2);
 
