@@ -658,7 +658,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 				SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
 		}
 		net->dest_state &= ~SCTP_ADDR_PF;
-		net->cwnd = net->mtu * stcb->asoc.sctp_cmt_pf;
+		stcb->asoc.cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Destination %p moved from PF to reachable with cwnd %d.\n",
 			net, net->cwnd);
 	}
