@@ -8648,6 +8648,18 @@ again_one_more_time:
 					/* Don't send the chunk on this net */
 					continue;
 				}
+				
+				if ((asoc->sctp_cmt_on_off == 0) &&
+				    (net != asoc->primary_destination) &&
+				    (chk->whoTo == NULL)) {
+					/* 
+					 * We won't send to a net with CMT
+					 * off that is not the primary 
+					 * unless the user specified a specific
+					 * destination.
+					 */
+					continue;
+				}
 				if ((chk->send_size > omtu) && ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) == 0)) {
 					/*-
 					 * strange, we have a chunk that is
