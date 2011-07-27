@@ -307,7 +307,7 @@ struct sctp_nets {
 	union cc_control_data {
 		struct htcp htcp_ca; 	/* JRS - struct used in HTCP algorithm */
 		struct rtcc_cc rtcc;    /* rtcc module cc stuff  */
-	}cc_mod;
+	} cc_mod;
 	int ref_count;
 
 	/* Congestion stats per destination */
@@ -357,9 +357,11 @@ struct sctp_nets {
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
-	/* number of transmit failures to down this guy */
+	/* number of timeouts to consider the destination unreachable */
 	uint16_t failure_threshold;
-	/* error stats on destination */
+	/* number of timeouts to consider the destination potentially failed */
+	uint16_t pf_threshold;
+	/* error stats on the destination */
 	uint16_t error_count;
 	/* UDP port number in case of UDP tunneling */
 	uint16_t port;

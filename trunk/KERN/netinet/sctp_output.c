@@ -3852,21 +3852,7 @@ sctp_handle_no_route(struct sctp_tcb *stcb,
 			                        so_locked);
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
-				/*
-				 * JRS 5/14/07 - If a destination is unreachable, the PF bit
-				 *  is turned off.  This allows an unambiguous use of the PF bit
-				 *  for destinations that are reachable but potentially failed.
-				 *  If the destination is set to the unreachable state, also set
-				 *  the destination to the PF state.
-				 */
-				/* Add debug message here if destination is not in PF state. */
-				/* Stop any running T3 timers here? */
-				if ((stcb->asoc.sctp_cmt_on_off > 0) &&
-				    (stcb->asoc.sctp_cmt_pf > 0)) {
-					net->dest_state &= ~SCTP_ADDR_PF;
-					SCTPDBG(SCTP_DEBUG_OUTPUT1, "Destination %p moved from PF to unreachable.\n",
-					        net);
-				}
+				net->dest_state &= ~SCTP_ADDR_PF;
 			}
 		}
 		if (stcb) {
@@ -7923,7 +7909,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	int data_auth_reqd = 0;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 	   the destination. */
-	int pf_hbflag = 0;
 	int quit_now = 0;
 
 #if defined(__APPLE__)
@@ -8012,7 +7997,8 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 * mostly copy by reference (we hope).
 			 */
 			net->window_probe = 0;
-			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ||
+			if ((net->dest_state & SCTP_ADDR_PF) ||
+			    (net->dest_state & SCTP_ADDR_NOT_REACHABLE) ||
 			    (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 					sctp_log_cwnd(stcb, net, 1,
@@ -8454,11 +8440,8 @@ again_one_more_time:
 				    (chk->rec.chunk_id.id == SCTP_ECN_CWR) ||
 				    (chk->rec.chunk_id.id == SCTP_PACKET_DROPPED) ||
 				    (chk->rec.chunk_id.id == SCTP_ASCONF_ACK)) {
-
 					if (chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) {
 						hbflag = 1;
-						/* JRS 5/14/07 - Set the flag to say a heartbeat is being sent. */
-						pf_hbflag = 1;
 					}
 					/* remove these chunks at the end */
 					if ((chk->rec.chunk_id.id == SCTP_SELECTIVE_ACK) ||
@@ -8588,7 +8571,6 @@ again_one_more_time:
 		}
 		/* JRI: if dest is in PF state, do not send data to it */
 		if ((asoc->sctp_cmt_on_off > 0) &&
-		    (asoc->sctp_cmt_pf > 0) &&
 		    (net->dest_state & SCTP_ADDR_PF)) {
 			goto no_data_fill;
 		}
@@ -8812,16 +8794,6 @@ again_one_more_time:
 				/*
 				 * no timer running on this destination
 				 * restart it.
-				 */
-				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
-			} else if ((asoc->sctp_cmt_on_off > 0) &&
-			           (asoc->sctp_cmt_pf > 0) &&
-				   pf_hbflag &&
-				   ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) &&
-			           (!SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer))) {
-				/*
-				 * JRS 5/14/07 - If a HB has been sent to a PF destination and no T3 timer is currently
-				 *  running, start the T3 timer to track the HBs that were sent.
 				 */
 				sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 			}
@@ -10113,15 +10085,6 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 */
 			if (net->ref_count > 1)
 				sctp_move_chunks_from_net(stcb, net);
-		} else if ((asoc->sctp_cmt_on_off > 0) &&
-		           (asoc->sctp_cmt_pf > 0) &&
-			   ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
-			/*
-			 * JRS 5/14/07 - If CMT PF is on and the current destination is in
-			 *  PF state, move all queued data to an alternate desination.
-			 */
-			if (net->ref_count > 1)
-				sctp_move_chunks_from_net(stcb, net);
 		} else {
 			/*-
 			 * if ((asoc->sat_network) || (net->addr_is_local))
@@ -11249,7 +11212,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, int iphlen, struct sctphdr *sh,
 
 }
 
-int
+void
 sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
 	SCTP_UNUSED
@@ -11262,7 +11225,7 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (net == NULL) {
-		return (0);
+		return;
 	}
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	switch (net->ro._l_addr.sa.sa_family) {
@@ -11275,12 +11238,12 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 		break;
 #endif
 	default:
-		return (0);
+		return;
 	}
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		SCTPDBG(SCTP_DEBUG_OUTPUT4, "Gak, can't get a chunk for hb\n");
-		return (0);
+		return;
 	}
 
 	chk->copy_by_ref = 0;
@@ -11292,7 +11255,7 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	chk->data = sctp_get_mbuf_for_msg(chk->send_size, 0, M_DONTWAIT, 1, MT_HEADER);
 	if (chk->data == NULL) {
 		sctp_free_a_chunk(stcb, chk, so_locked);
-		return (0);
+		return;
 	}
 	SCTP_BUF_RESV_UF(chk->data, SCTP_MIN_OVERHEAD);
 	SCTP_BUF_LEN(chk->data) = chk->send_size;
@@ -11346,55 +11309,15 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 		break;
 #endif
 	default:
-		return (0);
+		return;
 		break;
 	}
 
-	/*
-	 * JRS 5/14/07 - In CMT PF, the T3 timer is used to track PF-heartbeats.  Because of this,
-	 *  threshold management is done by the t3 timer handler, and does not need to be done
-	 *  upon the send of a PF-heartbeat.
-	 *  If CMT PF is on and the destination to which a heartbeat is being sent is in PF state,
-	 *  do NOT do threshold management.
-	 */
-	if ((stcb->asoc.sctp_cmt_pf == 0) ||
-	    ((net->dest_state & SCTP_ADDR_PF) != SCTP_ADDR_PF)) {
-		/* ok we have a destination that needs a beat */
-		/* lets do the theshold management Qiaobing style */
-		if (sctp_threshold_management(stcb->sctp_ep, stcb, net,
-			      stcb->asoc.max_send_times)) {
-			/*-
-			 * we have lost the association, in a way this is
-			 * quite bad since we really are one less time since
-			 * we really did not send yet. This is the down side
-			 * to the Q's style as defined in the RFC and not my
-			 * alternate style defined in the RFC.
-			 */
-			if (chk->data != NULL) {
-				sctp_m_freem(chk->data);
-				chk->data = NULL;
-			}
-			/* Here we do NOT use the macro since the
-			 * association is now gone.
-			 */
-			if (chk->whoTo) {
-				sctp_free_remote_addr(chk->whoTo);
-				chk->whoTo = NULL;
-			}
-			sctp_free_a_chunk((struct sctp_tcb *)NULL, chk, so_locked);
-			return (-1);
-		}
-	}
 	net->hb_responded = 0;
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
 	stcb->asoc.ctrl_queue_cnt++;
 	SCTP_STAT_INCR(sctps_sendheartbeat);
-	/*-
-	 * Call directly med level routine to put out the chunk. It will
-	 * always tumble out control chunks aka HB but it may even tumble
-	 * out data too.
-	 */
-	return (1);
+	return;
 }
 
 void

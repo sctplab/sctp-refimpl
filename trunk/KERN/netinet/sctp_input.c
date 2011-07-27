@@ -643,24 +643,11 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
 		}
 	}
-	/*
-	 * JRS 5/14/07 - If CMT PF is on and the destination is in PF state,
-	 *  set the destination to active state and set the cwnd to one or two
-	 *  MTU's based on whether PF1 or PF2 is being used. If a T3 timer is running,
-	 *  for the destination, stop the timer because a PF-heartbeat was received.
-	 */
-	if ((stcb->asoc.sctp_cmt_on_off > 0) &&
-	    (stcb->asoc.sctp_cmt_pf > 0) &&
-	    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
-		if (SCTP_OS_TIMER_PENDING(&net->rxt_timer.timer)) {
-			sctp_timer_stop(SCTP_TIMER_TYPE_SEND, stcb->sctp_ep,
-				stcb, net,
-				SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
-		}
-		net->dest_state &= ~SCTP_ADDR_PF;
+	if ((r_net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
+		r_net->dest_state &= ~SCTP_ADDR_PF;
+		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
+		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);
 		stcb->asoc.cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
-		SCTPDBG(SCTP_DEBUG_INPUT1, "Destination %p moved from PF to reachable with cwnd %d.\n",
-			net, net->cwnd);
 	}
 	/* Now lets do a RTO with this */
 	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy, 
@@ -3415,7 +3402,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 		/* resend a demand HB */
 		if ((stcb->asoc.overall_error_count + 3) < stcb->asoc.max_send_times) {
 			/* Only retransmit if we KNOW we wont destroy the tcb */
-			(void)sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+			sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
 		}
 		break;
 	case SCTP_SHUTDOWN:
