@@ -2580,6 +2580,10 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 	 * may need to go out. Don't bump the net. This is done ONLY when a
 	 * chunk is assigned.
 	 */
+	if (asoc->last_data_chunk_from != net) {
+		printf("We now see data from %p (previously %p)\n",
+			net, asoc->last_data_chunk_from);
+	}
 	asoc->last_data_chunk_from = net;
 
 #ifndef __Panda__
