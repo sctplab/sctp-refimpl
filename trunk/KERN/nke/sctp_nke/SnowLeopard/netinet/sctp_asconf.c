@@ -2005,7 +2005,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	getmicrotime(&timenow);
 #endif
 
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0 &&
+	if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0 ||
 	    sctp_is_feature_off(inp, SCTP_PCB_FLAGS_DO_ASCONF)) {
 		/* subset bound, no ASCONF allowed case, so ignore */
 		return;
