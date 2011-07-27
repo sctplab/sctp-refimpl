@@ -7906,6 +7906,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	struct sctp_auth_chunk *auth = NULL;
 	uint16_t auth_keyid;
 	int override_ok = 1;
+	int skip_fill_up = 0;
 	int data_auth_reqd = 0;
 	/* JRS 5/14/07 - Add flag for whether a heartbeat is sent to
 	   the destination. */
@@ -7982,7 +7983,22 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 		max_send_per_dest = SCTP_SB_LIMIT_SND(stcb->sctp_socket) / asoc->numnets;
 	else
 		max_send_per_dest = 0;
+	if (no_data_chunks == 0) {
+		/* How many non-directed chunks are there? */
+		TAILQ_FOREACH(chk, &asoc->send_queue, sctp_next) {
+			if (chk->whoTo == NULL) {
+				/* We already have non-directed
+				 * chunks on the queue, no need
+				 * to do a fill-up.
+				 */
+				skip_fill_up = 1;
+				break;
+			}
+		}
+
+	}
 	if ((no_data_chunks == 0) &&
+	    (skip_fill_up == 0) &&
 	    (!stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
@@ -8646,6 +8662,18 @@ again_one_more_time:
 				if ((chk->whoTo != NULL) &&
 				    (chk->whoTo != net)) {
 					/* Don't send the chunk on this net */
+					continue;
+				}
+				
+				if ((asoc->sctp_cmt_on_off == 0) &&
+				    (net != asoc->primary_destination) &&
+				    (chk->whoTo == NULL)) {
+					/* 
+					 * We won't send to a net with CMT
+					 * off that is not the primary 
+					 * unless the user specified a specific
+					 * destination.
+					 */
 					continue;
 				}
 				if ((chk->send_size > omtu) && ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) == 0)) {

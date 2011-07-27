@@ -553,6 +553,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.active = ((net->dest_state & SCTP_ADDR_REACHABLE) == SCTP_ADDR_REACHABLE);
 				xraddr.confirmed = ((net->dest_state & SCTP_ADDR_UNCONFIRMED) == 0);
 				xraddr.heartbeat_enabled = ((net->dest_state & SCTP_ADDR_NOHB) == 0);
+				xraddr.potentially_failed = ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF);
 				xraddr.rto = net->RTO;
 				xraddr.max_path_rtx = net->failure_threshold;
 				xraddr.rtx = net->marked_retrans;
