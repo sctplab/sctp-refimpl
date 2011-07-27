@@ -4054,9 +4054,12 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
-					/* now was it the primary? if so restore */
-					if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
+				}
+				if (net == stcb->asoc.primary_destination) {
+					if (stcb->asoc.alternate) {
+						/* release the alternate, primary is good */
+						sctp_free_remote_addr(stcb->asoc.alternate);
+						stcb->asoc.alternate = NULL;
 					}
 				}
 				if (net->dest_state & SCTP_ADDR_PF) {
@@ -4849,11 +4852,16 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
-					/* now was it the primary? if so restore */
-					if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
+				}
+
+				if (net == stcb->asoc.primary_destination) {
+					if (stcb->asoc.alternate) {
+						/* release the alternate, primary is good */
+						sctp_free_remote_addr(stcb->asoc.alternate);
+						stcb->asoc.alternate = NULL;
 					}
 				}
+
 				if (net->dest_state & SCTP_ADDR_PF) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);

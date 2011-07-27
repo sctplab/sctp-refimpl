@@ -610,7 +610,6 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		r_net->dest_state &= ~SCTP_ADDR_UNCONFIRMED;
 		if (r_net->dest_state & SCTP_ADDR_REQ_PRIMARY) {
 			stcb->asoc.primary_destination = r_net;
-			r_net->dest_state &= ~SCTP_ADDR_WAS_PRIMARY;
 			r_net->dest_state &= ~SCTP_ADDR_REQ_PRIMARY;
 			f_net = TAILQ_FIRST(&stcb->asoc.nets);
 			if (f_net != r_net) {
@@ -637,17 +636,20 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		r_net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 		r_net->dest_state |= SCTP_ADDR_REACHABLE;
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-		    SCTP_HEARTBEAT_SUCCESS, (void *)r_net, SCTP_SO_NOT_LOCKED);
-		/* now was it the primary? if so restore */
-		if (r_net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
-		}
+				SCTP_HEARTBEAT_SUCCESS, (void *)r_net, SCTP_SO_NOT_LOCKED);
 	}
 	if (r_net->dest_state & SCTP_ADDR_PF) {
 		r_net->dest_state &= ~SCTP_ADDR_PF;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);
 		stcb->asoc.cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
+	}
+	if (r_net == stcb->asoc.primary_destination) {
+		if (stcb->asoc.alternate) {
+			/* release the alternate, primary is good */
+			sctp_free_remote_addr(stcb->asoc.alternate);
+			stcb->asoc.alternate = NULL;
+		}
 	}
 	/* Now lets do a RTO with this */
 	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy, 

@@ -108,9 +108,6 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
 				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state &= ~SCTP_ADDR_REQ_PRIMARY;
-				if (net == stcb->asoc.primary_destination) {
-					net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-				}
 				net->dest_state &= ~SCTP_ADDR_PF;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 				    stcb,
@@ -901,6 +898,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 	} else {
 		alt = sctp_find_alternate_net(stcb, net, 0);
 	}
+
 	num_mk = 0;
 	num_abandoned = 0;
 	(void)sctp_mark_all_for_resend(stcb, net, alt, win_probe, 
@@ -923,7 +921,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 	/* Backoff the timer and cwnd */
 	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk, num_abandoned);
-	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+	if (net->dest_state & (SCTP_ADDR_NOT_REACHABLE|SCTP_ADDR_PF)) {
 		/* Move all pending over too */
 		sctp_move_chunks_from_net(stcb, net);
 
@@ -952,11 +950,11 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 			 * change-primary then this flag must be cleared
 			 * from any net structures.
 			 */
-			if (sctp_set_primary_addr(stcb,
-						  (struct sockaddr *)NULL,
-						  alt) == 0) {
-				net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
+			if (stcb->asoc.alternate) {
+				sctp_free_remote_addr(stcb->asoc.alternate);
 			}
+			stcb->asoc.alternate = alt;
+			atomic_add_int(&stcb->asoc.alternate->ref_count, 1);
 		}
 	}
 	/*
