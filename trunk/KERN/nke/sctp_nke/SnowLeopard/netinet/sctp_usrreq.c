@@ -5227,9 +5227,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			    (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 				/* Ok we need to set it */
 				if (sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net) == 0) {
-					if (net->dest_state & SCTP_ADDR_SWITCH_PRIMARY) {
-						net->dest_state |= SCTP_ADDR_DOUBLE_SWITCH;
-					}
 					net->dest_state |= SCTP_ADDR_SWITCH_PRIMARY;
 				}
 			}

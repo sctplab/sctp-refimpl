@@ -10541,9 +10541,6 @@ sctp_send_sack(struct sctp_tcb *stcb, int so_locked
 			/* Nope, no alternate */
 			a_chk->whoTo = asoc->last_data_chunk_from;
 			asoc->used_alt_onsack = 0;
-			printf("Pick alternate %p ldcf:%p\n",
-				a_chk->whoTo,
-				asoc->last_data_chunk_from);
 		}
 	} else {
 		/*
