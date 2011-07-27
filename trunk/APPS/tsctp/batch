@@ -11,13 +11,13 @@ VAR=$START
 if [ $START -lt $END ]
 then
 	while [ $VAR -le $END ]; do
-		./tsctp -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
+		./tsctp -v -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
 		VAR=`expr $VAR + $DELTA`
 		sleep 5
 	done
 else
 	while [ $VAR -ge $END ]; do
-		./tsctp -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
+		./tsctp -v -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
 		VAR=`expr $VAR - $DELTA`
 		sleep 5
 	done

@@ -2,23 +2,21 @@
 
 START=$1
 END=$2
-NUMBER=$3
+TIME=$3
+SOURCE=$4
 while [  $START -lt $END ]; do
-	./tsctp -l $START -n $NUMBER $4 
-	if [ $START -le 50 ]; then
+	./tsctp -l $START -T $TIME -L $SOURCE $5 
+	if [ $START -lt 100 ]; then
 		START=`expr $START + 1`
 	fi
-	if [ $START -gt 50 -a $START -le 100 ]; then
-		START=`expr $START + 2`
-	fi
-	if [ $START -gt 100 -a $START -le 500 ]; then
-		START=`expr $START + 5`
-	fi
-	if [ $START -gt 500 -a $START -le 1000 ]; then
+	if [ $START -ge 100 -a $START -lt 1000 ]; then
 		START=`expr $START + 10`
 	fi
-	if [ $START -gt 1000 ]; then
-		START=`expr $START + 50`
+	if [ $START -ge 1000 -a $START -lt 10000 ]; then
+		START=`expr $START + 100`
+	fi
+	if [ $START -ge 10000 ]; then
+		START=`expr $START + 1000`
 	fi
 	sleep 5
 done
