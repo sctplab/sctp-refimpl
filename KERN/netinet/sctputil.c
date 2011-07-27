@@ -928,7 +928,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_cmt_on_off = m->sctp_cmt_on_off;
 	asoc->ecn_allowed = m->sctp_ecn_enable;
 	asoc->sctp_nr_sack_on_off = (uint8_t)SCTP_BASE_SYSCTL(sctp_nr_sack_on_off);
-	asoc->sctp_cmt_pf = (uint8_t)SCTP_BASE_SYSCTL(sctp_cmt_pf);
+	asoc->sctp_cmt_pf = (uint8_t)0;
 	asoc->sctp_frag_point = m->sctp_frag_point;
 	asoc->sctp_features = m->sctp_features;
 #ifdef INET
@@ -2022,7 +2022,8 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			} else {
 				to_ticks = to_ticks - jitter;
 			}
-			if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
+			    !(net->dest_state & SCTP_ADDR_PF)) {
 				to_ticks += net->heart_beat_delay;
 			}
 			/*
