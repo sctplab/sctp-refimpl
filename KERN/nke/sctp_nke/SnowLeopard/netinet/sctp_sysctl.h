@@ -82,7 +82,6 @@ struct sctp_sysctl {
 	uint32_t sctp_cmt_use_dac;
 	/* EY 5/5/08 - nr_sack flag variable */
 	uint32_t sctp_nr_sack_on_off;
-	uint32_t sctp_cmt_pf;
 	uint32_t sctp_use_cwnd_based_maxburst;
 	uint32_t sctp_asconf_auth_nochk;
 	uint32_t sctp_auth_disable;
@@ -361,12 +360,6 @@ struct sctp_sysctl {
 #define SCTPCTL_CMT_USE_DAC_MIN		0
 #define SCTPCTL_CMT_USE_DAC_MAX		1
 #define SCTPCTL_CMT_USE_DAC_DEFAULT    	0
-
-/* JRS 5/2107 - CMT PF type flag */
-#define SCTPCTL_CMT_PF_DESC		"CMT PF type flag"
-#define SCTPCTL_CMT_PF_MIN		0
-#define SCTPCTL_CMT_PF_MAX		2
-#define SCTPCTL_CMT_PF_DEFAULT		0
 
 /* cwnd_maxburst: Use a CWND adjusting maxburst */
 #define SCTPCTL_CWND_MAXBURST_DESC	"Use a CWND adjusting maxburst"

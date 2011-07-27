@@ -96,7 +96,6 @@ sctp_init_sysctls()
 	/* EY */
 	SCTP_BASE_SYSCTL(sctp_nr_sack_on_off) = SCTPCTL_NR_SACK_ON_OFF_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_cmt_use_dac) = SCTPCTL_CMT_USE_DAC_DEFAULT;
-	SCTP_BASE_SYSCTL(sctp_cmt_pf) = SCTPCTL_CMT_PF_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst) = SCTPCTL_CWND_MAXBURST_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk) = SCTPCTL_ASCONF_AUTH_NOCHK_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_auth_disable) = SCTPCTL_AUTH_DISABLE_DEFAULT;
@@ -756,7 +755,6 @@ sysctl_sctp_check(SYSCTL_HANDLER_ARGS)
 		/* EY */
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_nr_sack_on_off), SCTPCTL_NR_SACK_ON_OFF_MIN, SCTPCTL_NR_SACK_ON_OFF_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_cmt_use_dac), SCTPCTL_CMT_USE_DAC_MIN, SCTPCTL_CMT_USE_DAC_MAX);
-		RANGECHK(SCTP_BASE_SYSCTL(sctp_cmt_pf), SCTPCTL_CMT_PF_MIN, SCTPCTL_CMT_PF_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), SCTPCTL_CWND_MAXBURST_MIN, SCTPCTL_CWND_MAXBURST_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_asconf_auth_nochk), SCTPCTL_ASCONF_AUTH_NOCHK_MIN, SCTPCTL_ASCONF_AUTH_NOCHK_MAX);
 		RANGECHK(SCTP_BASE_SYSCTL(sctp_auth_disable), SCTPCTL_AUTH_DISABLE_MIN, SCTPCTL_AUTH_DISABLE_MAX);
@@ -1158,10 +1156,6 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, cmt_use_dac, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_cmt_use_dac), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_CMT_USE_DAC_DESC);
 
-SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, cmt_pf, CTLTYPE_UINT|CTLFLAG_RW,
-                 &SCTP_BASE_SYSCTL(sctp_cmt_pf), 0, sysctl_sctp_check, "IU",
-                 SCTPCTL_CMT_PF_DESC);
-
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, cwnd_maxburst, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_CWND_MAXBURST_DESC);
@@ -1498,10 +1492,6 @@ void sysctl_setup_sctp(void)
 	sysctl_add_oid(&sysctl_oid_top, "cmt_use_dac", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_cmt_use_dac), 0, sysctl_sctp_check,
 	    SCTPCTL_CMT_USE_DAC_DESC);
-
-	sysctl_add_oid(&sysctl_oid_top, "cmt_pf", CTLTYPE_INT|CTLFLAG_RW,
-            &SCTP_BASE_SYSCTL(sctp_cmt_pf), 0, sysctl_sctp_check,
-	    SCTPCTL_CMT_PF_DESC);
 
 	sysctl_add_oid(&sysctl_oid_top, "cwnd_maxburst", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_use_cwnd_based_maxburst), 0, sysctl_sctp_check,

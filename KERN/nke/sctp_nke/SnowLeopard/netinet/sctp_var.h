@@ -384,6 +384,8 @@ extern struct pr_usrreqs sctp_usrreqs;
 
 #endif
 
+#define SCTP_PF_ENABLED(_net) (_net->pf_threshold < _net->failure_threshold)
+#define SCTP_NET_IS_PF(_net) (_net->pf_threshold < _net->error_count)
 
 struct sctp_nets;
 struct sctp_inpcb;
