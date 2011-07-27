@@ -542,10 +542,8 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219397 2011-03-08 11:58:25
 #define SCTP_ADDR_NOHB			0x004
 #define SCTP_ADDR_BEING_DELETED		0x008
 #define SCTP_ADDR_NOT_IN_ASSOC		0x010
-#define SCTP_ADDR_WAS_PRIMARY		0x020
 #define SCTP_ADDR_SWITCH_PRIMARY	0x040
 #define SCTP_ADDR_OUT_OF_SCOPE		0x080
-#define SCTP_ADDR_DOUBLE_SWITCH		0x100
 #define SCTP_ADDR_UNCONFIRMED		0x200
 #define SCTP_ADDR_REQ_PRIMARY           0x400
 /* JRS 5/13/07 - Added potentially failed state for CMT PF */
