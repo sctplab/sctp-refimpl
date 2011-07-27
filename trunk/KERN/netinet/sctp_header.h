@@ -104,6 +104,8 @@ struct sctp_heartbeat_info_param {
 	uint32_t random_value2;
 	uint8_t addr_family;
 	uint8_t addr_len;
+	/* make sure that this structure is 4 byte aligned */
+	uint8_t padding[2];
 	char address[SCTP_ADDRMAX];
 } SCTP_PACKED ;
 
