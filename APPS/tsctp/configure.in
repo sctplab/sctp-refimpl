@@ -1,11 +1,13 @@
 AC_INIT(tsctp.c)
-AM_INIT_AUTOMAKE(tsctp, 0.4)
+AM_INIT_AUTOMAKE(tsctp, 0.5)
 
 AC_PROG_CC
 
-AC_CANONICAL_HOST
+if test "$GCC" = "yes"; then
+  CFLAGS="$CFLAGS -g -Wall -ansi -pedantic"
+fi
 
-CFLAGS="$CFLAGS -Wall -ansi -pedantic"
+AC_CANONICAL_HOST
 
 case $host_os in
 solaris*)
