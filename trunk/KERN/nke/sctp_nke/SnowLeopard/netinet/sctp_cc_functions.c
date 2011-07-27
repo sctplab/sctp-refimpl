@@ -961,7 +961,7 @@ sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb, struct sctp_nets *net)
 	int old_cwnd;
 
 	old_cwnd = net->cwnd;
-	net->cwnd = net->mtu * stcb->asoc.sctp_cmt_pf;
+	net->cwnd = net->mtu;
 	SDT_PROBE(sctp, cwnd, net, ack, 
 	          stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
 	          old_cwnd, net->cwnd);
