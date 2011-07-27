@@ -837,6 +837,11 @@ sctp_start_net_timers(struct sctp_tcb *stcb)
 			cnt_hb_sent++;
 		}
 	}
+	if (cnt_hb_sent) {
+		sctp_chunk_output(stcb->sctp_ep, stcb, 
+				  SCTP_OUTPUT_FROM_COOKIE_ACK, 
+				  SCTP_SO_NOT_LOCKED);
+	}
 }
 
 
