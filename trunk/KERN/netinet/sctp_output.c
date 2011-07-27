@@ -7983,6 +7983,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	else
 		max_send_per_dest = 0;
 	if ((no_data_chunks == 0) &&
+	    TAILQ_EMPTY(&asoc->send_queue) &&
 	    (!stcb->asoc.ss_functions.sctp_ss_is_empty(stcb, asoc))) {
 		TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
 			/*
