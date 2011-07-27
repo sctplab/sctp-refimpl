@@ -3862,14 +3862,16 @@ sctp_handle_no_route(struct sctp_tcb *stcb,
 
 				alt = sctp_find_alternate_net(stcb, net, 0);
 				if (alt != net) {
-					if (sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, alt) == 0) {
-						net->dest_state |= SCTP_ADDR_WAS_PRIMARY;
-						if (net->ro._s_addr) {
-							sctp_free_ifa(net->ro._s_addr);
-							net->ro._s_addr = NULL;
-						}
-						net->src_addr_selected = 0;
+					if (stcb->asoc.alternate) {
+						sctp_free_remote_addr(stcb->asoc.alternate);
 					}
+					stcb->asoc.alternate = alt;
+					atomic_add_int(&stcb->asoc.alternate->ref_count, 1);
+					if (net->ro._s_addr) {
+						sctp_free_ifa(net->ro._s_addr);
+						net->ro._s_addr = NULL;
+					}
+					net->src_addr_selected = 0;
 				}
 			}
 		}
@@ -8013,9 +8015,10 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			 * mostly copy by reference (we hope).
 			 */
 			net->window_probe = 0;
-			if ((net->dest_state & SCTP_ADDR_PF) ||
-			    (net->dest_state & SCTP_ADDR_NOT_REACHABLE) ||
-			    (net->dest_state & SCTP_ADDR_UNCONFIRMED)) {
+			if ((net != stcb->asoc.alternate) &&
+			    ((net->dest_state & SCTP_ADDR_PF) ||
+			     (net->dest_state & SCTP_ADDR_NOT_REACHABLE) ||
+			     (net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 					sctp_log_cwnd(stcb, net, 1,
 						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
@@ -8025,16 +8028,6 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			if ((stcb->asoc.cc_functions.sctp_cwnd_new_transmission_begins) && 
 			    (net->flight_size == 0)) {
 				(*stcb->asoc.cc_functions.sctp_cwnd_new_transmission_begins)(stcb, net);
-			}
-			if ((asoc->sctp_cmt_on_off == 0) &&
-			    (asoc->primary_destination != net) &&
-			    (net->ref_count < 2)) {
-				/* nothing can be in queue for this guy */
-				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
-					sctp_log_cwnd(stcb, net, 2,
-						      SCTP_CWND_LOG_FILL_OUTQ_CALLED);
-				}
-				continue;
 			}
 			if (net->flight_size >= net->cwnd) {
 				/* skip this network, no room - can't fill */
@@ -8090,15 +8083,6 @@ again_one_more_time:
 			break;
 		}
 		tsns_sent = 0xa;
-		if ((asoc->sctp_cmt_on_off == 0) &&
-		    (asoc->primary_destination != net) &&
-		    (net->ref_count < 2)) {
-			/*
-			 * Ref-count of 1 so we cannot have data or control
-			 * queued to this address. Skip it (non-CMT).
-			 */
-			continue;
-		}
 		if (TAILQ_EMPTY(&asoc->control_send_queue) &&
 		    TAILQ_EMPTY(&asoc->asconf_send_queue) &&
 		    (net->flight_size >= net->cwnd)) {
@@ -8587,6 +8571,7 @@ again_one_more_time:
 		}
 		/* JRI: if dest is in PF state, do not send data to it */
 		if ((asoc->sctp_cmt_on_off > 0) &&
+		    (net != stcb->asoc.alternate) &&
 		    (net->dest_state & SCTP_ADDR_PF)) {
 			goto no_data_fill;
 		}
@@ -8664,17 +8649,17 @@ again_one_more_time:
 					/* Don't send the chunk on this net */
 					continue;
 				}
-				
-				if ((asoc->sctp_cmt_on_off == 0) &&
-				    (net != asoc->primary_destination) &&
-				    (chk->whoTo == NULL)) {
-					/* 
-					 * We won't send to a net with CMT
-					 * off that is not the primary 
-					 * unless the user specified a specific
-					 * destination.
-					 */
-					continue;
+
+				if (asoc->sctp_cmt_on_off == 0) {
+					if ((asoc->alternate) && 
+					    (asoc->alternate != net) &&
+					    (chk->whoTo == NULL)) {
+						continue;
+					} else if ((net != asoc->primary_destination) &&
+						   (asoc->alternate == NULL) &&
+						   (chk->whoTo == NULL)) {
+						continue;
+					}
 				}
 				if ((chk->send_size > omtu) && ((chk->flags & CHUNK_FLAGS_FRAGMENT_OK) == 0)) {
 					/*-
