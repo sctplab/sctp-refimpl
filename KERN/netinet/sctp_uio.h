@@ -1175,9 +1175,7 @@ struct xsctp_raddr {
 	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
 	uint8_t confirmed;                 /*                            */
 	uint8_t heartbeat_enabled;         /* sctpAssocLocalRemEntry 4   */
-#if defined(__Windows__)
-	uint8_t padding;
-#endif
+	uint8_t potentially_failed;
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
