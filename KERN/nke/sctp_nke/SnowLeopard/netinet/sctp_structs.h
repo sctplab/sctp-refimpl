@@ -858,6 +858,7 @@ struct sctp_association {
 	uint8_t *mapping_array;
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
+	struct sctp_nets *alternate; /* If primary is down or PF */
 	/* For CMT */
 	struct sctp_nets *last_net_cmt_send_started;
 	/* last place I got a data chunk from */
