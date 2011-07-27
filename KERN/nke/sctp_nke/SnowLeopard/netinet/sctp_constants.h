@@ -716,7 +716,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219397 2011-03-08 11:58:25
 /* Send window update (incr * this > hiwat). Should be a power of 2 */
 #define SCTP_MINIMAL_RWND		(4096)	/* minimal rwnd */
 
-#define SCTP_ADDRMAX		24
+#define SCTP_ADDRMAX		16
 
 /* SCTP DEBUG Switch parameters */
 #define SCTP_DEBUG_TIMER1	0x00000001
