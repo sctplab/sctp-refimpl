@@ -643,7 +643,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, r_net);
 		}
 	}
-	if ((r_net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
+	if (r_net->dest_state & SCTP_ADDR_PF) {
 		r_net->dest_state &= ~SCTP_ADDR_PF;
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);

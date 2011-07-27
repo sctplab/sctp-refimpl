@@ -4055,7 +4055,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
 					}
 				}
-				if ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
+				if (net->dest_state & SCTP_ADDR_PF) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
@@ -4850,7 +4850,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 						(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
 					}
 				}
-				if ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF) {
+				if (net->dest_state & SCTP_ADDR_PF) {
 					net->dest_state &= ~SCTP_ADDR_PF;
 					sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
