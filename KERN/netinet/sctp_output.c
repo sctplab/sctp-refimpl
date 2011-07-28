@@ -8867,6 +8867,13 @@ again_one_more_time:
 			outchain = endoutchain = NULL;
 			auth = NULL;
 			auth_offset = 0;
+			if (hbflag) {
+				struct timeval timenow;
+				getmicrouptime(&timenow);
+				printf("Send HB net:%p %ld.%ld - err:%d\n",
+				       net, timenow.tv_sec, 
+				       timenow.tv_usec, error);
+			}
 			if (bundle_at || hbflag) {
 				/* For data/asconf and hb set time */
 				if (*now_filled == 0) {
@@ -11235,6 +11242,7 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	struct sctp_tmit_chunk *chk;
 	struct sctp_heartbeat_chunk *hb;
 	struct timeval now;
+	int cnt=0;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (net == NULL) {
@@ -11253,6 +11261,16 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	default:
 		return;
 	}
+	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
+		if ((chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) && (net == chk->whoTo)) {
+			cnt++;
+		}
+	}
+	if (cnt) {
+		printf("Cnt of HB's in queue is %d when I add one to net:%p\n",
+		       cnt, net);
+	}
+
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		SCTPDBG(SCTP_DEBUG_OUTPUT4, "Gak, can't get a chunk for hb\n");
