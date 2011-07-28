@@ -99,8 +99,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_nr_sack_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
-extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran;
-extern struct sysctl_oid sysctl__net_inet_sctp_early_fast_retran_msec;
 extern struct sysctl_oid sysctl__net_inet_sctp_asconf_auth_nochk;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
 extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
@@ -183,7 +181,7 @@ soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct
 #endif
 
 kern_return_t 
-SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
+SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
 {
 	int err;
 
@@ -209,7 +207,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sctp4_seqpacket.pr_ctloutput = sctp_ctloutput;
 	sctp4_seqpacket.pr_ousrreq   = NULL;
 	sctp4_seqpacket.pr_init      = sctp_init;
+#if !defined(APPLE_LION)
 	sctp4_seqpacket.pr_fasttimo  = NULL;
+#endif
 	sctp4_seqpacket.pr_slowtimo  = sctp_slowtimo;
 	sctp4_seqpacket.pr_drain     = sctp_drain;
 	sctp4_seqpacket.pr_sysctl    = NULL;
@@ -228,7 +228,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sctp4_stream.pr_ctloutput    = sctp_ctloutput;
 	sctp4_stream.pr_ousrreq      = NULL;
 	sctp4_stream.pr_init         = NULL;
+#if !defined(APPLE_LION)
 	sctp4_stream.pr_fasttimo     = NULL;
+#endif
 	sctp4_stream.pr_slowtimo     = NULL;
 	sctp4_stream.pr_drain        = sctp_drain;
 	sctp4_stream.pr_sysctl       = NULL;
@@ -252,7 +254,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 #else
 	sctp6_seqpacket.pr_init      = sctp_init;
 #endif
+#if !defined(APPLE_LION)
 	sctp6_seqpacket.pr_fasttimo  = NULL;
+#endif
 	sctp6_seqpacket.pr_slowtimo  = NULL;
 	sctp6_seqpacket.pr_drain     = sctp_drain;
 	sctp6_seqpacket.pr_sysctl    = NULL;
@@ -271,7 +275,9 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 	sctp6_stream.pr_ctloutput    = sctp_ctloutput;
 	sctp6_stream.pr_ousrreq      = NULL;
 	sctp6_stream.pr_init         = NULL;
+#if !defined(APPLE_LION)
 	sctp6_stream.pr_fasttimo     = NULL;
+#endif
 	sctp6_stream.pr_slowtimo     = NULL;
 	sctp6_stream.pr_drain        = sctp_drain;
 	sctp6_stream.pr_sysctl       = NULL;
@@ -409,7 +415,7 @@ SCTP_start (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((un
 
 
 kern_return_t 
-SCTP_stop (kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
+SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
 {
 	struct inpcb *inp;
 	int err;
