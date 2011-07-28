@@ -1402,7 +1402,13 @@ int
 sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
     struct sctp_nets *net)
 {
+	uint8_t net_was_pf;
+
+	net_was_pf = 0;
 	if (net) {
+		if (net->dest_state & SCTP_ADDR_PF) {
+			net_was_pf = 1;
+		}
 		if (net->hb_responded == 0) {
 			if (net->ro._s_addr) {
 				/* Invalidate the src address if we did not get
@@ -1428,7 +1434,11 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    (TAILQ_EMPTY(&stcb->asoc.sent_queue))) {
 		sctp_audit_stream_queues_for_size(inp, stcb);
 	}
-	sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+	if (!((net_was_pf == 0) && (net->dest_state & SCTP_ADDR_PF))) {
+		/* when move to PF during threshold mangement, a HB has been
+		   queued in that routine */
+		sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+	}
 	return (0);
 }
 
