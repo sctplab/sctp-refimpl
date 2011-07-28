@@ -8073,6 +8073,16 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	} else {
 		start_at = TAILQ_FIRST(&asoc->nets);
 	}
+	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
+		if (chk->whoTo == NULL) {
+			if (asoc->alternate) {
+				chk->whoTo = asoc->alternate;
+			} else {
+				chk->whoTo = asoc->primary_destination;
+			}
+			atomic_add_int(&chk->whoTo->ref_count, 1);
+		}
+	}
 	old_start_at = NULL;
 again_one_more_time:
 	for (net = start_at ; net != NULL; net = TAILQ_NEXT(net, sctp_next)) {
@@ -8867,13 +8877,6 @@ again_one_more_time:
 			outchain = endoutchain = NULL;
 			auth = NULL;
 			auth_offset = 0;
-			if (hbflag) {
-				struct timeval timenow;
-				getmicrouptime(&timenow);
-				printf("Send HB net:%p %ld.%ld - err:%d\n",
-				       net, timenow.tv_sec, 
-				       timenow.tv_usec, error);
-			}
 			if (bundle_at || hbflag) {
 				/* For data/asconf and hb set time */
 				if (*now_filled == 0) {
@@ -8973,8 +8976,7 @@ sctp_queue_op_err(struct sctp_tcb *stcb, struct mbuf *op_err)
 	chk->flags = 0;
 	chk->asoc = &stcb->asoc;
 	chk->data = op_err;
-	chk->whoTo = chk->asoc->primary_destination;
-	atomic_add_int(&chk->whoTo->ref_count, 1);
+	chk->whoTo = NULL;
 	hdr = mtod(op_err, struct sctp_chunkhdr *);
 	hdr->chunk_type = SCTP_OPERATION_ERROR;
 	hdr->chunk_flags = 0;
@@ -9068,7 +9070,7 @@ sctp_send_cookie_echo(struct mbuf *m,
 	chk->flags = CHUNK_FLAGS_FRAGMENT_OK;
 	chk->asoc = &stcb->asoc;
 	chk->data = cookie;
-	chk->whoTo = chk->asoc->primary_destination;
+	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	TAILQ_INSERT_HEAD(&chk->asoc->control_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
@@ -9177,10 +9179,10 @@ sctp_send_cookie_ack(struct sctp_tcb *stcb)
 	chk->data = cookie_ack;
 	if (chk->asoc->last_control_chunk_from != NULL) {
 		chk->whoTo = chk->asoc->last_control_chunk_from;
+		atomic_add_int(&chk->whoTo->ref_count, 1);
 	} else {
-		chk->whoTo = chk->asoc->primary_destination;
+		chk->whoTo = NULL;
 	}
-	atomic_add_int(&chk->whoTo->ref_count, 1);
 	hdr = mtod(cookie_ack, struct sctp_chunkhdr *);
 	hdr->chunk_type = SCTP_COOKIE_ACK;
 	hdr->chunk_flags = 0;
@@ -9222,8 +9224,9 @@ sctp_send_shutdown_ack(struct sctp_tcb *stcb, struct sctp_nets *net)
 	chk->asoc = &stcb->asoc;
 	chk->data = m_shutdown_ack;
 	chk->whoTo = net;
-	atomic_add_int(&net->ref_count, 1);
-
+	if (chk->whoTo) {
+		atomic_add_int(&chk->whoTo->ref_count, 1);
+	}
 	ack_cp = mtod(m_shutdown_ack, struct sctp_shutdown_ack_chunk *);
 	ack_cp->ch.chunk_type = SCTP_SHUTDOWN_ACK;
 	ack_cp->ch.chunk_flags = 0;
@@ -9264,8 +9267,9 @@ sctp_send_shutdown(struct sctp_tcb *stcb, struct sctp_nets *net)
 	chk->asoc = &stcb->asoc;
 	chk->data = m_shutdown;
 	chk->whoTo = net;
-	atomic_add_int(&net->ref_count, 1);
-
+	if (chk->whoTo) {
+		atomic_add_int(&chk->whoTo->ref_count, 1);
+	}
 	shutdown_cp = mtod(m_shutdown, struct sctp_shutdown_chunk *);
 	shutdown_cp->ch.chunk_type = SCTP_SHUTDOWN;
 	shutdown_cp->ch.chunk_flags = 0;
@@ -9319,7 +9323,9 @@ sctp_send_asconf(struct sctp_tcb *stcb, struct sctp_nets *net, int addr_locked)
 	chk->flags = CHUNK_FLAGS_FRAGMENT_OK;
 	chk->asoc = &stcb->asoc;
 	chk->whoTo = net;
-	atomic_add_int(&chk->whoTo->ref_count, 1);
+	if (chk->whoTo) {
+		atomic_add_int(&chk->whoTo->ref_count, 1);
+	}
 	TAILQ_INSERT_TAIL(&chk->asoc->asconf_send_queue, chk, sctp_next);
 	chk->asoc->ctrl_queue_cnt++;
 	return;
@@ -9397,6 +9403,9 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb)
 		chk->copy_by_ref = 0;
 
 		chk->whoTo = net;
+		if (chk->whoTo) {
+			atomic_add_int(&chk->whoTo->ref_count, 1);
+		}
 		chk->data = m_ack;
 		chk->send_size = 0;
 		/* Get size */
@@ -9408,7 +9417,6 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb)
 		chk->snd_count = 0;
 		chk->flags |= CHUNK_FLAGS_FRAGMENT_OK; /* XXX */
 		chk->asoc = &stcb->asoc;
-		atomic_add_int(&chk->whoTo->ref_count, 1);
 
 		TAILQ_INSERT_TAIL(&chk->asoc->control_send_queue, chk, sctp_next);
 		chk->asoc->ctrl_queue_cnt++;
@@ -10274,10 +10282,9 @@ send_forward_tsn(struct sctp_tcb *stcb,
 			chk->sent = SCTP_DATAGRAM_UNSENT;
 			chk->snd_count = 0;
 			/* Do we correct its output location? */
-			if (chk->whoTo != asoc->primary_destination) {
+			if (chk->whoTo) {
 				sctp_free_remote_addr(chk->whoTo);
-				chk->whoTo = asoc->primary_destination;
-				atomic_add_int(&chk->whoTo->ref_count, 1);
+				chk->whoTo = NULL;
 			}
 			goto sctp_fill_in_rest;
 		}
@@ -10301,8 +10308,6 @@ send_forward_tsn(struct sctp_tcb *stcb,
 	SCTP_BUF_RESV_UF(chk->data, SCTP_MIN_OVERHEAD);
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
-	chk->whoTo = asoc->primary_destination;
-	atomic_add_int(&chk->whoTo->ref_count, 1);
 	TAILQ_INSERT_TAIL(&asoc->control_send_queue, chk, sctp_next);
 	asoc->ctrl_queue_cnt++;
 sctp_fill_in_rest:
@@ -10497,8 +10502,10 @@ sctp_send_sack(struct sctp_tcb *stcb, int so_locked
 				sctp_m_freem(a_chk->data);
 				a_chk->data = NULL;
 			}
-			sctp_free_remote_addr(a_chk->whoTo);
-			a_chk->whoTo = NULL;
+			if (a_chk->whoTo) {
+				sctp_free_remote_addr(a_chk->whoTo);
+				a_chk->whoTo = NULL;
+			}
 			break;
 		}
 	}
@@ -11242,7 +11249,6 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	struct sctp_tmit_chunk *chk;
 	struct sctp_heartbeat_chunk *hb;
 	struct timeval now;
-	int cnt=0;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	if (net == NULL) {
@@ -11261,16 +11267,6 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	default:
 		return;
 	}
-	TAILQ_FOREACH(chk, &stcb->asoc.control_send_queue, sctp_next) {
-		if ((chk->rec.chunk_id.id == SCTP_HEARTBEAT_REQUEST) && (net == chk->whoTo)) {
-			cnt++;
-		}
-	}
-	if (cnt) {
-		printf("Cnt of HB's in queue is %d when I add one to net:%p\n",
-		       cnt, net);
-	}
-
 	sctp_alloc_a_chunk(stcb, chk);
 	if (chk == NULL) {
 		SCTPDBG(SCTP_DEBUG_OUTPUT4, "Gak, can't get a chunk for hb\n");
@@ -11343,7 +11339,6 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 		return;
 		break;
 	}
-
 	net->hb_responded = 0;
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue, chk, sctp_next);
 	stcb->asoc.ctrl_queue_cnt++;
@@ -11359,6 +11354,9 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_ecne_chunk *ecne;
 	struct sctp_tmit_chunk *chk;
 
+	if (net == NULL) {
+		return;
+	}
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
@@ -11399,6 +11397,7 @@ sctp_send_ecn_echo(struct sctp_tcb *stcb, struct sctp_nets *net,
 	chk->snd_count = 0;
 	chk->whoTo = net;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
+
 	stcb->asoc.ecn_echo_cnt_onq++;
 	ecne = mtod(chk->data, struct sctp_ecne_chunk *);
 	ecne->ch.chunk_type = SCTP_ECN_ECHO;
@@ -11562,10 +11561,10 @@ jump_out:
 	if (net) {
 		/* we should hit here */
 		chk->whoTo = net;
+		atomic_add_int(&chk->whoTo->ref_count, 1);
 	} else {
-		chk->whoTo = asoc->primary_destination;
+		chk->whoTo = NULL;
 	}
-	atomic_add_int(&chk->whoTo->ref_count, 1);
 	chk->rec.chunk_id.id = SCTP_PACKET_DROPPED;
 	chk->rec.chunk_id.can_take_data = 1;
 	drp->ch.chunk_type = SCTP_PACKET_DROPPED;
@@ -11603,8 +11602,9 @@ sctp_send_cwr(struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t high_tsn, u
 
 	asoc = &stcb->asoc;
 	SCTP_TCB_LOCK_ASSERT(stcb);
-
-
+	if (net == NULL) {
+		return;
+	}
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if ((chk->rec.chunk_id.id == SCTP_ECN_CWR) && (net == chk->whoTo)) {
 			/* found a previous CWR queued to same destination update it if needed */
@@ -11871,14 +11871,14 @@ sctp_add_a_stream(struct sctp_tmit_chunk *chk,
 
 int
 sctp_send_str_reset_req(struct sctp_tcb *stcb,
-    int number_entries, uint16_t * list,
-						uint8_t send_out_req,
-						uint32_t resp_seq,
-						uint8_t send_in_req,
-						uint8_t send_tsn_req,
-						uint8_t add_stream,
-						uint16_t adding
-						)
+			int number_entries, uint16_t * list,
+			uint8_t send_out_req,
+			uint32_t resp_seq,
+			uint8_t send_in_req,
+			uint8_t send_tsn_req,
+			uint8_t add_stream,
+			uint16_t adding
+	)
 {
 
 	struct sctp_association *asoc;
@@ -11929,9 +11929,12 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 	/* setup chunk parameters */
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
-	chk->whoTo = asoc->primary_destination;
+	if (stcb->asoc.alternate) {
+		chk->whoTo = stcb->asoc.alternate;
+	} else {
+		chk->whoTo = stcb->asoc.primary_destination;
+	}
 	atomic_add_int(&chk->whoTo->ref_count, 1);
-
 	ch = mtod(chk->data, struct sctp_chunkhdr *);
 	ch->chunk_type = SCTP_STREAM_RESET;
 	ch->chunk_flags = 0;
