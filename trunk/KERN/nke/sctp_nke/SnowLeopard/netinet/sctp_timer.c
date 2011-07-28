@@ -852,12 +852,14 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 				} else {
 					ms_goneby = 0;
 				}
-				if ((ms_goneby > net->RTO) || (net->RTO == 0)) {
-					/*
-					 * no recent feed back in an RTO or
-					 * more, request a RTT update
-					 */
-					sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+				if ((net->dest_state & SCTP_ADDR_PF) == 0) {
+					if ((ms_goneby > net->RTO) || (net->RTO == 0)) {
+						/*
+						 * no recent feed back in an RTO or
+						 * more, request a RTT update
+						 */
+						sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+					}
 				}
 			}
 		}
