@@ -114,9 +114,8 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				    SCTP_FAILED_THRESHOLD,
 				    (void *)net, SCTP_SO_NOT_LOCKED);
 			}
-		}
-		if ((net->pf_threshold < net->failure_threshold) &&
-		    (net->error_count > net->pf_threshold)) {
+		} else if ((net->pf_threshold < net->failure_threshold) &&
+		           (net->error_count > net->pf_threshold)) {
 			if (!(net->dest_state & SCTP_ADDR_PF)) {
 				net->dest_state |= SCTP_ADDR_PF;
 				net->last_active = sctp_get_tick_count();
