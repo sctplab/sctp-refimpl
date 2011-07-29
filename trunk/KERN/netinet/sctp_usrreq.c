@@ -5248,7 +5248,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			    (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 				/* Ok we need to set it */
 				if (sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net) == 0) {
-					if ((stcb->asoc.alternate) && (!(net->dest_state & SCTP_ADDR_PF))) {
+					if ((stcb->asoc.alternate) && 
+					    (!(net->dest_state & (SCTP_ADDR_PF|SCTP_ADDR_NOT_REACHABLE)))) {
 						sctp_free_remote_addr(stcb->asoc.alternate);
 						stcb->asoc.alternate = NULL;
 					}

@@ -571,7 +571,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
 			"process_asconf_set_primary: primary address set\n");
 		/* notify upper layer */
 		sctp_ulp_notify(SCTP_NOTIFY_ASCONF_SET_PRIMARY, stcb, 0, sa, SCTP_SO_NOT_LOCKED);
-		if (((stcb->asoc.primary_destination->dest_state & SCTP_ADDR_PF) == 0) &&
+		if (((stcb->asoc.primary_destination->dest_state & (SCTP_ADDR_PF|SCTP_ADDR_NOT_REACHABLE)) == 0) &&
 		    (stcb->asoc.alternate)) {
 			sctp_free_remote_addr(stcb->asoc.alternate);
 			stcb->asoc.alternate = NULL;
