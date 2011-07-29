@@ -1554,7 +1554,13 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 				 */
 				if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
 					/* only send SHUTDOWN 1st time thru */
-					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+					struct sctp_nets *netp;
+					if (stcb->asoc.alternate) {
+						netp = stcb->asoc.alternate;
+					} else {
+						netp = stcb->asoc.primary_destination;
+					}
+					sctp_send_shutdown(stcb, netp);
 					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
@@ -1562,11 +1568,11 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 					SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 					SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
-					    stcb->sctp_ep, stcb,
-					    asoc->primary_destination);
+							 stcb->sctp_ep, stcb,
+							 netp);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-					    stcb->sctp_ep, stcb,
-					    asoc->primary_destination);
+							 stcb->sctp_ep, stcb,
+							 netp);
 				}
 			}
 		} else {
