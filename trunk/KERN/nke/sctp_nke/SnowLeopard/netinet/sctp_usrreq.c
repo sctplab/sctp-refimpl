@@ -1061,9 +1061,14 @@ sctp_disconnect(struct socket *so)
 				if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN 1st time thru */
+					struct sctp_nets *netp;
+					if (stcb->asoc.alternate) {
+						netp = stcb->asoc.alternate;
+					} else {
+						netp = stcb->asoc.primary_destination;
+					}
 					sctp_stop_timers_for_shutdown(stcb);
-					sctp_send_shutdown(stcb,
-					    stcb->asoc.primary_destination);
+					sctp_send_shutdown(stcb,netp);
 					sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_LOCKED);
 					if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 					    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -1072,11 +1077,10 @@ sctp_disconnect(struct socket *so)
 					SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 					SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
-					    stcb->sctp_ep, stcb,
-					    asoc->primary_destination);
+							 stcb->sctp_ep, stcb, netp);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-					    stcb->sctp_ep, stcb,
-					    asoc->primary_destination);
+							 stcb->sctp_ep, stcb, netp);
+
 				}
 			} else {
 				/*
@@ -1089,9 +1093,16 @@ sctp_disconnect(struct socket *so)
 				 * we will allow user data to be sent first
 				 * and move to SHUTDOWN-PENDING
 				 */
+				struct sctp_nets *netp;
+				if (stcb->asoc.alternate) {
+					netp = stcb->asoc.alternate;
+				} else {
+					netp = stcb->asoc.primary_destination;
+				}
+
 				asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
-						 asoc->primary_destination);
+						 netp);
 				if (asoc->locked_on_sending) {
 					/* Locked to send out the data */
 					struct sctp_stream_queue_pending *sp;
@@ -1271,9 +1282,14 @@ sctp_shutdown(struct socket *so)
 			/* there is nothing queued to send, so I'm done... */
 			if (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) {
 				/* only send SHUTDOWN the first time through */
+				struct sctp_nets *netp;
+				if (stcb->asoc.alternate) {
+					netp = stcb->asoc.alternate;
+				} else {
+					netp = stcb->asoc.primary_destination;
+				}
 				sctp_stop_timers_for_shutdown(stcb);
-				sctp_send_shutdown(stcb,
-				    stcb->asoc.primary_destination);
+				sctp_send_shutdown(stcb, netp);
 				sctp_chunk_output(stcb->sctp_ep, stcb, SCTP_OUTPUT_FROM_T3, SCTP_SO_LOCKED);
 				if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 				    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -1282,20 +1298,25 @@ sctp_shutdown(struct socket *so)
 				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN,
-				    stcb->sctp_ep, stcb,
-				    asoc->primary_destination);
+						 stcb->sctp_ep, stcb, netp);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD,
-				    stcb->sctp_ep, stcb,
-				    asoc->primary_destination);
+						 stcb->sctp_ep, stcb, netp);
 			}
 		} else {
 			/*
 			 * we still got (or just got) data to send, so set
 			 * SHUTDOWN_PENDING
 			 */
+			struct sctp_nets *netp;
+			if (stcb->asoc.alternate) {
+				netp = stcb->asoc.alternate;
+			} else {
+				netp = stcb->asoc.primary_destination;
+			}
+
 			asoc->state |= SCTP_STATE_SHUTDOWN_PENDING;
 			sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
-					 asoc->primary_destination);
+					 netp);
 
 			if (asoc->locked_on_sending) {
 				/* Locked to send out the data */
@@ -5227,7 +5248,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			    (!(net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 				/* Ok we need to set it */
 				if (sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net) == 0) {
-					net->dest_state |= SCTP_ADDR_SWITCH_PRIMARY;
+					if ((stcb->asoc.alternate) && 
+					    (!(net->dest_state & (SCTP_ADDR_PF|SCTP_ADDR_NOT_REACHABLE)))) {
+						sctp_free_remote_addr(stcb->asoc.alternate);
+						stcb->asoc.alternate = NULL;
+					}
 				}
 			}
 		} else {
