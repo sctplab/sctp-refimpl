@@ -1122,6 +1122,8 @@ struct sctp_association {
 
 	uint16_t def_net_failure;
 
+	uint16_t def_net_pf_threshold;
+
 	/*
 	 * lock flag: 0 is ok to send, 1+ (duals as a retran count) is
 	 * awaiting ACK
