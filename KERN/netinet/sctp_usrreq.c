@@ -4951,6 +4951,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				if (paddrp->spp_flags & SPP_HB_DEMAND) {
 					/* on demand HB */
 					sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 				}
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
