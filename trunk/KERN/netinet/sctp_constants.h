@@ -697,9 +697,10 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 219397 2011-03-08 11:58:25
 #define SCTP_INP_KILL_TIMEOUT 20	/* number of ms to retry kill of inpcb */
 #define SCTP_ASOC_KILL_TIMEOUT 10	/* number of ms to retry kill of inpcb */
 
-#define SCTP_DEF_MAX_INIT	8
-#define SCTP_DEF_MAX_SEND	10
-#define SCTP_DEF_MAX_PATH_RTX	5
+#define SCTP_DEF_MAX_INIT		8
+#define SCTP_DEF_MAX_SEND		10
+#define SCTP_DEF_MAX_PATH_RTX		5
+#define SCTP_DEF_PATH_PF_THRESHOLD	SCTP_DEF_MAX_PATH_RTX
 
 #define SCTP_DEF_PMTU_RAISE_SEC	600	/* 10 min between raise attempts */
 
