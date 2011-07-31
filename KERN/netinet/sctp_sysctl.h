@@ -76,6 +76,7 @@ struct sctp_sysctl {
 	uint32_t sctp_init_rtx_max_default;
 	uint32_t sctp_assoc_rtx_max_default;
 	uint32_t sctp_path_rtx_max_default;
+	uint32_t sctp_path_pf_threshold;
 	uint32_t sctp_add_more_threshold;
 	uint32_t sctp_nr_outgoing_streams_default;
 	uint32_t sctp_cmt_on_off;
@@ -330,6 +331,12 @@ struct sctp_sysctl {
 #define SCTPCTL_PATH_RTX_MAX_MIN	0
 #define SCTPCTL_PATH_RTX_MAX_MAX	0xFFFFFFFF
 #define SCTPCTL_PATH_RTX_MAX_DEFAULT	SCTP_DEF_MAX_PATH_RTX
+
+/* path_pf_threshold: threshold for considering the path potentially failed */
+#define SCTPCTL_PATH_PF_THRESHOLD_DESC		"Default potentially failed threshold"
+#define SCTPCTL_PATH_PF_THRESHOLD_MIN		0
+#define SCTPCTL_PATH_PF_THRESHOLD_MAX		0xFFFFFFFF
+#define SCTPCTL_PATH_PF_THRESHOLD_DEFAULT	SCTP_DEF_PATH_PF_THRESHOLD
 
 /* add_more_on_output: When space-wise is it worthwhile to try to add more to a socket send buffer */
 #define SCTPCTL_ADD_MORE_ON_OUTPUT_DESC	"When space-wise is it worthwhile to try to add more to a socket send buffer"

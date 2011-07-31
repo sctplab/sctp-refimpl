@@ -349,6 +349,8 @@ struct sctp_pcb {
 
 	uint16_t def_net_failure;
 
+	uint16_t def_net_pf_threshold;
+
 	/* number of streams to pre-open on a association */
 	uint16_t pre_open_stream_count;
 	uint16_t max_open_streams_intome;
