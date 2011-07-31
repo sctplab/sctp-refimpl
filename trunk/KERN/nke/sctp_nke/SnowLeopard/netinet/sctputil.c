@@ -1657,11 +1657,9 @@ sctp_timeout_handler(void *t)
 		if ((stcb == NULL) || (inp == NULL)) {
 			break;
 		}
-		{
-			SCTP_STAT_INCR(sctps_timosack);
-			stcb->asoc.timosack++;
-			sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
-		}
+		SCTP_STAT_INCR(sctps_timosack);
+		stcb->asoc.timosack++;
+		sctp_send_sack(stcb, SCTP_SO_NOT_LOCKED);
 #ifdef SCTP_AUDITING_ENABLED
 		sctp_auditing(4, inp, stcb, net);
 #endif
@@ -1683,21 +1681,20 @@ sctp_timeout_handler(void *t)
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_SHUT_TMR, SCTP_SO_NOT_LOCKED);
 		break;
 	case SCTP_TIMER_TYPE_HEARTBEAT:
-		{
-			if ((stcb == NULL) || (inp == NULL) || (net == NULL)) {
-				break;
-			}
-			SCTP_STAT_INCR(sctps_timoheartbeat);
-			stcb->asoc.timoheartbeat++;
-			if (sctp_heartbeat_timer(inp, stcb, net)) {
-				/* no need to unlock on tcb its gone */
-				goto out_decr;
-			}
+		if ((stcb == NULL) || (inp == NULL) || (net == NULL)) {
+			break;
+		}
+		SCTP_STAT_INCR(sctps_timoheartbeat);
+		stcb->asoc.timoheartbeat++;
+		if (sctp_heartbeat_timer(inp, stcb, net)) {
+			/* no need to unlock on tcb its gone */
+			goto out_decr;
+		}
 #ifdef SCTP_AUDITING_ENABLED
-			sctp_auditing(4, inp, stcb, net);
+		sctp_auditing(4, inp, stcb, net);
 #endif
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT,
-					 stcb->sctp_ep, stcb, net);
+		if (!(net->dest_state & SCTP_ADDR_NOHB)) {
+			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR, SCTP_SO_NOT_LOCKED);
 		}
 		break;
