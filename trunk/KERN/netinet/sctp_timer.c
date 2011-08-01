@@ -106,7 +106,6 @@ sctp_threshold_management(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			/* We had a threshold failure */
 			if (net->dest_state & SCTP_ADDR_REACHABLE) {
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
-				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state &= ~SCTP_ADDR_REQ_PRIMARY;
 				net->dest_state &= ~SCTP_ADDR_PF;
 				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
@@ -922,7 +921,8 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 	/* Backoff the timer and cwnd */
 	sctp_backoff_on_timeout(stcb, net, win_probe, num_mk, num_abandoned);
-	if (net->dest_state & (SCTP_ADDR_NOT_REACHABLE|SCTP_ADDR_PF)) {
+	if ((!(net->dest_state & SCTP_ADDR_REACHABLE)) ||
+	    (net->dest_state & SCTP_ADDR_PF)) {
 		/* Move all pending over too */
 		sctp_move_chunks_from_net(stcb, net);
 
@@ -1158,7 +1158,7 @@ sctp_strreset_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			atomic_add_int(&alt->ref_count, 1);
 		}
 	}
-	if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+	if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
 		/*
 		 * If the address went un-reachable, we need to move to
 		 * alternates for ALL chk's in queue
@@ -1248,7 +1248,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				sctp_ucount_incr(stcb->asoc.sent_queue_retran_cnt);
 			chk->sent = SCTP_DATAGRAM_RESEND;
 		}
-		if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+		if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
 			/*
 			 * If the address went un-reachable, we need to move
 			 * to the alternate for ALL chunks in queue
