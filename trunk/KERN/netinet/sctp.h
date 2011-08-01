@@ -124,6 +124,7 @@ struct sctp_paramhdr {
 #define SCTP_RECVNXTINFO                0x00000020
 #define SCTP_DEFAULT_SNDINFO            0x00000021
 #define SCTP_DEFAULT_PRINFO             0x00000022
+#define SCTP_PEER_ADDR_THLDS            0x00000023
 
 /*
  * read-only options
