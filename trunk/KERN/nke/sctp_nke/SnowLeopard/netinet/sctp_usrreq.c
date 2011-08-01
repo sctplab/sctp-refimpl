@@ -338,7 +338,6 @@ sctp_notify(struct sctp_inpcb *inp,
 		if (net->dest_state & SCTP_ADDR_REACHABLE) {
 			/* Ok that destination is NOT reachable */
 			net->dest_state &= ~SCTP_ADDR_REACHABLE;
-			net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 			net->dest_state &= ~SCTP_ADDR_PF;
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 					stcb, SCTP_FAILED_THRESHOLD,
@@ -5093,13 +5092,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					if (net->dest_state & SCTP_ADDR_REACHABLE) {
 						if (net->error_count > paddrp->spp_pathmaxrxt) {
 					    		net->dest_state &= ~SCTP_ADDR_REACHABLE;
-							net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 						}
-					}
-					if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+					} else {
 						if (net->error_count <= paddrp->spp_pathmaxrxt) {
-					    		net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 							net->dest_state |= SCTP_ADDR_REACHABLE;
 							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 						}
@@ -5141,13 +5137,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 						if (net->dest_state & SCTP_ADDR_REACHABLE) {
 							if (net->error_count > paddrp->spp_pathmaxrxt) {
 						    		net->dest_state &= ~SCTP_ADDR_REACHABLE;
-								net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 								sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 							}
-						}
-						if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+						} else {
 							if (net->error_count <= paddrp->spp_pathmaxrxt) {
-						    		net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 								net->dest_state |= SCTP_ADDR_REACHABLE;
 								sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 							}
@@ -5419,7 +5412,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				/* Ok we need to set it */
 				if (sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net) == 0) {
 					if ((stcb->asoc.alternate) && 
-					    (!(net->dest_state & (SCTP_ADDR_PF|SCTP_ADDR_NOT_REACHABLE)))) {
+					    (!(net->dest_state & SCTP_ADDR_PF)) &&
+					    (net->dest_state & SCTP_ADDR_REACHABLE)) {
 						sctp_free_remote_addr(stcb->asoc.alternate);
 						stcb->asoc.alternate = NULL;
 					}
@@ -5957,13 +5951,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				if (net->dest_state & SCTP_ADDR_REACHABLE) {
 					if (net->failure_threshold > thlds->spt_pathmaxrxt) {
 						net->dest_state &= ~SCTP_ADDR_REACHABLE;
-						net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 					}
-				}
-				if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+				} else {
 					if (net->failure_threshold <= thlds->spt_pathmaxrxt) {
-						net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 						net->dest_state |= SCTP_ADDR_REACHABLE;
 						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 					}
@@ -5989,13 +5980,10 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					if (net->dest_state & SCTP_ADDR_REACHABLE) {
 						if (net->failure_threshold > thlds->spt_pathmaxrxt) {
 							net->dest_state &= ~SCTP_ADDR_REACHABLE;
-							net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 						}
-					}
-					if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+					} else {
 						if (net->failure_threshold <= thlds->spt_pathmaxrxt) {
-							net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 							net->dest_state |= SCTP_ADDR_REACHABLE;
 							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
 						}

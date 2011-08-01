@@ -4044,10 +4044,8 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 				 * is optional.
 				 */
 				net->error_count = 0;
-				if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-				    SCTP_ADDR_NOT_REACHABLE) {
+				if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
 					/* addr came good */
-					net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
@@ -4852,10 +4850,8 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 				 * is optional.
 				 */
 				net->error_count = 0;
-				if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-				    SCTP_ADDR_NOT_REACHABLE) {
+				if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
 					/* addr came good */
-					net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
 					net->dest_state |= SCTP_ADDR_REACHABLE;
 					sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
 					                SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
