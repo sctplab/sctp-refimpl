@@ -1420,11 +1420,11 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				net->ro._s_addr = NULL;
 				net->src_addr_selected = 0;
 			}
+			sctp_backoff_on_timeout(stcb, net, 1, 0, 0);
 			if (sctp_threshold_management(inp, stcb, net, stcb->asoc.max_send_times)) {
 				/* Assoc is over */
 				return (1);
 			}
-			sctp_backoff_on_timeout(stcb, net, 1, 0, 0);
 		}
 		/* Zero PBA, if it needs it */
 		if (net->partial_bytes_acked) {
