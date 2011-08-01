@@ -546,6 +546,13 @@ struct sctp_paddrparams {
 #define SPP_IPV6_FLOWLABEL      0x00000100
 #define SPP_IPV4_TOS            0x00000200
 
+struct sctp_paddrthlds {
+	sctp_assoc_t spt_assoc_id;
+	struct sockaddr_storage spt_address;
+	uint16_t spt_pathmaxrxt;
+	uint16_t spt_pathpfthld;
+};
+
 struct sctp_paddrinfo {
 	struct sockaddr_storage spinfo_address;
 	sctp_assoc_t spinfo_assoc_id;

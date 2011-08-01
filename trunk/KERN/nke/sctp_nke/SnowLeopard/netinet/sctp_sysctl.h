@@ -335,8 +335,8 @@ struct sctp_sysctl {
 /* path_pf_threshold: threshold for considering the path potentially failed */
 #define SCTPCTL_PATH_PF_THRESHOLD_DESC		"Default potentially failed threshold"
 #define SCTPCTL_PATH_PF_THRESHOLD_MIN		0
-#define SCTPCTL_PATH_PF_THRESHOLD_MAX		0xFFFFFFFF
-#define SCTPCTL_PATH_PF_THRESHOLD_DEFAULT	SCTP_DEF_PATH_PF_THRESHOLD
+#define SCTPCTL_PATH_PF_THRESHOLD_MAX		0xFFFF
+#define SCTPCTL_PATH_PF_THRESHOLD_DEFAULT	SCTPCTL_PATH_PF_THRESHOLD_MAX
 
 /* add_more_on_output: When space-wise is it worthwhile to try to add more to a socket send buffer */
 #define SCTPCTL_ADD_MORE_ON_OUTPUT_DESC	"When space-wise is it worthwhile to try to add more to a socket send buffer"
