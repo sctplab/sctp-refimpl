@@ -3851,7 +3851,6 @@ sctp_handle_no_route(struct sctp_tcb *stcb,
 			                        (void *)net,
 			                        so_locked);
 				net->dest_state &= ~SCTP_ADDR_REACHABLE;
-				net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 				net->dest_state &= ~SCTP_ADDR_PF;
 			}
 		}
@@ -8017,7 +8016,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 			net->window_probe = 0;
 			if ((net != stcb->asoc.alternate) &&
 			    ((net->dest_state & SCTP_ADDR_PF) ||
-			     (net->dest_state & SCTP_ADDR_NOT_REACHABLE) ||
+			     (!(net->dest_state & SCTP_ADDR_REACHABLE)) ||
 			     (net->dest_state & SCTP_ADDR_UNCONFIRMED))) {
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
 					sctp_log_cwnd(stcb, net, 1,
@@ -10102,8 +10101,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 #endif
 	/* Check for bad destinations, if they exist move chunks around. */
 	TAILQ_FOREACH(net, &asoc->nets, sctp_next) {
-		if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-		    SCTP_ADDR_NOT_REACHABLE) {
+		if (!(net->dest_state & SCTP_ADDR_REACHABLE)) {
 			/*-
 			 * if possible move things off of this address we
 			 * still may send below due to the dormant state but
@@ -10537,13 +10535,13 @@ sctp_send_sack(struct sctp_tcb *stcb, int so_locked
 	a_chk->whoTo = NULL;
 
 	if ((asoc->numduptsns) ||
-	    (asoc->last_data_chunk_from->dest_state & SCTP_ADDR_NOT_REACHABLE)) {
+	    (!(asoc->last_data_chunk_from->dest_state & SCTP_ADDR_REACHABLE))) {
 		/*-
 		 * Ok, we have some duplicates or the destination for the
 		 * sack is unreachable, lets see if we can select an
 		 * alternate than asoc->last_data_chunk_from
 		 */
-		if ((!(asoc->last_data_chunk_from->dest_state & SCTP_ADDR_NOT_REACHABLE)) &&
+		if ((asoc->last_data_chunk_from->dest_state & SCTP_ADDR_REACHABLE) &&
 		    (asoc->used_alt_onsack > asoc->numnets)) {
 			/* We used an alt last time, don't this time */
 			a_chk->whoTo = NULL;

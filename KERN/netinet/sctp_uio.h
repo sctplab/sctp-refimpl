@@ -359,7 +359,8 @@ struct sctp_paddr_change {
 #define SCTP_ADDR_CONFIRMED	0x0006
 
 #define SCTP_ACTIVE		0x0001	/* SCTP_ADDR_REACHABLE */
-#define SCTP_INACTIVE		0x0002	/* SCTP_ADDR_NOT_REACHABLE */
+#define SCTP_INACTIVE		0x0002	/* neither SCTP_ADDR_REACHABLE
+					   nor SCTP_ADDR_UNCONFIRMED */
 #define SCTP_UNCONFIRMED	0x0200	/* SCTP_ADDR_UNCONFIRMED */
 
 /* remote error events */

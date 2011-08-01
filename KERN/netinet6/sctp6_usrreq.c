@@ -571,7 +571,6 @@ sctp6_notify(struct sctp_inpcb *inp,
 		if (net->dest_state & SCTP_ADDR_REACHABLE) {
 			/* Ok that destination is NOT reachable */			
 			net->dest_state &= ~SCTP_ADDR_REACHABLE;
-			net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
 			net->dest_state &= ~SCTP_ADDR_PF;
 			sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN,
 					stcb, SCTP_FAILED_THRESHOLD,

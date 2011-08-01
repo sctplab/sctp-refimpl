@@ -193,7 +193,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 				(__net)->ro._s_addr = NULL; \
 			} \
                         (__net)->src_addr_selected = 0; \
-			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
+			(__net)->dest_state &= ~SCTP_ADDR_REACHABLE; \
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
 		} \
@@ -241,7 +241,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 				(__net)->ro._s_addr = NULL; \
 			} \
                         (__net)->src_addr_selected = 0; \
-			(__net)->dest_state = SCTP_ADDR_NOT_REACHABLE; \
+			(__net)->dest_state &=~SCTP_ADDR_REACHABLE; \
 			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_net), (__net)); \
 			SCTP_DECR_RADDR_COUNT(); \
 		} \
