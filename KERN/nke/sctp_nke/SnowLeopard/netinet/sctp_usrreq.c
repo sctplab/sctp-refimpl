@@ -3459,6 +3459,93 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		break;
 	}
+	case SCTP_PEER_ADDR_THLDS:
+	{
+		struct sctp_paddrthlds *thlds;
+		struct sctp_nets *net;
+
+		SCTP_CHECK_AND_CAST(thlds, optval, struct sctp_paddrthlds, *optsize);
+		SCTP_FIND_STCB(inp, stcb, thlds->spt_assoc_id);
+
+		net = NULL;
+		if (stcb) {
+			net = sctp_findnet(stcb, (struct sockaddr *)&thlds->spt_address);
+		} else {
+			/* We increment here since sctp_findassociation_ep_addr() wil
+			 * do a decrement if it finds the stcb as long as the locked
+			 * tcb (last argument) is NOT a TCB.. aka NULL.
+			 */
+			SCTP_INP_INCR_REF(inp);
+			stcb = sctp_findassociation_ep_addr(&inp, (struct sockaddr *)&thlds->spt_address, &net, NULL, NULL);
+			if (stcb == NULL) {
+				SCTP_INP_DECR_REF(inp);
+			}
+		}
+		if (stcb && (net == NULL) ) {
+			struct sockaddr *sa;
+
+			sa = (struct sockaddr *)&thlds->spt_address;
+#ifdef INET
+			if (sa->sa_family == AF_INET) {
+				struct sockaddr_in *sin;
+
+				sin = (struct sockaddr_in *)sa;
+				if (sin->sin_addr.s_addr) {
+					error = EINVAL;
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+					break;
+				}
+			} else
+#endif
+#ifdef INET6
+			if (sa->sa_family == AF_INET6) {
+				struct sockaddr_in6 *sin6;
+
+				sin6 = (struct sockaddr_in6 *)sa;
+				if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+					error = EINVAL;
+					SCTP_TCB_UNLOCK(stcb);
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+					break;
+				}
+			} else
+#endif
+			{
+				error = EAFNOSUPPORT;
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+				break;
+			}
+		}
+
+		if (stcb) {
+			if (net) {
+				thlds->spt_pathmaxrxt = net->failure_threshold;
+				thlds->spt_pathpfthld = net->pf_threshold;
+			} else {
+				thlds->spt_pathmaxrxt = stcb->asoc.def_net_failure;
+				thlds->spt_pathpfthld = stcb->asoc.def_net_pf_threshold;
+			}
+			thlds->spt_assoc_id = sctp_get_associd(stcb);
+			SCTP_TCB_UNLOCK(stcb);
+		} else {
+			if (thlds->spt_assoc_id == SCTP_FUTURE_ASSOC) {
+				/* Use endpoint defaults */
+				SCTP_INP_RLOCK(inp);
+				thlds->spt_pathmaxrxt = inp->sctp_ep.def_net_failure;
+				thlds->spt_pathpfthld = inp->sctp_ep.def_net_pf_threshold;				
+				SCTP_INP_RUNLOCK(inp);
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+			}
+		}
+		if (error == 0) {
+			*optsize = sizeof(struct sctp_paddrthlds);
+		}
+		break;
+	}
 	default:
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOPROTOOPT);
 		error = ENOPROTOOPT;
@@ -4948,11 +5035,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			/* network sets ? */
 			if (net) {
 				/************************NET SPECIFIC SET ******************/
-				if (paddrp->spp_flags & SPP_HB_DEMAND) {
-					/* on demand HB */
-					sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
-					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
-				}
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
 					if (!(net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
 					    !(net->dest_state & SCTP_ADDR_NOHB)) {
@@ -4972,6 +5054,11 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					net->dest_state &= ~SCTP_ADDR_NOHB;
 				}
+				if (paddrp->spp_flags & SPP_HB_DEMAND) {
+					/* on demand HB */
+					sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
+				}
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
 					if (SCTP_OS_TIMER_PENDING(&net->pmtu_timer.timer)) {
 						sctp_timer_stop(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net,
@@ -4989,8 +5076,36 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 						sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, inp, stcb, net);
 					}
 				}
-				if (paddrp->spp_pathmaxrxt)
+				if (paddrp->spp_pathmaxrxt) {
+					if (net->dest_state & SCTP_ADDR_PF) {
+						if (net->error_count > paddrp->spp_pathmaxrxt) {
+							net->dest_state &= ~SCTP_ADDR_PF;
+						}
+					} else {
+						if ((net->error_count <= paddrp->spp_pathmaxrxt) &&
+						    (net->error_count > net->pf_threshold)) {
+							net->dest_state |= SCTP_ADDR_PF;
+							sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_TIMER + SCTP_LOC_3);
+							sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+						}
+					}
+					if (net->dest_state & SCTP_ADDR_REACHABLE) {
+						if (net->error_count > paddrp->spp_pathmaxrxt) {
+					    		net->dest_state &= ~SCTP_ADDR_REACHABLE;
+							net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+						}
+					}
+					if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+						if (net->error_count <= paddrp->spp_pathmaxrxt) {
+					    		net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+							net->dest_state |= SCTP_ADDR_REACHABLE;
+							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+						}
+					}
 					net->failure_threshold = paddrp->spp_pathmaxrxt;
+				}
 #ifdef INET
 				if (paddrp->spp_flags & SPP_IPV4_TOS) {
 					if (net->ro._l_addr.sin.sin_family == AF_INET) {
@@ -5007,8 +5122,39 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 #endif
 			} else {
 				/************************ASSOC ONLY -- NO NET SPECIFIC SET ******************/
-				if (paddrp->spp_pathmaxrxt)
+				if (paddrp->spp_pathmaxrxt) {
 					stcb->asoc.def_net_failure = paddrp->spp_pathmaxrxt;
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (net->dest_state & SCTP_ADDR_PF) {
+							if (net->error_count > paddrp->spp_pathmaxrxt) {
+								net->dest_state &= ~SCTP_ADDR_PF;
+							}
+						} else {
+							if ((net->error_count <= paddrp->spp_pathmaxrxt) &&
+							    (net->error_count > net->pf_threshold)) {
+								net->dest_state |= SCTP_ADDR_PF;
+								sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+								sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_TIMER + SCTP_LOC_3);
+								sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+							}
+						}
+						if (net->dest_state & SCTP_ADDR_REACHABLE) {
+							if (net->error_count > paddrp->spp_pathmaxrxt) {
+						    		net->dest_state &= ~SCTP_ADDR_REACHABLE;
+								net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+								sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+							}
+						}
+						if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+							if (net->error_count <= paddrp->spp_pathmaxrxt) {
+						    		net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+								net->dest_state |= SCTP_ADDR_REACHABLE;
+								sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+							}
+						}
+						net->failure_threshold = paddrp->spp_pathmaxrxt;
+					}
+				}
 
 				if (paddrp->spp_flags & SPP_HB_ENABLE) {
 					if (paddrp->spp_hbinterval) {
@@ -5018,12 +5164,17 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					}
 					/* Turn back on the timer */
 					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (paddrp->spp_hbinterval) {
+							net->heart_beat_delay = paddrp->spp_hbinterval;
+						} else if (paddrp->spp_flags & SPP_HB_TIME_IS_ZERO) {
+							net->heart_beat_delay = 0;
+						}
 						if (net->dest_state & SCTP_ADDR_NOHB) {
 							net->dest_state &= ~SCTP_ADDR_NOHB;
-							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
-							                SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
-							sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 						}
+						sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net,
+								SCTP_FROM_SCTP_USRREQ+SCTP_LOC_10);
+						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 					}
 				}
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
@@ -5059,12 +5210,24 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					}
 				}
 #ifdef INET
-				if (paddrp->spp_flags & SPP_IPV4_TOS)
+				if (paddrp->spp_flags & SPP_IPV4_TOS) {
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (net->ro._l_addr.sin.sin_family == AF_INET) {
+							net->tos_flowlabel = paddrp->spp_ipv4_tos & 0x000000fc;
+						}
+					}
 					stcb->asoc.default_tos = paddrp->spp_ipv4_tos & 0x000000fc;
+				}
 #endif
 #ifdef INET6
-				if (paddrp->spp_flags & SPP_IPV6_FLOWLABEL)
+				if (paddrp->spp_flags & SPP_IPV6_FLOWLABEL) {
+					TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+						if (net->ro._l_addr.sin6.sin6_family == AF_INET6) {
+							net->tos_flowlabel = paddrp->spp_ipv6_flowlabel;
+						}
+					}
 					stcb->asoc.default_flowlabel = paddrp->spp_ipv6_flowlabel;
+				}
 #endif
 
 			}
@@ -5459,10 +5622,12 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				break;
 			}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
-			if (td != NULL && (error = prison_local_ip6(td->td_ucred, &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
-											   (SCTP_IPV6_V6ONLY(inp) != 0))) != 0) {
-			  SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
-			  break;
+			if (td != NULL &&
+			    (error = prison_local_ip6(td->td_ucred,
+			                              &(((struct sockaddr_in6 *)(addrs->addr))->sin6_addr),
+			                              (SCTP_IPV6_V6ONLY(inp) != 0))) != 0) {
+				SCTP_LTRACE_ERR_RET(inp, stcb, NULL, SCTP_FROM_SCTP_USRREQ, error);
+				break;
 			}
 #endif
 		} else
@@ -5708,6 +5873,148 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					SCTP_TCB_UNLOCK(stcb);
 				}
 				SCTP_INP_RUNLOCK(inp);
+			}
+		}
+		break;
+	}
+	case SCTP_PEER_ADDR_THLDS:
+		/* Applies to the specific association */
+	{
+		struct sctp_paddrthlds *thlds;
+		struct sctp_nets *net;
+
+		SCTP_CHECK_AND_CAST(thlds, optval, struct sctp_paddrthlds, optsize);
+		SCTP_FIND_STCB(inp, stcb, thlds->spt_assoc_id);
+		net = NULL;
+		if (stcb) {
+			net = sctp_findnet(stcb, (struct sockaddr *)&thlds->spt_assoc_id);
+		} else {
+			/* We increment here since sctp_findassociation_ep_addr() wil
+			 * do a decrement if it finds the stcb as long as the locked
+			 * tcb (last argument) is NOT a TCB.. aka NULL.
+			 */
+			SCTP_INP_INCR_REF(inp);
+			stcb = sctp_findassociation_ep_addr(&inp,
+							    (struct sockaddr *)&thlds->spt_assoc_id,
+							    &net, NULL, NULL);
+			if (stcb == NULL) {
+				SCTP_INP_DECR_REF(inp);
+			}
+		}
+		if (stcb && (net == NULL) ) {
+			struct sockaddr *sa;
+
+			sa = (struct sockaddr *)&thlds->spt_assoc_id;
+#ifdef INET
+			if (sa->sa_family == AF_INET) {
+
+				struct sockaddr_in *sin;
+				sin = (struct sockaddr_in *)sa;
+				if (sin->sin_addr.s_addr) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+					SCTP_TCB_UNLOCK(stcb);
+					error = EINVAL;
+					break;
+				}
+			} else
+#endif
+#ifdef INET6
+			if (sa->sa_family == AF_INET6) {
+				struct sockaddr_in6 *sin6;
+
+				sin6 = (struct sockaddr_in6 *)sa;
+				if (!IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+					SCTP_TCB_UNLOCK(stcb);
+					error = EINVAL;
+					break;
+				}
+			} else
+#endif
+			{
+				error = EAFNOSUPPORT;
+				SCTP_TCB_UNLOCK(stcb);
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, error);
+				break;
+			}
+		}
+		if (stcb) {
+			if (net) {
+				if (net->dest_state & SCTP_ADDR_PF) {
+					if ((net->failure_threshold > thlds->spt_pathmaxrxt) ||
+					    (net->failure_threshold <= thlds->spt_pathpfthld)) {
+						net->dest_state &= ~SCTP_ADDR_PF;
+					}
+				} else {
+					if ((net->failure_threshold > thlds->spt_pathpfthld) &&
+					    (net->failure_threshold <= thlds->spt_pathmaxrxt)) {
+					    	net->dest_state |= SCTP_ADDR_PF;
+						sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+						sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_TIMER + SCTP_LOC_3);
+						sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+					}
+				}
+				if (net->dest_state & SCTP_ADDR_REACHABLE) {
+					if (net->failure_threshold > thlds->spt_pathmaxrxt) {
+						net->dest_state &= ~SCTP_ADDR_REACHABLE;
+						net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+					}
+				}
+				if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+					if (net->failure_threshold <= thlds->spt_pathmaxrxt) {
+						net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+						net->dest_state |= SCTP_ADDR_REACHABLE;
+						sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+					}
+				}
+				net->failure_threshold = thlds->spt_pathmaxrxt;
+				net->pf_threshold = thlds->spt_pathpfthld;
+			} else {
+				TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
+					if (net->dest_state & SCTP_ADDR_PF) {
+						if ((net->failure_threshold > thlds->spt_pathmaxrxt) ||
+						    (net->failure_threshold <= thlds->spt_pathpfthld)) {
+							net->dest_state &= ~SCTP_ADDR_PF;
+						}
+					} else {
+						if ((net->failure_threshold > thlds->spt_pathpfthld) &&
+						    (net->failure_threshold <= thlds->spt_pathmaxrxt)) {
+						    	net->dest_state |= SCTP_ADDR_PF;
+							sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+							sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net, SCTP_FROM_SCTP_TIMER + SCTP_LOC_3);
+							sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+						}
+					}
+					if (net->dest_state & SCTP_ADDR_REACHABLE) {
+						if (net->failure_threshold > thlds->spt_pathmaxrxt) {
+							net->dest_state &= ~SCTP_ADDR_REACHABLE;
+							net->dest_state |= SCTP_ADDR_NOT_REACHABLE;
+							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_DOWN, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+						}
+					}
+					if (net->dest_state & SCTP_ADDR_NOT_REACHABLE) {
+						if (net->failure_threshold <= thlds->spt_pathmaxrxt) {
+							net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
+							net->dest_state |= SCTP_ADDR_REACHABLE;
+							sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb, SCTP_RESPONSE_TO_USER_REQ, net, SCTP_SO_LOCKED);
+						}
+					}
+					net->failure_threshold = thlds->spt_pathmaxrxt;
+					net->pf_threshold = thlds->spt_pathpfthld;
+				}
+				stcb->asoc.def_net_failure = thlds->spt_pathmaxrxt;
+				stcb->asoc.def_net_pf_threshold = thlds->spt_pathpfthld;
+			}
+		} else {
+			if (thlds->spt_assoc_id == SCTP_FUTURE_ASSOC) {
+				SCTP_INP_WLOCK(inp);
+				inp->sctp_ep.def_net_failure = thlds->spt_pathmaxrxt;
+				inp->sctp_ep.def_net_pf_threshold = thlds->spt_pathpfthld;
+				SCTP_INP_WUNLOCK(inp);
+			} else {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
 			}
 		}
 		break;
