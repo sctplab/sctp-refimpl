@@ -546,6 +546,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	struct sctp_nets *r_net, *f_net;
 	struct timeval tv;
 	int req_prim = 0;
+	uint16_t old_error_counter;
 #ifdef INET
 	struct sockaddr_in *sin;
 #endif
@@ -628,10 +629,14 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);
 	}
+	old_error_counter = r_net->error_count;
 	r_net->error_count = 0;
 	r_net->hb_responded = 1;
 	tv.tv_sec = cp->heartbeat.hb_info.time_value_1;
 	tv.tv_usec = cp->heartbeat.hb_info.time_value_2;
+	/* Now lets do a RTO with this */
+	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy, 
+					SCTP_RTT_FROM_NON_DATA);
 	if (!(r_net->dest_state & SCTP_ADDR_REACHABLE)) {
 		r_net->dest_state |= SCTP_ADDR_REACHABLE;
 		sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
@@ -639,9 +644,11 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 	}
 	if (r_net->dest_state & SCTP_ADDR_PF) {
 		r_net->dest_state &= ~SCTP_ADDR_PF;
+		stcb->asoc.cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
+	}
+	if (old_error_counter > 0) {
 		sctp_timer_stop(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net, SCTP_FROM_SCTP_INPUT + SCTP_LOC_3);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, r_net);
-		stcb->asoc.cc_functions.sctp_cwnd_update_exit_pf(stcb, net);
 	}
 	if (r_net == stcb->asoc.primary_destination) {
 		if (stcb->asoc.alternate) {
@@ -650,9 +657,6 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			stcb->asoc.alternate = NULL;
 		}
 	}
-	/* Now lets do a RTO with this */
-	r_net->RTO = sctp_calculate_rto(stcb, &stcb->asoc, r_net, &tv, sctp_align_safe_nocopy, 
-					SCTP_RTT_FROM_NON_DATA);
 	/* Mobility adaptation */
 	if (req_prim) {
 		if ((sctp_is_mobility_feature_on(stcb->sctp_ep,
