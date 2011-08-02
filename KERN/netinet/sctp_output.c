@@ -6681,6 +6681,8 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	int added_control=0;
 	int un_sent, do_chunk_output=1;
 	struct sctp_association *asoc;
+	struct sctp_nets *net;
+
 	ca = (struct sctp_copy_all *)ptr;
 	if (ca->m == NULL) {
 		return;
@@ -6712,6 +6714,11 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		m = NULL;
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
+	if (stcb->asoc.alternate) {
+		net = stcb->asoc.alternate;
+	} else {
+		net = stcb->asoc.primary_destination;
+	}
 	if (ca->sndrcv.sinfo_flags & SCTP_ABORT) {
 		/* Abort this assoc with m as the user defined reason */
 		if (m) {
@@ -6747,7 +6754,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		}
 	} else {
 		if (m) {
-			ret = sctp_msg_append(stcb, stcb->asoc.primary_destination, m,
+			ret = sctp_msg_append(stcb, net, m,
 					      &ca->sndrcv, 1);
 		}
 		asoc = &stcb->asoc;
@@ -6767,14 +6774,14 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time through */
-					sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+					sctp_send_shutdown(stcb, net);
 					if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
 					SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 					SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
-							 asoc->primary_destination);
+							 net);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
 							 asoc->primary_destination);
 					added_control = 1;
@@ -9354,17 +9361,27 @@ sctp_send_asconf_ack(struct sctp_tcb *stcb)
 		net = sctp_find_alternate_net(stcb, stcb->asoc.last_control_chunk_from, 0);
 		if (net == NULL) {
 			/* no alternate */
-			if (stcb->asoc.last_control_chunk_from == NULL)
-				net = stcb->asoc.primary_destination;
-			else
+			if (stcb->asoc.last_control_chunk_from == NULL) {
+				if (stcb->asoc.alternate) {
+					net = stcb->asoc.alternate;
+				} else {
+					net = stcb->asoc.primary_destination;
+				}
+			} else {
 				net = stcb->asoc.last_control_chunk_from;
+			}
 		}
 	} else {
 		/* normal case */
-		if (stcb->asoc.last_control_chunk_from == NULL)
-			net = stcb->asoc.primary_destination;
-		else
+		if (stcb->asoc.last_control_chunk_from == NULL) {
+			if (stcb->asoc.alternate) {
+				net = stcb->asoc.alternate;
+			} else {
+				net = stcb->asoc.primary_destination;
+			}
+		} else {
 			net = stcb->asoc.last_control_chunk_from;
+		}
 	}
 	latest_ack->last_sent_to = net;
 
@@ -9947,7 +9964,11 @@ sctp_timer_validation(struct sctp_inpcb *inp,
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	/* Gak, we did not have a timer somewhere */
 	SCTPDBG(SCTP_DEBUG_OUTPUT3, "Deadlock avoided starting timer on a dest at retran\n");
-	sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, asoc->primary_destination);
+	if (asoc->alternate) {
+		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, asoc->alternate);
+	} else {
+		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, asoc->primary_destination);
+	}
 	return (ret);
 }
 
@@ -10864,6 +10885,7 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
 	int sz;
 	uint32_t auth_offset = 0;
 	struct sctp_auth_chunk *auth = NULL;
+	struct sctp_nets *net;
 
 #if defined(__APPLE__)
 	if (so_locked) {
@@ -10911,16 +10933,19 @@ sctp_send_abort_tcb(struct sctp_tcb *stcb, struct mbuf *operr, int so_locked
 		/* Put AUTH chunk at the front of the chain */
 		SCTP_BUF_NEXT(m_end) = m_abort;
 	}
-
+	if (stcb->asoc.alternate) {
+		net = stcb->asoc.alternate;
+	} else {
+		net = stcb->asoc.primary_destination;
+	}
 	/* fill in the ABORT chunk */
 	abort = mtod(m_abort, struct sctp_abort_chunk *);
 	abort->ch.chunk_type = SCTP_ABORT_ASSOCIATION;
 	abort->ch.chunk_flags = 0;
 	abort->ch.chunk_length = htons(sizeof(*abort) + sz);
 
-	(void)sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb,
-	                                 stcb->asoc.primary_destination,
-	                                 (struct sockaddr *)&stcb->asoc.primary_destination->ro._l_addr,
+	(void)sctp_lowlevel_chunk_output(stcb->sctp_ep, stcb, net,
+	                                 (struct sockaddr *)&net->ro._l_addr,
 	                                 m_out, auth_offset, auth, stcb->asoc.authinfo.active_keyid, 1, 0, NULL, 0,
 	                                 stcb->sctp_ep->sctp_lport, stcb->rport, htonl(stcb->asoc.peer_vtag),
 	                                 stcb->asoc.primary_destination->port, so_locked, NULL, NULL);
@@ -13366,7 +13391,11 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 	} else {
-		net = stcb->asoc.primary_destination;
+		if (stcb->asoc.alternate) {
+			net = stcb->asoc.alternate;
+		} else {
+			net = stcb->asoc.primary_destination;
+		}
 	}
 	atomic_add_int(&stcb->total_sends, 1);
 	/* Keep the stcb from being freed under our feet */
@@ -14116,15 +14145,22 @@ dataless_eof:
 			if ((SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_SENT) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
+				struct sctp_nets *netp;
+
+				if (stcb->asoc.alternate) {
+					netp = stcb->asoc.alternate;
+				} else {
+					netp = stcb->asoc.primary_destination;
+				}
 				/* only send SHUTDOWN the first time through */
-				sctp_send_shutdown(stcb, stcb->asoc.primary_destination);
+				sctp_send_shutdown(stcb, netp);
 				if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
-				                 asoc->primary_destination);
+				                 netp);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
 				                 asoc->primary_destination);
 			}
