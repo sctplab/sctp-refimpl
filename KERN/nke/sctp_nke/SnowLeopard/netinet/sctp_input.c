@@ -937,7 +937,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	} else {
 		/* no outstanding data to send, so move on... */
 		/* send SHUTDOWN-ACK */
-		sctp_send_shutdown_ack(stcb, stcb->asoc.primary_destination);
+		sctp_send_shutdown_ack(stcb, net);
 		/* move to SHUTDOWN-ACK-SENT state */
 		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -4033,8 +4033,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 	/* setup chunk parameters */
 	chk->sent = SCTP_DATAGRAM_UNSENT;
 	chk->snd_count = 0;
-	chk->whoTo = stcb->asoc.primary_destination;
-	atomic_add_int(&chk->whoTo->ref_count, 1);
+	chk->whoTo = NULL;
 
 	ch = mtod(chk->data, struct sctp_chunkhdr *);
 	ch->chunk_type = SCTP_STREAM_RESET;
@@ -4657,8 +4656,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			if ((stcb != NULL) &&
 			    (SCTP_GET_STATE(&stcb->asoc) ==
 			     SCTP_STATE_SHUTDOWN_ACK_SENT)) {
-				sctp_send_shutdown_ack(stcb,
-						       stcb->asoc.primary_destination);
+				sctp_send_shutdown_ack(stcb, NULL);
 				*offset = length;
 				sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_CONTROL_PROC, SCTP_SO_NOT_LOCKED);
 				if (locked_tcb) {
