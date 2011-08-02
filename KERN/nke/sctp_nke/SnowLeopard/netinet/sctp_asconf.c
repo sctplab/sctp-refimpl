@@ -2126,8 +2126,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				sctp_timer_start(SCTP_TIMER_TYPE_ASCONF, inp,
 				    stcb, stcb->asoc.primary_destination);
 #else
-				sctp_send_asconf(stcb, stcb->asoc.primary_destination,
-						 addr_locked);
+				sctp_send_asconf(stcb, NULL, addr_locked);
 #endif
 			}
 		}
@@ -2379,8 +2378,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * If we have queued params in the open state, send out an ASCONF.
 	 */
 	if (num_queued > 0) {
-		sctp_send_asconf(stcb, stcb->asoc.primary_destination,
-				 SCTP_ADDR_NOT_LOCKED);
+		sctp_send_asconf(stcb, NULL, SCTP_ADDR_NOT_LOCKED);
 	}
 }
 
@@ -2436,8 +2434,7 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 					 stcb->sctp_ep, stcb,
 					 stcb->asoc.primary_destination);
 #else
-			sctp_send_asconf(stcb, stcb->asoc.primary_destination,
-					 SCTP_ADDR_NOT_LOCKED);
+			sctp_send_asconf(stcb, NULL, SCTP_ADDR_NOT_LOCKED);
 #endif
 		}
 	} else {
@@ -2473,8 +2470,7 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 							 stcb->sctp_ep, stcb,
 							 stcb->asoc.primary_destination);
 #else
-					sctp_send_asconf(stcb, stcb->asoc.primary_destination,
-							 SCTP_ADDR_NOT_LOCKED);
+					sctp_send_asconf(stcb, NULL, SCTP_ADDR_NOT_LOCKED);
 #endif
 				}
 			}
@@ -3015,8 +3011,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 							 stcb->sctp_ep, stcb,
 							 stcb->asoc.primary_destination);
 #else
-					sctp_send_asconf(stcb, stcb->asoc.primary_destination,
-							 SCTP_ADDR_NOT_LOCKED);
+					sctp_send_asconf(stcb, NULL, SCTP_ADDR_NOT_LOCKED);
 #endif
 				}
 			}
@@ -3597,5 +3592,5 @@ sctp_asconf_send_nat_state_update(struct sctp_tcb *stcb,
 	}
  skip_rest:
 	/* Now we must send the asconf into the queue */
-	sctp_send_asconf(stcb, net, 0);
+	sctp_send_asconf(stcb, net, SCTP_ADDR_NOT_LOCKED);
 }
