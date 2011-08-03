@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 224641 2011-08-03 20:21:00Z tuexen $");
 #endif
 
 #ifndef __sctp_header_h__
@@ -102,9 +102,10 @@ struct sctp_heartbeat_info_param {
 	uint32_t time_value_2;
 	uint32_t random_value1;
 	uint32_t random_value2;
-	uint16_t user_req;
 	uint8_t addr_family;
 	uint8_t addr_len;
+	/* make sure that this structure is 4 byte aligned */
+	uint8_t padding[2];
 	char address[SCTP_ADDRMAX];
 } SCTP_PACKED ;
 

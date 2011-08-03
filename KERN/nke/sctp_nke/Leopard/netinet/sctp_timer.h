@@ -33,7 +33,7 @@
 /* $KAME: sctp_timer.h,v 1.6 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 224641 2011-08-03 20:21:00Z tuexen $");
 #endif
 
 #ifndef __sctp_timer_h__
@@ -43,10 +43,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.h 218319 2011-02-05 12:12:51Z rr
 
 #define SCTP_RTT_SHIFT 3
 #define SCTP_RTT_VAR_SHIFT 2
-
-void
-sctp_early_fr_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-    struct sctp_nets *net);
 
 struct sctp_nets *
 sctp_find_alternate_net(struct sctp_tcb *,
@@ -67,7 +63,7 @@ sctp_shutdown_timer(struct sctp_inpcb *, struct sctp_tcb *,
     struct sctp_nets *);
 int
 sctp_heartbeat_timer(struct sctp_inpcb *, struct sctp_tcb *,
-    struct sctp_nets *, int);
+    struct sctp_nets *);
 
 int
 sctp_cookie_timer(struct sctp_inpcb *, struct sctp_tcb *,
