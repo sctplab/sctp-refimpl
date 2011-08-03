@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 224641 2011-08-03 20:21:00Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -278,6 +278,7 @@ struct sctp_nets {
 	 * structure shared by all.
 	 */
 	struct sctp_timer pmtu_timer;
+	struct sctp_timer hb_timer;
 
 	/*
 	 * The following two in combination equate to a route entry for v6
@@ -300,14 +301,13 @@ struct sctp_nets {
 
 	/* This is used for SHUTDOWN/SHUTDOWN-ACK/SEND or INIT timers */
 	struct sctp_timer rxt_timer;
-	struct sctp_timer fr_timer;	/* for early fr */
 
 	/* last time in seconds I sent to it */
 	struct timeval last_sent_time;
 	union cc_control_data {
 		struct htcp htcp_ca; 	/* JRS - struct used in HTCP algorithm */
 		struct rtcc_cc rtcc;    /* rtcc module cc stuff  */
-	}cc_mod;
+	} cc_mod;
 	int ref_count;
 
 	/* Congestion stats per destination */
@@ -353,12 +353,15 @@ struct sctp_nets {
 	uint32_t marked_retrans;        /* number or DATA chunks marked for
 	                                   timer based retransmissions */
 	uint32_t marked_fastretrans;
+	uint32_t heart_beat_delay;      /* Heart Beat delay in ms */
 
 	/* if this guy is ok or not ... status */
 	uint16_t dest_state;
-	/* number of transmit failures to down this guy */
+	/* number of timeouts to consider the destination unreachable */
 	uint16_t failure_threshold;
-	/* error stats on destination */
+	/* number of timeouts to consider the destination potentially failed */
+	uint16_t pf_threshold;
+	/* error stats on the destination */
 	uint16_t error_count;
 	/* UDP port number in case of UDP tunneling */
 	uint16_t port;
@@ -689,6 +692,7 @@ struct sctp_cc_functions {
 	void (*sctp_cwnd_update_after_sack)(struct sctp_tcb *stcb,
 		 	struct sctp_association *asoc,
 		 	int accum_moved ,int reneged_all, int will_exit);
+	void (*sctp_cwnd_update_exit_pf)(struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_after_fr)(struct sctp_tcb *stcb,
 			struct sctp_association *asoc);
 	void (*sctp_cwnd_update_after_timeout)(struct sctp_tcb *stcb,
@@ -700,8 +704,6 @@ struct sctp_cc_functions {
 			uint32_t *bottle_bw, uint32_t *on_queue);
 	void (*sctp_cwnd_update_after_output)(struct sctp_tcb *stcb,
 			struct sctp_nets *net, int burst_limit);
-	void (*sctp_cwnd_update_after_fr_timer)(struct sctp_inpcb *inp,
-			struct sctp_tcb *stcb, struct sctp_nets *net);
 	void (*sctp_cwnd_update_packet_transmitted)(struct sctp_tcb *stcb, 
 			struct sctp_nets *net);
 	void (*sctp_cwnd_update_tsn_acknowledged)(struct sctp_nets *net, 
@@ -781,7 +783,6 @@ struct sctp_association {
 	struct sctp_nonpad_sndrcvinfo def_send;
 
 	/* timers and such */
-	struct sctp_timer hb_timer;		/* hb timer */
 	struct sctp_timer dack_timer;		/* Delayed ack timer */
 	struct sctp_timer asconf_timer;		/* asconf */
 	struct sctp_timer strreset_timer;	/* stream reset */
@@ -857,6 +858,7 @@ struct sctp_association {
 	uint8_t *mapping_array;
 	/* primary destination to use */
 	struct sctp_nets *primary_destination;
+	struct sctp_nets *alternate; /* If primary is down or PF */
 	/* For CMT */
 	struct sctp_nets *last_net_cmt_send_started;
 	/* last place I got a data chunk from */
@@ -1049,8 +1051,8 @@ struct sctp_association {
 	unsigned int size_on_all_streams;
 	unsigned int cnt_on_all_streams;
 
-	/* Heart Beat delay in ticks */
-	unsigned int heart_beat_delay;
+	/* Heart Beat delay in ms */
+      	uint32_t heart_beat_delay;
 
 	/* autoclose */
 	unsigned int sctp_autoclose_ticks;
@@ -1120,6 +1122,8 @@ struct sctp_association {
 
 	uint16_t def_net_failure;
 
+	uint16_t def_net_pf_threshold;
+
 	/*
 	 * lock flag: 0 is ok to send, 1+ (duals as a retran count) is
 	 * awaiting ACK
@@ -1159,7 +1163,6 @@ struct sctp_association {
 	uint8_t last_flags_delivered;
 	uint8_t hb_ect_randombit;
 	uint8_t hb_random_idx;
-	uint8_t hb_is_disabled;		/* is the hb disabled? */
 	uint8_t default_tos;
 	uint8_t asconf_del_pending;	/* asconf delete last addr pending */
 

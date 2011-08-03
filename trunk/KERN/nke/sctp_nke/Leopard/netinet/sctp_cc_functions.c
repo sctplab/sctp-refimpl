@@ -46,7 +46,7 @@
 #include <netinet/sctp_dtrace_declare.h>
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 221460 2011-05-04 21:27:05Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 224641 2011-08-03 20:21:00Z tuexen $");
 #endif
 
 #define SHIFT_MPTCP_MULTI_N 40
@@ -719,40 +719,6 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 			}
 		}
 #endif
-		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-			/*
-			 * So, first of all do we need to have a Early FR
-			 * timer running?
-			 */
-			if ((!TAILQ_EMPTY(&asoc->sent_queue) &&
-			     (net->ref_count > 1) &&
-			     (net->flight_size < net->cwnd)) ||
-			    (reneged_all)) {
-				/*
-				 * yes, so in this case stop it if its
-				 * running, and then restart it. Reneging
-				 * all is a special case where we want to
-				 * run the Early FR timer and then force the
-				 * last few unacked to be sent, causing us
-				 * to illicit a sack with gaps to force out
-				 * the others.
-				 */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_20 );
-				}
-				SCTP_STAT_INCR(sctps_earlyfrstrid);
-				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
-			} else {
-				/* No, stop it if its running */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_21 );
-				}
-			}
-		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
@@ -760,48 +726,6 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 			}
 			continue;
 		}
-		if (net->net_ack2 > 0) {
-			/*
-			 * Karn's rule applies to clearing error count, this
-			 * is optional.
-			 */
-			net->error_count = 0;
-			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-			    SCTP_ADDR_NOT_REACHABLE) {
-				/* addr came good */
-				net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
-				net->dest_state |= SCTP_ADDR_REACHABLE;
-				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-						SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
-				/* now was it the primary? if so restore */
-				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
-				}
-			}
-			/*
-			 * JRS 5/14/07 - If CMT PF is on and the destination is in PF state,
-			 *  set the destination to active state and set the cwnd to one or two
-			 *  MTU's based on whether PF1 or PF2 is being used.
-			 *
-			 *  Should we stop any running T3 timer here?
-			 */
-			if ((asoc->sctp_cmt_on_off > 0) &&
-			    (asoc->sctp_cmt_pf > 0) &&
-			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
-				net->dest_state &= ~SCTP_ADDR_PF;
-				old_cwnd = net->cwnd;
-				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
-				SDT_PROBE(sctp, cwnd, net, ack, 
-					  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
-					  old_cwnd, net->cwnd);
-				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
-					net, net->cwnd);
-				/* Since the cwnd value is explicitly set, skip the code that
-				   updates the cwnd value. */
-				goto skip_cwnd_update;
-			}
-		}
-
 #ifdef JANA_CMT_FAST_RECOVERY
                 /* CMT fast recovery code
 		 */
@@ -820,7 +744,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 			 * If we are in loss recovery we skip any cwnd
 			 * update
 			 */
-			goto skip_cwnd_update;
+			return;
 		}
 		/* 
 		 * Did any measurements go on for this network?
@@ -842,7 +766,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 			if (net->cc_mod.rtcc.lbw) {
 				if(cc_bw_limit(stcb, net, nbw)) {
 					/* Hold here, no update */
-					goto skip_cwnd_update;
+					continue;
 				}
 			} else {
 				uint64_t vtag, probepoint;
@@ -1028,26 +952,23 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 					      SCTP_CWND_LOG_NO_CUMACK);
 			}
 		}
-	skip_cwnd_update:
-		/*
-		 * NOW, according to Karn's rule do we need to restore the
-		 * RTO timer back? Check our net_ack2. If not set then we
-		 * have a ambiguity.. i.e. all data ack'd was sent to more
-		 * than one place.
-		 */
-		if (net->net_ack2) {
-			/* restore any doubled timers */
-			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
-			if (net->RTO < stcb->asoc.minrto) {
-				net->RTO = stcb->asoc.minrto;
-			}
-			if (net->RTO > stcb->asoc.maxrto) {
-				net->RTO = stcb->asoc.maxrto;
-			}
-		}
-
 	}
 }
+
+static void
+sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb, struct sctp_nets *net)
+{
+	int old_cwnd;
+
+	old_cwnd = net->cwnd;
+	net->cwnd = net->mtu;
+	SDT_PROBE(sctp, cwnd, net, ack, 
+	          stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), net, 
+	          old_cwnd, net->cwnd);
+	SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
+	        net, net->cwnd);
+}
+
 
 static void
 sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
@@ -1313,32 +1234,6 @@ sctp_cwnd_update_after_output(struct sctp_tcb *stcb,
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
 			sctp_log_cwnd(stcb, net, (net->cwnd - old_cwnd), SCTP_CWND_LOG_FROM_BRST);
 		}
-	}
-}
-
-static void
-sctp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
-		struct sctp_tcb *stcb, struct sctp_nets *net)
-{
-	int old_cwnd = net->cwnd;
-
-	sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR, SCTP_SO_NOT_LOCKED);
-	/*
-	 * make a small adjustment to cwnd and force to CA.
-	 */
-	if (net->cwnd > net->mtu)
-		/* drop down one MTU after sending */
-		net->cwnd -= net->mtu;
-	if (net->cwnd < net->ssthresh)
-		/* still in SS move to CA */
-		net->ssthresh = net->cwnd - 1;
-	SDT_PROBE(sctp, cwnd, net, fr, 
-		  stcb->asoc.my_vtag, 
-		  ((stcb->sctp_ep->sctp_lport << 16)|(stcb->rport)), 
-		  net, 
-		  old_cwnd, net->cwnd);
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-		sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
 	}
 }
 
@@ -1818,40 +1713,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			}
 		}
 #endif
-		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-			/*
-			 * So, first of all do we need to have a Early FR
-			 * timer running?
-			 */
-			if ((!TAILQ_EMPTY(&asoc->sent_queue) &&
-			     (net->ref_count > 1) &&
-			     (net->flight_size < net->cwnd)) ||
-			    (reneged_all)) {
-				/*
-				 * yes, so in this case stop it if its
-				 * running, and then restart it. Reneging
-				 * all is a special case where we want to
-				 * run the Early FR timer and then force the
-				 * last few unacked to be sent, causing us
-				 * to illicit a sack with gaps to force out
-				 * the others.
-				 */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_20 );
-				}
-				SCTP_STAT_INCR(sctps_earlyfrstrid);
-				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
-			} else {
-				/* No, stop it if its running */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_21 );
-				}
-			}
-		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
@@ -1859,44 +1720,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			}
 			continue;
 		}
-		if (net->net_ack2 > 0) {
-			/*
-			 * Karn's rule applies to clearing error count, this
-			 * is optional.
-			 */
-			net->error_count = 0;
-			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-			    SCTP_ADDR_NOT_REACHABLE) {
-				/* addr came good */
-				net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
-				net->dest_state |= SCTP_ADDR_REACHABLE;
-				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-				    SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
-				/* now was it the primary? if so restore */
-				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
-				}
-			}
-			/*
-			 * JRS 5/14/07 - If CMT PF is on and the destination is in PF state,
-			 *  set the destination to active state and set the cwnd to one or two
-			 *  MTU's based on whether PF1 or PF2 is being used.
-			 *
-			 *  Should we stop any running T3 timer here?
-			 */
-			if ((asoc->sctp_cmt_on_off > 0) &&
-			    (asoc->sctp_cmt_pf > 0) &&
-			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
-				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
-				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
-					net, net->cwnd);
-				/* Since the cwnd value is explicitly set, skip the code that
-					updates the cwnd value. */
-				goto skip_cwnd_update;
-			}
-		}
-
 #ifdef JANA_CMT_FAST_RECOVERY
                 /* CMT fast recovery code
 		 */
@@ -1915,7 +1738,7 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 * If we are in loss recovery we skip any cwnd
 			 * update
 			 */
-			goto skip_cwnd_update;
+			return;
 		}
 		/*
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
@@ -1960,24 +1783,6 @@ sctp_hs_cwnd_update_after_sack(struct sctp_tcb *stcb,
 					SCTP_CWND_LOG_NO_CUMACK);
 			}
 		}
-skip_cwnd_update:
-		/*
-		 * NOW, according to Karn's rule do we need to restore the
-		 * RTO timer back? Check our net_ack2. If not set then we
-		 * have a ambiguity.. i.e. all data ack'd was sent to more
-		 * than one place.
-		 */
-		if (net->net_ack2) {
-			/* restore any doubled timers */
-			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
-			if (net->RTO < stcb->asoc.minrto) {
-				net->RTO = stcb->asoc.minrto;
-			}
-			if (net->RTO > stcb->asoc.maxrto) {
-				net->RTO = stcb->asoc.maxrto;
-			}
-		}
-
 	}
 }
 
@@ -2297,40 +2102,6 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			}
 		}
 #endif
-		if (SCTP_BASE_SYSCTL(sctp_early_fr)) {
-			/*
-			 * So, first of all do we need to have a Early FR
-			 * timer running?
-			 */
-			if ((!TAILQ_EMPTY(&asoc->sent_queue) &&
-			     (net->ref_count > 1) &&
-			     (net->flight_size < net->cwnd)) ||
-			    (reneged_all)) {
-				/*
-				 * yes, so in this case stop it if its
-				 * running, and then restart it. Reneging
-				 * all is a special case where we want to
-				 * run the Early FR timer and then force the
-				 * last few unacked to be sent, causing us
-				 * to illicit a sack with gaps to force out
-				 * the others.
-				 */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck2);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_20 );
-				}
-				SCTP_STAT_INCR(sctps_earlyfrstrid);
-				sctp_timer_start(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net);
-			} else {
-				/* No, stop it if its running */
-				if (SCTP_OS_TIMER_PENDING(&net->fr_timer.timer)) {
-					SCTP_STAT_INCR(sctps_earlyfrstpidsck3);
-					sctp_timer_stop(SCTP_TIMER_TYPE_EARLYFR, stcb->sctp_ep, stcb, net,
-							SCTP_FROM_SCTP_INDATA+SCTP_LOC_21 );
-				}
-			}
-		}
 		/* if nothing was acked on this destination skip it */
 		if (net->net_ack == 0) {
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_LOGGING_ENABLE) {
@@ -2338,44 +2109,6 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			}
 			continue;
 		}
-		if (net->net_ack2 > 0) {
-			/*
-			 * Karn's rule applies to clearing error count, this
-			 * is optional.
-			 */
-			net->error_count = 0;
-			if ((net->dest_state & SCTP_ADDR_NOT_REACHABLE) ==
-			    SCTP_ADDR_NOT_REACHABLE) {
-				/* addr came good */
-				net->dest_state &= ~SCTP_ADDR_NOT_REACHABLE;
-				net->dest_state |= SCTP_ADDR_REACHABLE;
-				sctp_ulp_notify(SCTP_NOTIFY_INTERFACE_UP, stcb,
-				    SCTP_RECEIVED_SACK, (void *)net, SCTP_SO_NOT_LOCKED);
-				/* now was it the primary? if so restore */
-				if (net->dest_state & SCTP_ADDR_WAS_PRIMARY) {
-					(void)sctp_set_primary_addr(stcb, (struct sockaddr *)NULL, net);
-				}
-			}
-			/*
-			 * JRS 5/14/07 - If CMT PF is on and the destination is in PF state,
-			 *  set the destination to active state and set the cwnd to one or two
-			 *  MTU's based on whether PF1 or PF2 is being used.
-			 *
-			 *  Should we stop any running T3 timer here?
-			 */
-			if ((asoc->sctp_cmt_on_off > 0) &&
-			    (asoc->sctp_cmt_pf > 0) &&
-			    ((net->dest_state & SCTP_ADDR_PF) == SCTP_ADDR_PF)) {
-				net->dest_state &= ~SCTP_ADDR_PF;
-				net->cwnd = net->mtu * asoc->sctp_cmt_pf;
-				SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
-					net, net->cwnd);
-				/* Since the cwnd value is explicitly set, skip the code that
-					updates the cwnd value. */
-				goto skip_cwnd_update;
-			}
-		}
-
 #ifdef JANA_CMT_FAST_RECOVERY
                 /* CMT fast recovery code
 		 */
@@ -2394,7 +2127,7 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 			 * If we are in loss recovery we skip any cwnd
 			 * update
 			 */
-			goto skip_cwnd_update;
+			return;
 		}
 		/*
 		 * CMT: CUC algorithm. Update cwnd if pseudo-cumack has
@@ -2410,24 +2143,6 @@ sctp_htcp_cwnd_update_after_sack(struct sctp_tcb *stcb,
 					SCTP_CWND_LOG_NO_CUMACK);
 			}
 		}
-skip_cwnd_update:
-		/*
-		 * NOW, according to Karn's rule do we need to restore the
-		 * RTO timer back? Check our net_ack2. If not set then we
-		 * have a ambiguity.. i.e. all data ack'd was sent to more
-		 * than one place.
-		 */
-		if (net->net_ack2) {
-			/* restore any doubled timers */
-			net->RTO = (net->lastsa >> SCTP_RTT_SHIFT) + net->lastsv;
-			if (net->RTO < stcb->asoc.minrto) {
-				net->RTO = stcb->asoc.minrto;
-			}
-			if (net->RTO > stcb->asoc.maxrto) {
-				net->RTO = stcb->asoc.maxrto;
-			}
-		}
-
 	}
 }
 
@@ -2519,29 +2234,6 @@ sctp_htcp_cwnd_update_after_timeout(struct sctp_tcb *stcb,
 }
 
 static void
-sctp_htcp_cwnd_update_after_fr_timer(struct sctp_inpcb *inp,
-		struct sctp_tcb *stcb, struct sctp_nets *net)
-{
-	int old_cwnd;
-	old_cwnd = net->cwnd;
-
-	sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_EARLY_FR_TMR, SCTP_SO_NOT_LOCKED);
-	net->cc_mod.htcp_ca.last_cong = sctp_get_tick_count();
-	/*
-	 * make a small adjustment to cwnd and force to CA.
-	 */
-	if (net->cwnd > net->mtu)
-		/* drop down one MTU after sending */
-		net->cwnd -= net->mtu;
-	if (net->cwnd < net->ssthresh)
-		/* still in SS move to CA */
-		net->ssthresh = net->cwnd - 1;
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_CWND_MONITOR_ENABLE) {
-		sctp_log_cwnd(stcb, net, (old_cwnd - net->cwnd), SCTP_CWND_LOG_FROM_FR);
-	}
-}
-
-static void
 sctp_htcp_cwnd_update_after_ecn_echo(struct sctp_tcb *stcb,
 		struct sctp_nets *net, int in_window, int num_pkt_lost)
 {
@@ -2570,75 +2262,75 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 #if defined(__Windows__)
 	sctp_set_initial_cc_param,
 	sctp_cwnd_update_after_sack,
+	sctp_cwnd_update_exit_pf_common,
 	sctp_cwnd_update_after_fr,
 	sctp_cwnd_update_after_timeout,
 	sctp_cwnd_update_after_ecn_echo,
 	sctp_cwnd_update_after_packet_dropped,
 	sctp_cwnd_update_after_output,
-	sctp_cwnd_update_after_fr_timer
 #else
 	.sctp_set_initial_cc_param = sctp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_cwnd_update_after_sack,
+	.sctp_cwnd_update_exit_pf = sctp_cwnd_update_exit_pf_common,
 	.sctp_cwnd_update_after_fr = sctp_cwnd_update_after_fr,
 	.sctp_cwnd_update_after_timeout = sctp_cwnd_update_after_timeout,
 	.sctp_cwnd_update_after_ecn_echo = sctp_cwnd_update_after_ecn_echo,
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
-	.sctp_cwnd_update_after_fr_timer = sctp_cwnd_update_after_fr_timer
 #endif
 },
 {
 #if defined(__Windows__)
 	sctp_set_initial_cc_param,
 	sctp_hs_cwnd_update_after_sack,
+	sctp_cwnd_update_exit_pf_common,
 	sctp_hs_cwnd_update_after_fr,
 	sctp_cwnd_update_after_timeout,
 	sctp_cwnd_update_after_ecn_echo,
 	sctp_cwnd_update_after_packet_dropped,
 	sctp_cwnd_update_after_output,
-	sctp_cwnd_update_after_fr_timer
 #else
 	.sctp_set_initial_cc_param = sctp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_hs_cwnd_update_after_sack,
+	.sctp_cwnd_update_exit_pf = sctp_cwnd_update_exit_pf_common,
 	.sctp_cwnd_update_after_fr = sctp_hs_cwnd_update_after_fr,
 	.sctp_cwnd_update_after_timeout = sctp_cwnd_update_after_timeout,
 	.sctp_cwnd_update_after_ecn_echo = sctp_cwnd_update_after_ecn_echo,
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
-	.sctp_cwnd_update_after_fr_timer = sctp_cwnd_update_after_fr_timer
 #endif
 },
 {
 #if defined(__Windows__)
 	sctp_htcp_set_initial_cc_param,
 	sctp_htcp_cwnd_update_after_sack,
+	sctp_cwnd_update_exit_pf_common,
 	sctp_htcp_cwnd_update_after_fr,
 	sctp_htcp_cwnd_update_after_timeout,
 	sctp_htcp_cwnd_update_after_ecn_echo,
 	sctp_cwnd_update_after_packet_dropped,
 	sctp_cwnd_update_after_output,
-	sctp_htcp_cwnd_update_after_fr_timer
 #else
 	.sctp_set_initial_cc_param = sctp_htcp_set_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_htcp_cwnd_update_after_sack,
+	.sctp_cwnd_update_exit_pf = sctp_cwnd_update_exit_pf_common,
 	.sctp_cwnd_update_after_fr = sctp_htcp_cwnd_update_after_fr,
 	.sctp_cwnd_update_after_timeout = sctp_htcp_cwnd_update_after_timeout,
 	.sctp_cwnd_update_after_ecn_echo = sctp_htcp_cwnd_update_after_ecn_echo,
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
-	.sctp_cwnd_update_after_fr_timer = sctp_htcp_cwnd_update_after_fr_timer
 #endif
 },
 {
 #if defined(__Windows__)
 	sctp_set_rtcc_initial_cc_param,
 	sctp_cwnd_update_rtcc_after_sack,
+	sctp_cwnd_update_exit_pf_common,
 	sctp_cwnd_update_after_fr,
 	sctp_cwnd_update_after_timeout,
 	sctp_cwnd_update_rtcc_after_ecn_echo,
 	sctp_cwnd_update_after_packet_dropped,
 	sctp_cwnd_update_after_output,
-	sctp_cwnd_update_after_fr_timer,
 	sctp_cwnd_update_rtcc_packet_transmitted,
 	sctp_cwnd_update_rtcc_tsn_acknowledged,
 	sctp_cwnd_new_rtcc_transmission_begins,
@@ -2648,12 +2340,12 @@ struct sctp_cc_functions sctp_cc_functions[] = {
 #else
 	.sctp_set_initial_cc_param = sctp_set_rtcc_initial_cc_param,
 	.sctp_cwnd_update_after_sack = sctp_cwnd_update_rtcc_after_sack,
+	.sctp_cwnd_update_exit_pf = sctp_cwnd_update_exit_pf_common,
 	.sctp_cwnd_update_after_fr = sctp_cwnd_update_after_fr,
 	.sctp_cwnd_update_after_timeout = sctp_cwnd_update_after_timeout,
 	.sctp_cwnd_update_after_ecn_echo = sctp_cwnd_update_rtcc_after_ecn_echo,
 	.sctp_cwnd_update_after_packet_dropped = sctp_cwnd_update_after_packet_dropped,
 	.sctp_cwnd_update_after_output = sctp_cwnd_update_after_output,
-	.sctp_cwnd_update_after_fr_timer = sctp_cwnd_update_after_fr_timer,
 	.sctp_cwnd_update_packet_transmitted = sctp_cwnd_update_rtcc_packet_transmitted,
 	.sctp_cwnd_update_tsn_acknowledged = sctp_cwnd_update_rtcc_tsn_acknowledged,
 	.sctp_cwnd_new_transmission_begins = sctp_cwnd_new_rtcc_transmission_begins,
