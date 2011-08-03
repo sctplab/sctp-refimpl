@@ -33,7 +33,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223697 2011-06-30 16:56:55Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 224641 2011-08-03 20:21:00Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
