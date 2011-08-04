@@ -47,7 +47,7 @@
 #include <sys/sysctl.h>
 #include <sys/resourcevar.h>
 #include <sys/uio.h>
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #include <sys/proc_internal.h>
 #endif
 #include <sys/uio_internal.h>
@@ -264,7 +264,7 @@ extern struct fileops socketops;
  */
 typedef struct vm_zone *sctp_zone_t;
 extern zone_t kalloc_zone(vm_size_t);	/* XXX */
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #include <kern/zalloc.h>
 #endif
 
@@ -283,11 +283,19 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 #define SCTP_HASH_INIT(size, hashmark) hashinit(size, M_PCB, hashmark)
 #define SCTP_HASH_FREE(table, hashmark) SCTP_FREE(table, M_PCB)
 
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #define SCTP_M_COPYM m_copym
 #else
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 #define SCTP_M_COPYM sctp_m_copym
+#endif
+#if defined(APPLE_LION)
+#define m_free(_m) mbuf_free(_m)
+#define m_leadingspace(_m) mbuf_leadingspace(_m)
+#define m_trailingspace(_m) mbuf_trailingspace(_m)
+#define m_pulldown(_m, _o, _l, _d) mbuf_pulldown(_m, _o, _l, _d)
+#define m_copyback(_m, _o, _l, _d) mbuf_copyback(_m, _o, _l, _d, M_NOWAIT)
+#define m_copy_pkthdr(_d, _s) mbuf_copy_pkthdr(_d, _s)
 #endif
 /*
  * timers
@@ -431,7 +439,7 @@ typedef struct rtentry	sctp_rtentry_t;
  */
 #define SCTP_IP_ID(inp) (ip_id)
 
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = IP_RAWOUTPUT; \
@@ -477,7 +485,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #ifdef USE_SCTP_SHA1
 #include <netinet/sctp_sha1.h>
 #else
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #include <libkern/crypto/sha1.h>
 #else
 #include <crypto/sha1.h>
@@ -501,7 +509,9 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define atomic_add_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
 #define atomic_fetchadd_int(addr, val)	OSAddAtomic(val, (SInt32 *)addr)
 #define atomic_subtract_int(addr, val)	OSAddAtomic((-val), (SInt32 *)addr)
+#if !defined(APPLE_LION)
 #define atomic_add_16(addr, val)	OSAddAtomic16(val, (SInt16 *)addr)
+#endif
 #define atomic_cmpset_int(dst, exp, src) OSCompareAndSwap(exp, src, (UInt32 *)dst)
 
 #define SCTP_DECREMENT_AND_CHECK_REFCOUNT(addr) (atomic_fetchadd_int(addr, -1) == 1)
@@ -525,7 +535,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 }
 #endif
 
-#if defined(APPLE_SNOWLEOPARD)
+#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int sctp_lock(struct socket *so, int refcount, void *debug);
 int sctp_unlock(struct socket *so, int refcount, void *debug);
 #else
