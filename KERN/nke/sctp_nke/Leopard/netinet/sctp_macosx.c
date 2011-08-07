@@ -253,7 +253,6 @@ out:
 
 
 /* socket lock pr_xxx functions */
-#if defined(__APPLE__)
 /* Tiger only */
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int
@@ -387,7 +386,6 @@ sctp_unlock_assert(struct socket *so)
 		panic("sctp_unlock_assert: so=%p has sp->so_pcb==NULL.\n", so);
 	}
 }
-#endif /* __APPLE__ */
 
 /*
  * timer functions
@@ -411,12 +409,10 @@ sctp_stop_main_timer(void) {
 /*
  * locks
  */
-#if defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 lck_rw_t *sctp_calloutq_mtx;
 #else
 void *sctp_calloutq_mtx;
-#endif
 #endif
 
 #if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) &&!defined(APPLE_LION)
@@ -770,7 +766,6 @@ sctp_vtag_watchdog()
 	return;
 }
 
-#if defined(__APPLE__)
 void
 sctp_slowtimo()
 {
@@ -808,7 +803,7 @@ sctp_slowtimo()
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(&inp->inpcb_mtx);
-				lck_mtx_free(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -839,7 +834,6 @@ sctp_slowtimo()
 	}
 #endif
 }
-#endif
 
 #if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = NULL;
@@ -863,11 +857,9 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 }
 
 static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
-#if defined (__APPLE__)
 	errno_t error;
 	ifnet_t *ifnetlist;
 	uint32_t i, count;
-#endif
 	struct sockaddr *sa;
 	struct sockaddr *rti_info[RTAX_MAX];
 	struct ifnet *ifn, *found_ifn = NULL;
@@ -888,7 +880,6 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
 	 */
-#if defined (__APPLE__)
 	ifnetlist = NULL;
 	count = 0;
 	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
@@ -898,9 +889,6 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
-#else
-	TAILQ_FOREACH(ifn, &ifnet, if_list) {
-#endif
 		/* find the interface by index */
 		if (ifa_msg->ifam_index == ifn->if_index) {
 			found_ifn = ifn;
@@ -957,12 +945,10 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		printf(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
-#if defined(__APPLE__)
 out:
 	if (ifnetlist != 0) {
 		ifnet_list_free(ifnetlist);
 	}
-#endif
 }
 
 
@@ -1281,7 +1267,11 @@ sctp_over_udp_start(void)
 		return error;
 	}
 
+#if defined(APPLE_LION)
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_RECVPKTINFO, (const void *)&on, (int)sizeof(int));
+#else
 	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_PKTINFO, (const void *)&on, (int)sizeof(int));
+#endif
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
