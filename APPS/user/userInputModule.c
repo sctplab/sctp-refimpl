@@ -1,4 +1,4 @@
-/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.114 2011-07-25 19:58:06 randall Exp $ */
+/*	$Header: /usr/sctpCVS/APPS/user/userInputModule.c,v 1.115 2011-08-09 18:40:43 randall Exp $ */
 
 /*
  * Copyright (C) 2002-2006 Cisco Systems Inc,
@@ -3687,23 +3687,10 @@ cmd_getstat(char *argv[], int argc)
 	p(sctps_timoshutdownack,     "shutdownack");
 	p(sctps_timoshutdownguard,   "shutdownguard");
 	p(sctps_timostrmrst,         "strmrst");
-	p(sctps_timoearlyfr,         "earlyfr");
 	p(sctps_timoasconf,          "asconf");
 	p(sctps_timoautoclose,       "autoclose");
 	p(sctps_timoassockill,       "assockill");
 	p(sctps_timoinpkill,         "inpkill");
-	nl("EARLY FR");
-	p(sctps_earlyfrstart,        "start");
-	p(sctps_earlyfrstop,         "stop");
-	p(sctps_earlyfrmrkretrans,   "mrkretrans");
-	p(sctps_earlyfrstpout,       "stpout");
-	p(sctps_earlyfrstpidsck1,    "stpidsck1");
-	p(sctps_earlyfrstpidsck2,    "stpidsck2");
-	p(sctps_earlyfrstpidsck3,    "stpidsck3");
-	p(sctps_earlyfrstpidsck4,    "stpidsck4");
-	p(sctps_earlyfrstrid,        "strid");
-	p(sctps_earlyfrstrout,       "strout");
-	p(sctps_earlyfrstrtmr,       "strtmr");
 	nl("OTHER");
 	p(sctps_hdrops,              "hdrops");
 	p(sctps_badsum,              "badsum");
@@ -4344,9 +4331,6 @@ sctp_network_state(uint32_t state)
     int len;
 
     str_buf[0] = 0;
-    if(state & SCTP_ADDR_NOT_REACHABLE) {
-        strcat(str_buf,"UN-Reachable|");
-    }
     if(state & SCTP_ADDR_REACHABLE) {
         strcat(str_buf,"Reachable|");
     }
@@ -4359,17 +4343,8 @@ sctp_network_state(uint32_t state)
     if(state & SCTP_ADDR_NOT_IN_ASSOC) {
         strcat(str_buf,"Not-In-Assoc|");
     }
-    if(state & SCTP_ADDR_WAS_PRIMARY) {
-        strcat(str_buf,"Was-Primary|");
-    }
-    if(state & SCTP_ADDR_SWITCH_PRIMARY){
-        strcat(str_buf,"Primary-Switch|");
-    }
     if(state & SCTP_ADDR_OUT_OF_SCOPE) {
         strcat(str_buf,"Out-Of-Scope|");
-    }
-    if(state & SCTP_ADDR_DOUBLE_SWITCH) {
-        strcat(str_buf,"Double-Switch|");
     }
     if(state & SCTP_ADDR_UNCONFIRMED) {
         strcat(str_buf,"UNCONFIRMED");
