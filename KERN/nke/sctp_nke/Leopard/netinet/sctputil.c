@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 224641 2011-08-03 20:21:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 224870 2011-08-14 20:55:32Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -933,12 +933,12 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->sctp_features = m->sctp_features;
 #ifdef INET
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
-	asoc->default_tos = m->ip_inp.inp.inp_ip_tos;
+	asoc->default_dscp = m->ip_inp.inp.inp_ip_tos;
 #else
-	asoc->default_tos = m->inp_ip_tos;
+	asoc->default_dscp = m->inp_ip_tos;
 #endif
 #else
-	asoc->default_tos = 0;
+	asoc->default_dscp = 0;
 #endif
 
 #ifdef INET6
