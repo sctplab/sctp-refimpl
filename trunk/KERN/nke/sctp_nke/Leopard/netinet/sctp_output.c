@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 224641 2011-08-03 20:21:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 224870 2011-08-14 20:55:32Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4000,7 +4000,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		ip->ip_v = IPVERSION;
 		ip->ip_hl = (sizeof(struct ip) >> 2);
 		if (net) {
-			tos_value = net->tos_flowlabel & 0x000000ff;
+			tos_value = net->dscp;
 		} else {
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Panda__) || defined(__Windows__) || defined(__Userspace__)
 			tos_value = inp->ip_inp.inp.inp_ip_tos;
@@ -4285,7 +4285,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		int len;
 
 		if (net != NULL) {
-			flowlabel = net->tos_flowlabel;
+			flowlabel = net->flowlabel;
 		} else {
 			flowlabel = ((struct in6pcb *)inp)->in6p_flowinfo;
 		}
