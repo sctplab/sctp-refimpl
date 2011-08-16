@@ -5773,8 +5773,8 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				 * so return an error for sender dry events
 				 */
 				if ((event_type == SCTP_PCB_FLAGS_DRYEVNT) &&
-				    (inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE == 0) &&
-				    (inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL == 0) &&
+				    ((inp->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) == 0) &&
+				    ((inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) == 0) &&
 				    ((event->se_assoc_id == SCTP_ALL_ASSOC) || 
 				     (event->se_assoc_id == SCTP_CURRENT_ASSOC))) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, ENOTSUP);
