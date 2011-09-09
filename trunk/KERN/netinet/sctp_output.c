@@ -6418,7 +6418,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		goto out_now;
 	}
 	if ((stcb->asoc.stream_locked) &&
-	    (stcb->asoc.stream_locked_on  != srcv->sinfo_stream)) {
+	    (stcb->asoc.stream_locked_on != srcv->sinfo_stream)) {
 		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 		error = EINVAL;
 		goto out_now;
@@ -9997,15 +9997,15 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	 */
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
-	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0;
-	unsigned int burst_cnt=0;
+	int error = 0, num_out = 0, tot_out = 0, ret = 0, reason_code = 0;
+	unsigned int burst_cnt = 0;
 	struct timeval now;
 	int now_filled = 0;
-	int nagle_on = 0;
+	int nagle_on;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
-	int un_sent=0;
+	int un_sent = 0;
 	int fr_done;
-	unsigned int tot_frs=0;
+	unsigned int tot_frs = 0;
 
 #if defined(__APPLE__)
 	if (so_locked) {
@@ -10021,6 +10021,8 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 		} else {
 			nagle_on = 1;
 		}
+	} else {
+		nagle_on = 0;
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 
@@ -10192,7 +10194,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			 * flight we stop.
 			 */
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-					   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
+			           (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 			if ((un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
 			    (stcb->asoc.total_flight > 0) &&
 			    ((stcb->asoc.locked_on_sending == NULL) ||
