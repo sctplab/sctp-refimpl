@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 224870 2011-08-14 20:55:32Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 225462 2011-09-09 13:52:37Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6418,7 +6418,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 		goto out_now;
 	}
 	if ((stcb->asoc.stream_locked) &&
-	    (stcb->asoc.stream_locked_on  != srcv->sinfo_stream)) {
+	    (stcb->asoc.stream_locked_on != srcv->sinfo_stream)) {
 		SCTP_LTRACE_ERR_RET_PKT(m, NULL, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 		error = EINVAL;
 		goto out_now;
@@ -9997,15 +9997,15 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	 */
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
-	int error=0, num_out=0, tot_out=0, ret=0, reason_code=0;
-	unsigned int burst_cnt=0;
+	int error = 0, num_out = 0, tot_out = 0, ret = 0, reason_code = 0;
+	unsigned int burst_cnt = 0;
 	struct timeval now;
 	int now_filled = 0;
-	int nagle_on = 0;
+	int nagle_on;
 	int frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
-	int un_sent=0;
+	int un_sent = 0;
 	int fr_done;
-	unsigned int tot_frs=0;
+	unsigned int tot_frs = 0;
 
 #if defined(__APPLE__)
 	if (so_locked) {
@@ -10015,12 +10015,15 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	}
 #endif
 	asoc = &stcb->asoc;
+	/* The Nagle algorithm is only applied when handling a send call. */
 	if (from_where == SCTP_OUTPUT_FROM_USR_SEND) {
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY)) {
 			nagle_on = 0;
 		} else {
 			nagle_on = 1;
 		}
+	} else {
+		nagle_on = 0;
 	}
 	SCTP_TCB_LOCK_ASSERT(stcb);
 
@@ -10186,15 +10189,18 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			}
 		}
 		if (nagle_on) {
-			/*-
-			 * When nagle is on, we look at how much is un_sent, then
-			 * if its smaller than an MTU and we have data in
-			 * flight we stop.
+			/*
+			 * When the Nagle algorithm is used, look at how much
+			 * is unsent, then if its smaller than an MTU and we
+			 * have data in flight we stop, except if we are
+			 * handling a fragmented user message.
 			 */
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
-					   (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
+			           (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
 			if ((un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD)) &&
-			    (stcb->asoc.total_flight > 0)) {
+			    (stcb->asoc.total_flight > 0) &&
+			    ((stcb->asoc.locked_on_sending == NULL) ||
+			     sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR))) {
 				break;
 			}
 		}
