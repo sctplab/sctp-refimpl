@@ -10015,6 +10015,7 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 	}
 #endif
 	asoc = &stcb->asoc;
+	/* The Nagle algorithm is only applied when handling a send call. */
 	if (from_where == SCTP_OUTPUT_FROM_USR_SEND) {
 		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_NODELAY)) {
 			nagle_on = 0;
@@ -10188,10 +10189,11 @@ sctp_chunk_output (struct sctp_inpcb *inp,
 			}
 		}
 		if (nagle_on) {
-			/*-
-			 * When nagle is on, we look at how much is un_sent, then
-			 * if its smaller than an MTU and we have data in
-			 * flight we stop.
+			/*
+			 * When the Nagle algorithm is used, look at how much
+			 * is unsent, then if its smaller than an MTU and we
+			 * have data in flight we stop, except if we are
+			 * handling a fragmented user message.
 			 */
 			un_sent = ((stcb->asoc.total_output_queue_size - stcb->asoc.total_flight) +
 			           (stcb->asoc.stream_queue_cnt * sizeof(struct sctp_data_chunk)));
