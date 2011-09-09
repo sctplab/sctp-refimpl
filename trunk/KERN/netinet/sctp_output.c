@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 224870 2011-08-14 20:55:32Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 225462 2011-09-09 13:52:37Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
