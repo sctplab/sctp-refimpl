@@ -2912,7 +2912,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	m->local_hmacs = sctp_default_supported_hmaclist();
 	m->local_auth_chunks = sctp_alloc_chunklist();
 	m->default_dscp = 0;
+#ifdef INET6
 	m->default_flowlabel = 0;
+#endif
 	sctp_auth_set_default_chunks(m->local_auth_chunks);
 	LIST_INIT(&m->shared_keys);
 	/* add default NULL key as key id 0 */
@@ -4452,7 +4454,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->port = 0;
 	}
 	net->dscp = stcb->asoc.default_dscp;
+#ifdef INET6
 	net->flowlabel = stcb->asoc.default_flowlabel;
+#endif
 	if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DONOT_HEARTBEAT)) {
 		net->dest_state |= SCTP_ADDR_NOHB;
 	} else {
