@@ -1854,6 +1854,11 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
 		/* Gak! no memory */
 		goto out_now;
 	}
+	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
+		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
+		/* Set the connected flag so we can queue data */
+		soisconnecting(so);
+	}
 	SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_WAIT);
 	/* move to second address */
 	switch (sa->sa_family) {
@@ -6354,21 +6359,6 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) {
 		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_CONNECTED;
 		/* Set the connected flag so we can queue data */
-#if defined(__FreeBSD__) || defined(__Windows__)
-		SOCKBUF_LOCK(&so->so_rcv);
-  		so->so_rcv.sb_state &= ~SBS_CANTRCVMORE;
-		SOCKBUF_UNLOCK(&so->so_rcv);
-		SOCKBUF_LOCK(&so->so_snd);
-		so->so_snd.sb_state &= ~SBS_CANTSENDMORE;
-		SOCKBUF_UNLOCK(&so->so_snd);
-		SOCK_LOCK(so);
- 		so->so_state &= ~SS_ISDISCONNECTING;
-		SOCK_UNLOCK(so);
-#else
-		so->so_state &= ~(SS_ISDISCONNECTING |
-		                  SS_CANTRCVMORE |
-		                  SS_CANTSENDMORE);
-#endif
 		soisconnecting(so);
 	}
 	SCTP_SET_STATE(&stcb->asoc, SCTP_STATE_COOKIE_WAIT);

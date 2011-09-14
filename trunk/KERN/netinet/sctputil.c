@@ -3694,7 +3694,6 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
 #endif
     )
 {
-
 	if (stcb == NULL) {
 		return;
 	}
@@ -3705,6 +3704,11 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
+	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
+	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
+	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
+		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_WAS_ABORTED;
+	}
 	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) ||
 	    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_SOCKET_ALLGONE) ||
 	    (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET)) {
@@ -3712,11 +3716,6 @@ sctp_abort_notification(struct sctp_tcb *stcb, int error, int so_locked
 	}
 	/* Tell them we lost the asoc */
 	sctp_report_all_outbound(stcb, 1, so_locked);
-	if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL) ||
-	    ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) &&
-	     (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_CONNECTED))) {
-		stcb->sctp_ep->sctp_flags |= SCTP_PCB_FLAGS_WAS_ABORTED;
-	}
 	sctp_ulp_notify(SCTP_NOTIFY_ASSOC_ABORTED, stcb, error, NULL, so_locked);
 }
 
@@ -5351,11 +5350,6 @@ sctp_sorecvmsg(struct socket *so,
 					/* You were aborted, passive side always hits here */
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ECONNRESET);
 					error = ECONNRESET;
-					/* You get this once if you are active open side */
-					if (!(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-						/* Remove flag if on the active open side */
-						inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_ABORTED;
-					}
 				}
 				so->so_state &= ~(SS_ISCONNECTING |
 						  SS_ISDISCONNECTING |
@@ -5365,8 +5359,6 @@ sctp_sorecvmsg(struct socket *so,
 					if ((inp->sctp_flags & SCTP_PCB_FLAGS_WAS_CONNECTED) == 0) {
 						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
 						error = ENOTCONN;
-					} else {
-						inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_CONNECTED;
 					}
 				}
 				goto out;
@@ -5394,11 +5386,6 @@ sctp_sorecvmsg(struct socket *so,
 						/* You were aborted, passive side always hits here */
 						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ECONNRESET);
 						error = ECONNRESET;
-						/* You get this once if you are active open side */
-						if (!(inp->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-							/* Remove flag if on the active open side */
-							inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_ABORTED;
-						}
 					}
 					so->so_state &= ~(SS_ISCONNECTING |
 							  SS_ISDISCONNECTING |
@@ -5408,8 +5395,6 @@ sctp_sorecvmsg(struct socket *so,
 						if ((inp->sctp_flags & SCTP_PCB_FLAGS_WAS_CONNECTED) == 0) {
 							SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, ENOTCONN);
 							error = ENOTCONN;
-						} else {
-							inp->sctp_flags &= ~SCTP_PCB_FLAGS_WAS_CONNECTED;
 						}
 					}
 					goto out;
