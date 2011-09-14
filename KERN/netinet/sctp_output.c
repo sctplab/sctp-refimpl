@@ -4391,7 +4391,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (ecn_ok) {
 			tos_value |= sctp_get_ect(stcb, chk);
 		}
-		flowinfo = IPV6_VERSION;
+		flowinfo = 0x06;
 		flowinfo <<= 8;
 		flowinfo |= tos_value;
 		flowinfo <<= 20;
