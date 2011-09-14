@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 224870 2011-08-14 20:55:32Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 225549 2011-09-14 08:15:21Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -347,7 +347,9 @@ struct sctp_nets {
 	uint32_t fast_recovery_tsn;
 	uint32_t heartbeat_random1;
 	uint32_t heartbeat_random2;
+#ifdef INET6
 	uint32_t flowlabel;
+#endif
 	uint8_t dscp;
 
 	struct timeval start_time;      /* time when this net was created */
@@ -1013,7 +1015,9 @@ struct sctp_association {
 	uint32_t sb_cc;		       /* shadow of sb_cc */
 	uint32_t sb_send_resv;     /* amount reserved on a send */
 	uint32_t my_rwnd_control_len; /* shadow of sb_mbcnt used for rwnd control */
+#ifdef INET6
 	uint32_t default_flowlabel;
+#endif
 	uint32_t pr_sctp_cnt;
 	int ctrl_queue_cnt;	/* could be removed  REM - NO IT CAN'T!! RRS */
 	/*

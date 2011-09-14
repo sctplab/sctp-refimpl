@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 224870 2011-08-14 20:55:32Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 225549 2011-09-14 08:15:21Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -53,6 +53,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 224870 2011-08-14 20:55:32Z tuex
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_dtrace_define.h>
 #include <netinet/udp.h>
+#ifdef INET6
+#include <netinet6/ip6_var.h>
+#endif
 #if defined(__FreeBSD__)
 #include <sys/sched.h>
 #include <sys/smp.h>
@@ -2673,6 +2676,11 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	/* setup socket pointers */
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
+#ifdef INET6
+	if (MODULE_GLOBAL(ip6_auto_flowlabel)) {
+		inp->ip_inp.inp.inp_flags |= IN6P_AUTOFLOWLABEL;
+	}
+#endif
 	inp->sctp_associd_counter = 1;
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
 	inp->sctp_frag_point = SCTP_DEFAULT_MAXSEGMENT;
@@ -2903,6 +2911,10 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	 */
 	m->local_hmacs = sctp_default_supported_hmaclist();
 	m->local_auth_chunks = sctp_alloc_chunklist();
+	m->default_dscp = 0;
+#ifdef INET6
+	m->default_flowlabel = 0;
+#endif
 	sctp_auth_set_default_chunks(m->local_auth_chunks);
 	LIST_INIT(&m->shared_keys);
 	/* add default NULL key as key id 0 */
@@ -4442,7 +4454,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		net->port = 0;
 	}
 	net->dscp = stcb->asoc.default_dscp;
+#ifdef INET6
 	net->flowlabel = stcb->asoc.default_flowlabel;
+#endif
 	if (sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_DONOT_HEARTBEAT)) {
 		net->dest_state |= SCTP_ADDR_NOHB;
 	} else {
