@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 224641 2011-08-03 20:21:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 225571 2011-09-15 08:49:54Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #include <netinet/sctp_var.h>
@@ -216,6 +216,7 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 	uint16_t param_type, param_length, aparam_length;
 	struct sockaddr *sa;
 	int zero_address = 0;
+	int bad_address = 0;
 #ifdef INET
 	struct sockaddr_in *sin;
 	struct sctp_ipv4addr_param *v4addr;
@@ -247,6 +248,10 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 #endif
 		sin->sin_port = stcb->rport;
 		sin->sin_addr.s_addr = v4addr->addr;
+		if ((sin->sin_addr.s_addr == INADDR_BROADCAST) ||
+		    IN_MULTICAST(ntohl(sin->sin_addr.s_addr))) {
+			bad_address = 1;;
+		}
 		if (sin->sin_addr.s_addr == INADDR_ANY)
 			zero_address = 1;
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "process_asconf_add_ip: adding ");
@@ -269,6 +274,9 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		sin6->sin6_port = stcb->rport;
 		memcpy((caddr_t)&sin6->sin6_addr, v6addr->addr,
 		    sizeof(struct in6_addr));
+		if (IN6_IS_ADDR_MULTICAST(&sin6->sin6_addr)) {
+			bad_address = 1;
+		}
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
 			zero_address = 1;
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "process_asconf_add_ip: adding ");
@@ -276,11 +284,8 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		break;
 #endif
 	default:
-		/*  XXX: Is this the correct error cause? Maybe
-		 *  SCTP_CAUSE_INVALID_PARAM is a better choice.
-		 */
 		m_reply = sctp_asconf_error_response(aph->correlation_id,
-		    SCTP_CAUSE_UNRESOLVABLE_ADDR, (uint8_t *) aph,
+		    SCTP_CAUSE_INVALID_PARAM, (uint8_t *) aph,
 		    aparam_length);
 		return m_reply;
 	}			/* end switch */
@@ -294,7 +299,11 @@ sctp_process_asconf_add_ip(struct mbuf *m, struct sctp_asconf_paramhdr *aph,
 		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, sa);
 	}
 	/* add the address */
-	if (sctp_add_remote_addr(stcb, sa, &net, SCTP_DONOT_SETSCOPE,
+	if (bad_address) {
+		m_reply = sctp_asconf_error_response(aph->correlation_id,
+		    SCTP_CAUSE_INVALID_PARAM, (uint8_t *) aph,
+		    aparam_length);		
+	} else if (sctp_add_remote_addr(stcb, sa, &net, SCTP_DONOT_SETSCOPE,
 	                         SCTP_ADDR_DYNAMIC_ADDED) != 0) {
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"process_asconf_add_ip: error adding address\n");
