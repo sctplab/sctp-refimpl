@@ -14641,25 +14641,24 @@ DEFINE_APITEST(aasconf, sso_1_M)
  */
 DEFINE_APITEST(maxburst, gso_def_1_1)
 {
-	uint8_t val=0;
 	int fd, result;
 	socklen_t len;
+	struct sctp_assoc_value av;
 
 	fd = sctp_one2one(0, 0, 1);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	len = sizeof(val);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &val, &len);
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	close(fd);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	if (val != 4) {
-		return "Max burst not compliant to RFC4960 - 4";
+	if (av.assoc_value != 4) {
+		RETURN_FAILED("Max. burst is %u instead of 4", av.assoc_value);
 	}
-	return NULL;
+	RETURN_PASSED;
 }
 
 /*
@@ -14670,25 +14669,25 @@ DEFINE_APITEST(maxburst, gso_def_1_1)
  */
 DEFINE_APITEST(maxburst, gso_def_1_M)
 {
-	uint8_t val=0;
 	int fd, result;
 	socklen_t len;
+	struct sctp_assoc_value av;
 
 	fd = sctp_one2many(0, 1);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	len = sizeof(val);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &val, &len);
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	close(fd);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	if (val != 4) {
-		return "Max burst not compliant to RFC4960 - 4";
+	if (av.assoc_value != 4) {
+		RETURN_FAILED("Max. burst is %u instead of 4", av.assoc_value);
 	}
-	return NULL;
+	RETURN_PASSED;
 }
 
 /*
@@ -14700,45 +14699,46 @@ DEFINE_APITEST(maxburst, gso_def_1_M)
  */
 DEFINE_APITEST(maxburst, sso_1_1)
 {
-	uint8_t val, newval, finalval;
+	uint32_t newval;
 	int fd, result;
 	socklen_t len;
+	struct sctp_assoc_value av;
 
 	fd = sctp_one2one(0, 0, 1);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	len = sizeof(val);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &val, &len);
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	if (result < 0) {
 		close(fd);
 		return(strerror(errno));
 	}
-	if(val >= 2)
-		newval = val -1;
-	else
-		newval = val +1;
-
-	len = sizeof(newval);
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &newval, len);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	if (av.assoc_value >= 2) {
+		av.assoc_value--;
+	} else {
+		av.assoc_value++;
+	}
+	newval = av.assoc_value;
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, len);
 	if (result < 0) {
 		close(fd);
 		return(strerror(errno));
 	}
-	len = sizeof(finalval);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &finalval, &len);
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	av.assoc_value = 0;
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	close(fd);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	if (newval != finalval) {
-		return "Set of max-burst failed";
+	if (newval != av.assoc_value) {
+		RETURN_FAILED("Max. burst is %u instead of %u", av.assoc_value, newval);
 	}
-	return NULL;
-
+	RETURN_PASSED;
 }
 
 /*
@@ -14750,43 +14750,46 @@ DEFINE_APITEST(maxburst, sso_1_1)
  */
 DEFINE_APITEST(maxburst, sso_1_M)
 {
-	uint8_t val, newval, finalval;
+	uint32_t newval;
 	int fd, result;
 	socklen_t len;
+	struct sctp_assoc_value av;
 
 	fd = sctp_one2many(0, 1);
 	if (fd < 0) {
 		return(strerror(errno));
 	}
-	len = sizeof(val);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &val, &len);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	if (result < 0) {
 		close(fd);
 		return(strerror(errno));
 	}
-	if(val >= 2)
-		newval = val -1;
-	else
-		newval = val +1;
-	len = sizeof(newval);
-	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &newval, len);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	if (av.assoc_value >= 2) {
+		av.assoc_value--;
+	} else {
+		av.assoc_value++;
+	}
+	newval = av.assoc_value;
+	result = setsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, len);
 	if (result < 0) {
 		close(fd);
 		return(strerror(errno));
 	}
-	len = sizeof(finalval);
-	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST,
-			    &finalval, &len);
+	len = (socklen_t)sizeof(struct sctp_assoc_value);
+	av.assoc_id = SCTP_FUTURE_ASSOC;
+	av.assoc_value = 0;
+	result = getsockopt(fd, IPPROTO_SCTP, SCTP_MAX_BURST, &av, &len);
 	close(fd);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	if (newval != finalval) {
-		return "Set of max-burst failed";
+	if (newval != av.assoc_value) {
+		RETURN_FAILED("Max. burst is %u instead of %u", av.assoc_value, newval);
 	}
-	return NULL;
+	RETURN_PASSED;
 }
 
 /********************************************************
