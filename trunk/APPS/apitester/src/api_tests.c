@@ -1,6 +1,6 @@
 /*-
  * Copyright (c) 2001-2007 by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2001-2007, by Michael Tuexen, tuexen@fh-muenster.de. All rights reserved.
+ * Copyright (c) 2001-2011, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -38,6 +38,11 @@
 #endif
 #include "api_tests.h"
 
+#define RED(string) "\033[31m"string"\033[0m"
+#define GREEN(string) "\033[32m"string"\033[0m"
+#define YELLOW(string) "\033[33m"string"\033[0m"
+#define BLUE(string) "\033[34m"string"\033[0m"
+
 extern struct test all_tests[];
 extern unsigned number_of_tests;
 
@@ -67,10 +72,10 @@ run_test(unsigned int i)
 		fflush(stdout);
 		result =  all_tests[i].func();
 		if (result) {
-			printf("failed   %-40.40s\n", result);
+			printf("%s   %-40.40s\n", RED("FAILED"), result);
 			failed++;
 		} else {
-			printf("passed\n");
+			printf("%s\n", GREEN("PASSED"));
 			passed++;
 		}
 		run++;
