@@ -134,9 +134,9 @@ DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 	int fd, result;
 
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
-		return strerror(errno);
+		RETURN_FAILED_WITH_ERRNO;
 
-	result = sctp_get_rto_info(fd, 1, NULL, NULL, NULL);
+	result = sctp_get_rto_info(fd, 3, NULL, NULL, NULL);
 
 	close(fd);
 
@@ -144,9 +144,9 @@ DEFINE_APITEST(rtoinfo, gso_1_M_bad_id)
 		return "getsockopt was successful";
 
 	if (errno != ENOENT)
-		return strerror(errno);
+		RETURN_FAILED_WITH_ERRNO;
 
-	return NULL;
+	RETURN_PASSED;
 }
 
 /*
@@ -284,16 +284,16 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 	uint32_t init, max, min;
 
 	if ((fd = socket(AF_INET, SOCK_SEQPACKET, IPPROTO_SCTP)) < 0)
-		return strerror(errno);
+		RETURN_FAILED_WITH_ERRNO;
 
 	result = sctp_get_rto_info(fd, 0, &init, &max, &min);
 
 	if (result) {
 		close(fd);
-		return strerror(errno);
+		RETURN_FAILED_WITH_ERRNO;
 	}
 
-	result = sctp_set_rto_info(fd, 1, init, max, min);
+	result = sctp_set_rto_info(fd, 3, init, max, min);
 	close(fd);
 
 	if (!result) {
@@ -301,9 +301,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_bad_id)
 	}
 
 	if (errno != ENOENT)
-		return strerror(errno);
+		RETURN_FAILED_WITH_ERRNO;
 
-	return NULL;
+	RETURN_PASSED;
 }
 
 /*
@@ -12056,7 +12056,7 @@ DEFINE_APITEST(authkey, sso_a_def_1_1)
 		close(fd);
 		close(fds[0]);
 		close(fds[1]);
-		return "failed to set auth key";
+		return strerror(errno);
 	}
 	/* No way to tell if it was really written ok */
 	close(fd);
