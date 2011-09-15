@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 225559 2011-09-14 19:10:13Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 225571 2011-09-15 08:49:54Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6578,11 +6578,17 @@ int
 sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 			 int totaddr, int *error)
 {
-	int added=0;
+	int added = 0;
 	int i;
 	struct sctp_inpcb *inp;
 	struct sockaddr *sa;
-	size_t incr=0;
+	size_t incr = 0;
+#ifdef INET
+	struct sockaddr_in *sin;
+#endif
+#ifdef INET6
+	struct sockaddr_in6 *sin6;
+#endif
 
 	sa = addr;
 	inp = stcb->sctp_ep;
@@ -6592,6 +6598,15 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 #ifdef INET
 		case AF_INET:
 			incr = sizeof(struct sockaddr_in);
+			sin = (struct sockaddr_in *)sa;
+			if ((sin->sin_addr.s_addr == INADDR_ANY) ||
+			    (sin->sin_addr.s_addr == INADDR_BROADCAST) ||
+			    IN_MULTICAST(ntohl(sin->sin_addr.s_addr))) {
+				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_7);
+				*error = EINVAL;
+				goto out_now;
+			}
 			if (sctp_add_remote_addr(stcb, sa, NULL, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
@@ -6605,6 +6620,14 @@ sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
 #ifdef INET6
 		case AF_INET6:
 			incr = sizeof(struct sockaddr_in6);
+			sin6 = (struct sockaddr_in6 *)sa;
+			if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr) ||
+			    IN6_IS_ADDR_MULTICAST(&sin6->sin6_addr)) {
+				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
+				(void)sctp_free_assoc(inp, stcb, SCTP_NORMAL_PROC, SCTP_FROM_SCTP_USRREQ+SCTP_LOC_8);
+				*error = EINVAL;
+				goto out_now;
+			}
 			if (sctp_add_remote_addr(stcb, sa, NULL, SCTP_DONOT_SETSCOPE, SCTP_ADDR_IS_CONFIRMED)) {
 				/* assoc gone no un-lock */
 				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ENOBUFS);
