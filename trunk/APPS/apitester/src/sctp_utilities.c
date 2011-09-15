@@ -1354,7 +1354,7 @@ int sctp_get_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t *keyid,
 	if (result >= 0) {
 	    /* This should always fail */
 	    *keyid = akey->sca_keynumber;
-	    *keylen = len - sizeof(*akey);
+	    *keylen = akey->sca_keylength;
 	    bcopy(akey->sca_key, keytext, *keylen);
 	}
 	return (result);
@@ -1374,6 +1374,7 @@ int sctp_set_auth_key(int fd, sctp_assoc_t assoc_id, uint16_t keyid,
 	}
 	akey->sca_assoc_id = assoc_id;
 	akey->sca_keynumber = keyid;
+	akey->sca_keylength = keylen;
 	bcopy(keytext, akey->sca_key, keylen);
 	result = setsockopt(fd, IPPROTO_SCTP, SCTP_AUTH_KEY, akey, len);
 	return (result);
