@@ -7361,6 +7361,8 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_1)
 	}
 	close(fds[0]);
 	close(fds[1]);
+	flags[0] &= ~SPP_DSCP;
+	flags[1] &= ~SPP_DSCP;
 	if(flags[1] != flags[0]) {
 		return "failed, flags changed";
 	}
@@ -7436,6 +7438,8 @@ DEFINE_APITEST(paddrpara, sso_av4_tos_1_M)
 	}
 	close(fds[0]);
 	close(fds[1]);
+	flags[0] &= ~SPP_DSCP;
+	flags[1] &= ~SPP_DSCP;
 	if(flags[1] != flags[0]) {
 		return "failed, flags changed";
 	}
@@ -9190,6 +9194,8 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_1)
 		retstring = "v4 tos changed";
 		goto out;
 	}
+	flags[0] &= ~SPP_DSCP;
+	flags[1] &= ~SPP_DSCP;
 	if (flags[0] != flags[1]) {
 		retstring = "flags changed";
 		goto out;
@@ -9295,6 +9301,8 @@ DEFINE_APITEST(paddrpara, sso_dav4_tos_1_M)
 		retstring = "v4 tos changed";
 		goto out;
 	}
+	flags[0] &= ~SPP_DSCP;
+	flags[1] &= ~SPP_DSCP;
 	if (flags[0] != flags[1]) {
 		retstring = "flags changed";
 		goto out;
