@@ -6425,7 +6425,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 
 	result = sctp_socketpair(fds, 1);
 	if (result < 0) {
-		return(strerror(errno));
+		RETURN_FAILED_WITH_ERRNO;
 	}
 	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
 				      &maxrxt[0],
@@ -6436,13 +6436,13 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 	if (result< 0) {
 		close(fds[0]);
 		close(fds[1]);
-		return(strerror(errno));
+		RETURN_FAILED_WITH_ERRNO;
 	}
 	result = sctp_set_hbdisable(fds[0], 0, NULL);
 	if (result< 0) {
 		close(fds[0]);
 		close(fds[1]);
-		return(strerror(errno));
+		RETURN_FAILED_WITH_ERRNO;
 	}
 	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
 				      &maxrxt[1],
@@ -6453,7 +6453,7 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 	if (result< 0) {
 		close(fds[0]);
 		close(fds[1]);
-		return(strerror(errno));
+		RETURN_FAILED_WITH_ERRNO;
 	}
 	close(fds[0]);
 	close(fds[1]);
@@ -6472,9 +6472,9 @@ DEFINE_APITEST(paddrpara, sso_ahb_off_1_1)
 		retstring = "flag settings changed";
 	}
 	if (flags[1] & SPP_HB_ENABLE) {
-		retstring = "HB still enabled";
+		RETURN_FAILED("HB still enabled (old/new: %x/%x)", flags[0], flags[1]);
 	}
-	return retstring;
+	RETURN_PASSED;
 }
 
 /*
