@@ -37,6 +37,8 @@
 			snprintf(description, 41, format, ##__VA_ARGS__); \
 			return (description); \
 		} while (0)
+#define RETURN_FAILED_WITH_ERRNO \
+		strerror(errno)
 #define RETURN_PASSED return (NULL)
 
 struct test {
