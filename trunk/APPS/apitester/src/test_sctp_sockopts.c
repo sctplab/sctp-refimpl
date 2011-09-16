@@ -1112,8 +1112,9 @@ DEFINE_APITEST(rtoinfo, sso_1_M_inherit)
 	close(afd);
 	close(pfd);
 
-	if (result)
+	if (result) {
 		return strerror(errno);
+	}
 
 	if ((init != new_init) || (min != new_min) || (max != new_max))
 		return "Values are not inherited correctly";
