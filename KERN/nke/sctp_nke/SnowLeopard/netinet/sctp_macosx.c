@@ -605,6 +605,16 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
         return (m);
 }
 
+inline struct mbuf *
+m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
+{
+	mbuf_t *result;
+
+	*offsetp = offset;
+	(void)mbuf_pulldown(mbuf, (size_t *)offsetp, len, result);
+	return (*result);
+}
+
 static void
 sctp_print_addr(struct sockaddr *sa)
 {
