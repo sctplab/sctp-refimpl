@@ -605,6 +605,7 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
         return (m);
 }
 
+#if defined(APPLE_LION) || defined(APPLE_SNOWLEOPARD)
 inline struct mbuf *
 m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 {
@@ -614,6 +615,7 @@ m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 	(void)mbuf_pulldown(mbuf, (size_t *)offsetp, len, result);
 	return (*result);
 }
+#endif
 
 static void
 sctp_print_addr(struct sockaddr *sa)
