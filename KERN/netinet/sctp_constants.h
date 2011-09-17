@@ -538,6 +538,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 224641 2011-08-03 20:21:00
 
 /* SCTP reachability state for each address */
 #define SCTP_ADDR_REACHABLE		0x001
+#define SCTP_ADDR_NO_PMTUD              0x002
 #define SCTP_ADDR_NOHB			0x004
 #define SCTP_ADDR_BEING_DELETED		0x008
 #define SCTP_ADDR_NOT_IN_ASSOC		0x010
