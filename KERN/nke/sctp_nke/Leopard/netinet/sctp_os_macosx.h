@@ -289,13 +289,12 @@ extern zone_t kalloc_zone(vm_size_t);	/* XXX */
 struct mbuf *sctp_m_copym(struct mbuf *m, int off, int len, int wait);
 #define SCTP_M_COPYM sctp_m_copym
 #endif
-#if defined(APPLE_LION)
+#if defined(APPLE_LION) || defined(APPLE_SNOWLEOPARD)
 #define m_free(_m) mbuf_free(_m)
-#define m_leadingspace(_m) mbuf_leadingspace(_m)
-#define m_trailingspace(_m) mbuf_trailingspace(_m)
-#define m_pulldown(_m, _o, _l, _d) mbuf_pulldown(_m, _o, _l, _d)
-#define m_copyback(_m, _o, _l, _d) mbuf_copyback(_m, _o, _l, _d, M_NOWAIT)
-#define m_copy_pkthdr(_d, _s) mbuf_copy_pkthdr(_d, _s)
+#define m_leadingspace(_m) (int)mbuf_leadingspace(_m)
+#define m_trailingspace(_m) (int)mbuf_trailingspace(_m)
+#define m_copyback(_m, _o, _l, _d) (void)mbuf_copyback(_m, _o, _l, _d, M_NOWAIT)
+#define m_copy_pkthdr(_d, _s) (void)mbuf_copy_pkthdr(_d, _s)
 #endif
 /*
  * timers
