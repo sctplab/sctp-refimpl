@@ -6674,6 +6674,7 @@ sctp_pcb_finish(void)
 		ObDereferenceObject(sctp_it_ctl.iterator_thread_obj);
 	}
 #endif
+
 	SCTP_OS_TIMER_STOP(&SCTP_BASE_INFO(addr_wq_timer.timer));
 	SCTP_WQ_ADDR_LOCK();
 	LIST_FOREACH_SAFE(wi, &SCTP_BASE_INFO(addr_wq), sctp_nxt_addr, nwi) {
