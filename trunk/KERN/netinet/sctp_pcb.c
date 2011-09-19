@@ -6620,7 +6620,6 @@ sctp_pcb_finish(void)
 	 * but we still add the ifdef to make it
 	 * compile on old versions.
 	 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 	{
 		struct sctp_iterator *it, *nit;
 
@@ -6643,16 +6642,24 @@ sctp_pcb_finish(void)
 		}
 		SCTP_ITERATOR_UNLOCK();
 	}
-#endif	
 #else
+	/* Notify the iterator to exit. */
+	SCTP_IPI_ITERATOR_WQ_LOCK();
 	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_MUST_EXIT;
+	sctp_wakeup_iterator();
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 #endif
 #if defined(__APPLE__)
-	/* free the iterator worker thread */
-	if (sctp_it_ctl.thread_proc != THREAD_NULL) {
-		thread_terminate(sctp_it_ctl.thread_proc);
-		sctp_it_ctl.thread_proc = THREAD_NULL;
-	}
+	SCTP_IPI_ITERATOR_WQ_LOCK();
+	do {
+		msleep(&sctp_it_ctl.iterator_flags,
+		       sctp_it_ctl.ipi_iterator_wq_mtx,
+		       0, "waiting_for_work", 0);
+	} while ((sctp_it_ctl.iterator_flags & SCTP_ITERATOR_EXITED) == 0);
+	thread_deallocate(sctp_it_ctl.thread_proc);
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	SCTP_IPI_ITERATOR_WQ_DESTROY();
+	SCTP_ITERATOR_LOCK_DESTROY();
 #endif
 #if defined(__Windows__)
 	if (sctp_it_ctl.iterator_thread_obj != NULL) {
@@ -6667,7 +6674,6 @@ sctp_pcb_finish(void)
 		ObDereferenceObject(sctp_it_ctl.iterator_thread_obj);
 	}
 #endif
-	
 	SCTP_OS_TIMER_STOP(&SCTP_BASE_INFO(addr_wq_timer.timer));
 	SCTP_WQ_ADDR_LOCK();
 	LIST_FOREACH_SAFE(wi, &SCTP_BASE_INFO(addr_wq), sctp_nxt_addr, nwi) {
