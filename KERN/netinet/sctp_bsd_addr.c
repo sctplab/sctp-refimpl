@@ -79,7 +79,6 @@ MALLOC_DEFINE(SCTP_M_MCORE, "sctp_mcore", "sctp mcore queue");
 /* Global NON-VNET structure that controls the iterator */
 struct iterator_control sctp_it_ctl;
 
-
 #if !defined(__FreeBSD__)
 static void
 sctp_cleanup_itqueue(void)
@@ -95,7 +94,6 @@ sctp_cleanup_itqueue(void)
 	}
 }
 #endif
-
 #if defined(__Userspace__)
 /*__Userspace__ TODO if we use thread based iterator
  * then the implementation of wakeup will need to change.
