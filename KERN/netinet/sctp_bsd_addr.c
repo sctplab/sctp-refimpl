@@ -79,6 +79,7 @@ MALLOC_DEFINE(SCTP_M_MCORE, "sctp_mcore", "sctp mcore queue");
 /* Global NON-VNET structure that controls the iterator */
 struct iterator_control sctp_it_ctl;
 
+
 static void
 sctp_cleanup_itqueue(void)
 {
@@ -167,7 +168,6 @@ sctp_startup_iterator(void)
 	SCTP_ITERATOR_LOCK_INIT();
 	SCTP_IPI_ITERATOR_WQ_INIT();
 	TAILQ_INIT(&sctp_it_ctl.iteratorhead);
-
 #if defined(__FreeBSD__)
 #if __FreeBSD_version <= 701000
 	ret = kthread_create(sctp_iterator_thread,
