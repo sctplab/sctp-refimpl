@@ -78,8 +78,6 @@ MALLOC_DEFINE(SCTP_M_MCORE, "sctp_mcore", "sctp mcore queue");
 
 /* Global NON-VNET structure that controls the iterator */
 struct iterator_control sctp_it_ctl;
-static int __sctp_thread_based_iterator_started = 0;
-
 
 static void
 sctp_cleanup_itqueue(void)
@@ -118,8 +116,12 @@ static void
 sctp_iterator_thread(void *v)
 {
 	SCTP_IPI_ITERATOR_WQ_LOCK();
+	/* In FreeBSD this thread never terminates. */
+#if defined(__FreeBSD__)
 	while (1) {
-#if !defined(__Userspace__)
+#else
+	while ((sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) == 0) {
+#endif
 		msleep(&sctp_it_ctl.iterator_running,
 #if defined(__FreeBSD__)
 		       &sctp_it_ctl.ipi_iterator_wq_mtx,
@@ -127,39 +129,38 @@ sctp_iterator_thread(void *v)
 		       sctp_it_ctl.ipi_iterator_wq_mtx,
 #endif
 		       0, "waiting_for_work", 0);
+#if !defined(__FreeBSD__)
 		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
-			SCTP_IPI_ITERATOR_WQ_DESTROY();
-			SCTP_ITERATOR_LOCK_DESTROY();
-			sctp_cleanup_itqueue();
-			__sctp_thread_based_iterator_started = 0;
-#if defined(__FreeBSD__)
-#if __FreeBSD_version < 730000
-			kthread_exit(0);
-#else
-			kthread_exit();
-#endif
-#else
-			thread_deallocate(sctp_it_ctl.thread_proc);
-			thread_terminate(current_thread());
-			panic("Hmm. thread_terminate() continues...");
-#endif
+			break;
 		}
-#elif defined(__Userspace__)
-                /* TODO msleep alternative */
-#endif /* !__Userspace__ */
+#endif
 		sctp_iterator_worker();
 	}
+#if !defined(__FreeBSD__)
+	/* Now this thread needs to be terminated */
+	sctp_cleanup_itqueue();
+	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_EXITED;
+	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+	wakeup(&sctp_it_ctl.iterator_flags);
+	thread_terminate(current_thread());
+	panic("Hmm. thread_terminate() continues...");
+#endif
 }
 
 void
 sctp_startup_iterator(void)
 {
-	if (__sctp_thread_based_iterator_started) {
-	/* You only get one */
+	static int called = 0;
+#if defined(__FreeBSD__)
+	int ret;
+#endif
+
+	if (called) {
+		/* You only get one */
 		return;
 	}
 	/* init the iterator head */
-	__sctp_thread_based_iterator_started = 1;
+	called = 1;
 	sctp_it_ctl.iterator_running = 0;
 	sctp_it_ctl.iterator_flags = 0;
 	sctp_it_ctl.cur_it = NULL;
@@ -168,7 +169,6 @@ sctp_startup_iterator(void)
 	TAILQ_INIT(&sctp_it_ctl.iteratorhead);
 
 #if defined(__FreeBSD__)
-	int ret;
 #if __FreeBSD_version <= 701000
 	ret = kthread_create(sctp_iterator_thread,
 #else
@@ -180,9 +180,9 @@ sctp_startup_iterator(void)
 			   SCTP_KTHREAD_PAGES,
 			   SCTP_KTRHEAD_NAME);
 #elif defined(__APPLE__)
-        (void) kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
+        (void)kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
 #elif defined(__Userspace__)
-                             /* TODO pthread_create or alternative to create a thread? */
+	/* TODO pthread_create or alternative to create a thread? */
 #endif
 }
 
