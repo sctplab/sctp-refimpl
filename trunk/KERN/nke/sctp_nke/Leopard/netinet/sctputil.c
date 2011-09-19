@@ -1299,10 +1299,12 @@ select_a_new_ep:
 				/* We won't be staying here */
 				SCTP_INP_DECR_REF(it->inp);
 				atomic_add_int(&it->stcb->asoc.refcnt, -1);
+#if !defined(__FreeBSD__)
 				if (sctp_it_ctl.iterator_flags &
 				   SCTP_ITERATOR_MUST_EXIT) {
 					goto done_with_iterator;
 				}
+#endif
 				if (sctp_it_ctl.iterator_flags &
 				   SCTP_ITERATOR_STOP_CUR_IT) {
 					sctp_it_ctl.iterator_flags &= ~SCTP_ITERATOR_STOP_CUR_IT;
@@ -1384,9 +1386,11 @@ sctp_iterator_worker(void)
 		CURVNET_RESTORE();
 #endif
 		SCTP_IPI_ITERATOR_WQ_LOCK();
+#if !defined(__FreeBSD__)
 		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
 			break;
 		}
+#endif
 	        /*sa_ignore FREED_MEMORY*/
 	}
 	sctp_it_ctl.iterator_running = 0;
