@@ -71,14 +71,14 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 		 */
 		if ((assoc->max_burst > 0) && (cwnd_in_mtu > assoc->max_burst))
 			cwnd_in_mtu = assoc->max_burst;
-		net->cwnd = (net->mtu - sizeof(struct sctphdr)) * cwnd_in_mtu;
+		net->cwnd = (net->mtu - (uint32_t)sizeof(struct sctphdr)) * cwnd_in_mtu;
 	}
 	if ((stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV1) ||
 	    (stcb->asoc.sctp_cmt_on_off == SCTP_CMT_RPV2)) {
 		/* In case of resource pooling initialize appropriately */
 		net->cwnd /= assoc->numnets;
 		if (net->cwnd < (net->mtu - sizeof(struct sctphdr))) {
-			net->cwnd = net->mtu - sizeof(struct sctphdr);
+			net->cwnd = net->mtu - (uint32_t)sizeof(struct sctphdr);
 		}
 	}
 	net->ssthresh = assoc->peers_rwnd;
@@ -683,7 +683,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 			if (srtt > 0) {
 				uint64_t tmp;
 
-				t_ucwnd_sbw += (uint64_t)net->cwnd / (uint64_t)srtt;
+				t_ucwnd_sbw += (uint64_t)(net->cwnd / srtt);
 				t_path_mptcp += (((uint64_t)net->cwnd) << SHIFT_MPTCP_MULTI_Z) /
 				                (((uint64_t)net->mtu) * (uint64_t)srtt);
 				tmp = (((uint64_t)net->cwnd) << SHIFT_MPTCP_MULTI_N) /
@@ -992,7 +992,7 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 			srtt = lnet->lastsa;
 			/* lastsa>>3;  we don't need to divide ... */
 			if (srtt > 0) {
-				t_ucwnd_sbw += (uint64_t)lnet->cwnd / (uint64_t)srtt;
+				t_ucwnd_sbw += (uint64_t)(lnet->cwnd / srtt);
 			}
 		}
 		if (t_ucwnd_sbw < 1) {
@@ -1102,12 +1102,12 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 	uint32_t *bottle_bw, uint32_t *on_queue)
 {
 	uint32_t bw_avail;
-	int rtt;
+	uint32_t rtt;
 	unsigned int incr;
 	int old_cwnd = net->cwnd;
 
-	/* need real RTT in msd for this calc */
-	rtt = net->rtt / 1000;
+	/* need real RTT in ms for this calc */
+	rtt = (uint32_t)(net->rtt / 1000);
 	/* get bottle neck bw */
 	*bottle_bw = ntohl(cp->bottle_bw);
 	/* and whats on queue */
@@ -1333,7 +1333,7 @@ sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 				 */
 				if ((stcb->asoc.max_burst > 0) && (cwnd_in_mtu > stcb->asoc.max_burst))
 					cwnd_in_mtu = stcb->asoc.max_burst;
-				cwnd = (net->mtu - sizeof(struct sctphdr)) * cwnd_in_mtu;
+				cwnd = (net->mtu - (uint32_t)sizeof(struct sctphdr)) * cwnd_in_mtu;
 			}
 			if (net->cwnd > cwnd) {
 				/* Only set if we are not a timeout (i.e. down to 1 mtu) */
