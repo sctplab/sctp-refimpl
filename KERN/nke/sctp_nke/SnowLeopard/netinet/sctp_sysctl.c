@@ -391,11 +391,11 @@ sctp_assoclist SYSCTL_HANDLER_ARGS
 sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #endif
 {
-	unsigned int number_of_endpoints;
-	unsigned int number_of_local_addresses;
-	unsigned int number_of_associations;
-	unsigned int number_of_remote_addresses;
-	unsigned int n;
+	size_t number_of_endpoints;
+	size_t number_of_local_addresses;
+	size_t number_of_associations;
+	size_t number_of_remote_addresses;
+	size_t n;
 	int error;
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
@@ -568,7 +568,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 				xraddr.heartbeat_interval = net->heart_beat_delay;
 #endif
 #else
-				xraddr.rtt = net->rtt / 1000;
+				xraddr.rtt = (uint32_t)(net->rtt / 1000);
 				xraddr.heartbeat_interval = net->heart_beat_delay;
 #endif
 				xraddr.start_time.tv_sec = (uint32_t)net->start_time.tv_sec;
