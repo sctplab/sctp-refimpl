@@ -1073,7 +1073,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	msg.msg_iov = NULL;
 	msg.msg_iovlen = 0;
 	msg.msg_control = (void *)cmsgbuf;
-	msg.msg_controllen = CMSG_LEN(sizeof (struct in_addr));
+	msg.msg_controllen = (socklen_t)CMSG_LEN(sizeof (struct in_addr));
 	msg.msg_flags = 0;
 
 	length = (1<<16);
@@ -1111,7 +1111,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 	ip->ip_len = length;
 	ip->ip_src = src.sin_addr;
 	ip->ip_dst = dst.sin_addr;
-	SCTP_HEADER_LEN(ip_m) = sizeof(struct ip) + length;
+	SCTP_HEADER_LEN(ip_m) = (int)(sizeof(struct ip) + length);
 	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
 	SCTP_BUF_NEXT(ip_m) = packet;
 
@@ -1155,7 +1155,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	msg.msg_iov = NULL;
 	msg.msg_iovlen = 0;
 	msg.msg_control = (void *)cmsgbuf;
-	msg.msg_controllen = CMSG_LEN(sizeof (struct in6_pktinfo));
+	msg.msg_controllen = (socklen_t)CMSG_LEN(sizeof (struct in6_pktinfo));
 	msg.msg_flags = 0;
 	
 	length = (1<<16);
@@ -1191,7 +1191,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
 	ip6->ip6_plen = htons(length);
 	ip6->ip6_src = src.sin6_addr;
 	ip6->ip6_dst = dst.sin6_addr;
-	SCTP_HEADER_LEN(ip6_m) = sizeof(struct ip6_hdr) + length;
+	SCTP_HEADER_LEN(ip6_m) = (int)(sizeof(struct ip6_hdr) + length);
 	SCTP_BUF_LEN(ip6_m) = sizeof(struct ip6_hdr);
 	SCTP_BUF_NEXT(ip6_m) = packet;
 	
