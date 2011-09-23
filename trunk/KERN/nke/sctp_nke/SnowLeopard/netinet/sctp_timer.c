@@ -526,8 +526,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
-		sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
+		sctp_log_fr(cur_rto, (uint32_t)now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
+		sctp_log_fr(0, (uint32_t)min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 	}
 	/*
 	 * Our rwnd will be incorrect here since we are not adding back the
@@ -574,7 +574,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* validate its been outstanding long enough */
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 				sctp_log_fr(chk->rec.data.TSN_seq,
-					    chk->sent_rcv_time.tv_sec,
+					    (uint32_t)chk->sent_rcv_time.tv_sec,
 					    chk->sent_rcv_time.tv_usec,
 					    SCTP_FR_T3_MARK_TIME);
 			}
@@ -586,7 +586,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 */
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 					sctp_log_fr(0,
-						    chk->sent_rcv_time.tv_sec,
+						    (uint32_t)chk->sent_rcv_time.tv_sec,
 						    chk->sent_rcv_time.tv_usec,
 						    SCTP_FR_T3_STOPPED);
 				}
@@ -660,7 +660,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO,
 						       chk->whoTo->flight_size,
 						       chk->book_size,
-						       (uintptr_t)chk->whoTo,
+						       (uint32_t)(uintptr_t)chk->whoTo,
 						       chk->rec.data.TSN_seq);
 				}
 				sctp_flight_size_decrease(chk);
@@ -788,7 +788,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_UP,
 						       chk->whoTo->flight_size,
 						       chk->book_size,
-						       (uintptr_t)chk->whoTo,
+						       (uint32_t)(uintptr_t)chk->whoTo,
 						       chk->rec.data.TSN_seq);
 				}
 
@@ -847,7 +847,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 				(void)SCTP_GETTIME_TIMEVAL(&now);
 				if (net->last_sent_time.tv_sec) {
-					ms_goneby = (now.tv_sec - net->last_sent_time.tv_sec) * 1000;
+					ms_goneby = (uint32_t)((now.tv_sec - net->last_sent_time.tv_sec) * 1000);
 				} else {
 					ms_goneby = 0;
 				}
@@ -1502,7 +1502,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		if (net->ro._s_addr) {
 			mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._s_addr.sa, net->ro.ro_rt);
 			if (net->port) {
-				mtu -= sizeof(struct udphdr);
+				mtu -= (uint32_t)sizeof(struct udphdr);
 			}
 			if (mtu > next_mtu) {
 				net->mtu = next_mtu;
@@ -1535,7 +1535,7 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 			tim_touse = &asoc->time_last_sent;
 		}
 		/* Now has long enough transpired to autoclose? */
-		ticks_gone_by = SEC_TO_TICKS(tn.tv_sec - tim_touse->tv_sec);
+		ticks_gone_by = SEC_TO_TICKS((uint32_t)(tn.tv_sec - tim_touse->tv_sec));
 		if ((ticks_gone_by > 0) &&
 		    (ticks_gone_by >= (int)asoc->sctp_autoclose_ticks)) {
 			/*
