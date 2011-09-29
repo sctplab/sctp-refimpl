@@ -271,13 +271,13 @@ sctp_lock(struct socket *so, int refcount, int lr)
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #endif
 	} else {
-		panic("sctp_lock: so=%p NO PCB!\n", so);
+		panic("sctp_lock: so=%p has so_pcb == NULL.", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(so->so_proto->pr_domain->dom_mtx);
 	}
 
 	if (so->so_usecount < 0)
-		panic("sctp_lock: so=%p so_pcb=%p ref=%x\n", so, so->so_pcb, so->so_usecount);
+		panic("sctp_lock: so=%p so_pcb=%p ref=%x.", so, so->so_pcb, so->so_usecount);
 
 	if (refcount)
 		so->so_usecount++;
@@ -316,10 +316,10 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		so->so_usecount--;
 
 	if (so->so_usecount < 0)
-		panic("sctp_unlock: so=%p usecount=%x\n", so, so->so_usecount);
+		panic("sctp_unlock: so=%p usecount=%x.", so, so->so_usecount);
 
 	if (so->so_pcb == NULL) {
-		panic("sctp_unlock: so=%p NO PCB!\n", so);
+		panic("sctp_unlock: so=%p has so_pcb == NULL.", so);
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
@@ -347,14 +347,14 @@ sctp_getlock(struct socket *so, int locktype)
 	*/
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
-			panic("sctp_getlock: so=%p usecount=%x\n", so, so->so_usecount);
+			panic("sctp_getlock: so=%p usecount=%x.", so, so->so_usecount);
 #if defined(APPLE_LION)
 		return (&((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #else
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #endif
 	} else {
-		panic("sctp_getlock: so=%p NULL so_pcb\n", so);
+		panic("sctp_getlock: so=%p has so_pcb == NULL.", so);
 		return (so->so_proto->pr_domain->dom_mtx);
 	}
 }
@@ -369,7 +369,7 @@ sctp_lock_assert(struct socket *so)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 #endif
 	} else {
-		panic("sctp_lock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+		panic("sctp_lock_assert: so=%p has so->so_pcb == NULL.", so);
 	}
 }
 
@@ -383,7 +383,7 @@ sctp_unlock_assert(struct socket *so)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #endif
 	} else {
-		panic("sctp_unlock_assert: so=%p has sp->so_pcb==NULL.\n", so);
+		panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
 	}
 }
 
@@ -755,10 +755,10 @@ sctp_vtag_watchdog()
 					    (twait_block->vtag_block[j].tv_sec_at_expire == 0)) {
 						free_cnt++;
 					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
-					           ((long)twait_block->vtag_block[j].tv_sec_at_expire < now.tv_sec)) {
+					           (twait_block->vtag_block[j].tv_sec_at_expire < (uint32_t)now.tv_sec)) {
 						expired_cnt++;
 					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
-					           ((long)twait_block->vtag_block[j].tv_sec_at_expire >= now.tv_sec)) {
+					           (twait_block->vtag_block[j].tv_sec_at_expire >= (uint32_t)now.tv_sec)) {
 						inuse_cnt++;
 					} else {
 						other_cnt++;
