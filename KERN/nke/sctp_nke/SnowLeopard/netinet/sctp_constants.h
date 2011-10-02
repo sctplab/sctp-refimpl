@@ -424,7 +424,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 225635 2011-09-17 08:50:29
 /* SCTP chunk types are moved sctp.h for application (NAT, FW) use */
 
 /* align to 32-bit sizes */
-#define SCTP_SIZE32(x)	((((x)+3) >> 2) << 2)
+#define SCTP_SIZE32(x)	(uint32_t)((((x)+3) >> 2) << 2)
 
 #define IS_SCTP_CONTROL(a) ((a)->chunk_type != SCTP_DATA)
 #define IS_SCTP_DATA(a) ((a)->chunk_type == SCTP_DATA)

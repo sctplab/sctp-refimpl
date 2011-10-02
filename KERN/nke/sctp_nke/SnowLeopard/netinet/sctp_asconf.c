@@ -643,7 +643,7 @@ sctp_process_asconf_set_primary(struct mbuf *m,
  * if all parameters are processed ok, send a plain (empty) ASCONF-ACK
  */
 void
-sctp_handle_asconf(struct mbuf *m, unsigned int offset,
+sctp_handle_asconf(struct mbuf *m, size_t offset,
 		   struct sctp_asconf_chunk *cp, struct sctp_tcb *stcb,
 		   int first)
 {
@@ -653,7 +653,7 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	struct sctp_asconf_ack_chunk *ack_cp;
 	struct sctp_asconf_paramhdr *aph, *ack_aph;
 	struct sctp_ipv6addr_param *p_addr;
-	unsigned int asconf_limit, cnt;
+	size_t asconf_limit, cnt;
 	int error = 0;		/* did an error occur? */
 
 	/* asconf param buffer */
@@ -687,8 +687,8 @@ sctp_handle_asconf(struct mbuf *m, unsigned int offset,
 	/* get length of all the param's in the ASCONF */
 	asconf_limit = offset + ntohs(cp->ch.chunk_length);
 	SCTPDBG(SCTP_DEBUG_ASCONF1,
-		"handle_asconf: asconf_limit=%u, sequence=%xh\n",
-		asconf_limit, serial_num);
+		"handle_asconf: asconf_limit=%lu, sequence=%xh\n",
+		(unsigned long)asconf_limit, serial_num);
 
 	if (first) {
 		/* delete old cache */
@@ -1786,7 +1786,7 @@ sctp_asconf_ack_clear(struct sctp_tcb *stcb)
 }
 
 void
-sctp_handle_asconf_ack(struct mbuf *m, int offset,
+sctp_handle_asconf_ack(struct mbuf *m, size_t offset,
 		       struct sctp_asconf_ack_chunk *cp, struct sctp_tcb *stcb,
 		       struct sctp_nets *net, int *abort_no_unlock)
 {
@@ -2491,7 +2491,7 @@ int
 sctp_is_addr_pending(struct sctp_tcb *stcb, struct sctp_ifa *sctp_ifa)
 {
 	struct sctp_tmit_chunk *chk, *nchk;
-	unsigned int offset, asconf_limit;
+	size_t offset, asconf_limit;
 	struct sctp_asconf_chunk *acp;
 	struct sctp_asconf_paramhdr *aph;
 	uint8_t aparam_buf[SCTP_PARAM_BUFFER_SIZE];
