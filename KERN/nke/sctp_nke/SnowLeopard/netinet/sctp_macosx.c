@@ -386,6 +386,8 @@ sctp_unlock_assert(struct socket *so)
 		} else {
 			panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
 		}
+	} else {
+		printf("sctp_unlock_assert() called with so == NULL.\n");
 	}
 }
 
