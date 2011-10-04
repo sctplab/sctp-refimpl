@@ -376,14 +376,16 @@ sctp_lock_assert(struct socket *so)
 void
 sctp_unlock_assert(struct socket *so)
 {
-	if (so->so_pcb) {
+	if (so) {
+		if (so->so_pcb) {
 #if defined(APPLE_LION)
-		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+			lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #else
-		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+			lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #endif
-	} else {
-		panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
+		} else {
+			panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
+		}
 	}
 }
 
