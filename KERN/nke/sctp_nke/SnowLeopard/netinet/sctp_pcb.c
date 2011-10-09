@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 225635 2011-09-17 08:50:29Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 226168 2011-10-09 14:12:17Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3041,6 +3041,7 @@ sctp_move_pcb_and_assoc(struct sctp_inpcb *old_inp, struct sctp_inpcb *new_inp,
 	/* now what about the nets? */
 	TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 		net->pmtu_timer.ep = (void *)new_inp;
+		net->hb_timer.ep = (void *)new_inp;
 		net->rxt_timer.ep = (void *)new_inp;
 	}
 	SCTP_INP_WUNLOCK(new_inp);
