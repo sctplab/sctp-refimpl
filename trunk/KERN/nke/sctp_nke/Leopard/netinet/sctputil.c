@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 225635 2011-09-17 08:50:29Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 226168 2011-10-09 14:12:17Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1698,7 +1698,7 @@ sctp_timeout_handler(void *t)
 		sctp_auditing(4, inp, stcb, net);
 #endif
 		if (!(net->dest_state & SCTP_ADDR_NOHB)) {
-			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
+			sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 			sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_HB_TMR, SCTP_SO_NOT_LOCKED);
 		}
 		break;
