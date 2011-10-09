@@ -78,6 +78,7 @@
 #include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_timer.h>
 #include <net/kpi_interface.h>
 #define APPLE_FILE_NO 5
 
@@ -376,18 +377,14 @@ sctp_lock_assert(struct socket *so)
 void
 sctp_unlock_assert(struct socket *so)
 {
-	if (so) {
-		if (so->so_pcb) {
+	if (so->so_pcb) {
 #if defined(APPLE_LION)
-			lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #else
-			lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #endif
-		} else {
-			panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
-		}
 	} else {
-		printf("sctp_unlock_assert() called with so == NULL.\n");
+		panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
 	}
 }
 
@@ -807,8 +804,8 @@ sctp_slowtimo()
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
-		n++;
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
+			n++;
 			printf("sctp_slowtimo: inp %p, wantcnt %u, so_usecount %d.\n",
 			       inp, inp->inp_wantcnt, inp->inp_socket->so_usecount);
 		}
