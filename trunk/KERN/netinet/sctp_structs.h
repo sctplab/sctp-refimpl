@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 225676 2011-09-19 21:47:20Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_structs.h 226222 2011-10-10 16:31:18Z tuexen $");
 #endif
 
 #ifndef __sctp_structs_h__
@@ -218,8 +218,14 @@ struct iterator_control {
 
 struct sctp_net_route {
 	sctp_rtentry_t *ro_rt;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
+#if defined(__FreeBSD__)
+#if __FreeBSD_version >= 800000
 	void *ro_lle;
+#endif
+#if __FreeBSD_version >= 900000
+	void *ro_ia;
+	int ro_flags;
+#endif
 #endif
 #if defined(__APPLE__)
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
