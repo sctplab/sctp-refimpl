@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 225549 2011-09-14 08:15:21Z tuexen $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -317,7 +317,7 @@ struct sctp_base_info {
  * access /dev/random.
  */
 struct sctp_pcb {
-	unsigned int time_of_secret_change;	/* number of seconds from
+	time_t time_of_secret_change;	/* number of seconds from
 						 * timeval.tv_sec */
 	uint32_t secret_key[SCTP_HOW_MANY_SECRETS][SCTP_NUMBER_OF_SECRETS];
 	unsigned int size_of_a_cookie;
@@ -349,6 +349,8 @@ struct sctp_pcb {
 
 	uint16_t def_net_failure;
 
+	uint16_t def_net_pf_threshold;
+
 	/* number of streams to pre-open on a association */
 	uint16_t pre_open_stream_count;
 	uint16_t max_open_streams_intome;
@@ -376,6 +378,10 @@ struct sctp_pcb {
 	uint32_t store_at;
 	uint32_t max_burst;
 	uint32_t fr_max_burst;
+#ifdef INET6
+	uint32_t default_flowlabel;
+#endif
+	uint8_t default_dscp;
 	char current_secret_number;
 	char last_secret_number;
 };
@@ -769,7 +775,7 @@ void sctp_remove_laddr(struct sctp_laddr *);
 
 void sctp_del_local_addr_ep(struct sctp_inpcb *, struct sctp_ifa *);
 
-int sctp_add_remote_addr(struct sctp_tcb *, struct sockaddr *, int, int);
+int sctp_add_remote_addr(struct sctp_tcb *, struct sockaddr *, struct sctp_nets **, int, int);
 
 void sctp_remove_net(struct sctp_tcb *, struct sctp_nets *);
 
