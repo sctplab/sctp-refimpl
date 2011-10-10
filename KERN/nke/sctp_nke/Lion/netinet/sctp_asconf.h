@@ -50,11 +50,11 @@ extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *, int *, int);
 
 extern void
-sctp_handle_asconf(struct mbuf *, unsigned int, struct sctp_asconf_chunk *,
+sctp_handle_asconf(struct mbuf *, size_t, struct sctp_asconf_chunk *,
     struct sctp_tcb *, int i);
 
 extern void
-sctp_handle_asconf_ack(struct mbuf *, int, struct sctp_asconf_ack_chunk *,
+sctp_handle_asconf_ack(struct mbuf *, size_t, struct sctp_asconf_ack_chunk *,
      struct sctp_tcb *, struct sctp_nets *, int *);
 
 extern uint32_t

@@ -33,7 +33,7 @@
 /* $KAME: sctp_uio.h,v 1.11 2005/03/06 16:04:18 itojun Exp $	 */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 223697 2011-06-30 16:56:55Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 224870 2011-08-14 20:55:32Z tuexen $");
 #endif
 
 #ifndef __sctp_uio_h__
@@ -359,7 +359,8 @@ struct sctp_paddr_change {
 #define SCTP_ADDR_CONFIRMED	0x0006
 
 #define SCTP_ACTIVE		0x0001	/* SCTP_ADDR_REACHABLE */
-#define SCTP_INACTIVE		0x0002	/* SCTP_ADDR_NOT_REACHABLE */
+#define SCTP_INACTIVE		0x0002	/* neither SCTP_ADDR_REACHABLE
+					   nor SCTP_ADDR_UNCONFIRMED */
 #define SCTP_UNCONFIRMED	0x0200	/* SCTP_ADDR_UNCONFIRMED */
 
 /* remote error events */
@@ -534,8 +535,9 @@ struct sctp_paddrparams {
 	uint32_t spp_flags;
 	uint32_t spp_ipv6_flowlabel;
 	uint16_t spp_pathmaxrxt;
-	uint8_t spp_ipv4_tos;
+	uint8_t spp_dscp;
 };
+#define spp_ipv4_tos spp_dscp
 
 #define SPP_HB_ENABLE		0x00000001
 #define SPP_HB_DISABLE		0x00000002
@@ -544,7 +546,15 @@ struct sctp_paddrparams {
 #define SPP_PMTUD_DISABLE	0x00000010
 #define SPP_HB_TIME_IS_ZERO     0x00000080
 #define SPP_IPV6_FLOWLABEL      0x00000100
-#define SPP_IPV4_TOS            0x00000200
+#define SPP_DSCP                0x00000200
+#define SPP_IPV4_TOS            SPP_DSCP
+
+struct sctp_paddrthlds {
+	sctp_assoc_t spt_assoc_id;
+	struct sockaddr_storage spt_address;
+	uint16_t spt_pathmaxrxt;
+	uint16_t spt_pathpfthld;
+};
 
 struct sctp_paddrinfo {
 	struct sockaddr_storage spinfo_address;
@@ -986,18 +996,8 @@ struct sctpstat {
 	uint32_t  sctps_timoautoclose;       /* Number of times auto close timer fired */
 	uint32_t  sctps_timoassockill;       /* Number of asoc free timers expired */
 	uint32_t  sctps_timoinpkill;         /* Number of inp free timers expired */
-	/* Early fast retransmission counters */
-	uint32_t  sctps_earlyfrstart;
-	uint32_t  sctps_earlyfrstop;
-	uint32_t  sctps_earlyfrmrkretrans;
-	uint32_t  sctps_earlyfrstpout;
-	uint32_t  sctps_earlyfrstpidsck1;
-	uint32_t  sctps_earlyfrstpidsck2;
-	uint32_t  sctps_earlyfrstpidsck3;
-	uint32_t  sctps_earlyfrstpidsck4;
-	uint32_t  sctps_earlyfrstrid;
-	uint32_t  sctps_earlyfrstrout;
-	uint32_t  sctps_earlyfrstrtmr;
+	/* former early FR counters */
+	uint32_t  sctps_spare[11];
 	/* others */
 	uint32_t  sctps_hdrops;	          /* packet shorter than header */
 	uint32_t  sctps_badsum;	          /* checksum error             */
@@ -1185,18 +1185,18 @@ struct xsctp_raddr {
 	uint8_t active;                    /* sctpAssocLocalRemEntry 3   */
 	uint8_t confirmed;                 /*                            */
 	uint8_t heartbeat_enabled;         /* sctpAssocLocalRemEntry 4   */
-#if defined(__Windows__)
-	uint8_t padding;
-#endif
+	uint8_t potentially_failed;
 	struct sctp_timeval start_time;    /* sctpAssocLocalRemEntry 8   */
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800000
 	uint32_t rtt;
-	uint32_t extra_padding[32];              /* future */
+	uint32_t heartbeat_interval;
+	uint32_t extra_padding[31];              /* future */
 #endif
 #else
 	uint32_t rtt;
-	uint32_t extra_padding[32];              /* future */
+	uint32_t heartbeat_interval;
+	uint32_t extra_padding[31];              /* future */
 #endif
 };
 
