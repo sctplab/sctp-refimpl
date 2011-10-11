@@ -5164,7 +5164,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					net->failure_threshold = paddrp->spp_pathmaxrxt;
 				}
 				if (paddrp->spp_flags & SPP_DSCP) {
-					net->dscp = paddrp->spp_dscp 0xfc;
+					net->dscp = paddrp->spp_dscp & 0xfc;
 					net->dscp |= 0x01;
 				}
 #ifdef INET6
