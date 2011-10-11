@@ -612,6 +612,7 @@ m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 {
 	mbuf_t *result;
 
+	result = NULL;
 	*offsetp = offset;
 	(void)mbuf_pulldown(mbuf, (size_t *)offsetp, len, result);
 	return (*result);

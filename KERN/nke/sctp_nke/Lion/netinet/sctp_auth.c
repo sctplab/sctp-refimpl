@@ -289,7 +289,7 @@ sctp_print_key(sctp_key_t *key, const char *str)
 		printf("%s: [Null key]\n", str);
 		return;
 	}
-	printf("%s: len %u, ", str, key->keylen);
+	printf("%s: len %lu, ", str, (unsigned long)key->keylen);
 	if (key->keylen) {
 		for (i = 0; i < key->keylen; i++)
 			printf("%02x", key->key[i]);
@@ -308,7 +308,7 @@ sctp_show_key(sctp_key_t *key, const char *str)
 		printf("%s: [Null key]\n", str);
 		return;
 	}
-	printf("%s: len %u, ", str, key->keylen);
+	printf("%s: len %lu, ", str, (unsigned long)key->keylen);
 	if (key->keylen) {
 		for (i = 0; i < key->keylen; i++)
 			printf("%02x", key->key[i]);
