@@ -7,7 +7,7 @@
 	<key>CFBundleExecutable</key>
 	<string>${EXECUTABLE_NAME}</string>
 	<key>CFBundleIdentifier</key>
-	<string>org.sctp.kext.${PRODUCT_NAME:rfc1034identifier}</string>
+	<string>org.sctp.nke.${PRODUCT_NAME:rfc1034identifier}</string>
 	<key>CFBundleInfoDictionaryVersion</key>
 	<string>6.0</string>
 	<key>CFBundlePackageType</key>
@@ -21,15 +21,15 @@
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>com.apple.kpi.bsd</key>
-		<string>10.7.0</string>
+		<string>10.7.1</string>
 		<key>com.apple.kpi.libkern</key>
-		<string>10.7.0</string>
+		<string>10.7.1</string>
 		<key>com.apple.kpi.mach</key>
-		<string>10.7.0</string>
+		<string>10.7.1</string>
 		<key>com.apple.kpi.unsupported</key>
-		<string>10.7.0</string>
+		<string>10.7.1</string>
 		<key>org.sctp.kpi.sctpsupport</key>
-		<string>10.7.0</string>
+		<string>10.7.1</string>
 	</dict>
 </dict>
 </plist>
