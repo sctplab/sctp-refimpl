@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: test_sctp_peeloff.c
+ * $Id: test_sctp_peeloff.c,v 1.2 2011-10-15 12:12:52 tuexen Exp $
  */
  
 #include <sys/types.h>
