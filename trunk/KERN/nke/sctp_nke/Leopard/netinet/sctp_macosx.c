@@ -78,6 +78,7 @@
 #include <netinet/sctputil.h>
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_timer.h>
 #include <net/kpi_interface.h>
 #define APPLE_FILE_NO 5
 
@@ -134,10 +135,15 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-	/* workaround sonewconn() issue where qlimits are checked.
-	   i.e. sonewconn() can only be done on listening sockets */
+	/*
+	 * workaround sonewconn() issue where qlimits are checked.
+	 * i.e. sonewconn() can only be done on listening sockets
+	 * and it expects the SO_ACCEPTCONN flag being set.
+	 */
 	int old_qlimit;
+	short old_so_options;
 #endif
+
 	/* AUDIT_ARG(fd, uap->s); */
 	error = fp_getfsock(p, fd, &fp, &head);
 	if (error) {
@@ -190,12 +196,15 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-	old_qlimit = head->so_qlimit;	/* work around sonewconn() needing listen */
+	old_qlimit = head->so_qlimit;
+	old_so_options	= head->so_options;
 	head->so_qlimit = 1;
+	head->so_options |= SO_ACCEPTCONN;
 #endif
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	head->so_qlimit = old_qlimit;
+	head->so_options = old_so_options;
 #endif
 	if (so == NULL) {
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
@@ -376,18 +385,14 @@ sctp_lock_assert(struct socket *so)
 void
 sctp_unlock_assert(struct socket *so)
 {
-	if (so) {
-		if (so->so_pcb) {
+	if (so->so_pcb) {
 #if defined(APPLE_LION)
-			lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #else
-			lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #endif
-		} else {
-			panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
-		}
 	} else {
-		printf("sctp_unlock_assert() called with so == NULL.\n");
+		panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
 	}
 }
 
@@ -615,6 +620,7 @@ m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 {
 	mbuf_t *result;
 
+	result = NULL;
 	*offsetp = offset;
 	(void)mbuf_pulldown(mbuf, (size_t *)offsetp, len, result);
 	return (*result);
@@ -783,7 +789,7 @@ sctp_vtag_watchdog()
 }
 
 void
-sctp_slowtimo()
+sctp_slowtimo(void)
 {
 	struct inpcb *inp, *ninp;
 	struct socket *so;
@@ -807,8 +813,8 @@ sctp_slowtimo()
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
-		n++;
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
+			n++;
 			printf("sctp_slowtimo: inp %p, wantcnt %u, so_usecount %d.\n",
 			       inp, inp->inp_wantcnt, inp->inp_socket->so_usecount);
 		}
