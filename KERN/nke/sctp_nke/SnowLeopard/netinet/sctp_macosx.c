@@ -135,10 +135,15 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-	/* workaround sonewconn() issue where qlimits are checked.
-	   i.e. sonewconn() can only be done on listening sockets */
+	/*
+	 * workaround sonewconn() issue where qlimits are checked.
+	 * i.e. sonewconn() can only be done on listening sockets
+	 * and it expects the SO_ACCEPTCONN flag being set.
+	 */
 	int old_qlimit;
+	short old_so_options;
 #endif
+
 	/* AUDIT_ARG(fd, uap->s); */
 	error = fp_getfsock(p, fd, &fp, &head);
 	if (error) {
@@ -191,12 +196,15 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-	old_qlimit = head->so_qlimit;	/* work around sonewconn() needing listen */
+	old_qlimit = head->so_qlimit;
+	old_so_options	= head->so_options;
 	head->so_qlimit = 1;
+	head->so_options |= SO_ACCEPTCONN;
 #endif
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	head->so_qlimit = old_qlimit;
+	head->so_options = old_so_options;
 #endif
 	if (so == NULL) {
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
@@ -612,6 +620,7 @@ m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 {
 	mbuf_t *result;
 
+	result = NULL;
 	*offsetp = offset;
 	(void)mbuf_pulldown(mbuf, (size_t *)offsetp, len, result);
 	return (*result);
@@ -780,7 +789,7 @@ sctp_vtag_watchdog()
 }
 
 void
-sctp_slowtimo()
+sctp_slowtimo(void)
 {
 	struct inpcb *inp, *ninp;
 	struct socket *so;
