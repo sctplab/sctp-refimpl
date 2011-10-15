@@ -6,7 +6,8 @@ TEST_SOURCES                = test_sctp_recvmsg.c \
                               test_bind.c \
                               test_sctp_bindx.c \
                               test_shutdown.c \
-                              test_socket.c
+                              test_socket.c \
+                              test_sctp_peeloff.c
 # Plese do not edit anything below
 bin_PROGRAMS                = api_tests
 api_tests_SOURCES           = api_tests.c api_tests.h \
