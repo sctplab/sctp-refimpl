@@ -38,7 +38,7 @@
 			return (description); \
 		} while (0)
 #define RETURN_FAILED_WITH_ERRNO \
-		strerror(errno)
+		return (strerror(errno))
 #define RETURN_PASSED return (NULL)
 
 struct test {
