@@ -23,7 +23,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: test_sctp_peeloff.c,v 1.2 2011-10-15 12:12:52 tuexen Exp $
+ * $Id: test_sctp_peeloff.c,v 1.3 2011-10-15 12:14:15 tuexen Exp $
  */
  
 #include <sys/types.h>
@@ -82,7 +82,6 @@ DEFINE_APITEST(peeloff, goodcase)
 		close(cfd);
 		RETURN_FAILED_WITH_ERRNO;
 	}
-	printf("%d.\n", pfd);
 	if (close(pfd) < 0) {
 		close(cfd);
 		close(lfd);
