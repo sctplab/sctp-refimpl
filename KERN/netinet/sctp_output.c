@@ -8199,12 +8199,20 @@ again_one_more_time:
 			if (chk->rec.chunk_id.id != SCTP_ASCONF) {
 				continue;
 			}
-			if ((chk->whoTo != NULL) && (chk->whoTo != net)) {
-				/*
-				 * No, not sent to the network we are
-				 * looking at
-				 */
-				break;
+			if (chk->whoTo == NULL) {
+				if (asoc->alternate == NULL) {
+					if (asoc->primary_destination != net) {
+						break;
+					}
+				} else {
+					if (asoc->alternate != net) {
+						break;
+					}
+				}
+			} else {
+				if (chk->whoTo != net) {
+					break;
+				}
 			}
 			if (chk->data == NULL) {
 				break;
@@ -8393,12 +8401,20 @@ again_one_more_time:
 					goto skip_net_check;
 				}
 			}
-			if ((chk->whoTo != NULL) && (chk->whoTo != net)) {
-				/*
-				 * No, not sent to the network we are
-				 * looking at
-				 */
-				continue;
+			if (chk->whoTo == NULL) {
+				if (asoc->alternate == NULL) {
+					if (asoc->primary_destination != net) {
+						continue;
+					}
+				} else {
+					if (asoc->alternate != net) {
+						continue;
+					}
+				}
+			} else {
+				if (chk->whoTo != net) {
+					continue;
+				}
 			}
 		skip_net_check:
 			if (chk->data == NULL) {
