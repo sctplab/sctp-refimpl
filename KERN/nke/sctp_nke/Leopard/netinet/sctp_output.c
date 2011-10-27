@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 225571 2011-09-15 08:49:54Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 226868 2011-10-27 22:37:59Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -8199,12 +8199,20 @@ again_one_more_time:
 			if (chk->rec.chunk_id.id != SCTP_ASCONF) {
 				continue;
 			}
-			if (chk->whoTo != net) {
-				/*
-				 * No, not sent to the network we are
-				 * looking at
-				 */
-				break;
+			if (chk->whoTo == NULL) {
+				if (asoc->alternate == NULL) {
+					if (asoc->primary_destination != net) {
+						break;
+					}
+				} else {
+					if (asoc->alternate != net) {
+						break;
+					}
+				}
+			} else {
+				if (chk->whoTo != net) {
+					break;
+				}
 			}
 			if (chk->data == NULL) {
 				break;
@@ -8289,6 +8297,10 @@ again_one_more_time:
 				 */
 				no_data_chunks = 1;
 				chk->sent = SCTP_DATAGRAM_SENT;
+				if (chk->whoTo == NULL) {
+					chk->whoTo = net;
+					atomic_add_int(&net->ref_count, 1);
+				}
 				chk->snd_count++;
 				if (mtu == 0) {
 					/*
@@ -8389,12 +8401,20 @@ again_one_more_time:
 					goto skip_net_check;
 				}
 			}
-			if (chk->whoTo != net) {
-				/*
-				 * No, not sent to the network we are
-				 * looking at
-				 */
-				continue;
+			if (chk->whoTo == NULL) {
+				if (asoc->alternate == NULL) {
+					if (asoc->primary_destination != net) {
+						continue;
+					}
+				} else {
+					if (asoc->alternate != net) {
+						continue;
+					}
+				}
+			} else {
+				if (chk->whoTo != net) {
+					continue;
+				}
 			}
 		skip_net_check:
 			if (chk->data == NULL) {
@@ -8519,6 +8539,10 @@ again_one_more_time:
 						SCTP_STAT_INCR(sctps_sendecne);
 					}
 					chk->sent = SCTP_DATAGRAM_SENT;
+					if (chk->whoTo == NULL) {
+						chk->whoTo = net;
+						atomic_add_int(&net->ref_count, 1);
+					}
 					chk->snd_count++;
 				}
 				if (mtu == 0) {

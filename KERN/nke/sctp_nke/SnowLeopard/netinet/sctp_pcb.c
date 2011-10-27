@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 226203 2011-10-10 12:28:47Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 226869 2011-10-27 22:38:48Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -395,13 +395,12 @@ sctp_mark_ifa_addr_down(uint32_t vrf_id, struct sockaddr *addr,
 		goto out;
 	}
 	if (if_name) {
-		size_t len1, len2;
-
+		int len1, len2;
 		len1 = strlen(if_name);
 		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
 		if (len1 != len2) {
-			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %lu vs %lu - ignored\n",
-				(unsigned long)len1, (unsigned long)len2);
+			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %d vs %d - ignored\n",
+				len1, len2);
 			goto out;
 		}
 		if (strncmp(if_name, sctp_ifap->ifn_p->ifn_name, len1) != 0) {
@@ -447,13 +446,12 @@ sctp_mark_ifa_addr_up(uint32_t vrf_id, struct sockaddr *addr,
 		goto out;
 	}
 	if (if_name) {
-		size_t len1, len2;
-
+		int len1, len2;
 		len1 = strlen(if_name);
 		len2 = strlen(sctp_ifap->ifn_p->ifn_name);
 		if (len1 != len2) {
-			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %lu vs %lu - ignored\n",
-				(unsigned long)len1, (unsigned long)len2);
+			SCTPDBG(SCTP_DEBUG_PCB4, "IFN of ifa names different length %d vs %d - ignored\n",
+				len1, len2);
 			goto out;
 		}
 		if (strncmp(if_name, sctp_ifap->ifn_p->ifn_name, len1) != 0) {
@@ -835,8 +833,7 @@ sctp_del_addr_from_vrf(uint32_t vrf_id, struct sockaddr *addr,
 			 * panda who might recycle indexes fast.
 			 */
 			if (if_name) {
-				size_t len1, len2;
-
+				int len1, len2;
 				len1 = min(SCTP_IFNAMSIZ,strlen(if_name));
 				len2 = min(SCTP_IFNAMSIZ,strlen(sctp_ifap->ifn_p->ifn_name));
 				if (len1 && len2 && (len1 == len2)) {
@@ -2183,7 +2180,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int iphlen, int offset,
 			struct sctp_ipv6addr_param ip6_parm, *p6;
 
 			phdr = sctp_get_next_param(m, offset,
-			    (struct sctp_paramhdr *)&ip6_parm, min(plen, sizeof(ip6_parm)));
+			    (struct sctp_paramhdr *)&ip6_parm, min(plen,sizeof(ip6_parm)));
 			if (phdr == NULL) {
 				return (NULL);
 			}
@@ -4563,7 +4560,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 #endif
 	if (net->port) {
-		net->mtu -= (uint32_t)sizeof(struct udphdr);
+		net->mtu -= sizeof(struct udphdr);
 	}
 	if (stcb->asoc.smallest_mtu > net->mtu) {
 		stcb->asoc.smallest_mtu = net->mtu;
@@ -4589,6 +4586,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->flowidset = 1;
 #endif
 #endif
+	if (netp) {
+		*netp = net;
+	}
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
 		/* Since we have no route put it at the back */
@@ -4669,9 +4669,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			     stcb->asoc.primary_destination, sctp_next);
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
-	}
-	if (netp) {
-		*netp = net;
 	}
 	return (0);
 }
@@ -5145,13 +5142,13 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 				if ((twait_block->vtag_block[i].v_tag == 0) &&
 				    !set) {
 					twait_block->vtag_block[i].tv_sec_at_expire =
-						(uint32_t)now.tv_sec + time;
+						now.tv_sec + time;
 					twait_block->vtag_block[i].v_tag = tag;
 					twait_block->vtag_block[i].lport = lport;
 					twait_block->vtag_block[i].rport = rport;
 					set = 1;
 				} else if ((twait_block->vtag_block[i].v_tag) &&
-					    (twait_block->vtag_block[i].tv_sec_at_expire < (uint32_t)now.tv_sec)) {
+					    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
@@ -5159,7 +5156,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 					twait_block->vtag_block[i].rport = 0;
 					if (set == 0) {
 						/* Reuse it for my new tag */
-						twait_block->vtag_block[i].tv_sec_at_expire = (uint32_t)now.tv_sec + time;
+						twait_block->vtag_block[i].tv_sec_at_expire = now.tv_sec + time;
 						twait_block->vtag_block[i].v_tag = tag;
 						twait_block->vtag_block[i].lport = lport;
 						twait_block->vtag_block[i].rport = rport;
@@ -5188,7 +5185,7 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 		}
 		memset(twait_block, 0, sizeof(struct sctp_tagblock));
 		LIST_INSERT_HEAD(chain, twait_block, sctp_nxt_tagblock);
-		twait_block->vtag_block[0].tv_sec_at_expire = (uint32_t)now.tv_sec + time;
+		twait_block->vtag_block[0].tv_sec_at_expire = now.tv_sec + time;
 		twait_block->vtag_block[0].v_tag = tag;
 		twait_block->vtag_block[0].lport = lport;
 		twait_block->vtag_block[0].rport = rport;
@@ -6825,7 +6822,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 	struct sctp_auth_chunk_list *chunks = NULL;
 	uint16_t num_chunks = 0;
 	sctp_key_t *new_key;
-	size_t keylen;
+	uint32_t keylen;
 	int got_random = 0, got_hmacs = 0, got_chklist = 0;
 	uint8_t ecn_allowed;
 #ifdef INET
@@ -7175,7 +7172,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			phdr = sctp_get_next_param(m, offset,
 						   (struct sctp_paramhdr *)&lstore,
-						   min(plen, sizeof(lstore)));
+						   min(plen,sizeof(lstore)));
 			if (phdr == NULL) {
 				return (-24);
 			}
@@ -7226,11 +7223,10 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			/* A supported extension chunk */
 			struct sctp_supported_chunk_types_param *pr_supported;
 			uint8_t local_store[SCTP_PARAM_BUFFER_SIZE];
-			size_t num_ent, i;
+			int num_ent, i;
 
 			phdr = sctp_get_next_param(m, offset,
-						   (struct sctp_paramhdr *)&local_store,
-			                           min(plen, sizeof(local_store)));
+						   (struct sctp_paramhdr *)&local_store, min(sizeof(local_store),plen));
 			if (phdr == NULL) {
 				return (-25);
 			}
@@ -7278,7 +7274,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			phdr = sctp_get_next_param(m, offset,
 						   (struct sctp_paramhdr *)random_store,
-						   min(plen, sizeof(random_store)));
+						   min(sizeof(random_store),plen));
 			if (phdr == NULL)
 				return (-26);
 			p_random = (struct sctp_auth_random *)phdr;
@@ -7290,7 +7286,8 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			got_random = 1;
 		} else if (ptype == SCTP_HMAC_LIST) {
-			size_t i, num_hmacs;
+			int num_hmacs;
+			int i;
 
 			if (plen > sizeof(hmacs_store))
 				break;
@@ -7300,7 +7297,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			phdr = sctp_get_next_param(m, offset,
 						   (struct sctp_paramhdr *)hmacs_store,
-						   min(plen, sizeof(hmacs_store)));
+						   min(plen,sizeof(hmacs_store)));
 			if (phdr == NULL)
 				return (-28);
 			hmacs = (struct sctp_auth_hmac_algo *)phdr;
@@ -7331,7 +7328,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 			}
 			phdr = sctp_get_next_param(m, offset,
 						   (struct sctp_paramhdr *)chunks_store,
-						   min(plen, sizeof(chunks_store)));
+						   min(plen,sizeof(chunks_store)));
 			if (phdr == NULL)
 				return (-30);
 			chunks = (struct sctp_auth_chunk_list *)phdr;
@@ -7550,7 +7547,8 @@ skip_vtag_check:
 				if (twait_block->vtag_block[i].v_tag == 0) {
 					/* not used */
 					continue;
-				} else if (twait_block->vtag_block[i].tv_sec_at_expire < (uint32_t)now->tv_sec) {
+				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire  <
+					   now->tv_sec) {
 					/* Audit expires this guy */
 					twait_block->vtag_block[i].tv_sec_at_expire = 0;
 					twait_block->vtag_block[i].v_tag = 0;
