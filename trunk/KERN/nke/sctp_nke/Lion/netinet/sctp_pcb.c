@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 226203 2011-10-10 12:28:47Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 226869 2011-10-27 22:38:48Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4589,6 +4589,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	net->flowidset = 1;
 #endif
 #endif
+	if (netp) {
+		*netp = net;
+	}
 	netfirst = TAILQ_FIRST(&stcb->asoc.nets);
 	if (net->ro.ro_rt == NULL) {
 		/* Since we have no route put it at the back */
@@ -4669,9 +4672,6 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			     stcb->asoc.primary_destination, sctp_next);
 		TAILQ_INSERT_HEAD(&stcb->asoc.nets,
 				  stcb->asoc.primary_destination, sctp_next);
-	}
-	if (netp) {
-		*netp = net;
 	}
 	return (0);
 }
