@@ -275,6 +275,7 @@ bsd/netinet/in_gif.c      		optional gif inet
 bsd/netinet/ip_ecn.c          		optional inet
 bsd/netinet/ip_encap.c         		optional inet 
 bsd/netinet/kpi_ipfilter.c		optional inet
+bsd/netinet/sctp_asconf.c		optional inet
 bsd/netinet/sctp_auth.c			optional inet
 bsd/netinet/sctp_bsd_addr.c		optional inet
 bsd/netinet/sctp_callout.c		optional inet
