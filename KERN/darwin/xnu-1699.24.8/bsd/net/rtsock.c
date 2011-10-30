@@ -60,6 +60,7 @@
  *	@(#)rtsock.c	8.5 (Berkeley) 11/2/94
  */
 
+#include <sctp.h>
 
 #include <sys/param.h>
 #include <sys/systm.h>
@@ -86,6 +87,10 @@
 #include <netinet6/nd6.h>
 
 #include <machine/spl.h>
+
+#ifdef SCTP
+extern void sctp_addr_change(struct ifaddr *, int);
+#endif
 
 extern struct rtstat rtstat;
 extern int check_routeselfref;
@@ -1341,6 +1346,9 @@ rt_newmaddrmsg(int cmd, struct ifmultiaddr *ifma)
 	if (route_cb.any_count == 0)
 		return;
 
+#ifdef SCTP
+	sctp_addr_change(ifma->ifma_addr, cmd); /* maybe wrong first arg */
+#endif
 	/* Lock ifp for if_lladdr */
 	ifnet_lock_shared(ifp);
 	bzero((caddr_t)&info, sizeof(info));
