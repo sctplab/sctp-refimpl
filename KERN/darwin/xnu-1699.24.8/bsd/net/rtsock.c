@@ -1270,6 +1270,9 @@ rt_newaddrmsg(int cmd, struct ifaddr *ifa, int error, struct rtentry *rt)
 	if (route_cb.any_count == 0)
 		return;
 
+#ifdef SCTP
+	sctp_addr_change(ifa, cmd);
+#endif
 	/* Become a regular mutex, just in case */
 	RT_CONVERT_LOCK(rt);
 	for (pass = 1; pass < 3; pass++) {
@@ -1346,9 +1349,6 @@ rt_newmaddrmsg(int cmd, struct ifmultiaddr *ifma)
 	if (route_cb.any_count == 0)
 		return;
 
-#ifdef SCTP
-	sctp_addr_change(ifma->ifma_addr, cmd); /* maybe wrong first arg */
-#endif
 	/* Lock ifp for if_lladdr */
 	ifnet_lock_shared(ifp);
 	bzero((caddr_t)&info, sizeof(info));
