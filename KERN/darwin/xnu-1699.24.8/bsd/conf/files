@@ -114,6 +114,7 @@ OPTIONS/netat				optional netat
 OPTIONS/sendfile			optional sendfile
 OPTIONS/randomipid			optional randomipid
 OPTIONS/pf				optional pf
+OPTIONS/sctp				optional sctp
 
 OPTIONS/zlib				optional zlib
 
