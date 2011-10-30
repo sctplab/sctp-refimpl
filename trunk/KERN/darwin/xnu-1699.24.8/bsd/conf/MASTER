@@ -508,3 +508,8 @@ pseudo-device	systrace	1	init	systrace_init	# <config_dtrace>
 pseudo-device	fbt		1	init	fbt_init	# <config_dtrace>
 pseudo-device	profile_prvd	1	init	profile_init	# <config_dtrace>
 
+#
+# SCTP support
+#
+options		SCTP
+options		SCTP_DEBUG
