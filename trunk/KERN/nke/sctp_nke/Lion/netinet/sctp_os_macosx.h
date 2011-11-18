@@ -321,8 +321,7 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
 #define SCTP_BUF_PREPEND(m, plen, how) ((m) = sctp_m_prepend_2((m), (plen), (how)))
-struct mbuf *sctp_m_prepend(struct mbuf *, int, int);
-struct mbuf *sctp_m_prepend_2(struct mbuf *, int, int);
+struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 
 /*************************/
@@ -474,7 +473,7 @@ typedef struct rtentry	sctp_rtentry_t;
 }
 
 struct mbuf *
-sctp_get_mbuf_for_msg(size_t space_needed,
+sctp_get_mbuf_for_msg(unsigned int space_needed,
 		      int want_header, int how, int allonebuf, int type);
 
 /*

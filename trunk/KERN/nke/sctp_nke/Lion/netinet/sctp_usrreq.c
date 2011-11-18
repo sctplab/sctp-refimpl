@@ -104,7 +104,7 @@ sctp_init(void)
 	sb_max_adj = (u_long)((u_quad_t) (SB_MAX) * MCLBYTES / (MSIZE + MCLBYTES));
 #endif
 #if defined(__APPLE__)
-	SCTP_BASE_SYSCTL(sctp_sendspace) = (uint32_t)sb_max_adj;
+	SCTP_BASE_SYSCTL(sctp_sendspace) = sb_max_adj;
 #else
 	SCTP_BASE_SYSCTL(sctp_sendspace) = min(sb_max_adj,
 	    (((uint32_t)nmbclusters / 2) * SCTP_DEFAULT_MAXSEGMENT));
@@ -194,7 +194,7 @@ sctp_pathmtu_adjustment(struct sctp_inpcb *inp,
 				sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_PMTU,
 					       chk->whoTo->flight_size,
 					       chk->book_size,
-					       (uint32_t)(uintptr_t)chk->whoTo,
+					       (uintptr_t)chk->whoTo,
 					       chk->rec.data.TSN_seq);
 			}
 			/* Clear any time so NO RTT is being done */
@@ -265,7 +265,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 	if (net->mtu > nxtsz) {
 		net->mtu = nxtsz;
 		if (net->port) {
-			net->mtu -= (uint32_t)sizeof(struct udphdr);
+			net->mtu -= sizeof(struct udphdr);
 		}
 
 	}
@@ -1648,10 +1648,10 @@ sctp_fill_up_addresses(struct sctp_inpcb *inp,
 /*
  * NOTE: assumes addr lock is held
  */
-static size_t
+static int
 sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 {
-	size_t cnt = 0;
+	int cnt = 0;
 	struct sctp_vrf *vrf = NULL;
 
 	/*
@@ -1717,10 +1717,10 @@ sctp_count_max_addresses_vrf(struct sctp_inpcb *inp, uint32_t vrf_id)
 	return (cnt);
 }
 
-static size_t
+static int
 sctp_count_max_addresses(struct sctp_inpcb *inp)
 {
-	size_t cnt = 0;
+	int cnt = 0;
 #ifdef SCTP_MVRF
 	int id;
 #endif
@@ -2241,11 +2241,11 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	case SCTP_GET_ASSOC_ID_LIST:
 	{
 		struct sctp_assoc_ids *ids;
-		size_t at, limit;
+		unsigned int at, limit;
 		
 		SCTP_CHECK_AND_CAST(ids, optval, struct sctp_assoc_ids, *optsize);
 		at = 0;
-		limit = (*optsize - sizeof(uint32_t)) / sizeof(sctp_assoc_t);
+		limit = (*optsize-sizeof(uint32_t))/ sizeof(sctp_assoc_t);
 		SCTP_INP_RLOCK(inp);
 		LIST_FOREACH(stcb, &inp->sctp_asoc_list, sctp_tcblist) {
 			if (at < limit) {
@@ -2258,7 +2258,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		}
 		SCTP_INP_RUNLOCK(inp);
 		if (error == 0) {
-			ids->gaids_number_of_ids = (uint32_t)at;
+			ids->gaids_number_of_ids = at;
 			*optsize = ((at * sizeof(sctp_assoc_t)) + sizeof(uint32_t));
 		}
 		break;
@@ -2553,7 +2553,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
 		SCTP_INP_RLOCK(inp);
-		*value = (uint32_t)sctp_count_max_addresses(inp);
+		*value = sctp_count_max_addresses(inp);
 		SCTP_INP_RUNLOCK(inp);
 		*optsize = sizeof(uint32_t);
 		break;
@@ -3135,7 +3135,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		if (stcb) {
 			/* simply copy out the sockaddr_storage... */
-			size_t len;
+			int len;
 
 			len = *optsize;
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux)
@@ -3166,7 +3166,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	{
 		struct sctp_hmacalgo *shmac;
 		sctp_hmaclist_t *hmaclist;
-		size_t size;
+		uint32_t size;
 		int i;
 
 		SCTP_CHECK_AND_CAST(shmac, optval, struct sctp_hmacalgo, *optsize);
