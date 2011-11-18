@@ -2489,7 +2489,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		SCTP_TCB_LOCK(l_stcb);
 	}
 	/* which cookie is it? */
-	if ((cookie->time_entered.tv_sec < ep->time_of_secret_change) &&
+	if ((cookie->time_entered.tv_sec < (long)ep->time_of_secret_change) &&
 	    (ep->current_secret_number != ep->last_secret_number)) {
 		/* it's the old cookie */
 		(void)sctp_hmac_m(SCTP_HMAC,
@@ -2512,7 +2512,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	/* compare the received digest with the computed digest */
 	if (memcmp(calc_sig, sig, SCTP_SIGNATURE_SIZE) != 0) {
 		/* try the old cookie? */
-		if ((cookie->time_entered.tv_sec == ep->time_of_secret_change) &&
+		if ((cookie->time_entered.tv_sec == (long)ep->time_of_secret_change) &&
 		    (ep->current_secret_number != ep->last_secret_number)) {
 			/* compute digest with old */
 			(void)sctp_hmac_m(SCTP_HMAC,

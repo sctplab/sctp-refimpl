@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 221249 2011-04-30 11:18:16Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 225676 2011-09-19 21:47:20Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -651,7 +651,7 @@ out:
 #endif
 
 struct mbuf *
-sctp_get_mbuf_for_msg(size_t space_needed, int want_header,
+sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		      int how, int allonebuf, int type)
 {
     struct mbuf *m = NULL;
