@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 226168 2011-10-09 14:12:17Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 227755 2011-11-20 15:00:45Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1125,6 +1125,7 @@ sctp_init_asoc(struct sctp_inpcb *m, struct sctp_tcb *stcb,
 	asoc->authinfo.recv_keyid = 0;
 	LIST_INIT(&asoc->shared_keys);
 	asoc->marked_retrans = 0;
+	asoc->port = m->sctp_ep.port;
 	asoc->timoinit = 0;
 	asoc->timodata = 0;
 	asoc->timosack = 0;
@@ -4467,7 +4468,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		} else {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
-			
+
 			so = SCTP_INP_SO(inp);
 			if (!so_locked) {
 				atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -4618,7 +4619,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		} else {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
-			
+
 			so = SCTP_INP_SO(inp);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);
