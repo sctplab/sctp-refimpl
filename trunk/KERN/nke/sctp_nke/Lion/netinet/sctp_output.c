@@ -12214,11 +12214,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 	if (port) {
 		if (htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port)) == 0) {
 			sctp_m_freem(mout);
-			return;			
+			return;
 		}
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
-		/* set udp->uh_ulen later */	
+		/* set udp->uh_ulen later */
 		udp->uh_sum = 0;
 		iphlen_out += sizeof(struct udphdr);
 		abm = (struct sctp_abort_msg *)((caddr_t)abm + sizeof(struct udphdr));
@@ -12532,7 +12532,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		}
 		udp->uh_sport = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
 		udp->uh_dport = port;
-		/* set udp->uh_ulen later */	
+		/* set udp->uh_ulen later */
 		udp->uh_sum = 0;
 		iphlen_out += sizeof(struct udphdr);
 		sh_out = (struct sctphdr *)((caddr_t)udp + sizeof(struct udphdr));
