@@ -417,6 +417,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		((struct sctp_assoc_value *)arg)->assoc_id = id;
 		break;
 #endif
+	case SCTP_REMOTE_UDP_ENCAPS_PORT:
+		((struct sctp_udpencaps *)arg)->pr_assoc_id = id;
+		break;
 	default:
 		break;
 	}
