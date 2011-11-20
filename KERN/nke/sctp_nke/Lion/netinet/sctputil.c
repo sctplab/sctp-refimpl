@@ -4468,7 +4468,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 		} else {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
-			
+
 			so = SCTP_INP_SO(inp);
 			if (!so_locked) {
 				atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -4619,7 +4619,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 		} else {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 			struct socket *so;
-			
+
 			so = SCTP_INP_SO(inp);
 			atomic_add_int(&stcb->asoc.refcnt, 1);
 			SCTP_TCB_UNLOCK(stcb);

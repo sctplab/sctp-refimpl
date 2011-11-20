@@ -6189,7 +6189,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		break;
 	}
-
 	case SCTP_REMOTE_UDP_ENCAPS_PORT:
 	{
 		struct sctp_udpencaps *encaps;
