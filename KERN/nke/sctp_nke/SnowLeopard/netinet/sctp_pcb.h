@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 225549 2011-09-14 08:15:21Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.h 227755 2011-11-20 15:00:45Z tuexen $");
 #endif
 
 #ifndef __sctp_pcb_h__
@@ -317,7 +317,7 @@ struct sctp_base_info {
  * access /dev/random.
  */
 struct sctp_pcb {
-	time_t time_of_secret_change;	/* number of seconds from
+	unsigned int time_of_secret_change;	/* number of seconds from
 						 * timeval.tv_sec */
 	uint32_t secret_key[SCTP_HOW_MANY_SECRETS][SCTP_NUMBER_OF_SECRETS];
 	unsigned int size_of_a_cookie;
@@ -384,6 +384,7 @@ struct sctp_pcb {
 	uint8_t default_dscp;
 	char current_secret_number;
 	char last_secret_number;
+	uint16_t port; /* remote UDP encapsulation port */
 };
 
 #ifndef SCTP_ALIGNMENT

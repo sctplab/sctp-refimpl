@@ -125,7 +125,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_mobility_fasthandoff;
 extern struct sysctl_oid sysctl__net_inet_sctp_log;
 extern struct sysctl_oid sysctl__net_inet_sctp_clear_trace;
 #endif
-extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_for_client_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_udp_tunneling_port;
 extern struct sysctl_oid sysctl__net_inet_sctp_enable_sack_immediately;
 extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly_init;
@@ -380,7 +379,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_log);
 	sysctl_register_oid(&sysctl__net_inet_sctp_clear_trace);
 #endif
-	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
 	sysctl_register_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly_init);
@@ -509,7 +507,6 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_log);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_clear_trace);
 #endif
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_for_client_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_udp_tunneling_port);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_enable_sack_immediately);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly_init);
