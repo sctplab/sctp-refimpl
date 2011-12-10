@@ -446,7 +446,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	}
 	initack_limit = offset + ntohs(cp->ch.chunk_length);
 	/* load all addresses */
-	if ((retval = sctp_load_addresses_from_init(stcb, m, iphlen,
+	if ((retval = sctp_load_addresses_from_init(stcb, m,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit, sh,
 	    NULL))) {
 		/* Huh, we should abort */
@@ -952,7 +952,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 }
 
 static void
-sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp,
+sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp SCTP_UNUSED,
                          struct sctp_tcb *stcb,
                          struct sctp_nets *net)
 {
@@ -1607,7 +1607,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 * somehow abort.. but we do have an existing asoc. This
 		 * really should not fail.
 		 */
-		if (sctp_load_addresses_from_init(stcb, m, iphlen,
+		if (sctp_load_addresses_from_init(stcb, m,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
 			if (how_indx < sizeof(asoc->cookie_how))
@@ -1745,7 +1745,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 				asoc->cookie_how[how_indx] = 9;
 			return (NULL);
 		}
-		if (sctp_load_addresses_from_init(stcb, m, iphlen,
+		if (sctp_load_addresses_from_init(stcb, m,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
 			if (how_indx < sizeof(asoc->cookie_how))
@@ -1928,7 +1928,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		 */
 		net->hb_responded = 1;
 
-		if (sctp_load_addresses_from_init(stcb, m, iphlen,
+		if (sctp_load_addresses_from_init(stcb, m,
 						  init_offset + sizeof(struct sctp_init_chunk),
 						  initack_offset, sh, init_src)) {
 			if (how_indx < sizeof(asoc->cookie_how))
@@ -2139,7 +2139,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 	/* load all addresses */
-	if (sctp_load_addresses_from_init(stcb, m, iphlen,
+	if (sctp_load_addresses_from_init(stcb, m,
 	    init_offset + sizeof(struct sctp_init_chunk), initack_offset, sh,
 	    init_src)) {
 		atomic_add_int(&stcb->asoc.refcnt, 1);
@@ -2914,7 +2914,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 }
 
 static void
-sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp,
+sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp SCTP_UNUSED,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	/* cp must not be used, others call this without a c-ack :-) */
@@ -3177,7 +3177,7 @@ sctp_handle_ecn_cwr(struct sctp_cwr_chunk *cp, struct sctp_tcb *stcb, struct sct
 }
 
 static void
-sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp,
+sctp_handle_shutdown_complete(struct sctp_shutdown_complete_chunk *cp SCTP_UNUSED,
     struct sctp_tcb *stcb, struct sctp_nets *net)
 {
 	struct sctp_association *asoc;
@@ -4410,7 +4410,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				asconf_len = ntohs(asconf_ch->chunk_length);
 				if (asconf_len < sizeof(struct sctp_asconf_paramhdr))
 					break;
-				stcb = sctp_findassociation_ep_asconf(m, iphlen,
+				stcb = sctp_findassociation_ep_asconf(m,
 								      *offset, sh, &inp, netp, vrf_id);
 				if (stcb != NULL)
 					break;
@@ -5972,7 +5972,7 @@ sctp_input(i_pak, va_alist)
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
 			calc_check, check, m, mlen, iphlen);
 
-		stcb = sctp_findassociation_addr(m, iphlen,
+		stcb = sctp_findassociation_addr(m,
 						 offset - sizeof(*ch),
 						 sh, ch, &inp, &net,
 						 vrf_id);
@@ -6012,7 +6012,7 @@ sctp_input(i_pak, va_alist)
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
 	 */
-	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+	stcb = sctp_findassociation_addr(m, offset - sizeof(*ch),
 					 sh, ch, &inp, &net, vrf_id);
 	if ((net) && (port)) {
 		if (net->port == 0) {

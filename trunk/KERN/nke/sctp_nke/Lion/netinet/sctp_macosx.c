@@ -265,7 +265,7 @@ out:
 /* Tiger only */
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int
-sctp_lock(struct socket *so, int refcount, void *debug)
+sctp_lock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #else
 int
 sctp_lock(struct socket *so, int refcount, int lr)
@@ -304,7 +304,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int
-sctp_unlock(struct socket *so, int refcount, void *debug)
+sctp_unlock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #else
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
@@ -344,7 +344,7 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 }
 
 lck_mtx_t *
-sctp_getlock(struct socket *so, int locktype)
+sctp_getlock(struct socket *so, int locktype SCTP_UNUSED)
 {
 	/* WARNING: we do not own the socket lock here... */
 	/* We do not have always enough callers */
@@ -979,7 +979,7 @@ out:
 
 
 static void
-sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
+sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	struct msghdr msg;
 	struct iovec iov;
@@ -1069,7 +1069,7 @@ sctp_print_mbuf_chain(mbuf_t m)
 #endif
 
 static void
-sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
+sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	errno_t error;
 	size_t length;
@@ -1150,7 +1150,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 }
 
 static void
-sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
+sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	errno_t error;
 	size_t length;
