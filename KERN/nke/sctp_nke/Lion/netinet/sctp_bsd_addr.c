@@ -114,7 +114,7 @@ sctp_wakeup_iterator(void)
 }
 
 static void
-sctp_iterator_thread(void *v)
+sctp_iterator_thread(void *v SCTP_UNUSED)
 {
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	/* In FreeBSD this thread never terminates. */

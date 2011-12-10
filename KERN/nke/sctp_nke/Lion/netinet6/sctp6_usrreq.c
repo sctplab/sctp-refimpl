@@ -286,7 +286,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	if (calc_check != check) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p phlen:%d\n",
 			calc_check, check, m, iphlen);
-		stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+		stcb = sctp_findassociation_addr(m, offset - sizeof(*ch),
 						 sh, ch, &in6p, &net, vrf_id);
 		if ((net) && (port)) {
 			if (net->port == 0) {
@@ -322,7 +322,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	 * Locate pcb and tcb for datagram sctp_findassociation_addr() wants
 	 * IP/SCTP/first chunk header...
 	 */
-	stcb = sctp_findassociation_addr(m, iphlen, offset - sizeof(*ch),
+	stcb = sctp_findassociation_addr(m, offset - sizeof(*ch),
 					 sh, ch, &in6p, &net, vrf_id);
 	if ((net) && (port)) {
 		if (net->port == 0) {
@@ -861,16 +861,16 @@ sctp6_abort(struct socket *so)
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 static int
-sctp6_attach(struct socket *so, int proto, struct thread *p)
+sctp6_attach(struct socket *so, int proto SCTP_UNUSED, struct thread *p SCTP_UNUSED)
 #elif defined(__Panda__)
 int
-sctp6_attach(struct socket *so, int proto, uint32_t vrf_id)
+sctp6_attach(struct socket *so, int proto SCTP_UNUSED, uint32_t vrf_id)
 #elif defined(__Windows__)
 static int
-sctp6_attach(struct socket *so, int proto, PKTHREAD p)
+sctp6_attach(struct socket *so, int proto SCTP_UNUSED, PKTHREAD p SCTP_UNUSED)
 #else
 static int
-sctp6_attach(struct socket *so, int proto, struct proc *p)
+sctp6_attach(struct socket *so, int proto SCTP_UNUSED, struct proc *p SCTP_UNUSED)
 #endif
 {
 	struct in6pcb *inp6;

@@ -615,13 +615,13 @@ int
 static int
 #endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
-sctp_attach(struct socket *so, int proto, struct thread *p)
+sctp_attach(struct socket *so, int proto SCTP_UNUSED, struct thread *p SCTP_UNUSED)
 #elif defined(__Panda__) || defined(__Userspace__)
-sctp_attach(struct socket *so, int proto, uint32_t vrf_id)
+sctp_attach(struct socket *so, int proto SCTP_UNUSED, uint32_t vrf_id)
 #elif defined(__Windows__)
-sctp_attach(struct socket *so, int proto, PKTHREAD p)
+sctp_attach(struct socket *so, int proto SCTP_UNUSED, PKTHREAD p SCTP_UNUSED)
 #else
-sctp_attach(struct socket *so, int proto, struct proc *p)
+sctp_attach(struct socket *so, int proto SCTP_UNUSED, struct proc *p SCTP_UNUSED)
 #endif
 {
 	struct sctp_inpcb *inp;
@@ -5198,6 +5198,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				if (paddrp->spp_flags & SPP_HB_DEMAND) {
 					/* on demand HB */
 					sctp_send_hb(stcb, net, SCTP_SO_LOCKED);
+					sctp_chunk_output(inp, stcb,  SCTP_OUTPUT_FROM_SOCKOPT, SCTP_SO_LOCKED);
 					sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, inp, stcb, net);
 				}
 				if ((paddrp->spp_flags & SPP_PMTUD_DISABLE) && (paddrp->spp_pathmtu >= SCTP_SMALLEST_PMTU)) {
