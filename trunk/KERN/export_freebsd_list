@@ -38,3 +38,4 @@ netinet/sctputil.c
 netinet/sctputil.h
 netinet6/sctp6_usrreq.c
 netinet6/sctp6_var.h
+usr.lib/sctp_sys_calls.c
