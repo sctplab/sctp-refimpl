@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -56,7 +56,7 @@ struct sctphdr {
 	uint32_t v_tag;		/* verification tag of packet */
 	uint32_t checksum;	/* Adler32 C-Sum */
 	/* chunks follow... */
-} SCTP_PACKED ;
+} SCTP_PACKED;
 
 /*
  * SCTP Chunks
@@ -365,7 +365,7 @@ struct sctp_error_cause {
 	uint16_t code;
 	uint16_t length;
 	/* optional cause-specific info may follow */
-}  SCTP_PACKED;
+} SCTP_PACKED;
 
 struct sctp_error_invalid_stream {
 	struct sctp_error_cause cause;	/* code=SCTP_ERROR_INVALID_STREAM */
