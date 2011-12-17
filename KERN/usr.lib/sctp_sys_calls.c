@@ -433,10 +433,9 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
 	struct sockaddr *sa;
-	struct sockaddr *re;
 	sctp_assoc_t asoc;
 	caddr_t lim;
-	size_t siz;
+	socklen_t opt_len;
 	int cnt;
 
 	if (raddrs == NULL) {
@@ -444,30 +443,28 @@ sctp_getpaddrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		return (-1);
 	}
 	asoc = id;
-	siz = sizeof(sctp_assoc_t);
+	opt_len = (socklen_t)sizeof(sctp_assoc_t);
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_REMOTE_ADDR_SIZE,
-	    &asoc, (socklen_t *)&siz) != 0) {
+	    &asoc, &opt_len) != 0) {
 		return (-1);
 	}
 	/* size required is returned in 'asoc' */
-	siz = (size_t)asoc;
-	siz += sizeof(struct sctp_getaddresses);
-	addrs = calloc(1, siz);
+	opt_len = (socklen_t)((size_t)asoc + sizeof(struct sctp_getaddresses));
+	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		return (-1);
 	}
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_PEER_ADDRESSES,
-	    addrs, (socklen_t *)&siz) != 0) {
+	    addrs, &opt_len) != 0) {
 		free(addrs);
 		return (-1);
 	}
-	re = (struct sockaddr *)&addrs->addr[0];
-	*raddrs = re;
+	*raddrs = (struct sockaddr *)&addrs->addr[0];
 	cnt = 0;
 	sa = (struct sockaddr *)&addrs->addr[0];
-	lim = (caddr_t)addrs + siz;
+	lim = (caddr_t)addrs + opt_len;
 	while (((caddr_t)sa < lim) && (sa->sa_len > 0)) {
 		sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
 		cnt++;
@@ -490,10 +487,10 @@ int
 sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 {
 	struct sctp_getaddresses *addrs;
-	struct sockaddr *re;
 	caddr_t lim;
 	struct sockaddr *sa;
-	size_t siz, size_of_addresses;
+	size_t size_of_addresses;
+	socklen_t opt_len;
 	int cnt;
 
 	if (raddrs == NULL) {
@@ -501,9 +498,9 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		return (-1);
 	}
 	size_of_addresses = 0;
-	siz = sizeof(int);
+	opt_len = (socklen_t)sizeof(int);
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDR_SIZE,
-	    &size_of_addresses, (socklen_t *)&siz) != 0) {
+	    &size_of_addresses, &opt_len) != 0) {
 		errno = ENOMEM;
 		return (-1);
 	}
@@ -511,9 +508,10 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 		errno = ENOTCONN;
 		return (-1);
 	}
-	siz = size_of_addresses + sizeof(struct sockaddr_storage);
-	siz += sizeof(struct sctp_getaddresses);
-	addrs = calloc(1, siz);
+	opt_len = (socklen_t)(size_of_addresses +
+	                      sizeof(struct sockaddr_storage) +
+			      sizeof(struct sctp_getaddresses));
+	addrs = calloc(1, (size_t)opt_len);
 	if (addrs == NULL) {
 		errno = ENOMEM;
 		return (-1);
@@ -521,16 +519,15 @@ sctp_getladdrs(int sd, sctp_assoc_t id, struct sockaddr **raddrs)
 	addrs->sget_assoc_id = id;
 	/* Now lets get the array of addresses */
 	if (getsockopt(sd, IPPROTO_SCTP, SCTP_GET_LOCAL_ADDRESSES, addrs,
-	    (socklen_t *)&siz) != 0) {
+	    &opt_len) != 0) {
 		free(addrs);
 		errno = ENOMEM;
 		return (-1);
 	}
-	re = (struct sockaddr *)&addrs->addr[0];
-	*raddrs = re;
+	*raddrs = (struct sockaddr *)&addrs->addr[0];
 	cnt = 0;
 	sa = (struct sockaddr *)&addrs->addr[0];
-	lim = (caddr_t)addrs + siz;
+	lim = (caddr_t)addrs + opt_len;
 	while (((caddr_t)sa < lim) && (sa->sa_len > 0)) {
 		sa = (struct sockaddr *)((caddr_t)sa + sa->sa_len);
 		cnt++;
