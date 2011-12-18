@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 224641 2011-08-03 20:21:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_timer.c 228653 2011-12-17 19:21:40Z tuexen $");
 #endif
 
 #define _IP_VHL
@@ -526,8 +526,8 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 		min_wait.tv_sec = min_wait.tv_usec = 0;
 	}
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
-		sctp_log_fr(cur_rto, (uint32_t)now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
-		sctp_log_fr(0, (uint32_t)min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
+		sctp_log_fr(cur_rto, now.tv_sec, now.tv_usec, SCTP_FR_T3_MARK_TIME);
+		sctp_log_fr(0, min_wait.tv_sec, min_wait.tv_usec, SCTP_FR_T3_MARK_TIME);
 	}
 	/*
 	 * Our rwnd will be incorrect here since we are not adding back the
@@ -574,7 +574,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 			/* validate its been outstanding long enough */
 			if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 				sctp_log_fr(chk->rec.data.TSN_seq,
-					    (uint32_t)chk->sent_rcv_time.tv_sec,
+					    chk->sent_rcv_time.tv_sec,
 					    chk->sent_rcv_time.tv_usec,
 					    SCTP_FR_T3_MARK_TIME);
 			}
@@ -586,7 +586,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 				 */
 				if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_FR_LOGGING_ENABLE) {
 					sctp_log_fr(0,
-						    (uint32_t)chk->sent_rcv_time.tv_sec,
+						    chk->sent_rcv_time.tv_sec,
 						    chk->sent_rcv_time.tv_usec,
 						    SCTP_FR_T3_STOPPED);
 				}
@@ -660,7 +660,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_DOWN_RSND_TO,
 						       chk->whoTo->flight_size,
 						       chk->book_size,
-						       (uint32_t)(uintptr_t)chk->whoTo,
+						       (uintptr_t)chk->whoTo,
 						       chk->rec.data.TSN_seq);
 				}
 				sctp_flight_size_decrease(chk);
@@ -788,7 +788,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					sctp_misc_ints(SCTP_FLIGHT_LOG_UP,
 						       chk->whoTo->flight_size,
 						       chk->book_size,
-						       (uint32_t)(uintptr_t)chk->whoTo,
+						       (uintptr_t)chk->whoTo,
 						       chk->rec.data.TSN_seq);
 				}
 
@@ -847,7 +847,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 
 				(void)SCTP_GETTIME_TIMEVAL(&now);
 				if (net->last_sent_time.tv_sec) {
-					ms_goneby = (uint32_t)((now.tv_sec - net->last_sent_time.tv_sec) * 1000);
+					ms_goneby = (now.tv_sec - net->last_sent_time.tv_sec) * 1000;
 				} else {
 					ms_goneby = 0;
 				}
@@ -1040,7 +1040,7 @@ sctp_t1init_timer(struct sctp_inpcb *inp,
 int
 sctp_cookie_timer(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
-    struct sctp_nets *net)
+    struct sctp_nets *net SCTP_UNUSED)
 {
 	struct sctp_nets *alt;
 	struct sctp_tmit_chunk *cookie;
@@ -1269,7 +1269,7 @@ sctp_asconf_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 /* Mobility adaptation */
 void
 sctp_delete_prim_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
-		  struct sctp_nets *net)
+                       struct sctp_nets *net SCTP_UNUSED)
 {
 	if (stcb->asoc.deleted_primary == NULL) {
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "delete_prim_timer: deleted_primary is not stored...\n");
@@ -1452,7 +1452,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 {
 	uint32_t next_mtu, mtu;
 
-	next_mtu = sctp_get_next_mtu(inp, net->mtu);
+	next_mtu = sctp_get_next_mtu(net->mtu);
 
 	if ((next_mtu > net->mtu) && (net->port == 0)) {
 		if ((net->src_addr_selected == 0) ||
@@ -1502,7 +1502,7 @@ sctp_pathmtu_timer(struct sctp_inpcb *inp,
 		if (net->ro._s_addr) {
 			mtu = SCTP_GATHER_MTU_FROM_ROUTE(net->ro._s_addr, &net->ro._s_addr.sa, net->ro.ro_rt);
 			if (net->port) {
-				mtu -= (uint32_t)sizeof(struct udphdr);
+				mtu -= sizeof(struct udphdr);
 			}
 			if (mtu > next_mtu) {
 				net->mtu = next_mtu;
@@ -1535,7 +1535,7 @@ sctp_autoclose_timer(struct sctp_inpcb *inp,
 			tim_touse = &asoc->time_last_sent;
 		}
 		/* Now has long enough transpired to autoclose? */
-		ticks_gone_by = SEC_TO_TICKS((uint32_t)(tn.tv_sec - tim_touse->tv_sec));
+		ticks_gone_by = SEC_TO_TICKS(tn.tv_sec - tim_touse->tv_sec);
 		if ((ticks_gone_by > 0) &&
 		    (ticks_gone_by >= (int)asoc->sctp_autoclose_ticks)) {
 			/*
