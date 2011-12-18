@@ -30,7 +30,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 219397 2011-03-08 11:58:25Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 228653 2011-12-17 19:21:40Z tuexen $");
 #endif
 #ifndef __sctp_dtrace_declare_h__
 #if defined(__FreeBSD__) && __FreeBSD_version >= 900000
