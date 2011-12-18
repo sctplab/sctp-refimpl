@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -321,8 +321,7 @@ extern void *sctp_calloutq_mtx;
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
 #define SCTP_BUF_PREPEND(m, plen, how) ((m) = sctp_m_prepend_2((m), (plen), (how)))
-struct mbuf *sctp_m_prepend(struct mbuf *, int, int);
-struct mbuf *sctp_m_prepend_2(struct mbuf *, int, int);
+struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 
 
 /*************************/
@@ -362,15 +361,14 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *, int, int);
 #define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
-#define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
+#define SCTP_RELEASE_PKT(m) sctp_m_freem(m)
 #define SCTP_ENABLE_UDP_CSUM(m) do { \
 					m->m_pkthdr.csum_flags = CSUM_UDP; \
 					m->m_pkthdr.csum_data = offsetof(struct udphdr, uh_sum); \
 				} while (0)
-static inline int SCTP_GET_PKT_VRFID(void *m, uint32_t vrf_id) {
-	vrf_id = SCTP_DEFAULT_VRFID;
-	return (0);
-}
+
+#define SCTP_GET_PKT_VRFID(m, vrf_id)  ((vrf_id = SCTP_DEFAULT_VRFID) != SCTP_DEFAULT_VRFID)
+
 
 /* Attach the chain of data into the sendable packet. */
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
