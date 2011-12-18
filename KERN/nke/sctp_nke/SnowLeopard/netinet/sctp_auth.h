@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 221627 2011-05-08 09:11:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 228653 2011-12-17 19:21:40Z tuexen $");
 #endif
 
 #ifndef __SCTP_AUTH_H__
@@ -63,7 +63,7 @@ typedef union sctp_hash_context {
 } sctp_hash_context_t;
 
 typedef struct sctp_key {
-	size_t keylen;
+	uint32_t keylen;
 	uint8_t key[];
 } sctp_key_t;
 
@@ -130,12 +130,12 @@ extern int sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
     sctp_auth_chklist_t *list);
 
 /* key handling */
-extern sctp_key_t *sctp_alloc_key(size_t keylen);
+extern sctp_key_t *sctp_alloc_key(uint32_t keylen);
 extern void sctp_free_key(sctp_key_t *key);
 extern void sctp_print_key(sctp_key_t *key, const char *str);
 extern void sctp_show_key(sctp_key_t *key, const char *str);
-extern sctp_key_t *sctp_generate_random_key(size_t keylen);
-extern sctp_key_t *sctp_set_key(uint8_t *key, size_t keylen);
+extern sctp_key_t *sctp_generate_random_key(uint32_t keylen);
+extern sctp_key_t *sctp_set_key(uint8_t *key, uint32_t keylen);
 extern sctp_key_t *sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2,
     sctp_key_t *shared);
 
@@ -164,7 +164,7 @@ extern uint16_t sctp_negotiate_hmacid(sctp_hmaclist_t *peer,
     sctp_hmaclist_t *local);
 extern int sctp_serialize_hmaclist(sctp_hmaclist_t *list, uint8_t *ptr);
 extern int sctp_verify_hmac_param(struct sctp_auth_hmac_algo *hmacs,
-    size_t num_hmacs);
+    uint32_t num_hmacs);
 
 extern sctp_authinfo_t *sctp_alloc_authinfo(void);
 extern void sctp_free_authinfo(sctp_authinfo_t *authinfo);

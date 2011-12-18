@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.h 218319 2011-02-05 12:12:51Z rrs $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.h 228653 2011-12-17 19:21:40Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_ASCONF_H_
@@ -50,11 +50,11 @@ extern void sctp_asconf_cleanup(struct sctp_tcb *, struct sctp_nets *);
 extern struct mbuf *sctp_compose_asconf(struct sctp_tcb *, int *, int);
 
 extern void
-sctp_handle_asconf(struct mbuf *, size_t, struct sctp_asconf_chunk *,
+sctp_handle_asconf(struct mbuf *, unsigned int, struct sctp_asconf_chunk *,
     struct sctp_tcb *, int i);
 
 extern void
-sctp_handle_asconf_ack(struct mbuf *, size_t, struct sctp_asconf_ack_chunk *,
+sctp_handle_asconf_ack(struct mbuf *, int, struct sctp_asconf_ack_chunk *,
      struct sctp_tcb *, struct sctp_nets *, int *);
 
 extern uint32_t

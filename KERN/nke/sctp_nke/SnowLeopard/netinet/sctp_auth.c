@@ -7,11 +7,11 @@
  * modification, are permitted provided that the following conditions are met:
  *
  * a) Redistributions of source code must retain the above copyright notice,
- *   this list of conditions and the following disclaimer.
+ *    this list of conditions and the following disclaimer.
  *
  * b) Redistributions in binary form must reproduce the above copyright
  *    notice, this list of conditions and the following disclaimer in
- *   the documentation and/or other materials provided with the distribution.
+ *    the documentation and/or other materials provided with the distribution.
  *
  * c) Neither the name of Cisco Systems, Inc. nor the names of its
  *    contributors may be used to endorse or promote products derived
@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 223132 2011-06-15 23:50:27Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.c 228653 2011-12-17 19:21:40Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -259,7 +259,7 @@ sctp_unpack_auth_chunks(const uint8_t *ptr, uint8_t num_chunks,
  * allocate structure space for a key of length keylen
  */
 sctp_key_t *
-sctp_alloc_key(size_t keylen)
+sctp_alloc_key(uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
@@ -318,7 +318,7 @@ sctp_show_key(sctp_key_t *key, const char *str)
 	}
 }
 
-static size_t
+static uint32_t
 sctp_get_keylen(sctp_key_t *key)
 {
 	if (key != NULL)
@@ -331,7 +331,7 @@ sctp_get_keylen(sctp_key_t *key)
  * generate a new random key of length 'keylen'
  */
 sctp_key_t *
-sctp_generate_random_key(size_t keylen)
+sctp_generate_random_key(uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
@@ -350,7 +350,7 @@ sctp_generate_random_key(size_t keylen)
 }
 
 sctp_key_t *
-sctp_set_key(uint8_t *key, size_t keylen)
+sctp_set_key(uint8_t *key, uint32_t keylen)
 {
 	sctp_key_t *new_key;
 
@@ -437,7 +437,7 @@ sctp_compare_key(sctp_key_t *key1, sctp_key_t *key2)
 sctp_key_t *
 sctp_compute_hashkey(sctp_key_t *key1, sctp_key_t *key2, sctp_key_t *shared)
 {
-	size_t keylen;
+	uint32_t keylen;
 	sctp_key_t *new_key;
 	uint8_t *key_ptr;
 
@@ -811,9 +811,9 @@ sctp_serialize_hmaclist(sctp_hmaclist_t *list, uint8_t *ptr)
 }
 
 int
-sctp_verify_hmac_param (struct sctp_auth_hmac_algo *hmacs, size_t num_hmacs)
+sctp_verify_hmac_param (struct sctp_auth_hmac_algo *hmacs, uint32_t num_hmacs)
 {
-	size_t i;
+	uint32_t i;
 	uint16_t hmac_id;
 	uint32_t sha1_supported = 0;
 
@@ -1899,7 +1899,7 @@ sctp_notify_authentication(struct sctp_tcb *stcb, uint32_t indication,
 
 	/* append to socket */
 	control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
-	    0, 0, 0, 0, 0, 0, m_notify);
+	    0, 0, stcb->asoc.context, 0, 0, 0, m_notify);
 	if (control == NULL) {
 		/* no memory */
 		sctp_m_freem(m_notify);
