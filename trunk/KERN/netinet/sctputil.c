@@ -177,7 +177,6 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	     sctp_clog.x.misc.log4);
 }
 
-
 void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
@@ -234,7 +233,6 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
 	     sctp_clog.x.misc.log4);
 }
 
-
 void
 sctp_log_mb(struct mbuf *m, int from)
 {
@@ -263,7 +261,6 @@ sctp_log_mb(struct mbuf *m, int from)
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
 }
-
 
 void
 sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_read *poschk,
@@ -1162,7 +1159,7 @@ sctp_print_mapping_array(struct sctp_association *asoc)
 	       asoc->highest_tsn_inside_map,
 	       asoc->highest_tsn_inside_nr_map);
 	for (limit = asoc->mapping_array_size; limit > 1; limit--) {
-		if (asoc->mapping_array[limit - 1]) {
+		if (asoc->mapping_array[limit - 1] != 0) {
 			break;
 		}
 	}
@@ -1929,8 +1926,6 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 
 	if ((t_type != SCTP_TIMER_TYPE_ADDR_WQ) && (inp == NULL))
 		return;
-
-	to_ticks = 0;
 
 	tmr = NULL;
 	if (stcb) {
@@ -2793,11 +2788,11 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	struct sctp_paddr_change *spc;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVPADDREVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVPADDREVNT)) {
 		/* event not enabled */
 		return;
 	}
-	
 	m_notify = sctp_get_mbuf_for_msg(sizeof(struct sctp_paddr_change), 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		return;
@@ -2885,7 +2880,8 @@ sctp_notify_send_failed(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	int length;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -2970,7 +2966,8 @@ sctp_notify_send_failed2(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	int length;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_RECVSENDFAILEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3040,7 +3037,8 @@ sctp_notify_adaptation_layer(struct sctp_tcb *stcb)
 	struct sctp_adaptation_event *sai;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_ADAPTATIONEVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_ADAPTATIONEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3092,7 +3090,8 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 	struct sctp_queued_to_read *control;
 	struct sockbuf *sb;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_PDAPIEVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_PDAPIEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -3254,7 +3253,8 @@ sctp_notify_sender_dry_event(struct sctp_tcb *stcb,
 	struct sctp_sender_dry_event *event;
 	struct sctp_queued_to_read *control;
 
-	if (sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_DRYEVNT)) {
+	if ((stcb == NULL) ||
+	    sctp_stcb_is_feature_off(stcb->sctp_ep, stcb, SCTP_PCB_FLAGS_DRYEVNT)) {
 		/* event not enabled */
 		return;
 	}
@@ -4480,11 +4480,15 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 
 			so = SCTP_INP_SO(inp);
 			if (!so_locked) {
-				atomic_add_int(&stcb->asoc.refcnt, 1);
-				SCTP_TCB_UNLOCK(stcb);
+				if (stcb) {
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+				}
 				SCTP_SOCKET_LOCK(so, 1);
-				SCTP_TCB_LOCK(stcb);
-				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				}
 				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 					SCTP_SOCKET_UNLOCK(so, 1);
 					return;
@@ -4520,7 +4524,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 * Otherwise sb is NULL and all we need to do is put it at the end
 	 * of the mbuf chain.
 	 */
-	int len=0;
+	int len = 0;
 	struct mbuf *mm, *tail = NULL, *prev = NULL;
 
 	if (inp) {
@@ -4630,11 +4634,15 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			struct socket *so;
 
 			so = SCTP_INP_SO(inp);
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			SCTP_TCB_UNLOCK(stcb);
+			if (stcb) {
+				atomic_add_int(&stcb->asoc.refcnt, 1);
+				SCTP_TCB_UNLOCK(stcb);
+			}
 			SCTP_SOCKET_LOCK(so, 1);
-			SCTP_TCB_LOCK(stcb);
-			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			if (stcb) {
+				SCTP_TCB_LOCK(stcb);
+				atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			}
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
 				SCTP_SOCKET_UNLOCK(so, 1);
 				return (0);
@@ -5442,7 +5450,6 @@ sctp_sorecvmsg(struct socket *so,
 		 */
 		if (hold_rlock == 0) {
 			SCTP_INP_READ_LOCK(inp);
-			hold_rlock = 1;
 		}
 		control = TAILQ_FIRST(&inp->read_queue);
 		if ((control == NULL) && (so->so_rcv.sb_cc != 0)) {
@@ -6139,7 +6146,9 @@ sctp_sorecvmsg(struct socket *so,
 		}
 		if (control->end_added) {
 			out_flags |= MSG_EOR;
-			if ((control->do_not_ref_stcb == 0) && ((control->spec_flags & M_NOTIFICATION) == 0))
+			if ((control->do_not_ref_stcb == 0) &&
+			    (control->stcb != NULL) &&
+			    ((control->spec_flags & M_NOTIFICATION) == 0))
 				control->stcb->asoc.strmin[control->sinfo_stream].delivery_started = 0;
 		}
 		if (control->spec_flags & M_NOTIFICATION) {
@@ -6230,11 +6239,9 @@ sctp_sorecvmsg(struct socket *so,
 	}
 	if (hold_rlock == 1) {
 		SCTP_INP_READ_UNLOCK(inp);
-		hold_rlock = 0;
 	}
 	if (hold_sblock) {
 		SOCKBUF_UNLOCK(&so->so_rcv);
-		hold_sblock = 0;
 	}
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	if (sockbuf_lock) {
@@ -6258,7 +6265,6 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 		}
 		atomic_add_int(&stcb->asoc.refcnt, -1);
-		freecnt_applied = 0;
 		/* Save the value back for next time */
 		stcb->freed_by_sorcv_sincelast = freed_so_far;
 	}

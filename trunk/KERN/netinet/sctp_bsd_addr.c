@@ -202,6 +202,7 @@ void
 sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 {
 	struct in6_ifaddr *ifa6;
+
 	ifa6 = (struct in6_ifaddr *)ifa->ifa;
 	ifa->flags = ifa6->ia6_flags;
 	if (!MODULE_GLOBAL(ip6_use_deprecated)) {

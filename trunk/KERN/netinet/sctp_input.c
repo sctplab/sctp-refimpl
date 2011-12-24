@@ -1414,10 +1414,9 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	struct sctp_nets *net;
 	struct mbuf *op_err;
 	struct sctp_paramhdr *ph;
-	int chk_length;
 	int init_offset, initack_offset, i;
 	int retval;
-	int spec_flag=0;
+	int spec_flag = 0;
 	uint32_t how_indx;
 	
 	net = *netp;
@@ -1464,7 +1463,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* could not pull a INIT chunk in cookie */
 		return (NULL);
 	}
-	chk_length = ntohs(init_cp->ch.chunk_length);
 	if (init_cp->ch.chunk_type != SCTP_INITIATION) {
 		return (NULL);
 	}
@@ -1472,7 +1470,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 	 * find and validate the INIT-ACK chunk in the cookie (my info) the
 	 * INIT-ACK follows the INIT chunk
 	 */
-	initack_offset = init_offset + SCTP_SIZE32(chk_length);
+	initack_offset = init_offset + SCTP_SIZE32(ntohs(init_cp->ch.chunk_length));
 	initack_cp = (struct sctp_init_ack_chunk *)
 		sctp_m_getptr(m, initack_offset, sizeof(struct sctp_init_ack_chunk),
 			      (uint8_t *) & initack_buf);
@@ -1480,7 +1478,6 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		/* could not pull INIT-ACK chunk in cookie */
 		return (NULL);
 	}
-	chk_length = ntohs(initack_cp->ch.chunk_length);
 	if (initack_cp->ch.chunk_type != SCTP_INITIATION_ACK) {
 		return (NULL);
 	}
@@ -1971,11 +1968,9 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 	struct sockaddr_storage sa_store;
 	struct sockaddr *initack_src = (struct sockaddr *)&sa_store;
 	struct sctp_association *asoc;
-	int chk_length;
 	int init_offset, initack_offset, initack_limit;
 	int retval;
 	int error = 0;
-	uint32_t old_tag;
 	uint8_t auth_chunk_buf[SCTP_PARAM_BUFFER_SIZE];
 #ifdef INET
 	struct sockaddr_in *sin;
@@ -2004,12 +1999,11 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 			"process_cookie_new: could not pull INIT chunk hdr\n");
 		return (NULL);
 	}
-	chk_length = ntohs(init_cp->ch.chunk_length);
 	if (init_cp->ch.chunk_type != SCTP_INITIATION) {
 		SCTPDBG(SCTP_DEBUG_INPUT1, "HUH? process_cookie_new: could not find INIT chunk!\n");
 		return (NULL);
 	}
-	initack_offset = init_offset + SCTP_SIZE32(chk_length);
+	initack_offset = init_offset + SCTP_SIZE32(ntohs(init_cp->ch.chunk_length));
 	/*
 	 * find and validate the INIT-ACK chunk in the cookie (my info) the
 	 * INIT-ACK follows the INIT chunk
@@ -2022,7 +2016,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTPDBG(SCTP_DEBUG_INPUT1, "process_cookie_new: could not pull INIT-ACK chunk hdr\n");
 		return (NULL);
 	}
-	chk_length = ntohs(initack_cp->ch.chunk_length);
 	if (initack_cp->ch.chunk_type != SCTP_INITIATION_ACK) {
 		return (NULL);
 	}
@@ -2105,7 +2098,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 	/* process the INIT-ACK info (my info) */
-	old_tag = asoc->my_vtag;
 	asoc->my_vtag = ntohl(initack_cp->init.initiate_tag);
 	asoc->my_rwnd = ntohl(initack_cp->init.a_rwnd);
 	asoc->pre_open_streams = ntohs(initack_cp->init.num_outbound_streams);
@@ -2704,9 +2696,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	 */
 	if (netl == NULL) {
 		/* TSNH! Huh, why do I need to add this address here? */
-		int ret;
-		ret = sctp_add_remote_addr(*stcb, to, NULL, SCTP_DONOT_SETSCOPE,
-					   SCTP_IN_COOKIE_PROC);
+		if (sctp_add_remote_addr(*stcb, to, NULL, SCTP_DONOT_SETSCOPE, SCTP_IN_COOKIE_PROC)) {
+			return (NULL);
+		}
 		netl = sctp_findnet(*stcb, to);
 	}
 	if (netl) {
@@ -3027,10 +3019,11 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 	struct sctp_nets *net;
 	struct sctp_tmit_chunk *lchk;
 	struct sctp_ecne_chunk bkup;
-	uint8_t override_bit=0;
+	uint8_t override_bit;
 	uint32_t tsn, window_data_tsn;
 	int len;
 	unsigned int pkt_cnt;
+
 	len = ntohs(cp->ch.chunk_length);
 	if ((len != sizeof(struct sctp_ecne_chunk)) &&
 	    (len != sizeof(struct old_sctp_ecne_chunk))) {
@@ -3073,23 +3066,30 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if (tsn == net->last_cwr_tsn) {
 				/* Found him, send it off */
-				goto out;				
+				break;;				
 			}
 		}
-		/* 
-		 * If we reach here, we need to send a special
-		 * CWR that says hey, we did this a long time
-		 * ago and you lost the response.
-		 */
-		net = TAILQ_FIRST(&stcb->asoc.nets);
-		override_bit = SCTP_CWR_REDUCE_OVERRIDE;
+		if (net == NULL) {
+			/* 
+			 * If we reach here, we need to send a special
+			 * CWR that says hey, we did this a long time
+			 * ago and you lost the response.
+			 */
+			net = TAILQ_FIRST(&stcb->asoc.nets);
+			if (net == NULL) {
+				/* TSNH */
+				return;
+			}
+			override_bit = SCTP_CWR_REDUCE_OVERRIDE;
+		} else {
+			override_bit = 0;
+		}
+	} else {
+		override_bit = 0;
 	}
-out:
 	if (SCTP_TSN_GT(tsn, net->cwr_window_tsn) &&
 	    ((override_bit&SCTP_CWR_REDUCE_OVERRIDE) == 0)) {
 		/* JRS - Use the congestion control given in the pluggable CC module */
-		int ocwnd;
-		ocwnd = net->cwnd;
 		stcb->asoc.cc_functions.sctp_cwnd_update_after_ecn_echo(stcb, net, 0, pkt_cnt);
 		/*
 		 * We reduce once every RTT. So we will only lower cwnd at
@@ -5074,7 +5074,6 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					}
 					SCTPDBG(SCTP_DEBUG_INPUT3,
 						"GAK, null buffer\n");
-					auth_skipped = 0;
 					*offset = length;
 					return (NULL);
 				}
@@ -5525,7 +5524,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	int fwd_tsn_seen = 0, data_processed = 0;
 	struct mbuf *m = *mm;
 	int un_sent;
-	int cnt_ctrl_ready=0;
+	int cnt_ctrl_ready = 0;
 
 	SCTP_STAT_INCR(sctps_recvdatagrams);
 #ifdef SCTP_AUDITING_ENABLED
@@ -5702,7 +5701,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset,
 	}
 
 	/* take care of ecn */
-	if ((stcb->asoc.ecn_allowed == 1) &&
+	if ((data_processed == 1) &&
+	    (stcb->asoc.ecn_allowed == 1) &&
 	    ((ecn_bits & SCTP_CE_BITS) == SCTP_CE_BITS)) {
 		/* Yep, we need to add a ECNE */
 		sctp_send_ecn_echo(stcb, net, high_tsn);
