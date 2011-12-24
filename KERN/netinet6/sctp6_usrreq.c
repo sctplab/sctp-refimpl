@@ -1568,43 +1568,35 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	struct sctp_inpcb *inp;
 	struct sctp_tcb *stcb;
 	struct sctp_nets *net;
-
 #ifdef SCTP_KAME
 	int error;
-#endif				/* SCTP_KAME */
+#endif
 
-	/*
-	 * Do the malloc first in case it blocks.
-	 */
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	if ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0) {
-		/* UDP type and listeners will drop out here */
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOTCONN);
-		return (ENOTCONN);
-	}
+	/* Do the malloc first in case it blocks. */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 	SCTP_MALLOC_SONAME(sin6, struct sockaddr_in6 *, sizeof *sin6);
 	if (sin6 == NULL)
 		return (ENOMEM);
 #elif defined(__Panda__)
-	bzero(sin6, sizeof(*sin6));
+	memset(sin6, 0, sizeof(*sin6));
 #else
 	SCTP_BUF_LEN(nam) = sizeof(*sin6);
-	bzero(sin6, sizeof(*sin6));
+	memset(sin6, 0, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
 #if !defined(__Windows__)
 	sin6->sin6_len = sizeof(*sin6);
 #endif
 
-	/* We must recapture incase we blocked */
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == NULL) {
+	if ((inp == NULL) ||
+	    ((inp->sctp_flags & SCTP_PCB_FLAGS_CONNECTED) == 0)) {
+		/* UDP type and listeners will drop out here */
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 		SCTP_FREE_SONAME(sin6);
 #endif
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ECONNRESET);
-		return ECONNRESET;
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, ENOTCONN);
+		return (ENOTCONN);
 	}
 	SCTP_INP_RLOCK(inp);
 	stcb = LIST_FIRST(&inp->sctp_asoc_list);
