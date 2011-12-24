@@ -1289,7 +1289,7 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 {
 	struct sctpasochead *head;
 	struct sctp_inpcb *inp;
-	struct sctp_tcb *stcb=NULL;
+	struct sctp_tcb *stcb = NULL;
 	struct sctp_nets *net;
 	uint16_t rport;
 
@@ -6911,6 +6911,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		net->dest_state |= SCTP_ADDR_NOT_IN_ASSOC;
 	}
 	/* does the source address already exist? if so skip it */
+	inp = stcb->sctp_ep;
 	atomic_add_int(&stcb->asoc.refcnt, 1);
 	stcb_tmp = sctp_findassociation_ep_addr(&inp, sa, &net_tmp, local_sa, stcb);
 	atomic_add_int(&stcb->asoc.refcnt, -1);
