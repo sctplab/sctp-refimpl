@@ -486,7 +486,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 	unsigned int cnt_mk;
 	uint32_t orig_flight, orig_tf;
 	uint32_t tsnlast, tsnfirst;
-	int recovery_cnt=0;
+	int recovery_cnt = 0;
 
 
 	/* none in flight now */

@@ -70,7 +70,7 @@ sctp_set_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 uint32_t
 sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 {
-	uint32_t calc=0;
+	uint32_t calc = 0;
 
 	/*
 	 * This is really set wrong with respect to a 1-2-m socket. Since
@@ -1695,12 +1695,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 #ifdef SCTP_MBUF_LOGGING
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 			struct mbuf *mat;
-			mat = dmbuf;
-			while(mat) {
+
+			for (mat = dmbuf; mat; mat = SCTP_BUF_NEXT(mat)) {
 				if (SCTP_BUF_IS_EXTENDED(mat)) {
 					sctp_log_mb(mat, SCTP_MBUF_ICOPY);
 				}
-				mat = SCTP_BUF_NEXT(mat);
 			}
 		}
 #endif
@@ -1717,11 +1716,10 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			 * does not hit this to often :-0
 			 */
 			struct mbuf *lat;
+
 			l_len = 0;
-			lat = dmbuf;
-			while(lat) {
+			for (lat = dmbuf; lat; lat = SCTP_BUF_NEXT(lat)) {
 				l_len += SCTP_BUF_LEN(lat);
-				lat = SCTP_BUF_NEXT(lat);
 			}
 		}
 		if (l_len > the_len) {
@@ -2150,7 +2148,7 @@ finish_express_del:
 				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
 				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
 				if (*abort_flag) {
-					return(0);
+					return (0);
 				}
 			}
 		} else {
@@ -2166,7 +2164,7 @@ finish_express_del:
 				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
 				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
 				if (*abort_flag) {
-					return(0);
+					return (0);
 				}
 			}
 		}
@@ -2441,7 +2439,7 @@ sctp_sack_check(struct sctp_tcb *stcb, int was_a_gap)
 		    (stcb->asoc.data_pkts_seen >= stcb->asoc.sack_freq)	/* hit limit of pkts */
 			) {
 
-			if ((stcb->asoc.sctp_cmt_on_off > 0)&&
+			if ((stcb->asoc.sctp_cmt_on_off > 0) &&
 			    (SCTP_BASE_SYSCTL(sctp_cmt_use_dac)) &&
 			    (stcb->asoc.send_sack == 0) &&
 			    (stcb->asoc.numduptsns == 0) &&
@@ -3683,7 +3681,7 @@ static int
 sctp_fs_audit(struct sctp_association *asoc)
 {
 	struct sctp_tmit_chunk *chk;
-	int inflight=0, resend=0, inbetween=0, acked=0, above=0;
+	int inflight = 0, resend = 0, inbetween = 0, acked = 0, above = 0;
 	int entry_flight, entry_cnt, ret;
 	entry_flight = asoc->total_flight;
 	entry_cnt = asoc->total_flight_count;
@@ -3773,7 +3771,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	int win_probe_recovery = 0;
 	int win_probe_recovered = 0;
 	int j, done_once = 0;
-	int rto_ok=1;
+	int rto_ok = 1;
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
@@ -4320,7 +4318,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	int win_probe_recovered = 0;
 	struct sctp_nets *net = NULL;
 	int done_once;
-	int rto_ok=1;
+	int rto_ok = 1;
 	uint8_t reneged_all = 0;
 	uint8_t cmt_dac_flag;
 	/*

@@ -528,7 +528,7 @@ sctp_addr_change(struct ifaddr *ifa, int cmd)
 #if defined(__Userspace__)
         return;
 #else
-	uint32_t ifa_flags=0;
+	uint32_t ifa_flags = 0;
 	/* BSD only has one VRF, if this changes
 	 * we will need to hook in the right
 	 * things here to get the id to pass to
@@ -711,7 +711,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	m =  m_getm2(NULL, space_needed, how, type, want_header ? M_PKTHDR : 0);
 	if (m == NULL) {
 		/* bad, no memory */
-		return(m);
+		return (m);
 	}
 	if (allonebuf) {
 		int siz;
@@ -742,7 +742,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 #else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 601000
 	int aloc_size;
-	int index=0;
+	int index = 0;
 #endif
 	int mbuf_threshold;
 	if (want_header) {
@@ -815,7 +815,7 @@ sctp_packet_log(struct mbuf *m, int length)
 	void *copyto;
 	uint32_t *tick_tock;
 	int total_len;
-	int grabbed_lock=0;
+	int grabbed_lock = 0;
 	int value, newval, thisend, thisbegin;
 	/*
 	 * Buffer layout.
@@ -916,7 +916,7 @@ sctp_copy_out_packet_log(uint8_t *target, int length)
 	 */
 	int tocopy, this_copy;
 	int *lenat;
-	int did_delay=0;
+	int did_delay = 0;
 
 	tocopy = length;
 	if (length < (int)(2 * sizeof(int))) {

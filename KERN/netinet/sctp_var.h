@@ -309,7 +309,7 @@ extern struct pr_usrreqs sctp_usrreqs;
 #define sctp_mbuf_crush(data) do { \
 	struct mbuf *_m; \
 	_m = (data); \
-	while(_m && (SCTP_BUF_LEN(_m) == 0)) { \
+	while (_m && (SCTP_BUF_LEN(_m) == 0)) { \
 		(data)  = SCTP_BUF_NEXT(_m); \
 		SCTP_BUF_NEXT(_m) = NULL; \
 		sctp_m_free(_m); \
