@@ -2056,7 +2056,7 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	vrf = sctp_find_vrf(vrf_id);
 	if (vrf == NULL) {
 		SCTP_IPI_ADDR_RUNLOCK();
-		return(m_at);
+		return (m_at);
 	}
 	if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
 		struct sctp_ifa *sctp_ifap;
@@ -2311,7 +2311,7 @@ sctp_is_ifa_addr_acceptable(struct sctp_ifa *ifa,
 			    uint8_t dest_is_priv,
 			    sa_family_t fam)
 {
-	uint8_t dest_is_global=0;
+	uint8_t dest_is_global = 0;
 
 	/**
 	 * Here we determine if its a acceptable address. A acceptable
@@ -2448,7 +2448,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 {
 	struct sctp_laddr *laddr, *starting_point;
 	void *ifn;
-	int resettotop=0;
+	int resettotop = 0;
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa, *sifa;
 	struct sctp_vrf *vrf;
@@ -3805,7 +3805,7 @@ sctp_add_cookie(struct mbuf *init, int init_offset,
 	SCTP_BUF_LEN(sig) = 0;
 	SCTP_BUF_NEXT(m_at) = sig;
 	sig_offset = 0;
-	foo = (uint8_t *) (mtod(sig, caddr_t)+sig_offset);
+	foo = (uint8_t *) (mtod(sig, caddr_t) + sig_offset);
 	memset(foo, 0, SCTP_SIGNATURE_SIZE);
 	*signature = foo;
 	SCTP_BUF_LEN(sig) += SCTP_SIGNATURE_SIZE;
@@ -4957,7 +4957,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 			SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);
 		}
 		/* add HMAC_ALGO parameter */
-		hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
+		hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 		p_len = sctp_serialize_hmaclist(stcb->asoc.local_hmacs,
 		    (uint8_t *) hmacs->hmac_ids);
 		if (p_len > 0) {
@@ -4969,7 +4969,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 			SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);
 		}
 		/* add CHUNKS parameter */
-		chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
+		chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 		p_len = sctp_serialize_auth_chunks(stcb->asoc.local_auth_chunks,
 		    chunks->chunk_types);
 		if (p_len > 0) {
@@ -5584,13 +5584,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sockaddr *to;
 	struct sctp_state_cookie stc;
 	struct sctp_nets *net = NULL;
-	uint8_t *signature=NULL;
+	uint8_t *signature = NULL;
 	int cnt_inits_to = 0;
 	uint16_t his_limit, i_want;
 	int abort_flag, padval;
 	int num_ext;
 	int p_len;
-	int nat_friendly=0;
+	int nat_friendly = 0;
 	struct socket *so;
 
 	if (stcb)
@@ -5718,7 +5718,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	default:
 		goto do_a_abort;
 		break;
-	};
+	}
 
 	if (net == NULL) {
 		to = (struct sockaddr *)&store;
@@ -6118,7 +6118,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);
 
 		/* add HMAC_ALGO parameter */
-		hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
+		hmacs = (struct sctp_auth_hmac_algo *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 		p_len = sctp_serialize_hmaclist(inp->sctp_ep.local_hmacs,
 						(uint8_t *) hmacs->hmac_ids);
 		if (p_len > 0) {
@@ -6130,7 +6130,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			SCTP_BUF_LEN(m) += SCTP_SIZE32(p_len);
 		}
 		/* add CHUNKS parameter */
-		chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t)+ SCTP_BUF_LEN(m));
+		chunks = (struct sctp_auth_chunk_list *)(mtod(m, caddr_t) + SCTP_BUF_LEN(m));
 		p_len = sctp_serialize_auth_chunks(inp->sctp_ep.local_auth_chunks,
 						   chunks->chunk_types);
 		if (p_len > 0) {
@@ -6635,7 +6635,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 				m_copydata(clonechain, len, sizeofcpy, cp);
 				SCTP_BUF_LEN((*endofchain)) += sizeofcpy;
 			}
-			return(outchain);
+			return (outchain);
 		} else {
 			/* copy the old fashion way */
 			appendchain = SCTP_M_COPYM(clonechain, 0, M_COPYALL, M_DONTWAIT);
@@ -6719,9 +6719,9 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 {
 	struct sctp_copy_all *ca;
 	struct mbuf *m;
-	int ret=0;
-	int added_control=0;
-	int un_sent, do_chunk_output=1;
+	int ret = 0;
+	int added_control = 0;
+	int un_sent, do_chunk_output = 1;
 	struct sctp_association *asoc;
 	struct sctp_nets *net;
 
@@ -6883,7 +6883,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	if (do_chunk_output)
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_USR_SEND, SCTP_SO_NOT_LOCKED);
 	else if (added_control) {
-		int num_out=0, reason=0, now_filled=0;
+		int num_out = 0, reason = 0, now_filled = 0;
 		struct timeval now;
 		int frag_point;
 		frag_point = sctp_get_frag_point(stcb, &stcb->asoc);
@@ -7264,13 +7264,13 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	 * get a full msg in so we have to allow splitting.
 	 */
 	if (SCTP_SB_LIMIT_SND(stcb->sctp_socket) < frag_point) {
-		return(length);
+		return (length);
 	}
 
 	if ((length <= goal_mtu) ||
 	    ((length - goal_mtu) < SCTP_BASE_SYSCTL(sctp_min_residual))) {
 		/* Sub-optimial residual don't split in non-eeor mode. */
-		return(0);
+		return (0);
 	}
 	/* If we reach here length is larger
 	 * than the goal_mtu. Do we wish to split
@@ -7278,10 +7278,10 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 	 */
 	if (goal_mtu >= min(SCTP_BASE_SYSCTL(sctp_min_split_point), frag_point)) {
 		/* Its ok to split it */
-		return(min(goal_mtu, frag_point));
+		return (min(goal_mtu, frag_point));
 	}
 	/* Nope, can't split */
-	return(0);
+	return (0);
 
 }
 
@@ -7581,7 +7581,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 	 */
 	if (chk->last_mbuf == NULL) {
 		chk->last_mbuf = chk->data;
-		while(SCTP_BUF_NEXT(chk->last_mbuf) != NULL) {
+		while (SCTP_BUF_NEXT(chk->last_mbuf) != NULL) {
 			chk->last_mbuf = SCTP_BUF_NEXT(chk->last_mbuf);
 		}
 	}
@@ -7803,7 +7803,7 @@ sctp_fill_outqueue(struct sctp_tcb *stcb,
 {
 	struct sctp_association *asoc;
 	struct sctp_stream_out *strq;
-	int goal_mtu, moved_how_much, total_moved=0, bail=0;
+	int goal_mtu, moved_how_much, total_moved = 0, bail = 0;
 	int locked, giveup;
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
@@ -7937,7 +7937,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 	 * fomulate and send the low level chunks. Making sure to combine
 	 * any control in the control chunk queue also.
 	 */
-	struct sctp_nets *net, *start_at, *sack_goes_to=NULL, *old_start_at=NULL;
+	struct sctp_nets *net, *start_at, *sack_goes_to = NULL, *old_start_at = NULL;
 	struct mbuf *outchain, *endoutchain;
 	struct sctp_tmit_chunk *chk, *nchk;
 
@@ -8525,7 +8525,7 @@ again_one_more_time:
 						/* turn off the timer */
 						if (SCTP_OS_TIMER_PENDING(&stcb->asoc.dack_timer.timer)) {
 							sctp_timer_stop(SCTP_TIMER_TYPE_RECV,
-									inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1 );
+									inp, stcb, net, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_1);
 						}
 					}
 					ctl_cnt++;
@@ -9527,7 +9527,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 	struct sctp_tmit_chunk *data_list[SCTP_MAX_DATA_BUNDLING];
 	struct sctp_tmit_chunk *chk, *fwd;
 	struct mbuf *m, *endofchain;
-	struct sctp_nets *net=NULL;
+	struct sctp_nets *net = NULL;
 	uint32_t tsns_sent = 0;
 	int no_fragmentflg, bundle_at, cnt_thru;
 	unsigned int mtu;
@@ -9565,7 +9565,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 		asoc->sent_queue_cnt_removeable = 0;
 		/* send back 0/0 so we enter normal transmission */
 		*cnt_out = 0;
-		return(0);
+		return (0);
 	}
 	TAILQ_FOREACH(chk, &asoc->control_send_queue, sctp_next) {
 		if ((chk->rec.chunk_id.id == SCTP_COOKIE_ECHO) ||
@@ -9971,7 +9971,7 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 						 * t3-expiring.
 						 */
 						sctp_timer_stop(SCTP_TIMER_TYPE_SEND, inp, stcb, net,
-								SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_4 );
+								SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_4);
 						sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 					}
 				}
@@ -11518,12 +11518,12 @@ sctp_send_packet_dropped(struct sctp_tcb *stcb, struct sctp_nets *net,
 	struct sctp_tmit_chunk *chk;
 	uint8_t *datap;
 	int len;
-	int was_trunc=0;
+	int was_trunc = 0;
 	struct ip *iph;
 #ifdef INET6
 	struct ip6_hdr *ip6h;
 #endif
-	int fullsz=0, extra=0;
+	int fullsz = 0, extra = 0;
 	long spc;
 	int offset;
 	struct sctp_chunkhdr *ch, chunk_buf;
@@ -12777,7 +12777,7 @@ sctp_copy_resume(struct uio *uio,
 	*error = uiomove(mtod(head, caddr_t), willcpy, uio);
 	if (*error) {
 		sctp_m_freem(head);
-		return(NULL);
+		return (NULL);
 	}
 	*sndout += willcpy;
 	left -= willcpy;
@@ -12792,7 +12792,7 @@ sctp_copy_resume(struct uio *uio,
 			*new_tail = NULL;
 			SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_OUTPUT, ENOMEM);
 			*error = ENOMEM;
-			return(NULL);
+			return (NULL);
 		}
 		m = SCTP_BUF_NEXT(m);
 		cancpy = M_TRAILINGSPACE(m);
@@ -12813,7 +12813,7 @@ sctp_copy_resume(struct uio *uio,
 			SCTP_BUF_NEXT(m) = NULL;
 		}
 	}
-	return(head);
+	return (head);
 #endif
 }
 
@@ -12849,7 +12849,7 @@ sctp_copy_one(struct sctp_stream_queue_pending *sp,
 #else
 	int cancpy, willcpy, error;
 	struct mbuf *m, *head;
-	int cpsz=0;
+	int cpsz = 0;
 
 	/* First one gets a header */
 	left = sp->length;
@@ -13050,7 +13050,7 @@ sctp_sosend(struct socket *so,
 )
 {
 #ifdef __Panda__
-	struct mbuf *control=NULL;
+	struct mbuf *control = NULL;
 #endif
 #if defined(__APPLE__)
 	struct proc *p = current_proc();
@@ -13100,7 +13100,7 @@ sctp_sosend(struct socket *so,
 #endif
 				  flags,
 				  use_sndinfo ? &sndrcvninfo: NULL
-#if !( defined(__Panda__) || defined(__Userspace__) )
+#if !(defined(__Panda__) || defined(__Userspace__))
 				  , p
 #endif
 		);
@@ -13417,7 +13417,7 @@ sctp_lower_sosend(struct socket *so,
 			}
 #endif
 			stcb = sctp_aloc_assoc(inp, addr, &error, 0, vrf_id,
-#if !( defined( __Panda__) || defined(__Userspace__) )
+#if !(defined( __Panda__) || defined(__Userspace__))
 					       p
 #else
 					       (struct proc *)NULL
@@ -14487,6 +14487,7 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 	struct mbuf *m_auth;
 	struct sctp_auth_chunk *auth;
 	int chunk_len;
+	struct mbuf *cn;
 
 	if ((m_end == NULL) || (auth_ret == NULL) || (offset == NULL) ||
 	    (stcb == NULL))
@@ -14524,16 +14525,10 @@ sctp_add_auth_chunk(struct mbuf *m, struct mbuf **m_end,
 	/* key id and hmac digest will be computed and filled in upon send */
 
 	/* save the offset where the auth was inserted into the chain */
-	if (m != NULL) {
-		struct mbuf *cn;
-		*offset = 0;
-		cn = m;
-		while(cn) {
-			*offset += SCTP_BUF_LEN(cn);
-			cn = SCTP_BUF_NEXT(cn);
-		}
-	}else
-		*offset = 0;
+	*offset = 0;
+	for (cn = m; cn; cn = SCTP_BUF_NEXT(cn)) {
+		*offset += SCTP_BUF_LEN(cn);
+	}
 
 	/* update length and return pointer to the auth chunk */
 	SCTP_BUF_LEN(m_auth) = chunk_len;
@@ -14591,7 +14586,7 @@ sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 		if (sctp_cmpaddr((struct sockaddr *)&gw6,
 				ro->ro_rt->rt_gateway)) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT2, "pfxrouter is installed\n");
-			return(1);
+			return (1);
 		}
 	}
 	SCTPDBG(SCTP_DEBUG_OUTPUT2, "pfxrouter is not installed\n");
@@ -14609,7 +14604,7 @@ sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
 
 	if (ro == NULL || ro->ro_rt == NULL ||
 	    sifa->address.sa.sa_family != AF_INET) {
-		return(0);
+		return (0);
 	}
 	ifa = (struct ifaddr *)sifa->ifa;
 	mask = (struct sockaddr_in *)(ifa->ifa_netmask);
@@ -14625,22 +14620,22 @@ sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
 	SCTPDBG_ADDR(SCTP_DEBUG_OUTPUT2, ro->ro_rt->rt_gateway);
 	SCTPDBG(SCTP_DEBUG_OUTPUT1, "network address is %x\n", gwnetaddr.s_addr);
 	if (srcnetaddr.s_addr == gwnetaddr.s_addr) {
-		return(1);
+		return (1);
 	}
 #endif
-	return(0);
+	return (0);
 }
 #elif defined(__Userspace__)
 /* TODO __Userspace__ versions of sctp_vXsrc_match_nexthop(). */
 int
 sctp_v6src_match_nexthop(struct sockaddr_in6 *src6, sctp_route_t *ro)
 {
-    return 0;
+    return (0);
 }
 int
 sctp_v4src_match_nexthop(struct sctp_ifa *sifa, sctp_route_t *ro)
 {
-    return 0;
+    return (0);
 }
 
 #endif

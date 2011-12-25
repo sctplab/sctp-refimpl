@@ -716,7 +716,7 @@ sctp_auth_add_hmacid(sctp_hmaclist_t *list, uint16_t hmac_id)
 		return (-1);
 	}
 	/* Now is it already in the list */
-	for (i=0; i<list->num_algo; i++) {
+	for (i = 0; i < list->num_algo; i++) {
 		if (list->hmac[i] == hmac_id) {
 			/* already in list */
 			return (-1);
@@ -1925,8 +1925,8 @@ sctp_validate_init_auth_params(struct mbuf *m, int offset, int limit)
 	int peer_supports_asconf = 0;
 	int peer_supports_auth = 0;
 	int got_random = 0, got_hmacs = 0, got_chklist = 0;
-	uint8_t saw_asconf=0;
-	uint8_t saw_asconf_ack=0;
+	uint8_t saw_asconf = 0;
+	uint8_t saw_asconf_ack = 0;
 
 	/* go through each of the params. */
 	phdr = sctp_get_next_param(m, offset, &parm_buf, sizeof(parm_buf));

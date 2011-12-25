@@ -76,12 +76,12 @@ sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 			sctp_timer_stop(SCTP_TIMER_TYPE_COOKIE,
 					stcb->sctp_ep,
 					stcb,
-					net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_1 );
+					net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_1);
 		} else if (net->rxt_timer.type == SCTP_TIMER_TYPE_INIT) {
 			sctp_timer_stop(SCTP_TIMER_TYPE_INIT,
 					stcb->sctp_ep,
 					stcb,
-					net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_2 );
+					net, SCTP_FROM_SCTP_INPUT+SCTP_LOC_2);
 		}
 	}
 }
@@ -421,7 +421,7 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	struct mbuf *op_err;
 	int retval, abort_flag;
 	uint32_t initack_limit;
-	int nat_friendly=0;
+	int nat_friendly = 0;
 
 	/* First verify that we have no illegal param's */
 	abort_flag = 0;
@@ -565,7 +565,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in)) {
 			sin = (struct sockaddr_in *)&store;
 			sin->sin_family = cp->heartbeat.hb_info.addr_family;
-#if ! (defined(__Windows__) || defined(__Userspace_os_Linux))
+#if !(defined(__Windows__) || defined(__Userspace_os_Linux))
 			sin->sin_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sin->sin_port = stcb->rport;
@@ -836,7 +836,7 @@ sctp_start_net_timers(struct sctp_tcb *stcb)
 		sctp_timer_start(SCTP_TIMER_TYPE_PATHMTURAISE, stcb->sctp_ep, stcb, net);
 		sctp_timer_start(SCTP_TIMER_TYPE_HEARTBEAT, stcb->sctp_ep, stcb, net);
 		if ((net->dest_state & SCTP_ADDR_UNCONFIRMED) &&
-		    (cnt_hb_sent < SCTP_BASE_SYSCTL(sctp_hb_maxburst))){
+		    (cnt_hb_sent < SCTP_BASE_SYSCTL(sctp_hb_maxburst))) {
 			sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
 			cnt_hb_sent++;
 		}
@@ -1153,14 +1153,14 @@ sctp_handle_error(struct sctp_chunkhdr *ch,
 		        SCTPDBG(SCTP_DEBUG_INPUT2, "Received Colliding state abort flags:%x\n",
 				ch->chunk_flags);
 			if (sctp_handle_nat_colliding_state(stcb)) {
-			  return(0);
+			  return (0);
 			}
 			break;
 		case SCTP_CAUSE_NAT_MISSING_STATE:
 			SCTPDBG(SCTP_DEBUG_INPUT2, "Received missing state abort flags:%x\n",
 			                           ch->chunk_flags);
 			if (sctp_handle_nat_missing_state(stcb, net)) {
-			  return(0);
+			  return (0);
 			}
 			break;
 		case SCTP_CAUSE_STALE_COOKIE:
@@ -1695,7 +1695,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 			if (how_indx < sizeof(asoc->cookie_how))
 				asoc->cookie_how[how_indx] = 7;
 
-			return(NULL);
+			return (NULL);
 		}
 		if (how_indx < sizeof(asoc->cookie_how))
 			asoc->cookie_how[how_indx] = 8;
@@ -1885,7 +1885,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		SCTP_TCB_SEND_LOCK(stcb);
 
 		sctp_report_all_outbound(stcb, 1, SCTP_SO_NOT_LOCKED);
-		for (i=0; i<stcb->asoc.streamoutcnt; i++) {
+		for (i = 0; i<stcb->asoc.streamoutcnt; i++) {
 			stcb->asoc.strmout[i].stream_no = i;
 			stcb->asoc.strmout[i].next_sequence_sent = 0;
 			stcb->asoc.strmout[i].last_msg_incomplete = 0;
@@ -3066,7 +3066,7 @@ sctp_handle_ecn_echo(struct sctp_ecne_chunk *cp,
 		TAILQ_FOREACH(net, &stcb->asoc.nets, sctp_next) {
 			if (tsn == net->last_cwr_tsn) {
 				/* Found him, send it off */
-				break;;				
+				break;
 			}
 		}
 		if (net == NULL) {
@@ -3283,7 +3283,7 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 				SCTP_STAT_INCR(sctps_pdrpdizrw);
 				return (0);
 			}
-			ddp = (uint8_t *) (mtod(tp1->data, caddr_t)+
+			ddp = (uint8_t *) (mtod(tp1->data, caddr_t) +
 					   sizeof(struct sctp_data_chunk));
 			{
 				unsigned int iii;
@@ -3994,7 +3994,7 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 
 	uint32_t seq;
 	int num_req = 0;
-	int trunc=0;
+	int trunc = 0;
 	struct sctp_tmit_chunk *chk;
 	struct sctp_chunkhdr *ch;
 	struct sctp_paramhdr *ph;
@@ -4782,7 +4782,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				stcb->asoc.seen_a_sack_this_pkt = 1;
 				if ((stcb->asoc.pr_sctp_cnt == 0) &&
 				    (num_seg == 0) &&
-				    SCTP_TSN_GE(cum_ack, stcb->asoc.last_acked_seq)&&
+				    SCTP_TSN_GE(cum_ack, stcb->asoc.last_acked_seq) &&
 				    (stcb->asoc.saw_sack_with_frags == 0) &&
 				    (stcb->asoc.saw_sack_with_nr_frags == 0) &&
 				    (!TAILQ_EMPTY(&stcb->asoc.sent_queue))
@@ -5305,7 +5305,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_STREAM_RESET:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_STREAM_RESET\n");
-			if (((stcb == NULL) ||(ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req)))) {
+			if (((stcb == NULL) || (ch == NULL) || (chk_length < sizeof(struct sctp_stream_reset_tsn_req)))) {
 				/* Its not ours */
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -5762,7 +5762,7 @@ trigger_send:
 static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
-	for(; m; m = SCTP_BUF_NEXT(m)) {
+	for (; m; m = SCTP_BUF_NEXT(m)) {
 		printf("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
@@ -5855,12 +5855,10 @@ sctp_input(i_pak, va_alist)
 #ifdef SCTP_MBUF_LOGGING
 	/* Log in any input mbufs */
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		mat = m;
-		while(mat) {
+		for (mat =m; mat; mat = SCTP_BUF_NEXT(mat)) {
 			if (SCTP_BUF_IS_EXTENDED(mat)) {
 				sctp_log_mb(mat, SCTP_MBUF_INPUT);
 			}
-			mat = SCTP_BUF_NEXT(mat);
 		}
 	}
 #endif
