@@ -536,13 +536,13 @@ static uint32_t sctp_crc_tableil8_o88[256] =
 static uint32_t
 sctp_crc32c_sb8_64_bit(uint32_t crc,
                        const unsigned char *p_buf,
-                       size_t length,
-                       size_t init_bytes)
+                       uint32_t length,
+                       uint32_t init_bytes)
 {
 	uint32_t li;
 	uint32_t term1, term2;
-	size_t running_length;
-	size_t end_bytes;
+	uint32_t running_length;
+	uint32_t end_bytes;
 
 	running_length = ((length - init_bytes) / 8) * 8;
 	end_bytes = length - init_bytes - running_length;
@@ -608,9 +608,9 @@ sctp_crc32c_sb8_64_bit(uint32_t crc,
 static uint32_t
 multitable_crc32c(uint32_t crc32c,
                   const unsigned char *buffer,
-                  size_t length)
+                  unsigned int length)
 {
-	size_t to_even_word;
+	uint32_t to_even_word;
 
 	if (length == 0) {
 		return (crc32c);
@@ -692,9 +692,9 @@ static uint32_t sctp_crc_c[256] = {
 static uint32_t
 singletable_crc32c(uint32_t crc32c,
                    const unsigned char *buffer,
-                   size_t length)
+                   unsigned int length)
 {
-	size_t i;
+	unsigned int i;
 
 	for (i = 0; i < length; i++) {
 		SCTP_CRC32C(crc32c, buffer[i]);
@@ -706,7 +706,7 @@ singletable_crc32c(uint32_t crc32c,
 static uint32_t
 calculate_crc32c(uint32_t crc32c,
                  const unsigned char *buffer,
-                 size_t length)
+                 unsigned int length)
 {
 	if (length < 4) {
 		return (singletable_crc32c(crc32c, buffer, length));
@@ -752,7 +752,7 @@ sctp_finalize_crc32c(uint32_t crc32c)
 }
 
 uint32_t
-sctp_calculate_cksum(struct mbuf *m, size_t offset)
+sctp_calculate_cksum(struct mbuf *m, uint32_t offset)
 {
 	/*
 	 * given a mbuf chain with a packetheader offset by 'offset'
@@ -794,7 +794,7 @@ sctp_calculate_cksum(struct mbuf *m, size_t offset)
 
 
 void
-sctp_delayed_cksum(struct mbuf *m, size_t offset)
+sctp_delayed_cksum(struct mbuf *m, uint32_t offset)
 {
 #if defined(SCTP_WITH_NO_CSUM)
 	panic("sctp_delayed_cksum() called when using no SCTP CRC.");
@@ -807,8 +807,8 @@ sctp_delayed_cksum(struct mbuf *m, size_t offset)
 	offset += offsetof(struct sctphdr, checksum);
 
 	if (offset + sizeof(uint32_t) > (uint32_t) (m->m_len)) {
-		printf("sctp_delayed_cksum(): m->len: %u,  off: %lu.\n",
-		       (uint32_t)m->m_len, (unsigned long)offset);
+		printf("sctp_delayed_cksum(): m->len: %d,  off: %d.\n",
+		       (uint32_t) m->m_len, offset);
 		/*
 		 * XXX this shouldn't happen, but if it does, the correct
 		 * behavior may be to insert the checksum in the appropriate
