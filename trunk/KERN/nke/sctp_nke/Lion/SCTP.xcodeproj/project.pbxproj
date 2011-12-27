@@ -33,8 +33,6 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
-		504A6B8A12C4D2A600C90FAB /* sctp_dtrace_declare.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_declare.h; path = netinet/sctp_dtrace_declare.h; sourceTree = "<group>"; };
-		504A6B8B12C4D2A600C90FAB /* sctp_dtrace_define.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_dtrace_define.h; path = netinet/sctp_dtrace_define.h; sourceTree = "<group>"; };
 		50BAFE42107390EC0005425A /* sctp_asconf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_asconf.c; path = netinet/sctp_asconf.c; sourceTree = "<group>"; };
 		50BAFE43107390EC0005425A /* sctp_asconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_asconf.h; path = netinet/sctp_asconf.h; sourceTree = "<group>"; };
 		50BAFE44107390EC0005425A /* sctp_auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_auth.c; path = netinet/sctp_auth.c; sourceTree = "<group>"; };
@@ -193,8 +191,6 @@
 				50BAFE48107390EC0005425A /* sctp_callout.c */,
 				50BAFE49107390EC0005425A /* sctp_callout.h */,
 				50BAFE4A107390EC0005425A /* sctp_cc_functions.c */,
-				504A6B8A12C4D2A600C90FAB /* sctp_dtrace_declare.h */,
-				504A6B8B12C4D2A600C90FAB /* sctp_dtrace_define.h */,
 				50BAFE4C107390EC0005425A /* sctp_constants.h */,
 				50BAFE4D107390EC0005425A /* sctp_crc32.c */,
 				50BAFE4E107390EC0005425A /* sctp_crc32.h */,
@@ -421,7 +417,7 @@
 				GCC_MODEL_TUNING = G5;
 				GCC_OPTIMIZATION_LEVEL = 0;
 				GCC_PREPROCESSOR_DEFINITIONS = HAVE_SCTP_PEELOFF_SOCKOPT;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -443,7 +439,7 @@
 				EXECUTABLE_PREFIX = lib;
 				GCC_MODEL_TUNING = G5;
 				GCC_PREPROCESSOR_DEFINITIONS = HAVE_SCTP_PEELOFF_SOCKOPT;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_SHADOW = YES;
 				GCC_WARN_SIGN_COMPARE = YES;
 				GCC_WARN_UNINITIALIZED_AUTOS = YES;
@@ -461,10 +457,10 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
-				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
 				GCC_OPTIMIZATION_LEVEL = 0;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -477,7 +473,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -488,9 +484,9 @@
 			buildSettings = {
 				ALWAYS_SEARCH_USER_PATHS = NO;
 				ARCHS = "$(ARCHS_STANDARD_32_64_BIT)";
-				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = NO;
+				CLANG_WARN_IMPLICIT_SIGN_CONVERSION = YES;
 				GCC_C_LANGUAGE_STANDARD = gnu99;
-				GCC_WARN_64_TO_32_BIT_CONVERSION = NO;
+				GCC_WARN_64_TO_32_BIT_CONVERSION = YES;
 				GCC_WARN_ABOUT_MISSING_NEWLINE = YES;
 				GCC_WARN_ABOUT_MISSING_PROTOTYPES = NO;
 				GCC_WARN_ABOUT_RETURN_TYPE = YES;
@@ -503,7 +499,7 @@
 				GCC_WARN_UNUSED_VARIABLE = YES;
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				SDKROOT = macosx;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
@@ -547,7 +543,7 @@
 				MODULE_START = SCTP_start;
 				MODULE_STOP = SCTP_stop;
 				MODULE_VERSION = 6.0.0;
-				ONLY_ACTIVE_ARCH = NO;
+				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = SCTP;
 				USER_HEADER_SEARCH_PATHS = "";
