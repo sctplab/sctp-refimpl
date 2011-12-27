@@ -51,7 +51,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 228653 2011-12-17 19:21:40Z tuex
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_bsd_addr.h>
+#if defined(__FreeBSD__) && __FreeBSD_version >= 900000
 #include <netinet/sctp_dtrace_define.h>
+#endif
 #include <netinet/udp.h>
 #ifdef INET6
 #include <netinet6/ip6_var.h>
