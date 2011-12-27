@@ -176,7 +176,7 @@ soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct
 	if ((controlp) && (*controlp)) {
 		m_freem(*controlp);
 	}
-	return soreceive(so, psa, uio, mp0, controlp, flagsp);
+	return (soreceive(so, psa, uio, mp0, controlp, flagsp));
 }
 #endif
 
@@ -304,7 +304,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 		lck_mtx_unlock(inetdomain.dom_mtx);
 		printf("SCTP NKE: Not all protocol handlers could be installed.\n");
-		return KERN_FAILURE;
+		return (KERN_FAILURE);
 	}
 
 	ip_protox[IPPROTO_SCTP]  = &sctp4_seqpacket;
@@ -410,7 +410,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	lck_rw_done(udbinfo.mtx);
 #endif
 	printf("SCTP NKE: NKE loaded.\n");
-	return KERN_SUCCESS;
+	return (KERN_SUCCESS);
 }
 
 
@@ -422,12 +422,12 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	
 	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))) {
 		printf("SCTP NKE: Someone else holds the lock\n");
-		return KERN_FAILURE;
+		return (KERN_FAILURE);
 	}
 	if (!LIST_EMPTY(&SCTP_BASE_INFO(listhead))) {
 		printf("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
-		return KERN_FAILURE;
+		return (KERN_FAILURE);
 	}
 
 	if (!LIST_EMPTY(&SCTP_BASE_INFO(inplisthead))) {
@@ -436,7 +436,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
-		return KERN_FAILURE;
+		return (KERN_FAILURE);
 	}
 
 #if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
@@ -555,9 +555,9 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 
 	if (err) {
 		printf("SCTP NKE: Not all protocol handlers could be removed.\n");
-		return KERN_FAILURE;
+		return (KERN_FAILURE);
 	} else {
 		printf("SCTP NKE: NKE unloaded.\n");
-		return KERN_SUCCESS;
+		return (KERN_SUCCESS);
 	}
 }
