@@ -1132,7 +1132,7 @@ sctp_sendv(int sd,
 			msg.msg_controllen += CMSG_SPACE(sizeof(struct sctp_prinfo));
 			cmsg = (struct cmsghdr *)((caddr_t)cmsg + CMSG_SPACE(sizeof(struct sctp_prinfo)));		
 		}
-		if (spa_info->sendv_flags & SCTP_SEND_AUTHINFO_VALID ) {
+		if (spa_info->sendv_flags & SCTP_SEND_AUTHINFO_VALID) {
 			cmsg->cmsg_level = IPPROTO_SCTP;
 			cmsg->cmsg_type = SCTP_AUTHINFO;
 			cmsg->cmsg_len = CMSG_LEN(sizeof(struct sctp_authinfo));
