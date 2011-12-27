@@ -265,7 +265,7 @@ out:
 /* Tiger only */
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int
-sctp_lock(struct socket *so, int refcount, void *debug)
+sctp_lock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #else
 int
 sctp_lock(struct socket *so, int refcount, int lr)
@@ -294,7 +294,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 	             ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 	             ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
-#if (!defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION))&& defined(__ppc__)
+#if (!defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)) && defined(__ppc__)
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller1 = lr;
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller2 = refcount;
 #endif
@@ -304,7 +304,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 
 #if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 int
-sctp_unlock(struct socket *so, int refcount, void *debug)
+sctp_unlock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #else
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
@@ -344,7 +344,7 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 }
 
 lck_mtx_t *
-sctp_getlock(struct socket *so, int locktype)
+sctp_getlock(struct socket *so, int locktype SCTP_UNUSED)
 {
 	/* WARNING: we do not own the socket lock here... */
 	/* We do not have always enough callers */
@@ -543,7 +543,7 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 			n->m_data = m->m_data + off;
 			n->m_flags |= M_EXT;
 		} else {
-			bcopy(mtod(m, caddr_t)+off, mtod(n, caddr_t),
+			bcopy(mtod(m, caddr_t) + off, mtod(n, caddr_t),
 			    (unsigned)n->m_len);
 		}
 		if (len != M_COPYALL)
@@ -979,7 +979,7 @@ out:
 
 
 static void
-sctp_address_monitor_cb(socket_t rt_sock, void *cookie, int watif)
+sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	struct msghdr msg;
 	struct iovec iov;
@@ -1060,7 +1060,7 @@ void sctp_address_monitor_stop(void)
 static void
 sctp_print_mbuf_chain(mbuf_t m)
 {
-	for(; m; m = SCTP_BUF_NEXT(m)) {
+	for (; m; m = SCTP_BUF_NEXT(m)) {
 		printf("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
 		if (SCTP_BUF_IS_EXTENDED(m))
 			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
@@ -1069,7 +1069,7 @@ sctp_print_mbuf_chain(mbuf_t m)
 #endif
 
 static void
-sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
+sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	errno_t error;
 	size_t length;
@@ -1150,7 +1150,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie, int watif)
 }
 
 static void
-sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie, int watif)
+sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCTP_UNUSED)
 {
 	errno_t error;
 	size_t length;
@@ -1254,7 +1254,7 @@ sctp_over_udp_start(void)
 	if (error) {
 		sctp_over_udp_ipv4_so = NULL;
 		printf("Failed to create SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	error = sock_setsockopt(sctp_over_udp_ipv4_so, IPPROTO_IP, IP_RECVDSTADDR, (const void *)&on, (int)sizeof(int));
@@ -1262,7 +1262,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
 		printf("Failed to setsockopt() on SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	memset((void *)&addr_ipv4, 0, sizeof(struct sockaddr_in));
@@ -1275,7 +1275,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
 		printf("Failed to bind SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	error = sock_socket(PF_INET6, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv6_cb, NULL, &sctp_over_udp_ipv6_so);
@@ -1284,7 +1284,7 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv4_so = NULL;
 		sctp_over_udp_ipv6_so = NULL;
 		printf("Failed to create SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_V6ONLY, (const void *)&on, (int)sizeof(int));
@@ -1294,7 +1294,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
 		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 #if defined(APPLE_LION)
@@ -1308,7 +1308,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
 		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	memset((void *)&addr_ipv6, 0, sizeof(struct sockaddr_in6));
@@ -1323,7 +1323,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
 		printf("Failed to bind SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
-		return error;
+		return (error);
 	}
 
 	return (0);

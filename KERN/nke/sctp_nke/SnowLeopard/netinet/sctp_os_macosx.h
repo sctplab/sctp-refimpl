@@ -135,7 +135,7 @@ extern struct fileops socketops;
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {			\
 	    printf(params);						\
 	}								\
     } while (0);							\
@@ -143,7 +143,7 @@ extern struct fileops socketops;
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {			\
 	    sctp_print_address(addr);					\
 	}								\
     } while (0);							\
@@ -374,7 +374,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 #define SCTP_ATTACH_CHAIN(pak, m, packet_length) do { \
                                                  pak = m; \
                                                  pak->m_pkthdr.len = packet_length; \
-                         } while(0)
+                         } while (0)
 
 /* Other m_pkthdr type things */
 #define SCTP_IS_IT_BROADCAST(dst, m) in_broadcast(dst, m->m_pkthdr.rcvif)
