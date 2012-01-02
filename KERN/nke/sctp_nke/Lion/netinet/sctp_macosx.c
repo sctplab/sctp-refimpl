@@ -723,6 +723,7 @@ sctp_addr_watchdog()
 				sctp_print_addr(sa);
 				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
 					printf("! ");
+					sctp_addr_change(ifa, RTM_ADD);
 				} else {
 					printf(" ");
 				}
@@ -882,7 +883,8 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 	}
 }
 
-static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
+static void
+sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	errno_t error;
 	ifnet_t *ifnetlist;
 	uint32_t i, count;
@@ -892,7 +894,8 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	struct ifaddr *ifa, *found_ifa = NULL;
 
 	/* handle only the types we want */
-	if ((ifa_msg->ifam_type != RTM_NEWADDR) && (ifa_msg->ifam_type != RTM_DELADDR)) {
+	if ((ifa_msg->ifam_type != RTM_NEWADDR) &&
+	    (ifa_msg->ifam_type != RTM_DELADDR)) {
 		return;
 	}
 
@@ -937,11 +940,13 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			continue;
 		}
 		switch (ifa->ifa_addr->sa_family) {
+#if defined(INET)
 		case AF_INET:
 			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
 				found_ifa = ifa;
  			}
 			break;
+#endif
 #if defined(INET6)
 		case AF_INET6:
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
@@ -972,7 +977,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 out:
-	if (ifnetlist != 0) {
+	if (ifnetlist != NULL) {
 		ifnet_list_free(ifnetlist);
 	}
 }
