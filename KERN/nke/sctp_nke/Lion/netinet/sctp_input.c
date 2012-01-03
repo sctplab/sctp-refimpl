@@ -65,6 +65,7 @@ static void
 sctp_stop_all_cookie_timers(struct sctp_tcb *stcb)
 {
 	struct sctp_nets *net;
+
 	/* This now not only stops all cookie timers
 	 * it also stops any INIT timers as well. This
 	 * will make sure that the timers are stopped in
@@ -107,7 +108,9 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	op_err = NULL;
 	init = &cp->init;
 	/* First are we accepting? */
-	if ((inp->sctp_socket->so_qlimit == 0) && (stcb == NULL)) {
+	if (((inp->sctp_socket == NULL) ||
+	     (inp->sctp_socket->so_qlimit == 0)) &&
+	    (stcb == NULL)) {
 		SCTPDBG(SCTP_DEBUG_INPUT2,
 			"sctp_handle_init: Abort, so_qlimit:%d\n",
 			inp->sctp_socket->so_qlimit);
@@ -125,8 +128,6 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 		 */
 		sctp_abort_association(inp, stcb, m, iphlen, sh, op_err,
 				       vrf_id, port);
-		if (stcb)
-			*abort_no_unlock = 1;
 		goto outnow;
 	}
 	if (ntohs(cp->ch.chunk_length) < sizeof(struct sctp_init_chunk)) {
