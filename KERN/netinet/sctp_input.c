@@ -4682,7 +4682,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					return (NULL);
 				}
 			}
-			/* must be first and only chunk */
+			/* The INIT-CK chunk must be the only chunk. */
 			if ((num_chunks > 1) ||
 			    (SCTP_BASE_SYSCTL(sctp_strict_init) && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
 				*offset = length;
