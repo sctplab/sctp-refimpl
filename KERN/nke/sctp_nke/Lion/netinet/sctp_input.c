@@ -4626,7 +4626,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_INIT\n");
 			/* The INIT chunk must be the only chunk. */
 			if ((num_chunks > 1) ||
-			    (SCTP_BASE_SYSCTL(sctp_strict_init) && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
+			    (length - *offset > (int)SCTP_SIZE32(chk_length))) {
 				sctp_abort_association(inp, stcb, m,
 				                       iphlen, sh, NULL, vrf_id, port);
 				*offset = length;
@@ -4682,9 +4682,9 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					return (NULL);
 				}
 			}
-			/* The INIT-CK chunk must be the only chunk. */
+			/* The INIT-ACK chunk must be the only chunk. */
 			if ((num_chunks > 1) ||
-			    (SCTP_BASE_SYSCTL(sctp_strict_init) && (length - *offset > (int)SCTP_SIZE32(chk_length)))) {
+			    (length - *offset > (int)SCTP_SIZE32(chk_length))) {
 				*offset = length;
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
