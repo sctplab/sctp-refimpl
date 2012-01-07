@@ -1021,7 +1021,7 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp SCTP_UNUSED,
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
 			/* Set the connected flag to disconnected */
-			stcb->sctp_ep->sctp_socket->so_snd.sb_cc = 0;
+			stcb->sctp_socket->so_snd.sb_cc = 0;
 		}
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
