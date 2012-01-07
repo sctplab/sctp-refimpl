@@ -76,7 +76,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
 #if !defined(SCTP_WITH_NO_CSUM)
 extern struct sysctl_oid sysctl__net_inet_sctp_loopback_nocsum;
 #endif
-extern struct sysctl_oid sysctl__net_inet_sctp_strict_init;
 extern struct sysctl_oid sysctl__net_inet_sctp_peer_chkoh;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_maxchunks;
@@ -330,7 +329,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_loopback_nocsum);
 
 #endif
-	sysctl_register_oid(&sysctl__net_inet_sctp_strict_init);
 	sysctl_register_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxchunks);
@@ -458,7 +456,6 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 #if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_loopback_nocsum);
 #endif
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_init);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_maxchunks);
