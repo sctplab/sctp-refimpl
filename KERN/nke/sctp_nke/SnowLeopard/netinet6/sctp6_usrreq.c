@@ -33,7 +33,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 228907 2011-12-27 10:16:24Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 229805 2012-01-08 09:56:24Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -364,9 +364,13 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			goto bad;
 		}
-
-		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION)
-			sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id, port);
+ 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION) {
+			if ((SCTP_BASE_SYSCTL(sctp_blackhole) == 0) ||
+			    ((SCTP_BASE_SYSCTL(sctp_blackhole) == 1) &&
+			     (ch->chunk_type != SCTP_INIT))) {
+				    sctp_send_abort(m, iphlen, sh, 0, NULL, vrf_id, port);
+			    }
+		}
 		goto bad;
 	} else if (stcb == NULL) {
 		refcount_up = 1;
