@@ -723,6 +723,7 @@ sctp_addr_watchdog()
 				sctp_print_addr(sa);
 				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
 					printf("! ");
+					sctp_addr_change(ifa, RTM_ADD);
 				} else {
 					printf(" ");
 				}
@@ -866,12 +867,13 @@ socket_t sctp_address_monitor_so = NULL;
 
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
 #define NEXT_SA(sa) sa = (struct sockaddr *) \
-	((caddr_t) sa + (sa->sa_len ? ROUNDUP(sa->sa_len, sizeof(unsigned long)) : sizeof(unsigned long)))
+	((caddr_t) sa + (sa->sa_len ? ROUNDUP(sa->sa_len, sizeof(uint32_t)) : sizeof(uint32_t)))
 
 static void
 sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 {
 	int i;
+
 	for (i = 0; i < RTAX_MAX; i++) {
 		if (addrs & (1 << i)) {
 			rti_info[i] = sa;
@@ -882,7 +884,8 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 	}
 }
 
-static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
+static void
+sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	errno_t error;
 	ifnet_t *ifnetlist;
 	uint32_t i, count;
@@ -892,7 +895,8 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	struct ifaddr *ifa, *found_ifa = NULL;
 
 	/* handle only the types we want */
-	if ((ifa_msg->ifam_type != RTM_NEWADDR) && (ifa_msg->ifam_type != RTM_DELADDR)) {
+	if ((ifa_msg->ifam_type != RTM_NEWADDR) &&
+	    (ifa_msg->ifam_type != RTM_DELADDR)) {
 		return;
 	}
 
@@ -924,7 +928,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 	if (found_ifn == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: if_index %u not found?!", ifa_msg->ifam_index);
+		printf("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
 		goto out;
 	}
 
@@ -937,11 +941,13 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			continue;
 		}
 		switch (ifa->ifa_addr->sa_family) {
+#if defined(INET)
 		case AF_INET:
 			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
 				found_ifa = ifa;
  			}
 			break;
+#endif
 #if defined(INET6)
 		case AF_INET6:
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
@@ -955,7 +961,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	if (found_ifa == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: ifa not found?!");
+		printf("SCTP-NKE: ifa not found?!\n");
 		goto out;
 	}
 
@@ -972,7 +978,7 @@ static void sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 out:
-	if (ifnetlist != 0) {
+	if (ifnetlist != NULL) {
 		ifnet_list_free(ifnetlist);
 	}
 }
@@ -1004,9 +1010,12 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	if (length == 0) {
 		return;
 	}
-
 	/* process the routing event */
 	rt_msg = (struct rt_msghdr *)rt_buffer;
+	if (length != rt_msg->rtm_msglen) {
+		printf("Read %d bytes from routing socket for message of length %d.\n", (int) length, rt_msg->rtm_msglen);
+		return;
+	}
 	switch (rt_msg->rtm_type) {
 	case RTM_DELADDR:
 	case RTM_NEWADDR:
@@ -1016,6 +1025,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 		/* ignore this routing event */
 		break;
 	}
+	return;
 }
 
 void
