@@ -665,6 +665,7 @@ sctp_addr_watchdog()
 	uint32_t i, count;
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
+	ifaddr_t ifaddr;
 	struct sockaddr *sa;
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifn;
@@ -704,6 +705,16 @@ sctp_addr_watchdog()
 					printf(" ");
 				}
 #endif
+				if ((ifaddr = ifaddr_withaddr(sa)) == NULL) {
+					printf("SCTP-NKE: Automatically deleting ");
+					sctp_print_addr(sa);
+					printf(" to interface %s (index %d).\n", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+					SCTP_IPI_ADDR_RUNLOCK();
+					sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, sa, sctp_ifn->ifn_index, sctp_ifn->ifn_name);
+					return;
+				} else {
+					ifaddr_release(ifaddr);
+				}
 				break;
 			default:
 				break;
