@@ -867,12 +867,13 @@ socket_t sctp_address_monitor_so = NULL;
 
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
 #define NEXT_SA(sa) sa = (struct sockaddr *) \
-	((caddr_t) sa + (sa->sa_len ? ROUNDUP(sa->sa_len, sizeof(unsigned long)) : sizeof(unsigned long)))
+	((caddr_t) sa + (sa->sa_len ? ROUNDUP(sa->sa_len, sizeof(uint32_t)) : sizeof(uint32_t)))
 
 static void
 sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 {
 	int i;
+
 	for (i = 0; i < RTAX_MAX; i++) {
 		if (addrs & (1 << i)) {
 			rti_info[i] = sa;
@@ -927,7 +928,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 
 	if (found_ifn == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: if_index %u not found?!", ifa_msg->ifam_index);
+		printf("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
 		goto out;
 	}
 
@@ -960,7 +961,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	if (found_ifa == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: ifa not found?!");
+		printf("SCTP-NKE: ifa not found?!\n");
 		goto out;
 	}
 
@@ -1009,9 +1010,12 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	if (length == 0) {
 		return;
 	}
-
 	/* process the routing event */
 	rt_msg = (struct rt_msghdr *)rt_buffer;
+	if (length != rt_msg->rtm_msglen) {
+		printf("Read %d bytes from routing socket for message of length %d.\n", (int) length, rt_msg->rtm_msglen);
+		return;
+	}
 	switch (rt_msg->rtm_type) {
 	case RTM_DELADDR:
 	case RTM_NEWADDR:
@@ -1021,6 +1025,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 		/* ignore this routing event */
 		break;
 	}
+	return;
 }
 
 void
