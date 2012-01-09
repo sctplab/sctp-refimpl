@@ -665,6 +665,7 @@ sctp_addr_watchdog()
 	uint32_t i, count;
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
+	ifaddr_t ifaddr;
 	struct sockaddr *sa;
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifn;
@@ -679,9 +680,17 @@ sctp_addr_watchdog()
 		printf("SCTP-NKE: Can't find default VRF.\n");
 		goto out;
 	}
-	printf("SCTP-NKE: Interfaces available for SCTP:\n");
+#ifdef SCTP_DEBUG
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+		printf("SCTP-NKE: Interfaces available for SCTP:\n");
+	}
+#endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
-		printf("SCTP-NKE: \tInterface %s (index %d): ", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+#ifdef SCTP_DEBUG
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+			printf("SCTP-NKE: \tInterface %s (index %d): ", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+		}
+#endif
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
 			sa = &sctp_ifa->address.sa;
 			if (sa == NULL) {
@@ -690,14 +699,32 @@ sctp_addr_watchdog()
 			switch (sa->sa_family) {
 			case AF_INET:
 			case AF_INET6:
-				sctp_print_addr(sa);
-				printf(" ");
+#ifdef SCTP_DEBUG
+				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+					sctp_print_addr(sa);
+					printf(" ");
+				}
+#endif
+				if ((ifaddr = ifaddr_withaddr(sa)) == NULL) {
+					printf("SCTP-NKE: Automatically deleting ");
+					sctp_print_addr(sa);
+					printf(" to interface %s (index %d).\n", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+					SCTP_IPI_ADDR_RUNLOCK();
+					sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, sa, sctp_ifn->ifn_index, sctp_ifn->ifn_name);
+					return;
+				} else {
+					ifaddr_release(ifaddr);
+				}
 				break;
 			default:
 				break;
 			}
 		}
-		printf("\n");
+#ifdef SCTP_DEBUG
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+			printf("\n");
+		}
+#endif
 	}
 	SCTP_IPI_ADDR_RUNLOCK();
 	
@@ -708,10 +735,18 @@ sctp_addr_watchdog()
 		printf("SCTP-NKE: ifnet_list_get failed %d\n", error);
 		goto out;
 	}
-	printf("SCTP-NKE: Interfaces available on the system:\n");
+#ifdef SCTP_DEBUG
+	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+		printf("SCTP-NKE: Interfaces available on the system:\n");
+	}
+#endif
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
-		printf("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
+#ifdef SCTP_DEBUG
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+			printf("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
+		}
+#endif
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
 			sa = ifa->ifa_addr;
 			if (sa == NULL) {
@@ -720,19 +755,40 @@ sctp_addr_watchdog()
 			switch (sa->sa_family) {
 			case AF_INET:
 			case AF_INET6:
-				sctp_print_addr(sa);
+#ifdef SCTP_DEBUG
+				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+					sctp_print_addr(sa);
+				}
+#endif
 				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
-					printf("! ");
+#ifdef SCTP_DEBUG
+					if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+						printf("!");
+					} else {
+#endif
+						printf("SCTP-NKE: Automatically adding ");
+						sctp_print_addr(sa);
+						printf(" to interface %s%d (index %d).\n", ifn->if_name, ifn->if_unit, ifn->if_index);
+#ifdef SCTP_DEBUG
+					}
+#endif
 					sctp_addr_change(ifa, RTM_ADD);
-				} else {
+				}
+#ifdef SCTP_DEBUG
+				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
 					printf(" ");
 				}
+#endif
 				break;
 			default:
 				break;
 			}
 		}
-		printf("\n");
+#ifdef SCTP_DEBUG
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
+			printf("\n");
+		}
+#endif
 	}
 out:
 	if (ifnetlist != NULL) {
