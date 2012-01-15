@@ -981,13 +981,11 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			break;
 		}
 	}
-
 	if (found_ifn == NULL) {
 		/* TSNH */
 		printf("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
 		goto out;
 	}
-
 	/* verify the address on the interface */
 	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
 		if (found_ifa) {
@@ -1020,7 +1018,6 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		printf("SCTP-NKE: ifa not found?!\n");
 		goto out;
 	}
-
 	/* relay the appropriate address change to the base code */
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
 		printf("SCTP-NKE: Adding ");

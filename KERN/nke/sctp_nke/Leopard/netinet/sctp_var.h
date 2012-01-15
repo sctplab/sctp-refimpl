@@ -407,7 +407,7 @@ int sctp_ctloutput __P((struct socket *, struct sockopt *));
 #ifdef INET
 void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
 #endif
-#if defined(__APPLE__)
+#if defined(__APPLE__) || defined(__Userspace__)
 #if defined(INET6)
 int sctp6_input_with_port __P((struct mbuf **, int *, uint16_t));
 #endif
@@ -421,6 +421,9 @@ void sctp_pathmtu_adjustment __P((struct sctp_tcb *, uint16_t));
 void sctp_input __P((pakhandle_type i_pak));
 #elif defined(__Userspace__)
 void sctp_input_with_port __P((struct mbuf *, int, uint16_t));
+#if defined(INET6)
+int sctp6_input_with_port __P((struct mbuf **, int *, uint16_t));
+#endif
 void sctp_input __P((struct mbuf *, int));
 void sctp_pathmtu_adjustment __P((struct sctp_tcb *, uint16_t));
 #else
@@ -431,7 +434,11 @@ int sctp_ctloutput __P((int, struct socket *, int, int, struct mbuf **));
 
 #endif
 void sctp_drain __P((void));
+#if defined(__Userspace__)
+void sctp_init __P((uint16_t));
+#else
 void sctp_init __P((void));
+#endif
 
 void sctp_finish(void);
 

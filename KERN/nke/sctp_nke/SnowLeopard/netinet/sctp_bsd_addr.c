@@ -50,7 +50,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_bsd_addr.c 229621 2012-01-05 19:00:36Z
 #include <netinet/sctp_asconf.h>
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_indata.h>
+#if !defined (__Userspace_os_Windows)
 #include <sys/unistd.h>
+#endif
 
 /* Declare all of our malloc named types */
 #ifndef __Panda__
@@ -107,13 +109,21 @@ void
 sctp_wakeup_iterator(void)
 {
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
-        pthread_cond_broadcast(&sctp_it_ctl.iterator_wakeup);
+#if defined (__Userspace_os_Windows)
+	WakeAllConditionVariable(&sctp_it_ctl.iterator_wakeup);
+#else
+	pthread_cond_broadcast(&sctp_it_ctl.iterator_wakeup);
+#endif
 #else
 	wakeup(&sctp_it_ctl.iterator_running);
 #endif
 }
 
+#if defined(__Userspace__)
+static void *
+#else
 static void
+#endif
 sctp_iterator_thread(void *v SCTP_UNUSED)
 {
 	SCTP_IPI_ITERATOR_WQ_LOCK();
@@ -123,13 +133,21 @@ sctp_iterator_thread(void *v SCTP_UNUSED)
 #else
 	while ((sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) == 0) {
 #endif
+#if !defined(__Userspace__)
 		msleep(&sctp_it_ctl.iterator_running,
 #if defined(__FreeBSD__)
 		       &sctp_it_ctl.ipi_iterator_wq_mtx,
-#elif defined(__APPLE__)
+#elif defined(__APPLE__) || defined(__Userspace_os_Darwin)
 		       sctp_it_ctl.ipi_iterator_wq_mtx,
 #endif
 		       0, "waiting_for_work", 0);
+#else
+#if defined(__Userspace_os_Windows)
+		SleepConditionVariableCS(&sctp_it_ctl.iterator_wakeup, &sctp_it_ctl.ipi_iterator_wq_mtx, INFINITE);
+#else
+		pthread_cond_wait(&sctp_it_ctl.iterator_wakeup, &sctp_it_ctl.ipi_iterator_wq_mtx); 
+#endif
+#endif
 #if !defined(__FreeBSD__)
 		if (sctp_it_ctl.iterator_flags & SCTP_ITERATOR_MUST_EXIT) {
 			break;
@@ -142,9 +160,21 @@ sctp_iterator_thread(void *v SCTP_UNUSED)
 	sctp_cleanup_itqueue();
 	sctp_it_ctl.iterator_flags |= SCTP_ITERATOR_EXITED;
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
+#if defined(__Userspace__)
+	sctp_wakeup_iterator();
+#if !defined(__Userspace_os_Windows)
+	pthread_exit(NULL);
+#else
+	ExitThread(0);
+#endif
+#else
 	wakeup(&sctp_it_ctl.iterator_flags);
 	thread_terminate(current_thread());
+#endif
 	panic("Hmm. thread_terminate() continues...");
+#if defined(__Userspace__)
+	return NULL;
+#endif
 #endif
 }
 
@@ -152,7 +182,7 @@ void
 sctp_startup_iterator(void)
 {
 	static int called = 0;
-#if defined(__FreeBSD__)
+#if defined(__FreeBSD__) || (defined(__Userspace__) && !defined(__Userspace_os_Windows))
 	int ret;
 #endif
 
@@ -182,7 +212,17 @@ sctp_startup_iterator(void)
 #elif defined(__APPLE__)
         (void)kernel_thread_start((thread_continue_t)sctp_iterator_thread, NULL, &sctp_it_ctl.thread_proc);
 #elif defined(__Userspace__)
-	/* TODO pthread_create or alternative to create a thread? */
+#if defined(__Userspace_os_Windows)
+	if ((sctp_it_ctl.thread_proc = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&sctp_iterator_thread, NULL, 0, NULL))==NULL) {
+		printf("ERROR; Creating sctp_iterator_thread failed\n");
+		exit(1);
+	}
+#else
+	if ((ret = pthread_create(&sctp_it_ctl.thread_proc, NULL, &sctp_iterator_thread, NULL))) {
+		printf("ERROR; return code from sctp_iterator_thread pthread_create() is %d\n", ret);
+		exit(1);
+	}
+#endif
 #endif
 }
 
@@ -228,16 +268,10 @@ sctp_gather_internal_ifa_flags(struct sctp_ifa *ifa)
 #endif /* INET6 */
 
 
+#if !defined(__Userspace__)
 static uint32_t
 sctp_is_desired_interface_type(struct ifaddr *ifa)
 {
-#if defined (__Userspace__)
-	/* __Userspace__ TODO struct ifaddr is defined in net/if_var.h
-	 * This struct contains struct ifnet, which is also defined in
-	 * net/if_var.h. Currently a zero byte if_var.h file is present for Linux boxes
-	 */
-	return (1); /* __Userspace__ Is this what we want for ms1? */
-#else
 	int result;
 
 	/* check the interface type to see if it's one we care about */
@@ -275,8 +309,8 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 	}
 
 	return (result);
-#endif /* #else of defined(__Userspace__) */
 }
+#endif
 
 #if defined(__APPLE__)
 int
@@ -286,7 +320,120 @@ sctp_is_vmware_interface(struct ifnet *ifn)
 }
 #endif
 
-#if defined (__Userspace__)
+#if defined (__Userspace_os_Windows)
+#ifdef MALLOC
+#undef MALLOC
+#define MALLOC(x) HeapAlloc(GetProcessHeap(), 0, (x))
+#endif
+#ifdef FREE
+#undef FREE
+#define FREE(x) HeapFree(GetProcessHeap(), 0, (x))
+#endif
+static void
+sctp_init_ifns_for_vrf(int vrfid)
+{
+	struct ifaddrs *ifa;
+	struct sctp_ifa *sctp_ifa;
+	DWORD Err, AdapterAddrsSize;
+	PIP_ADAPTER_ADDRESSES pAdapterAddrs, pAdapterAddrs6, pAdapt;
+	PIP_ADAPTER_UNICAST_ADDRESS pUnicast;
+
+#if defined(INET)
+	AdapterAddrsSize = 0;
+
+	if ((Err = GetAdaptersAddresses(AF_INET, 0, NULL, NULL, &AdapterAddrsSize)) != 0) {
+		if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER)) {
+			printf("GetAdaptersV4Addresses() sizing failed with error code %d\n", Err);
+			printf("err = %d; AdapterAddrsSize = %d\n", Err, AdapterAddrsSize);
+			return;
+		}
+	}
+
+	/* Allocate memory from sizing information */
+	if ((pAdapterAddrs = (PIP_ADAPTER_ADDRESSES) GlobalAlloc(GPTR, AdapterAddrsSize)) == NULL) {
+		printf("Memory allocation error!\n");
+		return;
+	}
+	/* Get actual adapter information */
+	if ((Err = GetAdaptersAddresses(AF_INET, 0, NULL, pAdapterAddrs, &AdapterAddrsSize)) != ERROR_SUCCESS) {
+		printf("GetAdaptersV4Addresses() failed with error code %d\n", Err);
+		return;
+	}
+	/* Enumerate through each returned adapter and save its information */
+	for (pAdapt = pAdapterAddrs; pAdapt; pAdapt = pAdapt->Next) {
+		if (pAdapt->IfType == IF_TYPE_IEEE80211 || pAdapt->IfType == IF_TYPE_ETHERNET_CSMACD) {
+			ifa = (struct ifaddrs*)malloc(sizeof(struct ifaddrs));
+			ifa->ifa_name = strdup(pAdapt->AdapterName);
+			ifa->ifa_flags = pAdapt->Flags;
+			ifa->ifa_addr = (struct sockaddr *)malloc(sizeof(struct sockaddr_in));
+			memcpy(ifa->ifa_addr, pAdapt->FirstUnicastAddress->Address.lpSockaddr, sizeof(struct sockaddr_in));
+
+			sctp_ifa = sctp_add_addr_to_vrf(0,
+			                                ifa,
+			                                pAdapt->IfIndex,
+			                                (pAdapt->IfType == IF_TYPE_IEEE80211)?MIB_IF_TYPE_ETHERNET:pAdapt->IfType,
+			                                ifa->ifa_name,
+			                                (void *)ifa,
+			                                ifa->ifa_addr,
+			                                ifa->ifa_flags,
+			                                0);
+			if (sctp_ifa) {
+				sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+			}
+		}
+	}
+	if (pAdapterAddrs)
+		FREE(pAdapterAddrs);
+#endif
+#if defined(INET6)
+	AdapterAddrsSize = 0;
+
+	if ((Err = GetAdaptersAddresses(AF_INET6, 0, NULL, NULL, &AdapterAddrsSize)) != 0) {
+		if ((Err != ERROR_BUFFER_OVERFLOW) && (Err != ERROR_INSUFFICIENT_BUFFER)) {
+			printf("GetAdaptersV6Addresses() sizing failed with error code %d\n", Err);
+			printf("err = %d; AdapterAddrsSize = %d\n", Err, AdapterAddrsSize);
+			return;
+		}
+	}
+	/* Allocate memory from sizing information */
+	if ((pAdapterAddrs6 = (PIP_ADAPTER_ADDRESSES) GlobalAlloc(GPTR, AdapterAddrsSize)) == NULL) {
+		printf("Memory allocation error!\n");
+		return;
+	}
+	/* Get actual adapter information */
+	if ((Err = GetAdaptersAddresses(AF_INET6, 0, NULL, pAdapterAddrs6, &AdapterAddrsSize)) != ERROR_SUCCESS) {
+		printf("GetAdaptersV6Addresses() failed with error code %d\n", Err);
+		return;
+	}
+	/* Enumerate through each returned adapter and save its information */
+	for (pAdapt = pAdapterAddrs6; pAdapt; pAdapt = pAdapt->Next) {
+		if (pAdapt->IfType == IF_TYPE_IEEE80211 || pAdapt->IfType == IF_TYPE_ETHERNET_CSMACD) {
+			for (pUnicast = pAdapt->FirstUnicastAddress; pUnicast; pUnicast = pUnicast->Next) {
+				ifa = (struct ifaddrs*)malloc(sizeof(struct ifaddrs));
+				ifa->ifa_name = strdup(pAdapt->AdapterName);
+				ifa->ifa_flags = pAdapt->Flags;
+				ifa->ifa_addr = (struct sockaddr *)malloc(sizeof(struct sockaddr_in6));
+				memcpy(ifa->ifa_addr, pUnicast->Address.lpSockaddr, sizeof(struct sockaddr_in6));
+				sctp_ifa = sctp_add_addr_to_vrf(0,
+				                                ifa,
+				                                pAdapt->Ipv6IfIndex,
+				                                (pAdapt->IfType == IF_TYPE_IEEE80211)?MIB_IF_TYPE_ETHERNET:pAdapt->IfType,
+				                                ifa->ifa_name,
+				                                (void *)ifa,
+				                                ifa->ifa_addr,
+				                                ifa->ifa_flags,
+				                                0);
+				if (sctp_ifa) {
+					sctp_ifa->localifa_flags &= ~SCTP_ADDR_DEFER_USE;
+				}
+			}
+		}
+	}
+	if (pAdapterAddrs6)
+		FREE(pAdapterAddrs6);
+#endif
+}
+#elif defined (__Userspace__)
 static void
 sctp_init_ifns_for_vrf(int vrfid)
 {
@@ -312,20 +459,16 @@ sctp_init_ifns_for_vrf(int vrfid)
 			/* non inet/inet6 skip */
 			continue;
 		}
-		if (ifa->ifa_addr->sa_family == AF_INET6) {
-			/* skip IPv6 for now.  TODO find correct structs... */
+		if ((ifa->ifa_addr->sa_family == AF_INET6) &&
+		    IN6_IS_ADDR_UNSPECIFIED(&((struct sockaddr_in6 *)ifa->ifa_addr)->sin6_addr)) {
+			/* skip unspecifed addresses */
 			continue;
-		} else {
-			if (((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
-				continue;
-			}
-			/* ifa type (ifaddrs) differs for __Userspace__ and no if_type field... also,
-			 *  skipping IPv6 items for now...
-			 */
-			/* TODO get the if_index (& mtu?)... */
-
-			ifa_flags = 0;
 		}
+		if (ifa->ifa_addr->sa_family == AF_INET &&
+		    ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr == 0) {
+			continue;
+		}
+		ifa_flags = 0;
 		sctp_ifa = sctp_add_addr_to_vrf(vrfid,
 		                                ifa,
 		                                if_nametoindex(ifa->ifa_name),

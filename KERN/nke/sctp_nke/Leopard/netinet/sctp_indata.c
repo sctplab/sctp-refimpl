@@ -3772,6 +3772,11 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 	int win_probe_recovered = 0;
 	int j, done_once = 0;
 	int rto_ok = 1;
+#if defined (CALLBACK_API)
+	struct socket *so;
+	uint32_t inqueue_bytes, sb_free_now;
+	struct sctp_inpcb *inp;
+#endif
 
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LOG_SACK_ARRIVALS_ENABLE) {
 		sctp_misc_ints(SCTP_SACK_LOG_EXPRESS, cumack,
@@ -3842,7 +3847,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 #ifdef INVARIANTS
 			panic("Impossible sack 1");
 #else
-			
+
 			*abort_now = 1;
 			/* XXX */
 			oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
@@ -3986,6 +3991,32 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 		}
 
 	}
+#if defined (CALLBACK_API)
+	inp = stcb->sctp_ep;
+	so = stcb->sctp_socket;
+
+	if (so) {
+		inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+		sb_free_now = SCTP_SB_LIMIT_SND(so) - (inqueue_bytes + stcb->asoc.sb_send_resv);
+
+		/* check if the amount free in the send socket buffer crossed the threshold */
+		if (inp->send_callback &&
+		    (((inp->send_sb_threshold > 0) &&
+		      (sb_free_now >= inp->send_sb_threshold) &&
+		      (stcb->asoc.chunks_on_out_queue <= SCTP_BASE_SYSCTL(sctp_max_chunks_on_queue))) ||
+		     (inp->send_sb_threshold == 0)))  {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			inp->send_callback(so, sb_free_now);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+			sb_free_now = SCTP_SB_LIMIT_SND(so) - (inqueue_bytes + stcb->asoc.sb_send_resv);
+		}
+	}
+	/* update the amount free in the send socket buffer for next time */
+	inp->prev_send_sb_free = sb_free_now;
+#else
 	/* sa_ignore NO_NULL_CHK */
 	if (stcb->sctp_socket) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4019,6 +4050,7 @@ sctp_express_handle_sack(struct sctp_tcb *stcb, uint32_t cumack,
 			sctp_wakeup_log(stcb, 1, SCTP_NOWAKE_FROM_SACK);
 		}
 	}
+#endif
 
 	/* JRS - Use the congestion control given in the CC module */
 	if ((asoc->last_acked_seq != cumack) && (ecne_seen == 0)) {
@@ -4321,6 +4353,11 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 	int rto_ok = 1;
 	uint8_t reneged_all = 0;
 	uint8_t cmt_dac_flag;
+#if defined (CALLBACK_API)
+	struct socket *so;
+	uint32_t inqueue_bytes, sb_free_now;
+	struct sctp_inpcb *inp;
+#endif
 	/*
 	 * we take any chance we can to service our queues since we cannot
 	 * get awoken when the socket is read from :<
@@ -4731,6 +4768,29 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 		asoc->total_flight = 0;
 	}
 
+#if defined(CALLBACK_API)
+	inp = stcb->sctp_ep;
+	so = stcb->sctp_socket;
+	if (so) {
+		inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+		sb_free_now = SCTP_SB_LIMIT_SND(so) - (inqueue_bytes + stcb->asoc.sb_send_resv);
+
+		/* check if the amount free in the send socket buffer crossed the threshold */
+		if (inp->send_callback &&
+		   (((inp->send_sb_threshold > 0) && (sb_free_now >= inp->send_sb_threshold)) ||
+		    (inp->send_sb_threshold == 0)))  {
+			atomic_add_int(&stcb->asoc.refcnt, 1);
+			SCTP_TCB_UNLOCK(stcb);
+			inp->send_callback(so, sb_free_now);
+			SCTP_TCB_LOCK(stcb);
+			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			inqueue_bytes = stcb->asoc.total_output_queue_size - (stcb->asoc.chunks_on_out_queue * sizeof(struct sctp_data_chunk));
+			sb_free_now = SCTP_SB_LIMIT_SND(so) - (inqueue_bytes + stcb->asoc.sb_send_resv);
+		}
+	}
+	/* update the amount free in the send socket buffer for next time */
+	inp->prev_send_sb_free = sb_free_now;
+#else
 	/* sa_ignore NO_NULL_CHK */
 	if ((wake_him) && (stcb->sctp_socket)) {
 #if defined (__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4763,6 +4823,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			sctp_wakeup_log(stcb, wake_him, SCTP_NOWAKE_FROM_SACK);
 		}
 	}
+#endif
 
 	if (asoc->fast_retran_loss_recovery && accum_moved) {
 		if (SCTP_TSN_GE(asoc->last_acked_seq, asoc->fast_recovery_tsn)) {
