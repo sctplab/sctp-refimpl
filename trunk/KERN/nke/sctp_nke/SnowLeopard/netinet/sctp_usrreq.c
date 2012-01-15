@@ -57,7 +57,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 230104 2012-01-14 09:10:20Z t
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_bsd_addr.h>
+#if !defined (__Userspace_os_Windows)
 #include <netinet/udp.h>
+#endif
 
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 #include <netinet/sctp_peeloff.h>
@@ -71,16 +73,35 @@ extern struct sctp_cc_functions sctp_cc_functions[];
 extern struct sctp_ss_functions sctp_ss_functions[];
 
 void
+#if defined(__Userspace__)
+sctp_init(uint16_t port)
+#else
 sctp_init(void)
+#endif
 {
 #if !defined(__Panda__) && !defined(__Userspace__)
 	u_long sb_max_adj;
 #endif
 
+#if defined(__Userspace_os_Windows)
+	WSADATA wsaData;
+	int Ret;
+
+	if ((Ret = WSAStartup(MAKEWORD(2,2), &wsaData))!=0) {
+		printf("WSAStartup failed\n");
+		exit (-1);
+	}
+	InitializeConditionVariable(&accept_cond);
+	InitializeCriticalSection(&accept_mtx);
+#endif
 	/* Initialize and modify the sysctled variables */
 	sctp_init_sysctls();
 #if defined(__Userspace__)
-        srandom(getpid()); /* so inp->sctp_ep.random_numbers are truly random... */
+#if defined (__Userspace_os_Windows)
+	srand((unsigned int)time(NULL));
+#else
+	srandom(getpid()); /* so inp->sctp_ep.random_numbers are truly random... */
+#endif
 #endif
 #if defined(__Panda__)
 	sctp_sendspace = SB_MAX;
@@ -89,6 +110,7 @@ sctp_init(void)
 #elif defined(__Userspace__)
 	SCTP_BASE_SYSCTL(sctp_sendspace) = SB_MAX;
 	SCTP_BASE_SYSCTL(sctp_recvspace) = SB_RAW;
+	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = port;
 #else
 #if !defined(__APPLE__)
 	if ((nmbclusters / 8) > SCTP_ASOC_MAX_CHUNKS_ON_QUEUE)
@@ -144,6 +166,9 @@ sctp_finish(void)
 	sctp_over_udp_stop();
 	sctp_address_monitor_stop();
 	sctp_stop_main_timer();
+#endif
+#if defined(__Userspace__)
+	recv_thread_destroy();
 #endif
 	sctp_pcb_finish();
 #if defined(__Windows__)
@@ -201,6 +226,7 @@ sctp_pathmtu_adjustment(struct sctp_tcb *stcb, uint16_t nxtsz)
 }
 
 #ifdef INET
+#if !defined(__Userspace__)
 #if defined(__Panda__) || defined(__Windows__)
 void
 #else
@@ -274,6 +300,7 @@ sctp_notify_mbuf(struct sctp_inpcb *inp,
 
 	SCTP_TCB_UNLOCK(stcb);
 }
+#endif
 #endif
 
 void
@@ -720,7 +747,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		return (EINVAL);
 	}
 #endif				/* INET6 */
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	if (addr && (addr->sa_len != sizeof(struct sockaddr_in))) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
@@ -1381,7 +1408,7 @@ sctp_fill_user_address(struct sockaddr_storage *ss, struct sockaddr *sa)
 	    &lsa6);
 #endif
 #endif
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	memcpy(ss, sa, sa->sa_len);
 #else
 	if (sa->sa_family == AF_INET) {
@@ -1572,7 +1599,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 		}
 	} else {
 		struct sctp_laddr *laddr;
-#if defined(__Windows__) || defined(__Userspace_os_Linux)
+#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined (__Userspace_os_Windows)
 		uint32_t sa_len = 0;
 #endif
 		LIST_FOREACH(laddr, &inp->sctp_addr_list, sctp_nxt_addr) {
@@ -1584,7 +1611,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 			if (sctp_fill_user_address(sas, &laddr->ifa->address.sa))
 				continue;
 
-#if defined(__Windows__)
+#if defined(__Windows__) || defined (__Userspace_os_Windows)
 			if (laddr->ifa->address.sa.sa_family == AF_INET) {
 				sa_len = sizeof(struct sockaddr_in);
 			} else {
@@ -1592,7 +1619,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 			}
 #endif
 			((struct sockaddr_in6 *)sas)->sin6_port = inp->sctp_lport;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			sas = (struct sockaddr_storage *)((caddr_t)sas +
 							  laddr->ifa->address.sa.sa_len);
 			actual += laddr->ifa->address.sa.sa_len;
@@ -2950,7 +2977,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		sstat->sstat_instrms = stcb->asoc.streamincnt;
 		sstat->sstat_outstrms = stcb->asoc.streamoutcnt;
 		sstat->sstat_fragmentation_point = sctp_get_frag_point(stcb, &stcb->asoc);
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		memcpy(&sstat->sstat_primary.spinfo_address,
 		       &stcb->asoc.primary_destination->ro._l_addr,
 		       ((struct sockaddr *)(&stcb->asoc.primary_destination->ro._l_addr))->sa_len);
@@ -3133,7 +3160,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			int len;
 
 			len = *optsize;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			if (len > stcb->asoc.primary_destination->ro._l_addr.sa.sa_len)
 				len = stcb->asoc.primary_destination->ro._l_addr.sa.sa_len;
 #else
@@ -6189,7 +6216,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 	{
 		struct sctp_udpencaps *encaps;
 		struct sctp_nets *net;
-			
+
 		SCTP_CHECK_AND_CAST(encaps, optval, struct sctp_udpencaps, optsize);
 		SCTP_FIND_STCB(inp, stcb, encaps->sue_assoc_id);
 		if (stcb) {
@@ -6390,7 +6417,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #if defined(__Userspace__)
         /* TODO __Userspace__ falls into this code for IPv6 stuff at the moment... */
 #endif
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	switch (addr->sa_family) {
 #ifdef INET6
 	case AF_INET6:
@@ -6420,10 +6447,12 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 		struct sockaddr_in *sinp;
 
 #endif
+#if !defined (__Userspace_os_Windows)
 		if (addr->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			return (EINVAL);
 		}
+#endif
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 		sinp = (struct sockaddr_in *)addr;
 		if (p != NULL && (error = prison_remote_ip4(p->td_ucred, &sinp->sin_addr)) != 0) {
@@ -6639,7 +6668,7 @@ sctp_listen(struct socket *so, struct proc *p)
 #ifdef INET6
 			if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
 				store.sa.sa_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				store.sa.sa_len = sizeof(struct sockaddr_in6);
 #endif
 			}
@@ -6647,7 +6676,7 @@ sctp_listen(struct socket *so, struct proc *p)
 #ifdef INET
 			if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
 				store.sa.sa_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				store.sa.sa_len = sizeof(struct sockaddr_in);
 #endif
 			}
@@ -6803,7 +6832,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		bzero((caddr_t)sin, sizeof(*sin));
 #endif
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = ((struct sockaddr_in *)&store)->sin_port;
@@ -6830,7 +6859,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 		bzero((caddr_t)sin6, sizeof(*sin6));
 #endif
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = ((struct sockaddr_in6 *)&store)->sin6_port;
@@ -6954,7 +6983,7 @@ sctp_ingetaddr(struct socket *so, struct mbuf *nam)
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin->sin_len = sizeof(*sin);
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
@@ -7078,7 +7107,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 	memset(sin, 0, sizeof(*sin));
 #endif
 	sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin->sin_len = sizeof(*sin);
 #endif
 
@@ -7323,4 +7352,34 @@ sctp_usrreq(so, req, m, nam, control)
 }
 
 #endif
+#endif
+
+#if defined (CALLBACK_API)
+int
+register_recv_cb (struct socket* so, int (*receive_cb)(struct socket *sock, struct sctp_queued_to_read* c))
+{
+	struct sctp_inpcb* inp;
+
+	inp = (struct sctp_inpcb *) so->so_pcb;
+	inp->recv_callback = receive_cb;
+	return 1;
+}
+
+int
+register_send_cb (struct socket* so, uint32_t sb_threshold, int (*send_cb)(struct socket *sock, uint32_t sb_free))
+{
+	struct sctp_inpcb* inp;
+
+	inp = (struct sctp_inpcb *) so->so_pcb;
+	inp->send_callback = send_cb;
+	inp->send_sb_threshold = sb_threshold;
+	inp->prev_send_sb_free = 0;
+	/* FIXME change to current amount free. This will be the full buffer
+	 * the first time this is registered but it could be only a portion
+	 * of the send buffer if this is called a second time e.g. if the
+	 * threshold changes.
+	 */
+	return 1;
+}
+
 #endif

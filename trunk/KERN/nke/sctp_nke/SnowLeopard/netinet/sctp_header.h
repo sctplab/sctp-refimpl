@@ -40,14 +40,21 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 228653 2011-12-17 19:21:40Z t
 #ifndef __sctp_header_h__
 #define __sctp_header_h__
 
-#if defined(__Windows__)
+#if defined(__Windows__) && !defined (__Userspace_os_Windows)
 #include <packon.h>
 #endif
+#if !defined (__Userspace_os_Windows)
 #include <sys/time.h>
+#endif
 #include <netinet/sctp.h>
 #include <netinet/sctp_constants.h>
 
+#if !defined (__Userspace_os_Windows)
 #define SCTP_PACKED __attribute__((packed))
+#else
+#pragma pack (push, 1)
+#define SCTP_PACKED
+#endif
 
 /*
  * Parameter structures

@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 228966 2011-12-29 18:25:18Z jhb $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 230136 2012-01-15 13:35:55Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -59,13 +59,18 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 228966 2011-12-29 18:25:18Z j
 #if defined(__Userspace_os_Linux)
 #define __FAVOR_BSD    /* (on Ubuntu at least) enables UDP header field names like BSD in RFC 768 */
 #endif
+#if !defined(__Userspace_os_Windows)
 #include <netinet/udp.h>
+#endif
 #if defined(__APPLE__)
 #include <netinet/in.h>
 #endif
 #if defined(__FreeBSD__)
 #include <machine/in_cksum.h>
 #endif
+#if defined(__Userspace__) && defined(INET6)
+#include <netinet6/sctp6_var.h>
+#endif 
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 3
@@ -2780,10 +2785,7 @@ sctp_select_nth_preferred_addr_from_ifn_boundall(struct sctp_ifn *ifn,
 #endif  /* SCTP_EMBEDDED_V6_SCOPE */
 #endif	/* INET6 */
 
-#if defined(__Userspace__)
-                /* __Userspace avoids IPv6 for now... */
-#endif
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Userspace__)
 		/* Check if the IPv6 address matches to next-hop.
 		   In the mobile case, old IPv6 address may be not deleted
 		   from the interface. Then, the interface has previous and
@@ -3321,8 +3323,12 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 #ifdef INET6
 	case AF_INET6:
 		/* Scope based on outbound address */
+#if defined(__Userspace_os_Windows)
+		if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr)) {
+#else
 		if (IN6_IS_ADDR_LOOPBACK(&to6->sin6_addr) ||
 		    SCTP_ROUTE_IS_REAL_LOOP(ro)) {
+#endif
 			/*
 			 * If the address is a loopback address, which
 			 * consists of "::1" OR "fe80::1%lo0", we are loopback
@@ -3548,7 +3554,7 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 				}
 				memset(&sin, 0, sizeof(struct sockaddr_in));
 				sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				sin.sin_len = sizeof(struct sockaddr_in);
 #endif
 				sin.sin_port = stcb->rport;
@@ -3574,7 +3580,7 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 				}
 				memset(&sin6, 0, sizeof(struct sockaddr_in6));
 				sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 				sin6.sin6_port = stcb->rport;
@@ -3663,7 +3669,7 @@ sctp_findassociation_cmsgs(struct sctp_inpcb **inp_p,
 				}
 				memset(&sin, 0, sizeof(struct sockaddr_in));
 				sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				sin.sin_len = sizeof(struct sockaddr_in);
 #endif
 				sin.sin_port = port;
@@ -3679,7 +3685,7 @@ sctp_findassociation_cmsgs(struct sctp_inpcb **inp_p,
 				}
 				memset(&sin6, 0, sizeof(struct sockaddr_in6));
 				sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 				sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 				sin6.sin6_port = port;
@@ -4058,7 +4064,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			ro = &iproute;
 			memset(&iproute, 0, sizeof(iproute));
-#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			memcpy(&ro->ro_dst, to, to->sa_len);
 #else
 			memcpy(&ro->ro_dst, to, sizeof(struct sockaddr_in));
@@ -4276,11 +4282,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	{
 		uint32_t flowlabel, flowinfo;
 		struct ip6_hdr *ip6h;
-#if defined(__Userspace__)
-		sctp_route_t ip6route;
-#else
 		struct route_in6 ip6route;
-#endif
 #if defined(__Panda__) || defined(__Userspace__)
 		void *ifp;
 #else
@@ -4369,7 +4371,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		if (net == NULL) {
 			memset(&ip6route, 0, sizeof(ip6route));
 			ro = (sctp_route_t *)&ip6route;
-#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows) /*__Userspace__ */
 			memcpy(&ro->ro_dst, sin6, sin6->sin6_len);
 #else
 			memcpy(&ro->ro_dst, sin6, sizeof(struct sockaddr_in6));
@@ -4415,7 +4417,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		 */
 		bzero(&lsa6_tmp, sizeof(lsa6_tmp));
 		lsa6_tmp.sin6_family = AF_INET6;
-#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows) /*__Userspace__ */
 		lsa6_tmp.sin6_len = sizeof(lsa6_tmp);
 #endif
 		lsa6 = &lsa6_tmp;
@@ -5403,14 +5405,14 @@ sctp_are_there_new_addresses(struct sctp_association *asoc,
 #ifdef INET
 	memset(&sin4, 0, sizeof(sin4));
 	sin4.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin4.sin_len = sizeof(sin4);
 #endif
 #endif
 #ifdef INET6
 	memset(&sin6, 0, sizeof(sin6));
 	sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin6.sin6_len = sizeof(sin6);
 #endif
 #endif
@@ -5697,7 +5699,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	case IPVERSION:
 		  to_sin->sin_port = sh->dest_port;
 		  to_sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		  to_sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		  to_sin->sin_addr = iph->ip_dst;
@@ -5710,7 +5712,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		  to_sin6->sin6_scope_id = 0;
 		  to_sin6->sin6_port = sh->dest_port;
 		  to_sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		  to_sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		  break;
@@ -5727,7 +5729,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		case IPVERSION:
 		{
 			sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 			sin->sin_port = sh->src_port;
@@ -5768,7 +5770,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		{
 			ip6 = mtod(init_pkt, struct ip6_hdr *);
 			sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 			sin6->sin6_port = sh->src_port;
@@ -11160,14 +11162,17 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 		break;
 #endif
 #ifdef INET6
-#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
 	case IPV6_VERSION >> 4:
 		ip6 = (struct ip6_hdr *)iph;
 		ip6_out = mtod(mout, struct ip6_hdr *);
 
 		/* Fill in the IPv6 header for the ABORT */
 		ip6_out->ip6_flow = ip6->ip6_flow;
+#if defined(__Userspace__)
+		ip6_out->ip6_hlim = IPv6_HOP_LIMIT;
+#else
 		ip6_out->ip6_hlim = MODULE_GLOBAL(ip6_defhlim);
+#endif
 		if (port) {
 			ip6_out->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -11182,7 +11187,6 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 		offset_out += sizeof(*ip6_out);
 		comp_cp = (struct sctp_shutdown_complete_msg *)(
 		    (caddr_t)ip6_out + offset_out);
-#endif /* ! __Userspace__ */
 		break;
 #endif /* INET6 */
 	default:
@@ -11277,13 +11281,9 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 #endif
 #ifdef INET6
 	if (ip6_out != NULL) {
-#if defined(__Userspace__)
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 		struct ifnet *ifp = NULL;
 #endif
 
@@ -11325,7 +11325,11 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 #endif
 #endif
 		}
+#if !defined(__Userspace__)
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, NULL, vrf_id);
+#else
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, NULL, NULL, vrf_id);
+#endif
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -11404,7 +11408,7 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	hb->heartbeat.hb_info.time_value_2 = now.tv_usec;
 	/* Did our user request this one, put it in */
 	hb->heartbeat.hb_info.addr_family = net->ro._l_addr.sa.sa_family;
-#if !(defined(__Windows__) ||  defined(__Userspace_os_Linux)) /*__Userspace__ */
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	hb->heartbeat.hb_info.addr_len = net->ro._l_addr.sa.sa_len;
 #else
 	hb->heartbeat.hb_info.addr_len = sizeof(struct sockaddr_in);
@@ -12189,14 +12193,17 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		break;
 #endif
 #ifdef INET6
-#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
 	case IPV6_VERSION >> 4:
 		ip6 = (struct ip6_hdr *)iph;
 		ip6_out = mtod(mout, struct ip6_hdr *);
 
 		/* Fill in the IP6 header for the ABORT */
 		ip6_out->ip6_flow = ip6->ip6_flow;
+#if defined(__Userspace__)
+		ip6_out->ip6_hlim = IPv6_HOP_LIMIT;
+#else
 		ip6_out->ip6_hlim = MODULE_GLOBAL(ip6_defhlim);
+#endif
 		if (port) {
 			ip6_out->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -12208,7 +12215,6 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		iphlen_out = sizeof(*ip6_out);
 		abm = (struct sctp_abort_msg *)((caddr_t)ip6_out + iphlen_out);
 		break;
-#endif /* ! __Userspace__ */
 #endif /* INET6 */
 	default:
 		/* Currently not supported */
@@ -12335,13 +12341,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 #ifdef INET6
 	if (ip6_out != NULL) {
-#if defined(__Userspace__)
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 		struct ifnet *ifp = NULL;
 #endif
 		/* zap the stack pointer to the route */
@@ -12349,11 +12351,9 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #if defined(__Panda__)
 		ro._l_addr.sa.sa_family = AF_INET6;
 #endif
-#if !defined(__Userspace__)
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 		}
-#endif
 		SCTPDBG(SCTP_DEBUG_OUTPUT2, "sctp_send_abort calling ip6_output:\n");
 		SCTPDBG_PKT(SCTP_DEBUG_OUTPUT2, (struct ip *)ip6_out, &abm->sh);
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
@@ -12390,7 +12390,11 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 #endif
 #endif
 		}
+#if !defined(__Userspace__)
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, NULL, vrf_id);
+#else
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, NULL, NULL, vrf_id);
+#endif
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -12509,14 +12513,17 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		break;
 #endif
 #ifdef INET6
-#if !defined(__Userspace__) /* TODO declare ip6_defhlim */
 	case IPV6_VERSION >> 4:
 		ip6 = (struct ip6_hdr *)iph;
 		ip6_out = mtod(mout, struct ip6_hdr *);
 
 		/* Fill in the IP6 header for the ABORT */
 		ip6_out->ip6_flow = ip6->ip6_flow;
+#if defined(__Userspace__)
+		ip6_out->ip6_hlim = IPv6_HOP_LIMIT;
+#else
 		ip6_out->ip6_hlim = MODULE_GLOBAL(ip6_defhlim);
+#endif
 		if (port) {
 			ip6_out->ip6_nxt = IPPROTO_UDP;
 		} else {
@@ -12528,7 +12535,6 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		iphlen_out = sizeof(struct ip6_hdr);
 		sh_out = (struct sctphdr *)((caddr_t)ip6_out + iphlen_out);
 		break;
-#endif /* ! __Userspace__ */
 #endif /* INET6 */
 	default:
 		/* Currently not supported */
@@ -12651,13 +12657,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #endif
 #ifdef INET6
 	if (ip6_out != NULL) {
-#if defined(__Userspace__)
-		sctp_route_t ro;
-#else
 		struct route_in6 ro;
-#endif
 		int ret;
-#if !defined(__Panda__)
+#if !defined(__Panda__) && !defined(__Userspace__)
 		struct ifnet *ifp = NULL;
 #endif
 		/* zap the stack pointer to the route */
@@ -12665,11 +12667,9 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #if defined(__Panda__)
 		ro._l_addr.sa.sa_family = AF_INET6;
 #endif
-#if !defined(__Userspace__)
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip6_hdr));
 		}
-#endif
 		ip6_out->ip6_plen = len - sizeof(*ip6_out);
 #ifdef  SCTP_PACKET_LOGGING
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING)
@@ -12704,7 +12704,11 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 #endif
 #endif
 		}
+#if !defined(__Userspace__)
 		SCTP_IP6_OUTPUT(ret, o_pak, &ro, &ifp, NULL, vrf_id);
+#else
+		SCTP_IP6_OUTPUT(ret, o_pak, &ro, NULL, NULL, vrf_id);
+#endif
 
 		/* Free the route if we got one back */
 		if (ro.ro_rt)
@@ -13077,9 +13081,6 @@ sctp_sosend(struct socket *so,
 		}
 	}
 	addr_to_use = addr;
-#if defined(__Userspace__)
-	/* TODO port in6_sin6_2_sin */
-#else
 #if defined(INET) && defined(INET6)
 	if ((addr) && (addr->sa_family == AF_INET6)) {
 		struct sockaddr_in6 *sin6;
@@ -13090,7 +13091,6 @@ sctp_sosend(struct socket *so,
 			addr_to_use = (struct sockaddr *)&sin;
 		}
 	}
-#endif
 #endif
 	error = sctp_lower_sosend(so, addr_to_use, uio, top,
 #ifdef __Panda__
@@ -13499,13 +13499,17 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 	}
-	if ((SCTP_SO_IS_NBIO(so)
+#if defined(CALLBACK_API)
+	non_blocking = 1;
+#else
+	if (SCTP_SO_IS_NBIO(so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 	     || (flags & MSG_NBIO)
 #endif
-		    )) {
+	    ) {
 		non_blocking = 1;
 	}
+#endif
 	/* would we block? */
 	if (non_blocking) {
 		if (hold_tcblock == 0) {

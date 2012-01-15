@@ -212,11 +212,11 @@ struct sctp_epinfo {
 	struct mtx ipi_pktlog_mtx;
 	struct mtx wq_addr_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_mutex_t ipi_ep_mtx;
-	pthread_mutex_t ipi_addr_mtx;
-	pthread_mutex_t ipi_count_mtx;
-	pthread_mutex_t ipi_pktlog_mtx;
-	pthread_mutex_t wq_addr_mtx;
+	userland_mutex_t ipi_ep_mtx;
+	userland_mutex_t ipi_addr_mtx;
+	userland_mutex_t ipi_count_mtx;
+	userland_mutex_t ipi_pktlog_mtx;
+	userland_mutex_t wq_addr_mtx;
 #elif defined(__APPLE__)
 #ifdef _KERN_LOCKS_H_
 	lck_grp_attr_t *mtx_grp_attr;
@@ -491,9 +491,9 @@ struct sctp_inpcb {
 	struct mtx inp_rdata_mtx;
 	int32_t refcount;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_mutex_t inp_mtx;
-	pthread_mutex_t inp_create_mtx;
-	pthread_mutex_t inp_rdata_mtx;
+	userland_mutex_t inp_mtx;
+	userland_mutex_t inp_create_mtx;
+	userland_mutex_t inp_rdata_mtx;
 	int32_t refcount;
 #elif defined(__APPLE__)
 #if defined(SCTP_APPLE_RWLOCK)
@@ -550,8 +550,19 @@ struct sctp_inpcb {
 	struct sctp_pcbtsn_rlog readlog[SCTP_READ_LOG_SIZE];
 	uint32_t readlog_index;
 #endif
+#if defined (CALLBACK_API)
+	int (*recv_callback)(struct socket*, struct sctp_queued_to_read*);
+	uint32_t send_sb_threshold;
+	uint32_t prev_send_sb_free;
+	int (*send_callback)(struct socket*, uint32_t);
+#endif
 };
 
+#if defined (CALLBACK_API)
+int register_recv_cb (struct socket*, int (*)(struct socket *, struct sctp_queued_to_read*));
+int register_send_cb (struct socket*, uint32_t, int (*)(struct socket *, uint32_t));
+
+#endif
 struct sctp_tcb {
 	struct socket *sctp_socket;	/* back pointer to socket */
 	struct sctp_inpcb *sctp_ep;	/* back pointer to ep */
@@ -581,8 +592,8 @@ struct sctp_tcb {
 	struct mtx tcb_mtx;
 	struct mtx tcb_send_mtx;
 #elif defined(SCTP_PROCESS_LEVEL_LOCKS)
-	pthread_mutex_t tcb_mtx;
-	pthread_mutex_t tcb_send_mtx;
+	userland_mutex_t tcb_mtx;
+	userland_mutex_t tcb_send_mtx;
 #elif defined(__APPLE__)
 	lck_mtx_t* tcb_mtx;
 	lck_mtx_t* tcb_send_mtx;

@@ -54,15 +54,27 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 228907 2011-12-27 10:16:24Z tuex
 #if defined(__FreeBSD__) && __FreeBSD_version >= 900000
 #include <netinet/sctp_dtrace_define.h>
 #endif
+#if !defined(__Userspace_os_Windows)
 #include <netinet/udp.h>
+#endif
 #ifdef INET6
+#if defined(__Userspace__)
+#include "user_ip6_var.h"
+#else
 #include <netinet6/ip6_var.h>
+#endif
 #endif
 #if defined(__FreeBSD__)
 #include <sys/sched.h>
 #include <sys/smp.h>
-#endif
 #include <sys/unistd.h>
+#endif
+#if defined(__Userspace__)
+#if !defined(__Userspace_os_Windows)
+#include <sys/unistd.h>
+#endif
+#include <user_socketvar.h>
+#endif
 
 #if defined(__APPLE__)
 #define APPLE_FILE_NO 4
@@ -130,15 +142,7 @@ SCTP6_ARE_ADDR_EQUAL(struct sockaddr_in6 *a, struct sockaddr_in6 *b)
 	return (IN6_ARE_ADDR_EQUAL(&tmp_a, &tmp_b));
 #endif
 #else
-#if defined(__Userspace__)
-	/* FIX ME: __Userspace__ on FreeBSD 7 complains of struct sockaddr_in6
-         *   having no member named __u6_addr when using IN6_ARE_ADDR_EQUAL...
-         */
-        return (0);
-#else
-	/* FIX ME: we just #define this */
-	return (IN6_ARE_ADDR_EQUAL(a, b));
-#endif
+	return (IN6_ARE_ADDR_EQUAL(&(a->sin6_addr), &(b->sin6_addr)));
 #endif /* SCTP_EMBEDDED_V6_SCOPE */
 }
 #endif
@@ -672,7 +676,7 @@ sctp_add_addr_to_vrf(uint32_t vrf_id, void *ifn, uint32_t ifn_index,
 	atomic_add_int(&sctp_ifnp->refcount, 1);
 	sctp_ifap->vrf_id = vrf_id;
 	sctp_ifap->ifa = ifa;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	memcpy(&sctp_ifap->address, addr, addr->sa_len);
 #else
 	if (addr->sa_family == AF_INET) {
@@ -1182,7 +1186,6 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 #endif
 						sin6 = &sctp_ifa->address.sin6;
 						rsin6 = (struct sockaddr_in6 *)to;
-#if !defined(__Userspace__) /* ignoring IPv6 for now... */
 						if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 							if (local_scope == 0)
 								continue;
@@ -1206,7 +1209,6 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 						    (IN6_IS_ADDR_SITELOCAL(&sin6->sin6_addr))) {
 							continue;
 						}
-#endif /*  !defined(__Userspace__) */
 						if (SCTP6_ARE_ADDR_EQUAL(sin6, rsin6)) {
 							SCTP_IPI_ADDR_RUNLOCK();
 							return (1);
@@ -2107,7 +2109,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int offset,
 
 #ifdef INET
 	memset(&sin4, 0, sizeof(sin4));
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin4.sin_len = sizeof(sin4);
 #endif
 	sin4.sin_family = AF_INET;
@@ -2115,7 +2117,7 @@ sctp_findassociation_special_addr(struct mbuf *m, int offset,
 #endif
 #ifdef INET6
 	memset(&sin6, 0, sizeof(sin6));
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin6.sin6_len = sizeof(sin6);
 #endif
 	sin6.sin6_family = AF_INET6;
@@ -2323,7 +2325,7 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 		from4 = (struct sockaddr_in *)&from_store;
 		bzero(from4, sizeof(*from4));
 		from4->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		from4->sin_len = sizeof(struct sockaddr_in);
 #endif
 		from4->sin_addr.s_addr = iph->ip_src.s_addr;
@@ -2342,7 +2344,7 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 		from6 = (struct sockaddr_in6 *)&from_store;
 		bzero(from6, sizeof(*from6));
 		from6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		from6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		from6->sin6_addr = ip6->ip6_src;
@@ -2385,7 +2387,7 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 		to4 = (struct sockaddr_in *)&to_store;
 		bzero(to4, sizeof(*to4));
 		to4->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		to4->sin_len = sizeof(struct sockaddr_in);
 #endif
 		to4->sin_addr.s_addr = iph->ip_dst.s_addr;
@@ -2404,7 +2406,7 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 		to6 = (struct sockaddr_in6 *)&to_store;
 		bzero(to6, sizeof(*to6));
 		to6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		to6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		to6->sin6_addr = ip6->ip6_dst;
@@ -2524,7 +2526,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int offset,
 		/* its IPv4 */
 		sin = (struct sockaddr_in *)&local_store;
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = sh->dest_port;
@@ -2537,7 +2539,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int offset,
 		ip6 = mtod(m, struct ip6_hdr *);
 		sin6 = (struct sockaddr_in6 *)&local_store;
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = sh->dest_port;
@@ -2577,7 +2579,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int offset,
 		}
 		sin6 = (struct sockaddr_in6 *)&remote_store;
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6->sin6_len = sizeof(*sin6);
 #endif
 		sin6->sin6_port = sh->src_port;
@@ -2606,7 +2608,7 @@ sctp_findassociation_ep_asconf(struct mbuf *m, int offset,
 		}
 		sin = (struct sockaddr_in *)&remote_store;
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin->sin_len = sizeof(*sin);
 #endif
 		sin->sin_port = sh->src_port;
@@ -2677,9 +2679,11 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
 #ifdef INET6
+#if !defined(__Userspace__)
 	if (MODULE_GLOBAL(ip6_auto_flowlabel)) {
 		inp->ip_inp.inp.inp_flags |= IN6P_AUTOFLOWLABEL;
 	}
+#endif
 #endif
 	inp->sctp_associd_counter = 1;
 	inp->partial_delivery_point = SCTP_SB_LIMIT_RCV(so) >> SCTP_PARTIAL_DELIVERY_SHIFT;
@@ -3121,7 +3125,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
 			}
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			if (addr->sa_len != sizeof(*sin)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
@@ -3154,7 +3158,7 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 
 			sin6 = (struct sockaddr_in6 *)addr;
 
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			if (addr->sa_len != sizeof(*sin6)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
 				return (EINVAL);
@@ -3200,8 +3204,6 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, error);
 					return (error);
 				}
-#elif defined(__Userspace__)
-                                /* TODO IPv6 stuff for __Userspace__ */
 #else
 				if (in6_embedscope(&sin6->sin6_addr, sin6) != 0) {
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
@@ -4310,7 +4312,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		memset(&sin->sin_zero, 0, sizeof(sin->sin_zero));
 
 		/* assure len is set */
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		if (set_scope) {
@@ -4342,7 +4344,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			return (-1);
 		}
 		/* assure len is set */
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		if (set_scope) {
@@ -4396,13 +4398,13 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 	SCTP_INCR_RADDR_COUNT();
 	bzero(net, sizeof(struct sctp_nets));
 	(void)SCTP_GETTIME_TIMEVAL(&net->start_time);
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	memcpy(&net->ro._l_addr, newaddr, newaddr->sa_len);
 #endif
 	switch (newaddr->sa_family) {
 #ifdef INET
 	case AF_INET:
-#if defined(__Windows__) || defined(__Userspace_os_Linux)
+#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
 		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_in));
 #endif
 		((struct sockaddr_in *)&net->ro._l_addr)->sin_port = stcb->rport;
@@ -4410,7 +4412,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 #ifdef INET6
 	case AF_INET6:
-#if defined(__Windows__) || defined(__Userspace_os_Linux)
+#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
 		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_in6));
 #endif
 		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
@@ -6411,7 +6413,7 @@ sctp_pcb_init()
 	 */
 	int i;
 	struct timeval tv;
-	
+
 	if (SCTP_BASE_VAR(sctp_pcb_initialized) != 0) {
 		/* error I was called twice */
 		return;
@@ -6569,7 +6571,11 @@ sctp_pcb_init()
 	}
 
 #if defined(SCTP_PROCESS_LEVEL_LOCKS)
+#if defined(__Userspace_os_Windows)
+	InitializeConditionVariable(&sctp_it_ctl.iterator_wakeup);
+#else
 	(void)pthread_cond_init(&sctp_it_ctl.iterator_wakeup, NULL);
+#endif
 #endif
 	sctp_startup_iterator();
 
@@ -6714,7 +6720,7 @@ sctp_pcb_finish(void)
 	/* free the vrf hashes */
 	SCTP_HASH_FREE(SCTP_BASE_INFO(sctp_vrfhash), SCTP_BASE_INFO(hashvrfmark));
 	SCTP_HASH_FREE(SCTP_BASE_INFO(vrf_ifn_hash), SCTP_BASE_INFO(vrf_ifn_hashmark));
-#if defined(__Userspace__)
+#if defined(__Userspace__) && !defined(__Userspace_os_Windows)
 	/* free memory allocated by getifaddrs call */
 	freeifaddrs(g_interfaces);
 #endif
@@ -6836,7 +6842,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 #ifdef INET
 	memset(&sin, 0, sizeof(sin));
 	sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin.sin_len = sizeof(sin);
 #endif
 	sin.sin_port = stcb->rport;
@@ -6844,7 +6850,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 #ifdef INET6
 	memset(&sin6, 0, sizeof(sin6));
 	sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 	sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	sin6.sin6_port = stcb->rport;
@@ -6860,7 +6866,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		sin_2 = (struct sockaddr_in *)(local_sa);
 		memset(sin_2, 0, sizeof(sin));
 		sin_2->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin_2->sin_len = sizeof(sin);
 #endif
 		sin_2->sin_port = sh->dest_port;
@@ -6889,7 +6895,7 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 		sin6_2 = (struct sockaddr_in6 *)(local_sa);
 		memset(sin6_2, 0, sizeof(sin6));
 		sin6_2->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6_2->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6_2->sin6_port = sh->dest_port;
