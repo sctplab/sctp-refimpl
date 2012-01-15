@@ -45,7 +45,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 228653 2011-12-17 19:21:40Z tuex
 #endif
 #endif
 
-#if !(defined(__Windows__))
+#if !(defined(__Windows__)) && !defined(__Userspace_os_Windows)
 #if ! defined(_KERNEL)
 #include <stdint.h>
 #endif
@@ -61,6 +61,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 228653 2011-12-17 19:21:40Z tuex
 #include <sys/socket.h>
 #include <netinet/in.h>
 #endif
+#endif
+#if defined(__Userspace_os_Windows)
+#define __P(Protos) Protos
 #endif
 
 typedef uint32_t sctp_assoc_t;
@@ -1087,6 +1090,7 @@ union sctp_sockstore {
 /***********************************/
 
 #ifndef __APPLE__
+#ifndef __Userspace__
 #ifndef ntohll
 #if defined(__Userspace_os_Linux)
 #ifndef _BSD_SOURCE
@@ -1109,6 +1113,7 @@ union sctp_sockstore {
 #include <sys/endian.h>
 #endif
 #define htonll(x) htobe64(x)
+#endif
 #endif
 #endif
 /***********************************/
