@@ -51,7 +51,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 229805 2012-01-08 09:56:24Z tu
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_crc32.h>
+#if !defined(__Userspace_os_Windows)
 #include <netinet/udp.h>
+#endif
 #if defined(__FreeBSD__)
 #include <sys/smp.h>
 #endif
@@ -564,7 +566,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in)) {
 			sin = (struct sockaddr_in *)&store;
 			sin->sin_family = cp->heartbeat.hb_info.addr_family;
-#if !(defined(__Windows__) || defined(__Userspace_os_Linux))
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			sin->sin_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sin->sin_port = stcb->rport;
@@ -580,7 +582,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in6)) {
 			sin6 = (struct sockaddr_in6 *)&store;
 			sin6->sin6_family = cp->heartbeat.hb_info.addr_family;
-#if !(defined(__Windows__) || defined(__Userspace_os_Linux))
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 			sin6->sin6_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sin6->sin6_port = stcb->rport;
@@ -2206,7 +2208,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin = (struct sockaddr_in *)initack_src;
 		memset(sin, 0, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_addr.s_addr = cookie->laddress[0];
@@ -2218,7 +2220,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin6 = (struct sockaddr_in6 *)initack_src;
 		memset(sin6, 0, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6->sin6_scope_id = cookie->scope_id;
@@ -2380,7 +2382,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin = (struct sockaddr_in *)(localep_sa);
 		memset(lsin, 0, sizeof(*lsin));
 		lsin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		lsin->sin_len = sizeof(*lsin);
 #endif
 		lsin->sin_port = sh->dest_port;
@@ -2399,7 +2401,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		lsin6 = (struct sockaddr_in6 *)(localep_sa);
 		memset(lsin6, 0, sizeof(*lsin6));
 		lsin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		lsin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		ip6 = mtod(m, struct ip6_hdr *);
@@ -2593,7 +2595,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_IPV6_ADDRESS:
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin6.sin6_len = sizeof(sin6);
 #endif
 		sin6.sin6_port = sh->src_port;
@@ -2607,7 +2609,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_IPV4_ADDRESS:
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux)
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
 		sin.sin_len = sizeof(sin);
 #endif
 		sin.sin_port = sh->src_port;
@@ -5850,7 +5852,9 @@ sctp_input(i_pak, va_alist)
 	/* Open BSD gives us the len in network order, fix it */
 	NTOHS(ip->ip_len);
 #endif
-
+#if defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+	ip->ip_len = ntohs(ip->ip_len);
+#endif
 	/* validate mbuf chain length with IP payload length */
 	if (mlen < (SCTP_GET_IPV4_LENGTH(ip) - iphlen)) {
 		SCTP_STAT_INCR(sctps_hdrops);
@@ -6010,12 +6014,12 @@ sctp_input(i_pak, va_alist)
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_ACK) {
 			sctp_send_shutdown_complete2(m, sh, vrf_id, port);
- 			goto bad;
+			goto bad;
 		}
 		if (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) {
 			goto bad;
 		}
- 		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION) {
+		if (ch->chunk_type != SCTP_ABORT_ASSOCIATION) {
 			if ((SCTP_BASE_SYSCTL(sctp_blackhole) == 0) ||
 			    ((SCTP_BASE_SYSCTL(sctp_blackhole) == 1) &&
 			     (ch->chunk_type != SCTP_INIT))) {
@@ -6045,8 +6049,8 @@ sctp_input(i_pak, va_alist)
 	length = ip->ip_len + iphlen;
 #elif defined(__Userspace__)
 
-#if defined(__Userspace_os_Linux)
-        length = SCTP_GET_IPV4_LENGTH(ip);
+#if defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+	length = SCTP_GET_IPV4_LENGTH(ip);
 #else
 	length = SCTP_GET_IPV4_LENGTH(ip) + iphlen;
 #endif
