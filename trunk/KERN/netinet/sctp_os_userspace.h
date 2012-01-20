@@ -1044,6 +1044,14 @@ typedef int SHA384_CTX;
 typedef int SHA512_CTX;
 #endif
 
+#if defined(__Userspace_os_Windows)
+#define SHUT_RD 1
+#define SHUT_WR 2
+#define SHUT_RDWR 3 
+#endif
+#define PRU_FLUSH_RD SHUT_RD
+#define PRU_FLUSH_WR SHUT_WR
+#define PRU_FLUSH_RDWR SHUT_RDWR
 
 /* netinet/ip_var.h defintions are behind an if defined for _KERNEL on FreeBSD */
 #define	IP_RAWOUTPUT		0x2
