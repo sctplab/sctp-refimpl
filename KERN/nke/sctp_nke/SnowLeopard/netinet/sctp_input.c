@@ -34,7 +34,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 229805 2012-01-08 09:56:24Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 230379 2012-01-20 13:26:11Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1020,12 +1020,11 @@ sctp_handle_shutdown_ack(struct sctp_shutdown_ack_chunk *cp SCTP_UNUSED,
 	sctp_send_shutdown_complete(stcb, net, 0);
 	/* notify upper layer protocol */
 	if (stcb->sctp_socket) {
-		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 		if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_TCPTYPE) ||
 		    (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_IN_TCPPOOL)) {
-			/* Set the connected flag to disconnected */
 			stcb->sctp_socket->so_snd.sb_cc = 0;
 		}
+		sctp_ulp_notify(SCTP_NOTIFY_ASSOC_DOWN, stcb, 0, NULL, SCTP_SO_NOT_LOCKED);
 	}
 	SCTP_STAT_INCR_COUNTER32(sctps_shutdown);
 	/* free the TCB but first save off the ep */
