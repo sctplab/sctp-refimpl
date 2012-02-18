@@ -1570,7 +1570,7 @@ static int
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp6_peeraddr(struct socket *so, struct sockaddr **addr)
 {
-	struct sockaddr_in6 *sin6 = (struct sockaddr_in6 *)*addr;
+	struct sockaddr_in6 *sin6;
 #elif defined(__Panda__)
 sctp6_peeraddr(struct socket *so, struct sockaddr *addr)
 {
