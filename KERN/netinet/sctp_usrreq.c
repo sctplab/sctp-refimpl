@@ -7078,7 +7078,7 @@ int
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 sctp_peeraddr(struct socket *so, struct sockaddr **addr)
 {
-	struct sockaddr_in *sin = (struct sockaddr_in *)*addr;
+	struct sockaddr_in *sin;
 #elif defined(__Panda__)
 sctp_peeraddr(struct socket *so, struct sockaddr *addr)
 {
