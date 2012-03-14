@@ -300,7 +300,7 @@ sctp_is_desired_interface_type(struct ifaddr *ifa)
 #if !defined(__APPLE__)
 	case IFT_IP:
 	case IFT_IPOVERCDLC:
-	case IFT_IPOVERCLAW
+	case IFT_IPOVERCLAW:
 	case IFT_PROPVIRTUAL: /* NetGraph Virtual too */
 	case IFT_VIRTUALIPADDRESS:
 #endif
