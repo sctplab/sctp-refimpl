@@ -6310,12 +6310,6 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 	void *p;
 	int error = 0;
 
-	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
-		/* I made the same as TCP since we are not setup? */
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-		return (ECONNRESET);
-	}
 	if (sopt->sopt_level != IPPROTO_SCTP) {
 		/* wrong proto level... send back up to IP */
 #ifdef INET6
@@ -6330,6 +6324,7 @@ sctp_ctloutput(struct socket *so, struct sockopt *sopt)
 #endif
 		return (error);
 	}
+	inp = (struct sctp_inpcb *)so->so_pcb;
 	optsize = sopt->sopt_valsize;
 	if (optsize) {
 		SCTP_MALLOC(optval, void *, optsize, SCTP_M_SOCKOPT);
