@@ -584,7 +584,7 @@ sctp_abort(struct socket *so)
 	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 		return;
 #else
@@ -755,7 +755,7 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
 	}
@@ -773,7 +773,7 @@ sctp_close(struct socket *so)
 	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0)
+	if (inp == NULL)
 		return;
 
 	/* Inform all the lower layer assoc that we
@@ -834,7 +834,7 @@ sctp_detach(struct socket *so)
 	uint32_t flags;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 #if defined(__FreeBSD__) && __FreeBSD_version > 690000
 		return;
 #else
@@ -918,7 +918,7 @@ sctp_sendm(struct socket *so, int flags, struct mbuf *m, struct sockaddr *addr,
 	int error;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		if (control) {
 			sctp_m_freem(control);
 			control = NULL;
@@ -1247,7 +1247,7 @@ sctp_shutdown(struct socket *so)
 	struct sctp_inpcb *inp;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
 	}
@@ -1982,7 +1982,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 	}
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return EINVAL;
 	}
@@ -3717,7 +3717,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		return (EINVAL);
 	}
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		SCTP_PRINTF("inp is NULL?\n");
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
@@ -6399,7 +6399,7 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	struct sctp_tcb *stcb = NULL;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		/* I made the same as TCP since we are not setup? */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (ECONNRESET);
@@ -6600,7 +6600,7 @@ sctp_listen(struct socket *so, struct proc *p)
 	struct sctp_inpcb *inp;
 	
 	inp = (struct sctp_inpcb *)so->so_pcb;
-	if (inp == 0) {
+	if (inp == NULL) {
 		/* I made the same as TCP since we are not setup? */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (ECONNRESET);
@@ -6786,7 +6786,7 @@ sctp_accept(struct socket *so, struct mbuf *nam)
 #endif
 	inp = (struct sctp_inpcb *)so->so_pcb;
 
-	if (inp == 0) {
+	if (inp == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (ECONNRESET);
 	}
