@@ -5773,23 +5773,19 @@ sctp_sorecvmsg(struct socket *so,
 		switch (control->whoFrom->ro._l_addr.sa.sa_family) {
 #ifdef INET6
 			case AF_INET6:
-			{
 #if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr_in6));
 #endif
 				((struct sockaddr_in6 *)from)->sin6_port = control->port_from;
 				break;
-			}
 #endif
 #ifdef INET
 			case AF_INET:
-			{
 #if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr_in));
 #endif
 				((struct sockaddr_in *)from)->sin_port = control->port_from;
 				break;
-			}
 #endif
 			default:
 #if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
