@@ -2814,6 +2814,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			inp->sctp_ecn_enable = (*inp_p)->sctp_ecn_enable;
 			inp->partial_delivery_point = (*inp_p)->partial_delivery_point;
 			inp->sctp_context = (*inp_p)->sctp_context;
+			inp->local_strreset_support = (*inp_p)->local_strreset_support;
 			inp->inp_starting_point_for_iterator = NULL;
 			/*
 			 * copy in the authentication parameters from the
@@ -3588,8 +3589,8 @@ sctp_clean_up_stream_reset(struct sctp_tcb *stcb)
 
 static int
 sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
-    uint32_t seq, uint32_t action,
-    struct sctp_stream_reset_response *respin)
+				  uint32_t seq, uint32_t action,
+				  struct sctp_stream_reset_response *respin)
 {
 	uint16_t type;
 	int lparm_len;
@@ -3627,19 +3628,29 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 				if (action != SCTP_STREAM_RESET_PERFORMED) {
 					sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_FAILED_IN, stcb, number_entries, srparam->list_of_streams, SCTP_SO_NOT_LOCKED);
 				}
-			} else if (type == SCTP_STR_RESET_ADD_STREAMS) {
-			  /* Ok we now may have more streams */
-			  if (asoc->stream_reset_outstanding)
-				asoc->stream_reset_outstanding--;
-			  if (action == SCTP_STREAM_RESET_PERFORMED) {
-				/* Put the new streams into effect */
-				stcb->asoc.streamoutcnt = stcb->asoc.strm_realoutsize;
- 				sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_ADD_OK, stcb,
-								(uint32_t)stcb->asoc.streamoutcnt, NULL, SCTP_SO_NOT_LOCKED);
-			  } else {
-				sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_ADD_FAIL, stcb,
-								(uint32_t)stcb->asoc.streamoutcnt, NULL, SCTP_SO_NOT_LOCKED);
-			  }
+			} else if (type == SCTP_STR_RESET_ADD_OUT_STREAMS) {
+				/* Ok we now may have more streams */
+				int num_stream;
+
+				num_stream = stcb->asoc.strm_realoutsize - stcb->asoc.streamoutcnt;
+
+				if (asoc->stream_reset_outstanding)
+					asoc->stream_reset_outstanding--;
+				if (action == SCTP_STREAM_RESET_PERFORMED) {
+					/* Put the new streams into effect */
+					stcb->asoc.streamoutcnt = stcb->asoc.strm_realoutsize;
+					sctp_notify_stream_reset_add(stcb, stcb->asoc.streamincnt, stcb->asoc.streamoutcnt, 0);
+				} else {
+					sctp_notify_stream_reset_add(stcb, stcb->asoc.streamincnt, stcb->asoc.streamoutcnt, 
+								     SCTP_STREAM_CHANGED_DENIED);
+				}
+			} else if (type == SCTP_STR_RESET_ADD_IN_STREAMS) {
+				if (asoc->stream_reset_outstanding)
+					asoc->stream_reset_outstanding--;
+				if (action != SCTP_STREAM_RESET_PERFORMED) {
+					sctp_notify_stream_reset_add(stcb, stcb->asoc.streamincnt, stcb->asoc.streamoutcnt, 
+								     SCTP_STREAM_CHANGED_DENIED);
+				}
 			} else if (type == SCTP_STR_RESET_TSN_REQUEST) {
 				/**
 				 * a) Adopt the new in tsn.
@@ -3665,7 +3676,7 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 					}
 					stcb->asoc.highest_tsn_inside_map = (ntohl(resp->senders_next_tsn) - 1);
 					if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MAP_LOGGING_ENABLE) {
-					  sctp_log_map(0, 7, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
+						sctp_log_map(0, 7, asoc->highest_tsn_inside_map, SCTP_MAP_SLIDE_RESULT);
 					}
 
 					stcb->asoc.tsn_last_delivered = stcb->asoc.cumulative_tsn = stcb->asoc.highest_tsn_inside_map;
@@ -3680,7 +3691,10 @@ sctp_handle_stream_reset_response(struct sctp_tcb *stcb,
 
 					sctp_reset_out_streams(stcb, 0, (uint16_t *) NULL);
 					sctp_reset_in_stream(stcb, 0, (uint16_t *) NULL);
-
+					sctp_notify_stream_reset_tsn(stcb, stcb->asoc.sending_seq, (stcb->asoc.mapping_array_base_tsn+1), 0);
+				} else {
+					sctp_notify_stream_reset_tsn(stcb, stcb->asoc.sending_seq, (stcb->asoc.mapping_array_base_tsn+1), 
+								     SCTP_STREAM_RESET_FAILED);
 				}
 			}
 			/* get rid of the request and get the request flags */
@@ -3710,10 +3724,11 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 
 	seq = ntohl(req->request_seq);
 	if (asoc->str_reset_seq_in == seq) {
+		asoc->str_reset_seq_in++;
 		if (trunc) {
 			/* Can't do it, since they exceeded our buffer size  */
 			asoc->last_reset_action[1] = asoc->last_reset_action[0];
-			asoc->last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+			asoc->last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
 			sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 		} else if (stcb->asoc.stream_reset_out_is_outstanding == 0) {
 			len = ntohs(req->ph.param_length);
@@ -3738,7 +3753,6 @@ sctp_handle_str_reset_request_in(struct sctp_tcb *stcb,
 			asoc->last_reset_action[0] = SCTP_STREAM_RESET_TRY_LATER;
 			sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 		}
-		asoc->str_reset_seq_in++;
 	} else if (asoc->str_reset_seq_in - 1 == seq) {
 		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
 	} else if (asoc->str_reset_seq_in - 2 == seq) {
@@ -3766,6 +3780,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 
 	seq = ntohl(req->request_seq);
 	if (asoc->str_reset_seq_in == seq) {
+		asoc->str_reset_seq_in++;
 		fwdtsn.ch.chunk_length = htons(sizeof(struct sctp_forward_tsn_chunk));
 		fwdtsn.ch.chunk_type = SCTP_FORWARD_CUM_TSN;
 		fwdtsn.ch.chunk_flags = 0;
@@ -3799,8 +3814,7 @@ sctp_handle_str_reset_request_tsn(struct sctp_tcb *stcb,
 		sctp_reset_in_stream(stcb, 0, (uint16_t *) NULL);
 		stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 		stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
-
-		asoc->str_reset_seq_in++;
+		sctp_notify_stream_reset_tsn(stcb, stcb->asoc.sending_seq, (stcb->asoc.mapping_array_base_tsn+1), 0);
 	} else if (asoc->str_reset_seq_in - 1 == seq) {
 		sctp_add_stream_reset_result_tsn(chk, seq, asoc->last_reset_action[0],
 		    stcb->asoc.last_sending_seq[0],
@@ -3830,6 +3844,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 
 	/* now if its not a duplicate we process it */
 	if (asoc->str_reset_seq_in == seq) {
+		asoc->str_reset_seq_in++;
 		len = ntohs(req->ph.param_length);
 		number_entries = ((len - sizeof(struct sctp_stream_reset_out_request)) / sizeof(uint16_t));
 		/*
@@ -3844,8 +3859,8 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 		/* move the reset action back one */
 		asoc->last_reset_action[1] = asoc->last_reset_action[0];
 		if (trunc) {
-			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
-			asoc->last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_REJECT);
+			asoc->last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
 		} else if (SCTP_TSN_GE(asoc->cumulative_tsn, tsn)) {
 			/* we can do it now */
 			sctp_reset_in_stream(stcb, number_entries, req->list_of_streams);
@@ -3864,8 +3879,8 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 				    siz, SCTP_M_STRESET);
 			if (liste == NULL) {
 				/* gak out of memory */
-				sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
-				asoc->last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+				sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_REJECT);
+				asoc->last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
 				return;
 			}
 			liste->tsn = tsn;
@@ -3876,7 +3891,6 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_PERFORMED);
 			asoc->last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
 		}
-		asoc->str_reset_seq_in++;
 	} else if ((asoc->str_reset_seq_in - 1) == seq) {
 		/*
 		 * one seq back, just echo back last action since my
@@ -3896,13 +3910,13 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 
 static void
 sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk,
-							   struct sctp_stream_reset_add_strm  *str_add)
+			       struct sctp_stream_reset_add_strm  *str_add)
 {
 	/* Peer is requesting to add more streams.
 	* If its within our max-streams we will
 	* allow it.
 	*/
-	uint16_t num_stream, i;
+	int num_stream, i;
 	uint32_t seq;
 	struct sctp_association *asoc = &stcb->asoc;
 	struct sctp_queued_to_read *ctl, *nctl;
@@ -3912,18 +3926,24 @@ sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *ch
 	num_stream = ntohs(str_add->number_of_streams);
 	/* Now what would be the new total? */
 	if (asoc->str_reset_seq_in == seq) {
+		asoc->str_reset_seq_in++;
 		num_stream += stcb->asoc.streamincnt;
-		if (num_stream > stcb->asoc.max_inbound_streams) {
+		if ((num_stream > stcb->asoc.max_inbound_streams) ||
+		    (num_stream > 0xffff)) {
 			/* We must reject it they ask for to many */
   denied:
-			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_DENIED);
+			printf("Rejecting stream add %d > %d or 0xffff\n",
+			       num_stream, stcb->asoc.max_inbound_streams);
+			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_REJECT);
 			stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
-			stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_DENIED;
+			stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
 		} else {
 			/* Ok, we can do that :-) */
 			struct sctp_stream_in *oldstrm;
 
 			/* save off the old */
+			printf("Moving my in streams on stcb:%p to %d from %d\n",
+			       stcb, num_stream, stcb->asoc.streamincnt);
 			oldstrm = stcb->asoc.strmin;
 			SCTP_MALLOC(stcb->asoc.strmin, struct sctp_stream_in *,
 			            (num_stream * sizeof(struct sctp_stream_in)),
@@ -3958,8 +3978,7 @@ sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *ch
 			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_PERFORMED);
 			stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
 			stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
-			sctp_ulp_notify(SCTP_NOTIFY_STR_RESET_INSTREAM_ADD_OK, stcb,
-			                (uint32_t)stcb->asoc.streamincnt, NULL, SCTP_SO_NOT_LOCKED);
+			sctp_notify_stream_reset_add(stcb, stcb->asoc.streamincnt, stcb->asoc.streamoutcnt, 0);
 		}
 	} else if ((asoc->str_reset_seq_in - 1) == seq) {
 		/*
@@ -3976,6 +3995,65 @@ sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *ch
 	} else {
 		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 
+	}
+}
+
+static void
+sctp_handle_str_reset_add_out_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *chk,
+				   struct sctp_stream_reset_add_strm  *str_add)
+{
+	/* Peer is requesting to add more streams.
+	* If its within our max-streams we will
+	* allow it.
+	*/
+	uint16_t num_stream;
+	uint32_t seq;
+	struct sctp_association *asoc = &stcb->asoc;
+
+	/* Get the number. */
+	seq = ntohl(str_add->request_seq);
+	num_stream = ntohs(str_add->number_of_streams);
+	/* Now what would be the new total? */
+	printf("Requesting by peer to add %d to my stcb:%p out streams\n", num_stream, stcb);
+	if (asoc->str_reset_seq_in == seq) {
+		asoc->str_reset_seq_in++;
+		if (stcb->asoc.stream_reset_outstanding) {
+			/* We must reject it we have something pending */
+			printf("Can't do it I am busy\n");
+			sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_REJECT);
+			stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+			stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
+		} else {
+			/* Ok, we can do that :-) */
+			int chk;
+			chk = stcb->asoc.streamoutcnt;
+			chk += num_stream;
+			if (chk < 0x10000) {
+				stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+				stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_PERFORMED;
+				if (sctp_send_str_reset_req(stcb, 0, NULL, 0, 0, 0, 1, num_stream, 0)) {
+					stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
+				}
+			} else {
+				stcb->asoc.last_reset_action[1] = stcb->asoc.last_reset_action[0];
+				stcb->asoc.last_reset_action[0] = SCTP_STREAM_RESET_REJECT;
+			}
+		}
+		sctp_add_stream_reset_result(chk, seq, stcb->asoc.last_reset_action[0]);
+	} else if ((asoc->str_reset_seq_in - 1) == seq) {
+		/*
+		 * one seq back, just echo back last action since my
+		 * response was lost.
+		 */
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[0]);
+	} else if ((asoc->str_reset_seq_in - 2) == seq) {
+		/*
+		 * two seq back, just echo back last action since my
+		 * response was lost.
+		 */
+		sctp_add_stream_reset_result(chk, seq, asoc->last_reset_action[1]);
+	} else {
+		sctp_add_stream_reset_result(chk, seq, SCTP_STREAM_RESET_BAD_SEQNO);
 	}
 }
 
@@ -4073,11 +4151,18 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 				}
 			}
 			sctp_handle_str_reset_request_out(stcb, chk, req_out, trunc);
-		} else if (ptype == SCTP_STR_RESET_ADD_STREAMS) {
-		  struct sctp_stream_reset_add_strm  *str_add;
-		  str_add = (struct sctp_stream_reset_add_strm  *)ph;
-		  num_req++;
-		  sctp_handle_str_reset_add_strm(stcb, chk, str_add);
+		} else if (ptype == SCTP_STR_RESET_ADD_OUT_STREAMS) {
+			struct sctp_stream_reset_add_strm  *str_add;
+			str_add = (struct sctp_stream_reset_add_strm  *)ph;
+			num_req++;
+			sctp_handle_str_reset_add_strm(stcb, chk, str_add);
+		} else if (ptype == SCTP_STR_RESET_ADD_IN_STREAMS) {
+			struct sctp_stream_reset_add_strm  *str_add;
+			str_add = (struct sctp_stream_reset_add_strm  *)ph;
+			num_req++;
+			printf("Requested to add to my out streams on stcb:%p\n",
+			       stcb);
+			sctp_handle_str_reset_add_out_strm(stcb, chk, str_add);
 		} else if (ptype == SCTP_STR_RESET_IN_REQUEST) {
 			struct sctp_stream_reset_in_request *req_in;
 			num_req++;
@@ -4118,8 +4203,8 @@ sctp_handle_stream_reset(struct sctp_tcb *stcb, struct mbuf *m, int offset,
 	}
 	/* ok we have a chunk to link in */
 	TAILQ_INSERT_TAIL(&stcb->asoc.control_send_queue,
-	    chk,
-	    sctp_next);
+			  chk,
+			  sctp_next);
 	stcb->asoc.ctrl_queue_cnt++;
 	return (ret_code);
 }
