@@ -66,7 +66,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 231672 2012-02-14 12:00:34Z t
 #include <netinet/in.h>
 #endif
 #if defined(__FreeBSD__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 #include <netinet/udp_var.h>
 #endif
 #include <machine/in_cksum.h>
@@ -4138,7 +4138,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			udp->uh_dport = port;
 			udp->uh_ulen = htons(packet_length - sizeof(struct ip));	
 #if !defined(__Windows__) && !defined(__Userspace__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				udp->uh_sum = in_pseudo(ip->ip_src.s_addr, ip->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 			} else {
@@ -4212,7 +4212,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 				SCTP_STAT_INCR(sctps_sendnocrc);
 			}
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				SCTP_ENABLE_UDP_CSUM(o_pak);
 			}
@@ -11260,7 +11260,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 #if !defined(__Windows__) && !defined(__Userspace__)
 #ifdef INET
 		if (iph_out) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 			} else {
@@ -11318,7 +11318,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 			comp_cp->sh.checksum = sctp_calculate_cksum(mout, offset_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				SCTP_ENABLE_UDP_CSUM(mout);
 			}
@@ -12360,7 +12360,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__) && !defined(__Userspace__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 			} else {
@@ -12394,7 +12394,7 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sctphdr *sh, uint32_t vtag,
 			abm->sh.checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				SCTP_ENABLE_UDP_CSUM(o_pak);
 			}
@@ -12692,7 +12692,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 		if (port) {
 			udp->uh_ulen = htons(len - sizeof(struct ip));
 #if !defined(__Windows__) && !defined(__Userspace__)
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				udp->uh_sum = in_pseudo(iph_out->ip_src.s_addr, iph_out->ip_dst.s_addr, udp->uh_ulen + htons(IPPROTO_UDP));
 			} else {
@@ -12724,7 +12724,7 @@ sctp_send_operr_to(struct mbuf *m, int iphlen, struct mbuf *scm, uint32_t vtag,
 			sh_out->checksum = sctp_calculate_cksum(mout, iphlen_out);
 			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			if (V_udp_cksum) {
 				SCTP_ENABLE_UDP_CSUM(o_pak);
 			}
