@@ -1210,6 +1210,7 @@ struct sctp_association {
 	uint8_t peer_supports_auth;
 	/* stream resets are supported by the peer */
 	uint8_t peer_supports_strreset;
+	uint8_t local_strreset_support;
 
         uint8_t peer_supports_nat;
 	/*
