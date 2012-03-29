@@ -6373,7 +6373,7 @@ sctp_startup_mcore_threads(void)
 	}
 }
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 990000
+#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 1100000
 static struct mbuf *
 sctp_netisr_hdlr(struct mbuf *m, uintptr_t source)
 {
@@ -6381,6 +6381,7 @@ sctp_netisr_hdlr(struct mbuf *m, uintptr_t source)
 	struct sctphdr *sh;
 	int offset;
 	uint32_t flowid, tag;
+
 	/*
 	 * No flow id built by lower layers fix it so we
 	 * create one.
@@ -6395,7 +6396,6 @@ sctp_netisr_hdlr(struct mbuf *m, uintptr_t source)
 		ip = mtod(m, struct ip *);
 	}
 	sh = (struct sctphdr *)((caddr_t)ip + (ip->ip_hl << 2));
-
 	tag = htonl(sh->v_tag);
 	flowid = tag ^ ntohs(sh->dest_port) ^ ntohs(sh->src_port);
 	m->m_pkthdr.flowid = flowid;
@@ -6591,7 +6591,7 @@ sctp_pcb_init()
 	 */
 	sctp_init_vrf_list(SCTP_DEFAULT_VRF);
 #endif
-#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 990000
+#if defined(__FreeBSD__) && __FreeBSD_cc_version >= 1100000
 	if (ip_register_flow_handler(sctp_netisr_hdlr, IPPROTO_SCTP)) {
 		printf("***SCTP- Error can't register netisr handler***\n");
 	}
