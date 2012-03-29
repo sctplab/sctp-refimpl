@@ -4741,6 +4741,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		if (stradd->sas_instrms) {
 			int cnt;
+
 			addstream |= 2;
 			/* We allocate inside sctp_send_str_reset_req() */
 			add_i_strmcnt = stradd->sas_instrms;
@@ -4751,7 +4752,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				error = EINVAL;
 				goto skip_stuff;
 			}
-			if (cnt > stcb->asoc.max_inbound_streams) {
+			if (cnt > (int)stcb->asoc.max_inbound_streams) {
 				/* More than you are allowed */
 				error = EINVAL;
 				goto skip_stuff;
