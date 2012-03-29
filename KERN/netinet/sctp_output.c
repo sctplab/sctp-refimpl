@@ -12057,7 +12057,6 @@ sctp_add_an_in_stream(struct sctp_tmit_chunk *chk,
 	addstr = (struct sctp_stream_reset_add_strm *)((caddr_t)ch + len);
 	/* now how long will this param be? */
 	len = sizeof(struct sctp_stream_reset_add_strm);
-
 	/* Fill it out. */
 	addstr->ph.param_type = htons(SCTP_STR_RESET_ADD_IN_STREAMS);
 	addstr->ph.param_length = htons(len);
@@ -12084,7 +12083,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 			uint8_t send_tsn_req,
 			uint8_t add_stream,
 			uint16_t adding_o,
-			uint16_t adding_i
+			uint16_t adding_i, uint8_t peer_asked
 	)
 {
 
@@ -12214,12 +12213,14 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
 skip_stuff:
-	if (add_stream && (add_stream & 1)) {
+	if ((add_stream & 1) && (adding_o > 0)) {
+		asoc->strm_pending_add_size = adding_o;
+		asoc->peer_req_out = peer_asked;
 		sctp_add_an_out_stream(chk, seq, adding_o);
 		seq++;
 		asoc->stream_reset_outstanding++;
 	}
-	if (add_stream && (add_stream & 2)) {
+	if ((add_stream & 2) && (adding_i > 0)) {
 		sctp_add_an_in_stream(chk, seq, adding_i);
 		seq++;
 		asoc->stream_reset_outstanding++;

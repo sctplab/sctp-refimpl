@@ -1139,6 +1139,7 @@ struct sctp_association {
 	uint16_t streamincnt;
 	uint16_t streamoutcnt;
 	uint16_t strm_realoutsize;
+	uint16_t strm_pending_add_size;
 	/* my maximum number of retrans of INIT and SEND */
 	/* copied from SCTP but should be individually setable */
 	uint16_t max_init_times;
@@ -1199,6 +1200,9 @@ struct sctp_association {
 
 	/* Flag to tell if ECN is allowed */
 	uint8_t ecn_allowed;
+
+	/* Did the peer make the stream config (add out) request */
+	uint8_t peer_req_out;
 
 	/* flag to indicate if peer can do asconf */
 	uint8_t peer_supports_asconf;

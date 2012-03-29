@@ -4704,7 +4704,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		error = sctp_send_str_reset_req(stcb, strrst->srs_number_streams,
 						strrst->srs_stream_list,
-						send_out, send_in, 0, 0, 0, 0);
+						send_out, send_in, 0, 0, 0, 0, 0);
 
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ, SCTP_SO_LOCKED);
 		SCTP_TCB_UNLOCK(stcb);
@@ -4740,16 +4740,24 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			}
 		}
 		if (stradd->sas_instrms) {
+			int cnt;
 			addstream |= 2;
-			/* We allocate here */
+			/* We allocate inside sctp_send_str_reset_req() */
 			add_i_strmcnt = stradd->sas_instrms;
-			if ((((int)add_i_strmcnt) + ((int)stcb->asoc.streamincnt)) > 0x0000ffff) {
+			cnt = add_i_strmcnt;
+			cnt += stcb->asoc.streamincnt;
+			if (cnt > 0x0000ffff) {
 				/* You can't have more than 64k */
 				error = EINVAL;
 				goto skip_stuff;
 			}
+			if (cnt > stcb->asoc.max_inbound_streams) {
+				/* More than you are allowed */
+				error = EINVAL;
+				goto skip_stuff;
+			}
 		}
-		error = sctp_send_str_reset_req(stcb, 0, NULL, 0, 0, 0, addstream, add_o_strmcnt, add_i_strmcnt);
+		error = sctp_send_str_reset_req(stcb, 0, NULL, 0, 0, 0, addstream, add_o_strmcnt, add_i_strmcnt, 0);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ, SCTP_SO_LOCKED);
 	skip_stuff:
 		SCTP_TCB_UNLOCK(stcb);
@@ -4790,7 +4798,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			SCTP_TCB_UNLOCK(stcb);
 			break;
 		}
-		error = sctp_send_str_reset_req(stcb, 0, NULL, 0, 0, 1, 0, 0, 0);
+		error = sctp_send_str_reset_req(stcb, 0, NULL, 0, 0, 1, 0, 0, 0, 0);
 		sctp_chunk_output(inp, stcb, SCTP_OUTPUT_FROM_STRRST_REQ, SCTP_SO_LOCKED);
 		SCTP_TCB_UNLOCK(stcb);
 		break;

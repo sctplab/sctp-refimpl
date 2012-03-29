@@ -223,7 +223,7 @@ sctp_send_str_reset_req(struct sctp_tcb *stcb,
 			uint8_t send_tsn_req,
 			uint8_t add_stream,
 			uint16_t adding_o,
-			uint16_t adding_i);
+			uint16_t adding_i, uint8_t from_peer);
 
 void
 sctp_send_abort(struct mbuf *, int, struct sctphdr *, uint32_t,

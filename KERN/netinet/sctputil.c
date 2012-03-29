@@ -3302,6 +3302,12 @@ sctp_notify_stream_reset_add(struct sctp_tcb *stcb, uint16_t numberin, uint16_t 
 		/* event not enabled */
 		return;
 	}
+	if ((stcb->asoc.peer_req_out) && flag) {
+		/* Peer made the request, don't tell the local user */
+		stcb->asoc.peer_req_out = 0;
+		return;
+	}
+	stcb->asoc.peer_req_out = 0;
 	m_notify = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_DONTWAIT, 1, MT_DATA);
 	if (m_notify == NULL)
 		/* no space left */
