@@ -2679,7 +2679,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
 #ifdef INET6
-#if !defined(__Userspace__)
+#if !defined(__Userspace__) && !defined(__Windows__)
 	if (MODULE_GLOBAL(ip6_auto_flowlabel)) {
 		inp->ip_inp.inp.inp_flags |= IN6P_AUTOFLOWLABEL;
 	}
