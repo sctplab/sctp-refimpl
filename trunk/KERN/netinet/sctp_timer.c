@@ -1441,7 +1441,29 @@ sctp_heartbeat_timer(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	    !((net_was_pf == 0) && (net->dest_state & SCTP_ADDR_PF))) {
 		/* when move to PF during threshold mangement, a HB has been
 		   queued in that routine */
-		sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+		uint32_t ms_gone_by;
+
+		if ((net->last_sent_time.tv_sec > 0) ||
+		    (net->last_sent_time.tv_usec > 0)) {
+#ifdef __FreeBSD__
+			struct timeval diff;
+			
+			SCTP_GETTIME_TIMEVAL(&diff);
+			timevalsub(&diff, &net->last_sent_time);
+#else
+			struct timeval diff, now;
+
+			SCTP_GETTIME_TIMEVAL(&now);
+			timersub(&now, &net->last_sent_time, &diff);
+#endif
+			ms_gone_by = (uint32_t)(diff.tv_sec * 1000) +
+			             (uint32_t)(diff.tv_usec / 1000);
+		} else {
+			ms_gone_by = 0xffffffff;
+		}
+		if (ms_gone_by >= net->heart_beat_delay) {
+			sctp_send_hb(stcb, net, SCTP_SO_NOT_LOCKED);
+		}
 	}
 	return (0);
 }
