@@ -136,7 +136,6 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	n_inp->sctp_context = inp->sctp_context;
 	n_inp->local_strreset_support = inp->local_strreset_support;
 	n_inp->inp_starting_point_for_iterator = NULL;
-
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
@@ -252,6 +251,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	n_inp->send_sb_threshold = inp->send_sb_threshold;
 	n_inp->prev_send_sb_free = inp->prev_send_sb_free;
 #endif
+
 	/* copy in the authentication parameters from the original endpoint */
 	if (n_inp->sctp_ep.local_hmacs)
 		sctp_free_hmaclist(n_inp->sctp_ep.local_hmacs);
