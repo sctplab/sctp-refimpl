@@ -13685,8 +13685,10 @@ sctp_lower_sosend(struct socket *so,
 			goto out_unlocked;
 		}
 	}
-#if defined(CALLBACK_API)
-	non_blocking = 1;
+#if defined(__Userspace__)
+	if (inp->recv_callback) {
+		non_blocking = 1;
+	}
 #else
 	if (SCTP_SO_IS_NBIO(so)
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
