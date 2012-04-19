@@ -3526,7 +3526,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_assoc_change(SCTP_SHUTDOWN_COMP, stcb, error, so_locked);
 #if defined (__Userspace__)
 		if (stcb->sctp_ep->recv_callback) {
-			if (stcb->sctp_socket)  {				
+			if (stcb->sctp_socket) {				
 				atomic_add_int(&stcb->asoc.refcnt, 1);
 				SCTP_TCB_UNLOCK(stcb);
 				inp->recv_callback(stcb->sctp_socket, NULL);
@@ -4527,7 +4527,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	if (inp->recv_callback) {
 		if (inp_read_lock_held == 0)
 			SCTP_INP_READ_UNLOCK(inp);
-		if (control->end_added == 1)  {
+		if (control->end_added == 1) {
 			struct socket *so;
 			struct mbuf *m;
 
@@ -4703,7 +4703,7 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 	 */
 #if defined(__Userspace__)
 	if (inp->recv_callback) {
-		if (control->end_added == 1)  {
+		if (control->end_added == 1) {
 			struct socket *so;
 
 			so = inp->sctp_socket;
