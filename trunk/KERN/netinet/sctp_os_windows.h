@@ -223,7 +223,7 @@ typedef NPAGED_LOOKASIDE_LIST sctp_zone_t;
 } while(0)
 
 void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
-	
+
 #define HASH_NOWAIT 0x00000001
 #define HASH_WAITOK 0x00000002
 
@@ -266,7 +266,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
 #define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) do { \
 	if (rt != NULL) \
 		rt->rt_mtu = mtu; \
-	} while(0) 
+	} while(0)
 
 /* (de-)register interface event notifications */
 #define SCTP_REGISTER_INTERFACE(ifhandle, af)
@@ -377,7 +377,7 @@ typedef struct rtentry	sctp_rtentry_t;
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
-/* This is re-pulse ourselves for sendbuf */  
+/* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 
