@@ -1955,7 +1955,7 @@ sctp_do_connect_x(struct socket *so, struct sctp_inpcb *inp, void *optval,
   }
 
 
-#define SCTP_CHECK_AND_CAST(destp, srcp, type, size)  {\
+#define SCTP_CHECK_AND_CAST(destp, srcp, type, size) {\
 	if (size < sizeof(type)) { \
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL); \
 		error = EINVAL; \
