@@ -141,6 +141,23 @@ sctp_init(void)
 
 	SCTP_BASE_VAR(first_time) = 0;
 	SCTP_BASE_VAR(sctp_pcb_initialized) = 0;
+#if defined(__Userspace__)
+#if !defined(__Userspace_os_Windows)
+#if defined(INET) || defined(INET6)
+	SCTP_BASE_VAR(userspace_route) = -1;
+#endif
+#endif
+#ifdef INET
+	SCTP_BASE_VAR(userspace_rawsctp) = -1;
+	SCTP_BASE_VAR(userspace_udpsctp) = -1;
+#endif
+#ifdef INET6
+	SCTP_BASE_VAR(userspace_rawsctp6) = -1;
+	SCTP_BASE_VAR(userspace_udpsctp6) = -1;
+#endif
+	SCTP_BASE_VAR(timer_thread_should_exit) = 0;
+	sctp_start_timer();
+#endif
 	sctp_pcb_init();
 #if defined(SCTP_PACKET_LOGGING)
 	SCTP_BASE_VAR(packet_log_writers) = 0;
@@ -150,7 +167,6 @@ sctp_init(void)
 #if defined(__APPLE__)
 	SCTP_BASE_VAR(sctp_main_timer_ticks) = 0;
 #endif
-
 
 #if defined(__APPLE__)
 	sctp_start_main_timer();
@@ -169,6 +185,49 @@ sctp_finish(void)
 #endif
 #if defined(__Userspace__)
 	recv_thread_destroy();
+#if !defined(__Userspace_os_Windows)
+#if defined(INET) || defined(INET6)
+	pthread_join(SCTP_BASE_VAR(recvthreadroute), NULL);
+#endif
+#endif
+#if defined(INET)
+	if (SCTP_BASE_VAR(recvthreadraw)) {
+#if defined(__Userspace_os_Windows)
+		WaitForSingleObject(SCTP_BASE_VAR(recvthreadraw), INFINITE);
+#else
+		pthread_join(SCTP_BASE_VAR(recvthreadraw), NULL);
+#endif
+	}
+	if (SCTP_BASE_VAR(recvthreadudp)) {
+#if defined(__Userspace_os_Windows)
+		WaitForSingleObject(SCTP_BASE_VAR(recvthreadudp), INFINITE);
+#else
+		pthread_join(SCTP_BASE_VAR(recvthreadudp), NULL);
+#endif
+	}
+#endif
+#if defined(INET6)
+	if (SCTP_BASE_VAR(recvthreadraw6)) {
+#if defined(__Userspace_os_Windows)
+		WaitForSingleObject(SCTP_BASE_VAR(recvthreadraw6), INFINITE);
+#else
+		pthread_join(SCTP_BASE_VAR(recvthreadraw6), NULL);
+#endif
+	}
+	if (SCTP_BASE_VAR(recvthreadudp6)) {
+#if defined(__Userspace_os_Windows)
+		WaitForSingleObject(SCTP_BASE_VAR(recvthreadudp6), INFINITE);
+#else
+		pthread_join(SCTP_BASE_VAR(recvthreadudp6), NULL);
+#endif
+	}
+#endif
+	SCTP_BASE_VAR(timer_thread_should_exit) = 1;
+#if defined(__Userspace_os_Windows)
+	WaitForSingleObject(SCTP_BASE_VAR(timer_thread), INFINITE);
+#else
+	pthread_join(SCTP_BASE_VAR(timer_thread), NULL);
+#endif
 #endif
 	sctp_pcb_finish();
 #if defined(__Windows__)
