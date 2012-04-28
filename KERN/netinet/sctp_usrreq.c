@@ -81,8 +81,8 @@ sctp_init(void)
 {
 #if !defined(__Panda__) && !defined(__Userspace__)
 	u_long sb_max_adj;
-#endif
 
+#endif
 #if defined(__Userspace_os_Windows)
 	WSADATA wsaData;
 	int Ret;
@@ -138,7 +138,6 @@ sctp_init(void)
 	 */
 	SCTP_BASE_SYSCTL(sctp_recvspace) = SCTP_BASE_SYSCTL(sctp_sendspace);
 #endif
-
 	SCTP_BASE_VAR(first_time) = 0;
 	SCTP_BASE_VAR(sctp_pcb_initialized) = 0;
 #if defined(__Userspace__)
@@ -167,7 +166,6 @@ sctp_init(void)
 #if defined(__APPLE__)
 	SCTP_BASE_VAR(sctp_main_timer_ticks) = 0;
 #endif
-
 #if defined(__APPLE__)
 	sctp_start_main_timer();
 	sctp_address_monitor_start();
