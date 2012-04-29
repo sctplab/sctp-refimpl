@@ -4221,7 +4221,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_WITH_NO_CSUM)
 			SCTP_STAT_INCR(sctps_sendnocrc);
 #else
-#if defined(__FreeBSD__) && __FreeBSD_version > 900000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			m->m_pkthdr.csum_flags = CSUM_SCTP;
 			m->m_pkthdr.csum_data = 0;
 			SCTP_STAT_INCR(sctps_sendhwcrc);
@@ -11321,7 +11321,7 @@ sctp_send_shutdown_complete2(struct mbuf *m, struct sctphdr *sh,
 #if defined(SCTP_WITH_NO_CSUM)
 			SCTP_STAT_INCR(sctps_sendnocrc);
 #else
-#if defined(__FreeBSD__) && __FreeBSD_version > 900000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 			mout->m_pkthdr.csum_flags = CSUM_SCTP;
 			mout->m_pkthdr.csum_data = 0;
 			SCTP_STAT_INCR(sctps_sendhwcrc);
