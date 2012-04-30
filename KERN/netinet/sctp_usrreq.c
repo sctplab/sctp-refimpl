@@ -3327,6 +3327,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			} else {
 				/* copy in the chunks */
 				(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+				sac->gauth_number_of_chunks = (uint32_t)size;
 				*optsize = sizeof(struct sctp_authchunks) + size;
 			}
 			SCTP_TCB_UNLOCK(stcb);
@@ -3345,6 +3346,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				} else {
 					/* copy in the chunks */
 					(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+					sac->gauth_number_of_chunks = (uint32_t)size;
 					*optsize = sizeof(struct sctp_authchunks) + size;
 				}
 				SCTP_INP_RUNLOCK(inp);
@@ -3375,6 +3377,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			} else {
 				/* copy in the chunks */
 				(void)sctp_serialize_auth_chunks(chklist, sac->gauth_chunks);
+				sac->gauth_number_of_chunks = (uint32_t)size;
 				*optsize = sizeof(struct sctp_authchunks) + size;
 			}
 			SCTP_TCB_UNLOCK(stcb);
