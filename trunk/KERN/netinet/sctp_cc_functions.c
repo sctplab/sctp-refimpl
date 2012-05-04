@@ -48,7 +48,7 @@
 #endif
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 228907 2011-12-27 10:16:24Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 234995 2012-05-04 09:27:00Z tuexen $");
 #endif
 
 #define SHIFT_MPTCP_MULTI_N 40
