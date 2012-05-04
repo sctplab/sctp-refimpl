@@ -527,14 +527,14 @@ sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
 		}
 		if (len == M_COPYALL) {
 		    if (min(len, (m->m_len - off)) == len) {
-			printf("m->m_len %d - off %d = %d, %d\n",
+			SCTP_PRINTF("m->m_len %d - off %d = %d, %d\n",
 			       m->m_len, off, m->m_len - off,
 			       min(len, (m->m_len - off)));
 		    }
 		}
 		n->m_len = min(len, (m->m_len - off));
 		if (n->m_len == M_COPYALL) {
-		    printf("n->m_len == M_COPYALL, fixing\n");
+		    SCTP_PRINTF("n->m_len == M_COPYALL, fixing\n");
 		    n->m_len = MHLEN;
 		}
 		if (m->m_flags & M_EXT) {
@@ -639,7 +639,7 @@ sctp_print_addr(struct sockaddr *sa)
 		struct sockaddr_in6 *sin6;
 
 		sin6 = (struct sockaddr_in6 *)sa;
-		printf("%s", ip6_sprintf(&sin6->sin6_addr));
+		SCTP_PRINTF("%s", ip6_sprintf(&sin6->sin6_addr));
 		break;
 	}
 	case AF_INET:
@@ -649,7 +649,7 @@ sctp_print_addr(struct sockaddr *sa)
 
 		sin = (struct sockaddr_in *)sa;
 		p = (unsigned char *)&sin->sin_addr;
-		printf("%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
+		SCTP_PRINTF("%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
 		break;
 	}
 	default:
@@ -677,18 +677,18 @@ sctp_addr_watchdog()
 	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
 	if (vrf == NULL) {
 		SCTP_IPI_ADDR_RUNLOCK();
-		printf("SCTP-NKE: Can't find default VRF.\n");
+		SCTP_PRINTF("SCTP-NKE: Can't find default VRF.\n");
 		goto out;
 	}
 #ifdef SCTP_DEBUG
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-		printf("SCTP-NKE: Interfaces available for SCTP:\n");
+		SCTP_PRINTF("SCTP-NKE: Interfaces available for SCTP:\n");
 	}
 #endif
 	LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-			printf("SCTP-NKE: \tInterface %s (index %d): ", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+			SCTP_PRINTF("SCTP-NKE: \tInterface %s (index %d): ", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
 		}
 #endif
 		LIST_FOREACH(sctp_ifa, &sctp_ifn->ifalist, next_ifa) {
@@ -702,13 +702,13 @@ sctp_addr_watchdog()
 #ifdef SCTP_DEBUG
 				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
 					sctp_print_addr(sa);
-					printf(" ");
+					SCTP_PRINTF(" ");
 				}
 #endif
 				if ((ifaddr = ifaddr_withaddr(sa)) == NULL) {
-					printf("SCTP-NKE: Automatically deleting ");
+					SCTP_PRINTF("SCTP-NKE: Automatically deleting ");
 					sctp_print_addr(sa);
-					printf(" to interface %s (index %d).\n", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
+					SCTP_PRINTF(" to interface %s (index %d).\n", sctp_ifn->ifn_name, sctp_ifn->ifn_index);
 					SCTP_IPI_ADDR_RUNLOCK();
 					sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID, sa, sctp_ifn->ifn_index, sctp_ifn->ifn_name);
 					return;
@@ -722,7 +722,7 @@ sctp_addr_watchdog()
 		}
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-			printf("\n");
+			SCTP_PRINTF("\n");
 		}
 #endif
 	}
@@ -732,19 +732,19 @@ sctp_addr_watchdog()
 	count = 0;
 	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
 	if (error != 0) {
-		printf("SCTP-NKE: ifnet_list_get failed %d\n", error);
+		SCTP_PRINTF("SCTP-NKE: ifnet_list_get failed %d\n", error);
 		goto out;
 	}
 #ifdef SCTP_DEBUG
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-		printf("SCTP-NKE: Interfaces available on the system:\n");
+		SCTP_PRINTF("SCTP-NKE: Interfaces available on the system:\n");
 	}
 #endif
 	for (i = 0; i < count; i++) {
 		ifn = ifnetlist[i];
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-			printf("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
+			SCTP_PRINTF("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
 		}
 #endif
 		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
@@ -763,12 +763,12 @@ sctp_addr_watchdog()
 				if (sctp_find_ifa_by_addr(sa, SCTP_DEFAULT_VRFID, SCTP_ADDR_NOT_LOCKED) == NULL) {
 #ifdef SCTP_DEBUG
 					if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-						printf("!");
+						SCTP_PRINTF("!");
 					} else {
 #endif
-						printf("SCTP-NKE: Automatically adding ");
+						SCTP_PRINTF("SCTP-NKE: Automatically adding ");
 						sctp_print_addr(sa);
-						printf(" to interface %s%d (index %d).\n", ifn->if_name, ifn->if_unit, ifn->if_index);
+						SCTP_PRINTF(" to interface %s%d (index %d).\n", ifn->if_name, ifn->if_unit, ifn->if_index);
 #ifdef SCTP_DEBUG
 					}
 #endif
@@ -776,7 +776,7 @@ sctp_addr_watchdog()
 				}
 #ifdef SCTP_DEBUG
 				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-					printf(" ");
+					SCTP_PRINTF(" ");
 				}
 #endif
 				break;
@@ -786,7 +786,7 @@ sctp_addr_watchdog()
 		}
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-			printf("\n");
+			SCTP_PRINTF("\n");
 		}
 #endif
 	}
@@ -834,11 +834,11 @@ sctp_vtag_watchdog()
 			}
 		}
 		if ((i % 16) == 0) {
-			printf("vtag_timewait[%04x] (f/e/i): ", i);
+			SCTP_PRINTF("vtag_timewait[%04x] (f/e/i): ", i);
 		}
-		printf(" %d/%d/%d", free_cnt, expired_cnt, inuse_cnt);
+		SCTP_PRINTF(" %d/%d/%d", free_cnt, expired_cnt, inuse_cnt);
 		if (((i + 1) % 16) == 0) {
-			printf("\n");
+			SCTP_PRINTF("\n");
 		}
 	}
 	SCTP_INP_INFO_RUNLOCK();
@@ -872,7 +872,7 @@ sctp_slowtimo(void)
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
 			n++;
-			printf("sctp_slowtimo: inp %p, wantcnt %u, so_usecount %d.\n",
+			SCTP_PRINTF("sctp_slowtimo: inp %p, wantcnt %u, so_usecount %d.\n",
 			       inp, inp->inp_wantcnt, inp->inp_socket->so_usecount);
 		}
 #endif
@@ -913,7 +913,7 @@ sctp_slowtimo(void)
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 #ifdef SCTP_DEBUG
 	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
-		printf("sctp_slowtimo: Total number of inps: %u\n", n);
+		SCTP_PRINTF("sctp_slowtimo: Total number of inps: %u\n", n);
 	}
 #endif
 }
@@ -970,7 +970,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	count = 0;
 	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
 	if (error != 0) {
-		printf("SCTP-NKE: ifnet_list_get failed %d\n", error);
+		SCTP_PRINTF("SCTP-NKE: ifnet_list_get failed %d\n", error);
 		goto out;
 	}
 	for (i = 0; i < count; i++) {
@@ -981,13 +981,11 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			break;
 		}
 	}
-
 	if (found_ifn == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
+		SCTP_PRINTF("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
 		goto out;
 	}
-
 	/* verify the address on the interface */
 	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
 		if (found_ifa) {
@@ -1017,20 +1015,19 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	if (found_ifa == NULL) {
 		/* TSNH */
-		printf("SCTP-NKE: ifa not found?!\n");
+		SCTP_PRINTF("SCTP-NKE: ifa not found?!\n");
 		goto out;
 	}
-
 	/* relay the appropriate address change to the base code */
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
-		printf("SCTP-NKE: Adding ");
+		SCTP_PRINTF("SCTP-NKE: Adding ");
 		sctp_print_addr(sa);
-		printf(" to interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
+		SCTP_PRINTF(" to interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_ADD);
 	} else {
-		printf("SCTP-NKE: Deleting ");
+		SCTP_PRINTF("SCTP-NKE: Deleting ");
 		sctp_print_addr(sa);
-		printf(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
+		SCTP_PRINTF(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 out:
@@ -1060,7 +1057,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	/* read the routing socket */
 	error = sock_receive(rt_sock, &msg, 0, &length);
 	if (error) {
-		printf("Routing socket read error: length %d, errno %d\n", (int)length, error);
+		SCTP_PRINTF("Routing socket read error: length %d, errno %d\n", (int)length, error);
 		return;
 	}
 	if (length == 0) {
@@ -1069,7 +1066,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	/* process the routing event */
 	rt_msg = (struct rt_msghdr *)rt_buffer;
 	if (length != rt_msg->rtm_msglen) {
-		printf("Read %d bytes from routing socket for message of length %d.\n", (int) length, rt_msg->rtm_msglen);
+		SCTP_PRINTF("Read %d bytes from routing socket for message of length %d.\n", (int) length, rt_msg->rtm_msglen);
 		return;
 	}
 	switch (rt_msg->rtm_type) {
@@ -1096,7 +1093,7 @@ sctp_address_monitor_start(void)
 
 	error = sock_socket(PF_ROUTE, SOCK_RAW, 0, sctp_address_monitor_cb, NULL, &sctp_address_monitor_so);
 	if (error) {
-		printf("Failed to create routing socket\n");
+		SCTP_PRINTF("Failed to create routing socket\n");
 	}
 }
 
@@ -1127,9 +1124,9 @@ static void
 sctp_print_mbuf_chain(mbuf_t m)
 {
 	for (; m; m = SCTP_BUF_NEXT(m)) {
-		printf("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
+		SCTP_PRINTF("%p: m_len = %ld, m_type = %x\n", m, SCTP_BUF_LEN(m), m->m_type);
 		if (SCTP_BUF_IS_EXTENDED(m))
-			printf("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
+			SCTP_PRINTF("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
 	}
 }
 #endif
@@ -1163,7 +1160,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	length = (1<<16);
 	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
 	if (error) {
-		printf("sock_receivembuf returned error %d.\n", error);
+		SCTP_PRINTF("sock_receivembuf returned error %d.\n", error);
 		return;
 	}
 	if (length == 0) {
@@ -1200,14 +1197,14 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	SCTP_BUF_NEXT(ip_m) = packet;
 
 	/*
-	printf("Received a UDP packet of length %d from ", (int)length);
+	SCTP_PRINTF("Received a UDP packet of length %d from ", (int)length);
 	print_address((struct sockaddr *)&src);
-	printf(" to ");
+	SCTP_PRINTF(" to ");
 	print_address((struct sockaddr *)&dst);
-	printf(".\n");
-	printf("packet = \n");
+	SCTP_PRINTF(".\n");
+	SCTP_PRINTF("packet = \n");
 	sctp_print_mbuf_chain(packet);
-	printf("ip_m = \n");
+	SCTP_PRINTF("ip_m = \n");
 	sctp_print_mbuf_chain(ip_m);
 	*/
 
@@ -1245,7 +1242,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	length = (1<<16);
 	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
 	if (error) {
-		printf("sock_receivembuf returned error %d.\n", error);
+		SCTP_PRINTF("sock_receivembuf returned error %d.\n", error);
 		return;
 	}
 	if (length == 0) {
@@ -1280,14 +1277,14 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	SCTP_BUF_NEXT(ip6_m) = packet;
 
 	/*
-	printf("Received a UDP packet of length %d from ", (int)length);
+	SCTP_PRINTF("Received a UDP packet of length %d from ", (int)length);
 	print_address((struct sockaddr *)&src);
-	printf(" to ");
+	SCTP_PRINTF(" to ");
 	print_address((struct sockaddr *)&dst);
-	printf(".\n");
-	printf("packet = \n");
+	SCTP_PRINTF(".\n");
+	SCTP_PRINTF("packet = \n");
 	sctp_print_mbuf_chain(packet);
-	printf("ip_m = \n");
+	SCTP_PRINTF("ip_m = \n");
 	sctp_print_mbuf_chain(ip6_m);
 	*/
 
@@ -1319,7 +1316,7 @@ sctp_over_udp_start(void)
 	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
 	if (error) {
 		sctp_over_udp_ipv4_so = NULL;
-		printf("Failed to create SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to create SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1327,7 +1324,7 @@ sctp_over_udp_start(void)
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
-		printf("Failed to setsockopt() on SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to setsockopt() on SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1340,7 +1337,7 @@ sctp_over_udp_start(void)
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
-		printf("Failed to bind SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to bind SCTP/UDP/IPv4 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1349,7 +1346,7 @@ sctp_over_udp_start(void)
 		sock_close(sctp_over_udp_ipv4_so);
 		sctp_over_udp_ipv4_so = NULL;
 		sctp_over_udp_ipv6_so = NULL;
-		printf("Failed to create SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to create SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1359,7 +1356,7 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv4_so = NULL;
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
-		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1373,7 +1370,7 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv4_so = NULL;
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
-		printf("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to setsockopt() on SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
@@ -1388,7 +1385,7 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv4_so = NULL;
 		sock_close(sctp_over_udp_ipv6_so);
 		sctp_over_udp_ipv6_so = NULL;
-		printf("Failed to bind SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
+		SCTP_PRINTF("Failed to bind SCTP/UDP/IPv6 tunneling socket: errno = %d.\n", error);
 		return (error);
 	}
 
