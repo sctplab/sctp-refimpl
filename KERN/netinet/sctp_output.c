@@ -3092,7 +3092,7 @@ again_with_private_addresses_allowed:
 				continue;
 			}
 		} else {
-			printf("Stcb is null - no print\n");
+			SCTP_PRINTF("Stcb is null - no print\n");
 		}
 		atomic_add_int(&sifa->refcount, 1);
 		goto out;
@@ -9703,8 +9703,8 @@ sctp_chunk_retransmission(struct sctp_inpcb *inp,
 			continue;
 		}
 		if (chk->data == NULL) {
-			printf("TSN:%x chk->snd_count:%d chk->sent:%d can't retran - no data\n",
-			       chk->rec.data.TSN_seq, chk->snd_count, chk->sent);
+			SCTP_PRINTF("TSN:%x chk->snd_count:%d chk->sent:%d can't retran - no data\n",
+			            chk->rec.data.TSN_seq, chk->snd_count, chk->sent);
 			continue;
 		}
 		if ((SCTP_BASE_SYSCTL(sctp_max_retran_chunk)) &&
@@ -14655,7 +14655,7 @@ out_unlocked:
 	if (inp) {
 		sctp_validate_no_locks(inp);
 	} else {
-		printf("Warning - inp is NULL so cant validate locks\n");
+		SCTP_PRINTF("Warning - inp is NULL so cant validate locks\n");
 	}
 #endif
 	if (top) {
