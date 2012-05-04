@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 228630 2011-12-17 14:55:19Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 234997 2012-05-04 10:26:50Z tuexen $");
 #endif
 #include <stdio.h>
 #include <string.h>
@@ -805,7 +805,6 @@ continue_send:
 	}
 	sinfo->sinfo_assoc_id = sctp_getassocid(sd, addrs);
 	if (sinfo->sinfo_assoc_id == 0) {
-		printf("Huh, can't get associd? TSNH!\n");
 		(void)setsockopt(sd, IPPROTO_SCTP, SCTP_CONNECT_X_COMPLETE, (void *)addrs,
 		    (socklen_t) addrs->sa_len);
 		errno = ENOENT;
