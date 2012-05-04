@@ -303,7 +303,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 		lck_mtx_unlock(inet6domain.dom_mtx);
 #endif
 		lck_mtx_unlock(inetdomain.dom_mtx);
-		printf("SCTP NKE: Not all protocol handlers could be installed.\n");
+		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be installed.\n");
 		return (KERN_FAILURE);
 	}
 
@@ -409,7 +409,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 	lck_rw_done(udbinfo.mtx);
 #endif
-	printf("SCTP NKE: NKE loaded.\n");
+	SCTP_PRINTF("SCTP NKE: NKE loaded.\n");
 	return (KERN_SUCCESS);
 }
 
@@ -421,19 +421,19 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	int err;
 	
 	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))) {
-		printf("SCTP NKE: Someone else holds the lock\n");
+		SCTP_PRINTF("SCTP NKE: Someone else holds the lock\n");
 		return (KERN_FAILURE);
 	}
 	if (!LIST_EMPTY(&SCTP_BASE_INFO(listhead))) {
-		printf("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
+		SCTP_PRINTF("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return (KERN_FAILURE);
 	}
 
 	if (!LIST_EMPTY(&SCTP_BASE_INFO(inplisthead))) {
-		printf("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
+		SCTP_PRINTF("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
 		LIST_FOREACH(inp, &SCTP_BASE_INFO(inplisthead), inp_list) {
-			printf("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
+			SCTP_PRINTF("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 		return (KERN_FAILURE);
@@ -554,10 +554,10 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	lck_mtx_unlock(inetdomain.dom_mtx);
 
 	if (err) {
-		printf("SCTP NKE: Not all protocol handlers could be removed.\n");
+		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be removed.\n");
 		return (KERN_FAILURE);
 	} else {
-		printf("SCTP NKE: NKE unloaded.\n");
+		SCTP_PRINTF("SCTP NKE: NKE unloaded.\n");
 		return (KERN_SUCCESS);
 	}
 }
