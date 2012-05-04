@@ -31,7 +31,7 @@
  */
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 231852 2012-02-17 02:39:58Z bz $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 234995 2012-05-04 09:27:00Z tuexen $");
 #endif
 #ifndef __sctp_os_bsd_h__
 #define __sctp_os_bsd_h__
@@ -186,12 +186,13 @@ MALLOC_DECLARE(SCTP_M_MCORE);
  */
 #define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 
+#define SCTP_PRINTF(params...)	printf(params)
 #if defined(SCTP_DEBUG)
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
-	    printf(params);						\
+	    SCTP_PRINTF(params);						\
 	}								\
     } while (0);							\
 }
@@ -216,7 +217,6 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #define SCTPDBG_ADDR(level, addr)
 #define SCTPDBG_PKT(level, iph, sh)
 #endif
-#define SCTP_PRINTF(params...)	printf(params)
 
 #ifdef SCTP_LTRACE_CHUNKS
 #define SCTP_LTRACE_CHK(a, b, c, d) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_CHUNK_ENABLE) SCTP_CTR6(KTR_SUBSYS, "SCTP:%d[%d]:%x-%x-%x-%x", SCTP_LOG_CHUNK_PROC, 0, a, b, c, d)
@@ -225,12 +225,14 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #endif
 
 #ifdef SCTP_LTRACE_ERRORS
-#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
-                                                         printf("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
-								     m, inp, stcb, net, file, __LINE__, err);
-#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) if(SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
-                                                          printf("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
-								     inp, stcb, net, file, __LINE__, err);
+#define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err) \
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
+        	SCTP_PRINTF("mbuf:%p inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
+		            m, inp, stcb, net, file, __LINE__, err);
+#define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err) \
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LTRACE_ERROR_ENABLE) \
+        	SCTP_PRINTF("inp:%p stcb:%p net:%p file:%x line:%d error:%d\n", \
+		            inp, stcb, net, file, __LINE__, err);
 #else
 #define SCTP_LTRACE_ERR_RET_PKT(m, inp, stcb, net, file, err)
 #define SCTP_LTRACE_ERR_RET(inp, stcb, net, file, err)
