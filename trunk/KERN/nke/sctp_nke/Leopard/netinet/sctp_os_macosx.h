@@ -131,12 +131,13 @@ extern struct fileops socketops;
 /*
  * debug macro
  */
+#define SCTP_PRINTF(params...)	printf(params)
 #if defined(SCTP_DEBUG)
 #define SCTPDBG(level, params...)					\
 {									\
     do {								\
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {			\
-	    printf(params);						\
+	    SCTP_PRINTF(params);					\
 	}								\
     } while (0);							\
 }
@@ -161,7 +162,6 @@ extern struct fileops socketops;
 #define SCTPDBG_ADDR(level, addr)
 #define SCTPDBG_PKT(level, iph, sh)
 #endif
-#define SCTP_PRINTF(params...)	printf(params)
 
 /*
  * Local address and interface list handling
