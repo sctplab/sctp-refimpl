@@ -3451,6 +3451,9 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		case SCTP_STREAM_CHANGE_EVENT:
 			event_type = SCTP_PCB_FLAGS_STREAM_CHANGEEVNT;
 			break;
+		case SCTP_SEND_FAILED_EVENT:
+			event_type = SCTP_PCB_FLAGS_RECVNSENDFAILEVNT;
+			break;
 		default:
 			event_type = 0;
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
@@ -6033,6 +6036,9 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 			break;
 		case SCTP_STREAM_CHANGE_EVENT:
 			event_type = SCTP_PCB_FLAGS_STREAM_CHANGEEVNT;
+			break;
+		case SCTP_SEND_FAILED_EVENT:
+			event_type = SCTP_PCB_FLAGS_RECVNSENDFAILEVNT;
 			break;
 		default:
 			event_type = 0;
