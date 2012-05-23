@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -34,6 +34,7 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 234997 2012-05-04 10:26:50Z tuexen $");
 #endif
+
 #include <stdio.h>
 #include <string.h>
 #include <errno.h>
