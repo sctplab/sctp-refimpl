@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.6 2012-05-23 20:30:08 tuexen Exp $
+ * $Id: rtcweb.c,v 1.7 2012-05-23 20:41:18 tuexen Exp $
  */
 
 /*
@@ -1145,8 +1145,10 @@ main(int argc, char *argv[])
 	struct sctp_event event;
 	uint16_t event_types[] = {SCTP_ASSOC_CHANGE,
 	                          SCTP_PEER_ADDR_CHANGE,
+	                          SCTP_REMOTE_ERROR,
 	                          SCTP_SHUTDOWN_EVENT,
 	                          SCTP_ADAPTATION_INDICATION,
+	                          SCTP_SEND_FAILED_EVENT,
 	                          SCTP_STREAM_RESET_EVENT,
 	                          SCTP_STREAM_CHANGE_EVENT};
 
