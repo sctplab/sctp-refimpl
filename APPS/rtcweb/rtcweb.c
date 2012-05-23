@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $id
+ * $Id: rtcweb.c,v 1.2 2012-05-23 13:10:08 tuexen Exp $
  */
 
 /*
