@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.3 2012-05-23 16:57:47 tuexen Exp $
+ * $Id: rtcweb.c,v 1.4 2012-05-23 17:10:02 tuexen Exp $
  */
 
 /*
@@ -116,15 +116,17 @@ static void
 init_peer_connection(struct peer_connection *pc, int fd)
 {
 	uint32_t i;
+	struct channel *channel;
 
 	for (i = 0; i < NUMBER_OF_CHANNELS; i++) {
-		pc->channels[i].id = i;
-		pc->channels[i].state = DATA_CHANNEL_CLOSED;
-		pc->channels[i].pr_policy = SCTP_PR_SCTP_NONE;
-		pc->channels[i].pr_value = 0;
-		pc->channels[i].i_stream = 0;
-		pc->channels[i].o_stream = 0;
-		pc->channels[i].unordered = 0;
+		channel = &(pc->channels[i]);
+		channel->id = i;
+		channel->state = DATA_CHANNEL_CLOSED;
+		channel->pr_policy = SCTP_PR_SCTP_NONE;
+		channel->pr_value = 0;
+		channel->i_stream = 0;
+		channel->o_stream = 0;
+		channel->unordered = 0;
 	}
 	for (i = 0; i < NUMBER_OF_STREAMS; i++) {
 		pc->i_stream_channel[i] = NULL;
@@ -878,37 +880,39 @@ handle_stream_change_event(struct peer_connection *pc, struct sctp_stream_change
 {
 	uint16_t o_stream;
 	uint32_t i;
+	struct channel *channel;
 
 	for (i = 0; i < NUMBER_OF_CHANNELS; i++) {
-		if ((pc->channels[i].state == DATA_CHANNEL_CONNECTING) &&
-		    (pc->channels[i].o_stream == 0)) {
+		channel = &(pc->channels[i]);
+		if ((channel->state == DATA_CHANNEL_CONNECTING) &&
+		    (channel->o_stream == 0)) {
 			if ((strchg->strchange_flags & SCTP_STREAM_CHANGE_DENIED) ||
 			    (strchg->strchange_flags & SCTP_STREAM_CHANGE_FAILED)) {
-				pc->channels[i].state = DATA_CHANNEL_CLOSED;
-				pc->channels[i].unordered = 0;
-				pc->channels[i].pr_policy = SCTP_PR_SCTP_NONE;
-				pc->channels[i].pr_value = 0;
-				pc->channels[i].o_stream = 0;
+				channel->state = DATA_CHANNEL_CLOSED;
+				channel->unordered = 0;
+				channel->pr_policy = SCTP_PR_SCTP_NONE;
+				channel->pr_value = 0;
+				channel->o_stream = 0;
 			} else {
 				o_stream = find_free_o_stream(pc);
 				if (o_stream != 0) {
-					if (pc->channels[i].i_stream != 0) {
-						if (send_open_response_message(pc->fd, o_stream, pc->channels[i].i_stream)) {
-							pc->channels[i].o_stream = o_stream;
-							pc->o_stream_channel[o_stream] = &pc->channels[i];
+					if (channel->i_stream != 0) {
+						if (send_open_response_message(pc->fd, o_stream, channel->i_stream)) {
+							channel->o_stream = o_stream;
+							pc->o_stream_channel[o_stream] = channel;
 						} else {
 							/* XXX: error handling */
 						}
 					} else {
-						if (send_open_request_message(pc->fd, o_stream, pc->channels[i].unordered, pc->channels[i].pr_policy, pc->channels[i].pr_value)) {
-							pc->channels[i].o_stream = o_stream;
-							pc->o_stream_channel[o_stream] = &pc->channels[i];
+						if (send_open_request_message(pc->fd, o_stream, channel->unordered, channel->pr_policy, channel->pr_value)) {
+							channel->o_stream = o_stream;
+							pc->o_stream_channel[o_stream] = channel;
 						} else {
-							pc->channels[i].state = DATA_CHANNEL_CLOSED;
-							pc->channels[i].unordered = 0;
-							pc->channels[i].pr_policy = SCTP_PR_SCTP_NONE;
-							pc->channels[i].pr_value = 0;
-							pc->channels[i].o_stream = 0;
+							channel->state = DATA_CHANNEL_CLOSED;
+							channel->unordered = 0;
+							channel->pr_policy = SCTP_PR_SCTP_NONE;
+							channel->pr_value = 0;
+							channel->o_stream = 0;
 						}
 					}
 				} else {
@@ -977,6 +981,7 @@ print_status(struct peer_connection *pc)
 	struct sctp_status status;
 	socklen_t len;
 	uint32_t i;
+	struct channel *channel;
 
 	len = (socklen_t)sizeof(struct sctp_status);
 	if (getsockopt(pc->fd, IPPROTO_SCTP, SCTP_STATUS, &status, &len) < 0) {
@@ -1022,11 +1027,12 @@ print_status(struct peer_connection *pc)
 	printf("Number of streams (i/o) = (%u/%u)\n",
 	       status.sstat_instrms, status.sstat_outstrms);
 	for (i = 0; i < NUMBER_OF_CHANNELS; i++) {
-		if (pc->channels[i].state == DATA_CHANNEL_CLOSED) {
+		channel = &(pc->channels[i]);
+		if (channel->state == DATA_CHANNEL_CLOSED) {
 			continue;
 		}
-		printf("Channel with id = %u: state ", pc->channels[i].id);
-		switch (pc->channels[i].state) {
+		printf("Channel with id = %u: state ", channel->id);
+		switch (channel->state) {
 		case DATA_CHANNEL_CLOSED:
 			printf("CLOSED");
 			break;
@@ -1040,29 +1046,29 @@ print_status(struct peer_connection *pc)
 			printf("CLOSING");
 			break;
 		default:
-			printf("UNKNOWN(%d)", pc->channels[i].state);
+			printf("UNKNOWN(%d)", channel->state);
 			break;
 		}
 		printf(", stream id (in/out): (%u/%u), ",
-		       pc->channels[i].i_stream,
-		       pc->channels[i].o_stream);
-		if (pc->channels[i].unordered) {
+		       channel->i_stream,
+		       channel->o_stream);
+		if (channel->unordered) {
 			printf("unordered, ");
 		} else {
 			printf("ordered, ");
 		}
-		switch (pc->channels[i].pr_policy) {
+		switch (channel->pr_policy) {
 		case SCTP_PR_SCTP_NONE:
 			printf("reliable.\n");
 			break;
 		case SCTP_PR_SCTP_TTL:
-			printf("unreliable (timeout %ums).\n", pc->channels[i].pr_value);
+			printf("unreliable (timeout %ums).\n", channel->pr_value);
 			break;
 		case SCTP_PR_SCTP_RTX:
-			printf("unreliable (max. %u rtx).\n", pc->channels[i].pr_value);
+			printf("unreliable (max. %u rtx).\n", channel->pr_value);
 			break;
 		default:
-			printf("unkown policy %u.\n", pc->channels[i].pr_policy);
+			printf("unkown policy %u.\n", channel->pr_policy);
 			break;
 		}
 	}
