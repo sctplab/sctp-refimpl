@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.4 2012-05-23 17:10:02 tuexen Exp $
+ * $Id: rtcweb.c,v 1.5 2012-05-23 20:28:07 tuexen Exp $
  */
 
 /*
@@ -740,28 +740,38 @@ handle_association_change_event(struct sctp_assoc_change *sac)
 		printf("UNKNOWN");
 		break;
 	}
-	printf(", streams (in/out) = (%u/%u), supports",
+	printf(", streams (in/out) = (%u/%u)",
 	       sac->sac_inbound_streams, sac-> sac_outbound_streams);
 	n = sac->sac_length - sizeof(struct sctp_assoc_change);
-	for (i = 0; i < n; i++) {
-		switch (sac->sac_info[i]) {
-		case SCTP_ASSOC_SUPPORTS_PR:
-			printf(" PR");
-			break;
-		case SCTP_ASSOC_SUPPORTS_AUTH:
-			printf(" AUTH");
-			break;
-		case SCTP_ASSOC_SUPPORTS_ASCONF:
-			printf(" ASCONF");
-			break;
-		case SCTP_ASSOC_SUPPORTS_MULTIBUF:
-			printf(" MULTIBUF");
-			break;
-		case SCTP_ASSOC_SUPPORTS_RE_CONFIG:
-			printf(" RE-CONFIG");
-			break;
-		default:
-			break;
+	if (((sac->sac_state == SCTP_COMM_UP) ||
+	     (sac->sac_state == SCTP_RESTART)) && (n > 0)) {
+		printf(", supports");
+		for (i = 0; i < n; i++) {
+			switch (sac->sac_info[i]) {
+			case SCTP_ASSOC_SUPPORTS_PR:
+				printf(" PR");
+				break;
+			case SCTP_ASSOC_SUPPORTS_AUTH:
+				printf(" AUTH");
+				break;
+			case SCTP_ASSOC_SUPPORTS_ASCONF:
+				printf(" ASCONF");
+				break;
+			case SCTP_ASSOC_SUPPORTS_MULTIBUF:
+				printf(" MULTIBUF");
+				break;
+			case SCTP_ASSOC_SUPPORTS_RE_CONFIG:
+				printf(" RE-CONFIG");
+				break;
+			default:
+				break;
+			}
+		}
+	} else if (((sac->sac_state == SCTP_COMM_LOST) ||
+	            (sac->sac_state == SCTP_CANT_STR_ASSOC)) && (n > 0)) {
+		printf(", ABORT =");
+		for (i = 0; i < n; i++) {
+			printf(" 0x%02x", sac->sac_info[i]);
 		}
 	}
 	printf(".\n");
@@ -812,7 +822,7 @@ handle_peer_address_change_event(struct sctp_paddr_change *spc)
 		printf("UNKNOWN");
 		break;
 	}
-	printf(".\n");
+	printf(" (error = 0x%08x).\n", spc->spc_error);
 	return;
 }
 
@@ -925,6 +935,45 @@ handle_stream_change_event(struct peer_connection *pc, struct sctp_stream_change
 }
 
 static void
+handle_remote_error_event(struct sctp_remote_error *sre)
+{
+	size_t i, n;
+
+	n = sre->sre_length - sizeof(struct sctp_remote_error);
+	printf("Remote Error (error = 0x%04x): ", sre->sre_error);
+	for (i = 0; i < n; i++) {
+		printf(" 0x%02x", sre-> sre_data[i]);
+	}
+	printf(".\n");
+	return;
+}
+
+static void
+handle_send_failed(struct sctp_send_failed *ssf)
+{
+	size_t i, n;
+
+	if (ssf->ssf_flags & SCTP_DATA_UNSENT) {
+		printf("Unsent ");
+	}
+	if (ssf->ssf_flags & SCTP_DATA_SENT) {
+		printf("Sent ");
+	}
+	if (ssf->ssf_flags & ~(SCTP_DATA_SENT | SCTP_DATA_UNSENT)) {
+		printf("(flags = %x) ", ssf->ssf_flags);
+	}
+	printf("message with PPID = %d, SID = %d, flags: 0x%04x due to error = 0x%08x",
+	       ntohl(ssf->ssf_info.sinfo_ppid), ssf->ssf_info.sinfo_stream,
+	       ssf->ssf_info.sinfo_flags, ssf->ssf_error);
+	n = ssf->ssf_length - sizeof(struct sctp_send_failed);
+	for (i = 0; i < n; i++) {
+		printf(" 0x%02x", ssf->ssf_data[i]);
+	}
+	printf(".\n");
+	return;
+}
+
+static void
 handle_notification(struct peer_connection *pc, union sctp_notification *notif, size_t n)
 {
 	if (notif->sn_header.sn_length != (uint32_t)n) {
@@ -938,9 +987,7 @@ handle_notification(struct peer_connection *pc, union sctp_notification *notif, 
 		handle_peer_address_change_event(&(notif->sn_paddr_change));
 		break;
 	case SCTP_REMOTE_ERROR:
-		break;
-	/* XXX: Deprecated */
-	case SCTP_SEND_FAILED:
+		handle_remote_error_event(&(notif->sn_remote_error));
 		break;
 	case SCTP_SHUTDOWN_EVENT:
 		handle_shutdown_event(&(notif->sn_shutdown_event));
@@ -957,6 +1004,7 @@ handle_notification(struct peer_connection *pc, union sctp_notification *notif, 
 	case SCTP_NOTIFICATIONS_STOPPED_EVENT:
 		break;
 	case SCTP_SEND_FAILED_EVENT:
+		handle_send_failed(&(notif->sn_send_failed));
 		break;
 	case SCTP_STREAM_RESET_EVENT:
 		handle_stream_reset_event(pc, &(notif->sn_strreset_event));
