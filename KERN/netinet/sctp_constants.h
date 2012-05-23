@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 235557 2012-05-17 18:12:24Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 235828 2012-05-23 11:26:28Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_CONSTANTS_H_
@@ -994,10 +994,10 @@ extern void getwintimeofday(struct timeval *tv);
 /* How many micro seconds is the cutoff from
  * local lan type rtt's
  */
- /* 
+ /*
   * We allow 900us for the rtt.
   */
-#define SCTP_LOCAL_LAN_RTT 900 
+#define SCTP_LOCAL_LAN_RTT 900
 #define SCTP_LAN_UNKNOWN  0
 #define SCTP_LAN_LOCAL    1
 #define SCTP_LAN_INTERNET 2

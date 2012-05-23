@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 235416 2012-05-13 19:32:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 235828 2012-05-23 11:26:28Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_UTIL_H_
@@ -84,7 +84,7 @@ int sctp_init_asoc(struct sctp_inpcb *, struct sctp_tcb *, uint32_t, uint32_t);
 void sctp_fill_random_store(struct sctp_pcb *);
 
 void
-sctp_notify_stream_reset_add(struct sctp_tcb *stcb, uint16_t numberin, 
+sctp_notify_stream_reset_add(struct sctp_tcb *stcb, uint16_t numberin,
 			     uint16_t numberout, int flag);
 void
 sctp_notify_stream_reset_tsn(struct sctp_tcb *stcb, uint32_t sending_tsn, uint32_t recv_tsn, int flag);
