@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -30,16 +30,13 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-
-/* $KAME: sctputil.h,v 1.15 2005/03/06 16:04:19 itojun Exp $	 */
-
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctputil.h 235416 2012-05-13 19:32:49Z tuexen $");
 #endif
-#ifndef __sctputil_h__
-#define __sctputil_h__
 
+#ifndef _NETINET_SCTP_UTIL_H_
+#define _NETINET_SCTP_UTIL_H_
 
 #if defined(_KERNEL) || defined(__Userspace__)
 

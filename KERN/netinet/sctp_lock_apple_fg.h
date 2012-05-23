@@ -1,9 +1,7 @@
-#ifndef __sctp_lock_apple_fg_h__
-#define __sctp_lock_apple_fg_h__
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -32,9 +30,8 @@
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
 
-/*
- * Appropriate macros are also provided for Apple Mac OS 10.4.x systems.
- */
+#ifndef _NETINET_SCTP_LOCK_APPLE_FG_H_
+#define _NETINET_SCTP_LOCK_APPLE_FG_H_
 
 #define SCTP_STATLOG_INIT_LOCK()
 #define SCTP_STATLOG_LOCK()

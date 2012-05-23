@@ -1,7 +1,7 @@
 /*-
  * Copyright (c) 2001-2008, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -29,7 +29,6 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
-/* $KAME: sctp.h,v 1.18 2005/03/06 16:04:16 itojun Exp $	 */
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
@@ -38,6 +37,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp.h 235280 2012-05-11 17:50:51Z tuexen $
 
 #ifndef _NETINET_SCTP_H_
 #define _NETINET_SCTP_H_
+
 #if (defined(__APPLE__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Darwin))
 #include <stdint.h>
 #endif
