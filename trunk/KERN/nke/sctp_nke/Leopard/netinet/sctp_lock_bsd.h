@@ -1,9 +1,7 @@
-#ifndef __sctp_lock_bsd_h__
-#define __sctp_lock_bsd_h__
 /*-
  * Copyright (c) 2001-2007, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
@@ -31,6 +29,14 @@
  * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
+#ifdef __FreeBSD__
+#include <sys/cdefs.h>
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 235828 2012-05-23 11:26:28Z tuexen $");
+#endif
+
+#ifndef _NETINET_SCTP_LOCK_BSD_H_
+#define _NETINET_SCTP_LOCK_BSD_H_
 
 /*
  * General locking concepts: The goal of our locking is to of course provide
@@ -70,11 +76,6 @@
  * SCTP_INP_INFO_RLOCK() and then when we want to add a new association to
  * the SCTP_BASE_INFO() list's we will do a SCTP_INP_INFO_WLOCK().
  */
-#ifdef __FreeBSD__
-#include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_lock_bsd.h 218319 2011-02-05 12:12:51Z rrs $");
-#endif
-
 
 extern struct sctp_foo_stuff sctp_logoff[];
 extern int sctp_logoff_stuff;

@@ -1,40 +1,42 @@
 /*-
  * Copyright (c) 2006-2007, by Cisco Systems, Inc. All rights reserved.
- * Copyright (c) 2008-2011, by Randall Stewart. All rights reserved.
- * Copyright (c) 2008-2011, by Michael Tuexen. All rights reserved.
+ * Copyright (c) 2008-2012, by Randall Stewart. All rights reserved.
+ * Copyright (c) 2008-2012, by Michael Tuexen. All rights reserved.
  *
- * Redistribution and use in source and binary forms, with or without 
+ * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
- * a) Redistributions of source code must retain the above copyright notice, 
+ *
+ * a) Redistributions of source code must retain the above copyright notice,
  *   this list of conditions and the following disclaimer.
  *
- * b) Redistributions in binary form must reproduce the above copyright 
- *    notice, this list of conditions and the following disclaimer in 
+ * b) Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in
  *   the documentation and/or other materials provided with the distribution.
  *
- * c) Neither the name of Cisco Systems, Inc. nor the names of its 
- *    contributors may be used to endorse or promote products derived 
+ * c) Neither the name of Cisco Systems, Inc. nor the names of its
+ *    contributors may be used to endorse or promote products derived
  *    from this software without specific prior written permission.
  *
- * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS 
+ * THIS SOFTWARE IS PROVIDED BY THE COPYRIGHT HOLDERS AND CONTRIBUTORS
  * "AS IS" AND ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO,
  * THE IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
  * ARE DISCLAIMED. IN NO EVENT SHALL THE COPYRIGHT OWNER OR CONTRIBUTORS BE
- * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR 
+ * LIABLE FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR
  * CONSEQUENTIAL DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF
- * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS 
+ * SUBSTITUTE GOODS OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS
  * INTERRUPTION) HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN
- * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) 
- * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF 
+ * CONTRACT, STRICT LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE)
+ * ARISING IN ANY WAY OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF
  * THE POSSIBILITY OF SUCH DAMAGE.
  */
+
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 234995 2012-05-04 09:27:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 235828 2012-05-23 11:26:28Z tuexen $");
 #endif
-#ifndef __sctp_os_bsd_h__
-#define __sctp_os_bsd_h__
+
+#ifndef _NETINET_SCTP_OS_BSD_H_
+#define _NETINET_SCTP_OS_BSD_H_
 /*
  * includes
  */
@@ -320,7 +322,7 @@ typedef struct uma_zone *sctp_zone_t;
 #if __FreeBSD_version >= 603000
 #define SCTP_HASH_INIT(size, hashmark) hashinit_flags(size, M_PCB, hashmark, HASH_NOWAIT)
 #else
-void *sctp_hashinit_flags(int elements, struct malloc_type *type, 
+void *sctp_hashinit_flags(int elements, struct malloc_type *type,
                     u_long *hashmask, int flags);
 
 #define HASH_NOWAIT 0x00000001
@@ -389,7 +391,7 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) do { \
                                               if (rt != NULL) \
                                                  rt->rt_rmx.rmx_mtu = mtu; \
-                                           } while(0) 
+                                           } while(0)
 
 /* (de-)register interface event notifications */
 #define SCTP_REGISTER_INTERFACE(ifhandle, af)
@@ -477,7 +479,7 @@ typedef struct callout sctp_os_timer_t;
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
- 
+
 /*
  * XXX multi-FIB support was backed out in r179783 and it seems clear that the
  * VRF support as currently in FreeBSD is not ready to support multi-FIB.
@@ -488,7 +490,7 @@ typedef struct rtentry	sctp_rtentry_t;
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
-/* This is re-pulse ourselves for sendbuf */  
+/* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 /*
@@ -517,7 +519,7 @@ typedef struct rtentry	sctp_rtentry_t;
 }
 
 struct mbuf *
-sctp_get_mbuf_for_msg(unsigned int space_needed, 
+sctp_get_mbuf_for_msg(unsigned int space_needed,
 		      int want_header, int how, int allonebuf, int type);
 
 
