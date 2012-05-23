@@ -1,4 +1,4 @@
-q/*-
+/*-
  * Copyright (c) 2010-2012, by Michael Tuexen. All rights reserved.
  * Copyright (c) 2010-2012, by Randall Stewart. All rights reserved.
  * Copyright (c) 2010-2012, by Robin Seggelmann. All rights reserved.
