@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.5 2012-05-23 20:28:07 tuexen Exp $
+ * $Id: rtcweb.c,v 1.6 2012-05-23 20:30:08 tuexen Exp $
  */
 
 /*
@@ -764,6 +764,7 @@ handle_association_change_event(struct sctp_assoc_change *sac)
 				printf(" RE-CONFIG");
 				break;
 			default:
+				printf(" UNKNOWN(0x%02x)", sac->sac_info[i]);
 				break;
 			}
 		}
