@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.10 2012-05-24 12:11:39 tuexen Exp $
+ * $Id: rtcweb.c,v 1.11 2012-05-24 13:05:01 tuexen Exp $
  */
 
 /*
@@ -327,7 +327,7 @@ send_open_response_message(int fd, uint16_t o_stream, uint16_t i_stream)
 	               NULL, 0,
 	               &sndinfo, (socklen_t)sizeof(struct sctp_sndinfo),
 	               SCTP_SENDV_SNDINFO, 0) < 0) {
-	        perror("sctp_sendv");
+		perror("sctp_sendv");
 		return (0);
 	} else {
 		return (1);
@@ -355,7 +355,7 @@ send_open_ack_message(int fd, uint16_t o_stream)
 	               NULL, 0,
 	               &sndinfo, (socklen_t)sizeof(struct sctp_sndinfo),
 	               SCTP_SENDV_SNDINFO, 0) < 0) {
-	        perror("sctp_sendv");
+		perror("sctp_sendv");
 		return (0);
 	} else {
 		return (1);
@@ -439,7 +439,7 @@ send_user_message(struct peer_connection *pc, struct channel *channel, char *mes
 	               NULL, 0,
 	               &spa, (socklen_t)sizeof(struct sctp_sendv_spa),
 	               SCTP_SENDV_SPA, 0) < 0) {
-	        perror("sctp_sendv");
+		perror("sctp_sendv");
 		return (0);
 	} else {
 		return (1);
