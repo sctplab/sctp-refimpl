@@ -27,7 +27,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.8 2012-05-24 11:58:48 tuexen Exp $
+ * $Id: rtcweb.c,v 1.9 2012-05-24 12:00:42 tuexen Exp $
  */
 
 /*
@@ -741,7 +741,7 @@ handle_association_change_event(struct sctp_assoc_change *sac)
 		break;
 	}
 	printf(", streams (in/out) = (%u/%u)",
-	       sac->sac_inbound_streams, sac-> sac_outbound_streams);
+	       sac->sac_inbound_streams, sac->sac_outbound_streams);
 	n = sac->sac_length - sizeof(struct sctp_assoc_change);
 	if (((sac->sac_state == SCTP_COMM_UP) ||
 	     (sac->sac_state == SCTP_RESTART)) && (n > 0)) {
