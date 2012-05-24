@@ -1,5 +1,6 @@
 /*-
  * Copyright (C) 2012 Michael Tuexen
+ * Copyright (C) 2012 Irene Ruengeler
  *
  * All rights reserved.
  *
@@ -27,11 +28,11 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.9 2012-05-24 12:00:42 tuexen Exp $
+ * $Id: rtcweb.c,v 1.10 2012-05-24 12:11:39 tuexen Exp $
  */
 
 /*
- * gcc -Wall -std=c99 -pedantic -Wall -o rtcweb rtcweb.c -lsctp
+ * gcc -Wall -std=c99 -pedantic -o rtcweb rtcweb.c -lsctp
  */
 
 #include <sys/types.h>
