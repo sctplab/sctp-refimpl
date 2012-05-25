@@ -569,6 +569,11 @@ struct sctp_error_unrecognized_chunk {
 
 #define SCTP_SMALLEST_PMTU 512	 /* smallest pmtu allowed when disabling PMTU discovery */
 
+#if defined(__Userspace_os_Windows)
+#pragma pack()
+#endif
+#undef SCTP_PACKED
+
 #include <netinet/sctp_uio.h>
 
 /* This dictates the size of the packet
@@ -619,8 +624,5 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_LOG_AT_SEND_2_SCTP				0x04000000
 #define SCTP_LOG_AT_SEND_2_OUTQ				0x08000000
 #define SCTP_LOG_TRY_ADVANCE				0x10000000
-
-
-#undef SCTP_PACKED
 
 #endif				/* !_NETINET_SCTP_H_ */
