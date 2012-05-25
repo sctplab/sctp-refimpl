@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.12 2012-05-25 19:51:17 tuexen Exp $
+ * $Id: rtcweb.c,v 1.13 2012-05-25 20:50:49 tuexen Exp $
  */
 
 /*
@@ -1326,5 +1326,8 @@ main(int argc, char *argv[])
 		}
 	}
 	pthread_join(tid, NULL);
+	if (close(peer_connection.fd) < 0) {
+		perror("close");
+	}
 	return (0);
 }
