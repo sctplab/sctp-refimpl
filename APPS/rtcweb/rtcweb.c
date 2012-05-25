@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.11 2012-05-24 13:05:01 tuexen Exp $
+ * $Id: rtcweb.c,v 1.12 2012-05-25 19:51:17 tuexen Exp $
  */
 
 /*
@@ -777,6 +777,11 @@ handle_association_change_event(struct sctp_assoc_change *sac)
 		}
 	}
 	printf(".\n");
+	if ((sac->sac_state == SCTP_CANT_STR_ASSOC) ||
+	    (sac->sac_state == SCTP_SHUTDOWN_COMP) ||
+	    (sac->sac_state == SCTP_COMM_LOST)) {
+		exit(0);
+	}
 	return;
 }
 
@@ -1124,26 +1129,60 @@ print_status(struct peer_connection *pc)
 	}
 }
 
+static void *
+handle_messages(void *arg)
+{
+	struct peer_connection *pc;
+	struct iovec iov;
+	struct sctp_rcvinfo rcvinfo;
+	socklen_t infolen;
+	unsigned int infotype;
+	ssize_t n;
+	int flags;
+	char buffer[BUFFER_SIZE];
+
+	pc = (struct peer_connection *)arg;
+	for (;;) {
+		iov.iov_base = buffer;
+		iov.iov_len = BUFFER_SIZE;
+		memset(&rcvinfo, 0, sizeof(struct sctp_rcvinfo));
+		infolen = sizeof(struct sctp_rcvinfo);
+		infotype = SCTP_RECVV_NOINFO;
+		flags = 0;
+		n = sctp_recvv(pc->fd, &iov, 1, NULL, NULL, &rcvinfo, &infolen, &infotype, &flags);
+		if (n <= 0) {
+			break;
+		}
+		lock_peer_connection(pc);
+		if (flags & MSG_NOTIFICATION) {
+			handle_notification(pc, (union sctp_notification *)buffer, n);
+		} else {
+			if (infotype  == SCTP_RECVV_RCVINFO) {
+				handle_message(pc, buffer, n, ntohl(rcvinfo.rcv_ppid), rcvinfo.rcv_sid);
+			} else {
+				unlock_peer_connection(pc);
+				break;
+			}
+		}
+		unlock_peer_connection(pc);
+	}
+	return (NULL);
+}
+
 int
 main(int argc, char *argv[])
 {
-	int fd, flags;
+	int fd;
 	struct sockaddr_in addr;
 	socklen_t addr_len;
-	ssize_t n;
 	char line[LINE_LENGTH + 1];
-	char buffer[BUFFER_SIZE];
-	fd_set fds;
 	unsigned int unordered, policy, value, id, seconds;
 	unsigned int i;
-	struct sctp_rcvinfo rcvinfo;
 	struct channel *channel;
-	socklen_t infolen;
-	unsigned int infotype;
-	struct iovec iov;
 	const int on = 1;
 	struct sctp_assoc_value av;
 	struct sctp_event event;
+	pthread_t tid;
 	uint16_t event_types[] = {SCTP_ASSOC_CHANGE,
 	                          SCTP_PEER_ADDR_CHANGE,
 	                          SCTP_REMOTE_ERROR,
@@ -1229,95 +1268,63 @@ main(int argc, char *argv[])
 	}
 
 	init_peer_connection(&peer_connection, fd);
+	pthread_create(&tid, NULL, &handle_messages, &peer_connection);
 
 	for (;;) {
-		FD_ZERO(&fds);
-		FD_SET(fileno(stdin), &fds);
-		FD_SET(fd, &fds);
-		if (select(fd + 1, &fds, NULL, NULL, NULL) < 0) {
-			perror("select");
+		if (fgets(line, LINE_LENGTH, stdin) == NULL) {
+			shutdown(peer_connection.fd, SHUT_WR);
+			break;
 		}
-		if (FD_ISSET(fileno(stdin), &fds)) {
-			if (fgets(line, LINE_LENGTH, stdin) == NULL) {
-				break;
-			}
-			if (strncasecmp(line, "?", strlen("?")) == 0 ||
-			    strncasecmp(line, "help", strlen("help")) == 0) {
-				printf("Commands:\n"
-				       "open unordered pr_policy pr_value - opens a channel\n"
-				       "close channel - closes the channel\n"
-				       "send channel:string - sends string using channel\n"
-				       "status - prints the status\n"
-				       "sleep n - sleep for n seconds\n"
-				       "help - this message\n");
-			} else if (strncasecmp(line, "status", strlen("status")) == 0) {
-				lock_peer_connection(&peer_connection);
-				print_status(&peer_connection);
-				unlock_peer_connection(&peer_connection);
-			} else if (sscanf(line, "open %u %u %u", &unordered, &policy, &value) == 3) {
-				lock_peer_connection(&peer_connection);
-				channel = open_channel(&peer_connection, (uint8_t)unordered, (uint16_t)policy, (uint32_t)value);
-				unlock_peer_connection(&peer_connection);
-				if (channel == NULL) {
-					printf("Creating channel failed.\n");
-				} else {
-					printf("Channel with id %u created.\n", channel->id);
-				}
-			} else if (sscanf(line, "close %u", &id) == 1) {
-				if (id < NUMBER_OF_CHANNELS) {
-					lock_peer_connection(&peer_connection);
-					close_channel(&peer_connection, &peer_connection.channels[id]);
-					unlock_peer_connection(&peer_connection);
-				}
-			} else if (sscanf(line, "send %u", &id) == 1) {
-				if (id < NUMBER_OF_CHANNELS) {
-					char *msg;
-
-					msg = strstr(line, ":");
-					if (msg) {
-						msg++;
-						lock_peer_connection(&peer_connection);
-						if (send_user_message(&peer_connection, &peer_connection.channels[id], msg, strlen(msg) - 1)) {
-							printf("Message sent.\n");
-						} else {
-							printf("Message sending failed.\n");
-						}
-						unlock_peer_connection(&peer_connection);
-					}
-				}
-			} else if (sscanf(line, "sleep %u", &seconds) == 1) {
-				sleep(seconds);
-			} else {
-				printf("Unknown command: %s", line);
-			}
-		}
-		if (FD_ISSET(fd, &fds)) {
-			iov.iov_base = buffer;
-			iov.iov_len = BUFFER_SIZE;
-			memset(&rcvinfo, 0, sizeof(struct sctp_rcvinfo));
-			infolen = sizeof(struct sctp_rcvinfo);
-			infotype = SCTP_RECVV_NOINFO;
-			flags = 0;
-			n = sctp_recvv(fd, &iov, 1, NULL, NULL, &rcvinfo, &infolen, &infotype, &flags);
-			if (n <= 0) {
-				break;
-			}
+		if (strncmp(line, "?", strlen("?")) == 0 ||
+		    strncmp(line, "help", strlen("help")) == 0) {
+			printf("Commands:\n"
+			       "open unordered pr_policy pr_value - opens a channel\n"
+			       "close channel - closes the channel\n"
+			       "send channel:string - sends string using channel\n"
+			       "status - prints the status\n"
+			       "sleep n - sleep for n seconds\n"
+			       "help - this message\n");
+		} else if (strncmp(line, "status", strlen("status")) == 0) {
 			lock_peer_connection(&peer_connection);
-			if (flags & MSG_NOTIFICATION) {
-				handle_notification(&peer_connection, (union sctp_notification *)buffer, n);
+			print_status(&peer_connection);
+			unlock_peer_connection(&peer_connection);
+		} else if (sscanf(line, "open %u %u %u", &unordered, &policy, &value) == 3) {
+			lock_peer_connection(&peer_connection);
+			channel = open_channel(&peer_connection, (uint8_t)unordered, (uint16_t)policy, (uint32_t)value);
+			unlock_peer_connection(&peer_connection);
+			if (channel == NULL) {
+				printf("Creating channel failed.\n");
 			} else {
-				if (infotype  == SCTP_RECVV_RCVINFO) {
-					handle_message(&peer_connection, buffer, n, ntohl(rcvinfo.rcv_ppid), rcvinfo.rcv_sid);
-				} else {
+				printf("Channel with id %u created.\n", channel->id);
+			}
+		} else if (sscanf(line, "close %u", &id) == 1) {
+			if (id < NUMBER_OF_CHANNELS) {
+				lock_peer_connection(&peer_connection);
+				close_channel(&peer_connection, &peer_connection.channels[id]);
+				unlock_peer_connection(&peer_connection);
+			}
+		} else if (sscanf(line, "send %u", &id) == 1) {
+			if (id < NUMBER_OF_CHANNELS) {
+				char *msg;
+
+				msg = strstr(line, ":");
+				if (msg) {
+					msg++;
+					lock_peer_connection(&peer_connection);
+					if (send_user_message(&peer_connection, &peer_connection.channels[id], msg, strlen(msg) - 1)) {
+						printf("Message sent.\n");
+					} else {
+						printf("Message sending failed.\n");
+					}
 					unlock_peer_connection(&peer_connection);
-					break;
 				}
 			}
-			unlock_peer_connection(&peer_connection);
+		} else if (sscanf(line, "sleep %u", &seconds) == 1) {
+			sleep(seconds);
+		} else {
+			printf("Unknown command: %s", line);
 		}
 	}
-	if (close(fd) < 0) {
-		perror("close");
-	}
+	pthread_join(tid, NULL);
 	return (0);
 }
