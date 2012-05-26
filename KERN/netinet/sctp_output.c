@@ -4198,14 +4198,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_WITH_NO_CSUM)
 			SCTP_STAT_INCR(sctps_sendnocrc);
 #else
-			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
-			     (stcb) &&
-			     (stcb->asoc.loopback_scope))) {
-				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip) + sizeof(struct udphdr));
-				SCTP_STAT_INCR(sctps_sendswcrc);
-			} else {
-				SCTP_STAT_INCR(sctps_sendnocrc);
-			}
+			sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip) + sizeof(struct udphdr));
+			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
 #if defined(__FreeBSD__) && ((__FreeBSD_version > 803000 && __FreeBSD_version < 900000) || __FreeBSD_version > 900000)
 			if (V_udp_cksum) {
@@ -4224,8 +4218,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
-			     (stcb) &&
-			     (stcb->asoc.loopback_scope))) {
+			      (stcb) && (stcb->asoc.loopback_scope))) {
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip));
 				SCTP_STAT_INCR(sctps_sendswcrc);
 			} else {
@@ -4640,14 +4633,8 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 #if defined(SCTP_WITH_NO_CSUM)
 			SCTP_STAT_INCR(sctps_sendnocrc);
 #else
-			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
-			     (stcb) &&
-			     (stcb->asoc.loopback_scope))) {
-				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr) + sizeof(struct udphdr));
-				SCTP_STAT_INCR(sctps_sendswcrc);
-			} else {
-				SCTP_STAT_INCR(sctps_sendnocrc);
-			}
+			sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr) + sizeof(struct udphdr));
+			SCTP_STAT_INCR(sctps_sendswcrc);
 #endif
 #if defined(__Windows__)
 			udp->uh_sum = 0;
@@ -4666,8 +4653,7 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 			SCTP_STAT_INCR(sctps_sendhwcrc);
 #else
 			if (!(SCTP_BASE_SYSCTL(sctp_no_csum_on_loopback) &&
-			     (stcb) &&
-			     (stcb->asoc.loopback_scope))) {
+			      (stcb) && (stcb->asoc.loopback_scope))) {
 				sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr));
 				SCTP_STAT_INCR(sctps_sendswcrc);
 			} else {
