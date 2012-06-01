@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.14 2012-06-01 20:35:37 tuexen Exp $
+ * $Id: rtcweb.c,v 1.15 2012-06-01 20:56:07 tuexen Exp $
  */
 
 /*
@@ -262,7 +262,6 @@ request_more_o_streams(struct peer_connection *pc)
 		perror("setsockopt");
 	}
 	return;
-
 }
 
 static int
