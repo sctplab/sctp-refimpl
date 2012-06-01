@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.15 2012-06-01 20:56:07 tuexen Exp $
+ * $Id: rtcweb.c,v 1.16 2012-06-01 21:01:00 tuexen Exp $
  */
 
 /*
@@ -287,7 +287,6 @@ send_open_request_message(int fd, uint16_t o_stream, uint8_t unordered, uint16_t
 		req.channel_type = DATA_CHANNEL_PARTIAL_RELIABLE_REXMIT;
 		break;
 	default:
-		/* TSNH */
 		return (0);
 	}
 	req.flags = htons(0);
