@@ -2723,7 +2723,6 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #endif				/* IPSEC */
 	SCTP_INCR_EP_COUNT();
 	inp->ip_inp.inp.inp_ip_ttl = MODULE_GLOBAL(ip_defttl);
-	inp->ip_inp.inp.inp_ip_tos = 0;
 	SCTP_INP_INFO_WUNLOCK();
 
 	so->so_pcb = (caddr_t)inp;
