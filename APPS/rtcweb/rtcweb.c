@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.16 2012-06-01 21:01:00 tuexen Exp $
+ * $Id: rtcweb.c,v 1.17 2012-06-06 14:51:51 tuexen Exp $
  */
 
 /*
@@ -111,14 +111,14 @@ struct rtcweb_datachannel_open_request {
 } SCTP_PACKED;
 
 struct rtcweb_datachannel_open_response {
-	uint8_t  msg_type; /* DATA_CHANNEL_OPEN_RESPONSE */
-	uint8_t  error;
+	uint8_t msg_type; /* DATA_CHANNEL_OPEN_RESPONSE */
+	uint8_t error;
 	uint16_t flags;
 	uint16_t reverse_stream;
 } SCTP_PACKED;
 
 struct rtcweb_datachannel_ack {
-	uint8_t  msg_type; /* DATA_CHANNEL_ACK */
+	uint8_t msg_type; /* DATA_CHANNEL_ACK */
 } SCTP_PACKED;
 
 #undef SCTP_PACKED
