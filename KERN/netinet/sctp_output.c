@@ -11120,7 +11120,7 @@ sctp_send_resp_msg(struct mbuf *m, struct sctphdr *sh, uint32_t vtag,
 	/* Compute the length of the cause and add final padding. */
 	cause_len = 0;
 	if (cause != NULL) {
-		struct mbuf *m_at, *m_last;
+		struct mbuf *m_at, *m_last = NULL;
 
 		for (m_at = cause; m_at; m_at = SCTP_BUF_NEXT(m_at)) {
 			if (SCTP_BUF_NEXT(m_at) == NULL)
@@ -11268,6 +11268,8 @@ sctp_send_resp_msg(struct mbuf *m, struct sctphdr *sh, uint32_t vtag,
 		                     cause_len + padding_len);
 		len += sizeof(struct udphdr);
 		shout = (struct sctphdr *)((caddr_t)shout + sizeof(struct udphdr));
+	} else {
+		udp = NULL;
 	}
 	shout->src_port = sh->dest_port;
 	shout->dest_port = sh->src_port;
