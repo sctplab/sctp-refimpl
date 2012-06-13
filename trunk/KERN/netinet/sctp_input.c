@@ -6248,7 +6248,7 @@ sctp_input(i_pak, va_alist)
 		net->port = port;
 	}
 #if defined(__FreeBSD__)
-	if ((net != NULL) && (use_mflowid != 0))) {
+	if ((net != NULL) && (use_mflowid != 0)) {
 		net->flowid = mflowid;
 #ifdef INVARIANTS
 		net->flowidset = 1;
