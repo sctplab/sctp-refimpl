@@ -2513,7 +2513,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 int
 sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
                   struct sctphdr *sh, struct sctp_inpcb *inp,
-                  struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t *high_tsn
+                  struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t *high_tsn,
 #if defined(__FreeBSD__)
                   uint8_t use_mflowid, uint32_t mflowid,
 #endif
