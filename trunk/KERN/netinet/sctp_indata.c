@@ -2513,11 +2513,11 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 int
 sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
                   struct sctphdr *sh, struct sctp_inpcb *inp,
-                  struct sctp_tcb *stcb, struct sctp_nets *net,
+                  struct sctp_tcb *stcb, struct sctp_nets *net, uint32_t *high_tsn
 #if defined(__FreeBSD__)
                   uint8_t use_mflowid, uint32_t mflowid,
 #endif
-		  uint32_t *high_tsn)
+		  uint32_t vrf_id, uint16_t port)
 {
 	struct sctp_data_chunk *ch, chunk_buf;
 	struct sctp_association *asoc;
@@ -2630,7 +2630,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 #if defined(__FreeBSD__)
 				                       use_mflowid, mflowid,
 #endif
-				                       0, net->port);
+				                       vrf_id, port);
 				return (2);
 			}
 #ifdef SCTP_AUDITING_ENABLED
@@ -2700,7 +2700,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 #if defined(__FreeBSD__)
 					                       use_mflowid, mflowid,
 #endif
-					                       0, net->port);
+					                       vrf_id, port);
 					return (2);
 				}
 				break;
