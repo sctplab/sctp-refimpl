@@ -214,10 +214,10 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset, struct sctphdr *sh,
 	} else {
 		SCTPDBG(SCTP_DEBUG_INPUT3, "sctp_handle_init: sending INIT-ACK\n");
 		sctp_send_initiate_ack(inp, stcb, m, iphlen, offset, sh, cp,
-		                       vrf_id, port,
 #if defined(__FreeBSD__)
 		                       use_mflowid, mflowid,
 #endif
+		                       vrf_id, port,
 		                       ((stcb == NULL) ? SCTP_HOLDS_LOCK : SCTP_NOT_LOCKED));
 	}
  outnow:
