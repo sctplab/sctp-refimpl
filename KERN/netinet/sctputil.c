@@ -7584,7 +7584,7 @@ static void
 sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 {
 	struct ip *iph;
-	struct mbuf *sp;
+	struct mbuf *sp, *last;
 	struct udphdr *uhdr;
 	uint16_t port;
 
@@ -7620,9 +7620,9 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 	m_adj(sp, sizeof(struct udphdr));
 
 	/* Now reconstruct the mbuf chain */
-	m_cat(m, sp);
+	for (last = m; last->m_next; last = last->m_next);
+	last->m_next = sp;
 	m->m_pkthdr.len += sp->m_pkthdr.len;
-
 	iph = mtod(m, struct ip *);
 	switch (iph->ip_v) {
 #ifdef INET
