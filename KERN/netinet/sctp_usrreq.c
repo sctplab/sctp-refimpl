@@ -7290,7 +7290,6 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 }
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
-#ifdef INET
 struct pr_usrreqs sctp_usrreqs = {
 #if __FreeBSD_version >= 600000
 	.pru_abort = sctp_abort,
@@ -7357,7 +7356,6 @@ struct pr_usrreqs sctp_usrreqs = {
 #endif
 #endif
 };
-#endif
 #elif !defined(__Panda__) && !defined(__Userspace__)
 int
 sctp_usrreq(so, req, m, nam, control)
