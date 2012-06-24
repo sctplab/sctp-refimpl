@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 235828 2012-05-23 11:26:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 237540 2012-06-24 21:25:54Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -417,7 +417,7 @@ typedef struct callout sctp_os_timer_t;
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
 #define SCTP_DETACH_HEADER_FROM_CHAIN(m)
-#define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
+#define SCTP_HEADER_LEN(m) ((m)->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
