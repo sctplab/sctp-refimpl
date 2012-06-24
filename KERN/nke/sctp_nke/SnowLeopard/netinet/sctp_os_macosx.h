@@ -359,7 +359,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  */
 #define SCTP_HEADER_TO_CHAIN(m) (m)
 #define SCTP_DETACH_HEADER_FROM_CHAIN(m)
-#define SCTP_HEADER_LEN(m) (m->m_pkthdr.len)
+#define SCTP_HEADER_LEN(m) ((m)->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m) sctp_m_freem(m)
