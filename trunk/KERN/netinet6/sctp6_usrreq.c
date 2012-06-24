@@ -167,7 +167,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	}
 
 	m = SCTP_HEADER_TO_CHAIN(*i_pak);
-	pkt_len = SCTP_HEADER_LEN((*i_pak));
+	pkt_len = SCTP_HEADER_LEN(*i_pak);
 #ifdef __Panda__
 	/* We dont need the pak hdr, free it */
 	/* For BSD/MAC this does nothing */
@@ -175,8 +175,8 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	(void)SCTP_RELEASE_HEADER(*i_pak);
 #endif
 
-#ifdef  SCTP_PACKET_LOGGING
-	sctp_packet_log(m, pkt_len);
+#ifdef SCTP_PACKET_LOGGING
+	sctp_packet_log(m);
 #endif
 #if defined(__FreeBSD__)
 	if (m->m_flags & M_FLOWID) {

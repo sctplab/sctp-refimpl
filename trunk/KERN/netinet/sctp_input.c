@@ -6090,9 +6090,9 @@ sctp_input(i_pak, va_alist)
 		}
 	}
 #endif
-#ifdef  SCTP_PACKET_LOGGING
+#ifdef SCTP_PACKET_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING)
-		sctp_packet_log(m, mlen);
+		sctp_packet_log(m);
 #endif
 #if defined(__FreeBSD__)
 	if (m->m_flags & M_FLOWID) {
