@@ -289,7 +289,7 @@ void *sctp_hashinit_flags(int, struct malloc_type *, u_long *, int);
  */
 #define SCTP_HEADER_TO_CHAIN(m)		(m)
 #define SCTP_DETACH_HEADER_FROM_CHAIN(m)
-#define SCTP_HEADER_LEN(m)		(m->m_pkthdr.len)
+#define SCTP_HEADER_LEN(m)		((m)->m_pkthdr.len)
 #define SCTP_GET_HEADER_FOR_OUTPUT(o_pak) 0
 #define SCTP_RELEASE_HEADER(m)
 #define SCTP_RELEASE_PKT(m)	sctp_m_freem(m)
