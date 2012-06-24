@@ -332,7 +332,7 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
-#if defined (APPLE_LION)
+#if defined(APPLE_LION)
 		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(&((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #else
