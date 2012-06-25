@@ -210,7 +210,7 @@ do { \
 		} while (0)
 
 /* save caller pc and caller's caller pc */
-#if defined (__i386__)
+#if defined(__i386__)
 #define SAVE_CALLERS(a, b, c) { \
         unsigned int ebp = 0; \
         unsigned int prev_ebp = 0; \
