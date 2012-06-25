@@ -6086,6 +6086,7 @@ sctp_input(i_pak, va_alist)
 	}
 	sh = (struct sctphdr *)((caddr_t)ip + iphlen);
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
+	offset -= sizeof(struct sctp_chunkhdr);
 #if defined(__Windows__)
 	NTOHS(ip->ip_len);
 #endif
@@ -6167,7 +6168,6 @@ sctp_input(i_pak, va_alist)
 		goto sctp_skip_csum;
 	}
 #endif
-	offset -= sizeof(struct sctp_chunkhdr);
 	sh->checksum = 0;
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	sh->checksum = check;
