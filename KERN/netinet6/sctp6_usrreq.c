@@ -199,6 +199,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		return (IPPROTO_DONE);
 	}
 	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
+	offset -= sizeof(struct sctp_chunkhdr);
 #ifdef __FreeBSD__
 	if (faithprefix_p != NULL && (*faithprefix_p) (&ip6->ip6_dst)) {
 		/* XXX send icmp6 host/port unreach? */
@@ -272,7 +273,6 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 		goto sctp_skip_csum;
 	}
 #endif
-	offset -= sizeof(struct sctp_chunkhdr);
 	sh->checksum = 0;
 	calc_check = sctp_calculate_cksum(m, iphlen);
 	sh->checksum = check;
