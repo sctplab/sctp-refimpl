@@ -107,18 +107,9 @@ SCTPDBG(uint32_t level, char *format, ...)
 		} \
 	} while (0); \
 }
-#define SCTPDBG_PKT(level, iph, sh) \
-{ \
-	do { \
-		if (*sctp_debug_on & level) { \
-			sctp_print_address_pkt(iph, sh); \
-		} \
-	} while (0); \
-}
 #else
 #define SCTPDBG(x, ...)
 #define SCTPDBG_ADDR(level, addr)
-#define SCTPDBG_PKT(level, iph, sh)
 #endif
 __inline void
 SCTP_PRINTF(char *format, ...)
