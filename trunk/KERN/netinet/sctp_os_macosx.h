@@ -150,18 +150,9 @@ extern struct fileops socketops;
 	}								\
     } while (0);							\
 }
-#define SCTPDBG_PKT(level, iph, sh)					\
-{									\
-    do {								\
-	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
-		    sctp_print_address_pkt(iph, sh);			\
-	    }								\
-    } while (0);							\
-}
 #else
 #define SCTPDBG(level, params...)
 #define SCTPDBG_ADDR(level, addr)
-#define SCTPDBG_PKT(level, iph, sh)
 #endif
 
 /*
