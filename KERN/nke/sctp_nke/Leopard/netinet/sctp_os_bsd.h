@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 237540 2012-06-24 21:25:54Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 237715 2012-06-28 16:01:08Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -206,18 +206,9 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 	}								\
     } while (0);							\
 }
-#define SCTPDBG_PKT(level, iph, sh)					\
-{									\
-    do {								\
-	    if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {		\
-		    sctp_print_address_pkt(iph, sh);			\
-	    }								\
-    } while (0);							\
-}
 #else
 #define SCTPDBG(level, params...)
 #define SCTPDBG_ADDR(level, addr)
-#define SCTPDBG_PKT(level, iph, sh)
 #endif
 
 #ifdef SCTP_LTRACE_CHUNKS
@@ -445,10 +436,6 @@ typedef struct callout sctp_os_timer_t;
  * into the chain of data holders, for BSD
  * its a NOP.
  */
-
-/* Macro's for getting length from V6/V4 header */
-#define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
-#define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
 
 /* get the v6 hop limit */
 #define SCTP_GET_HLIM(inp, ro)	in6_selecthlim((struct in6pcb *)&inp->ip_inp.inp, (ro ? (ro->ro_rt ? (ro->ro_rt->rt_ifp) : (NULL)) : (NULL)));
