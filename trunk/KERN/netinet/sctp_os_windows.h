@@ -306,10 +306,6 @@ in_broadcast(struct in_addr in, struct ifnet *ifp)
 #define SCTP_IS_IT_LOOPBACK(m) \
 	((m->m_flags & M_PKTHDR) && ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type == IFT_LOOP)))
 
-/* Macro's for getting length from V6/V4 header */
-#define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
-#define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
-
 /* get the v6 hop limit */
 #define SCTP_GET_HLIM(inp, ro) 128 /* XXX */
 
