@@ -107,18 +107,9 @@ SCTPDBG(uint32_t level, char *format, ...)
 		} \
 	} while (0); \
 }
-#define SCTPDBG_PKT(level, iph, sh) \
-{ \
-	do { \
-		if (*sctp_debug_on & level) { \
-			sctp_print_address_pkt(iph, sh); \
-		} \
-	} while (0); \
-}
 #else
 #define SCTPDBG(x, ...)
 #define SCTPDBG_ADDR(level, addr)
-#define SCTPDBG_PKT(level, iph, sh)
 #endif
 __inline void
 SCTP_PRINTF(char *format, ...)
@@ -314,10 +305,6 @@ in_broadcast(struct in_addr in, struct ifnet *ifp)
 	((m->m_flags & M_PKTHDR) ? in_broadcast(dst, m->m_pkthdr.rcvif) : 0)
 #define SCTP_IS_IT_LOOPBACK(m) \
 	((m->m_flags & M_PKTHDR) && ((m->m_pkthdr.rcvif == NULL) || (m->m_pkthdr.rcvif->if_type == IFT_LOOP)))
-
-/* Macro's for getting length from V6/V4 header */
-#define SCTP_GET_IPV4_LENGTH(iph) (iph->ip_len)
-#define SCTP_GET_IPV6_LENGTH(ip6) (ntohs(ip6->ip6_plen))
 
 /* get the v6 hop limit */
 #define SCTP_GET_HLIM(inp, ro) 128 /* XXX */
