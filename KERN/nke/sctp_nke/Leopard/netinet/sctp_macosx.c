@@ -79,6 +79,7 @@
 #include <netinet/sctp_peeloff.h>
 #include <netinet/sctp_bsd_addr.h>
 #include <netinet/sctp_timer.h>
+#include <netinet/sctp_input.h>
 #include <net/kpi_interface.h>
 #define APPLE_FILE_NO 5
 
@@ -1136,19 +1137,21 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 {
 	errno_t error;
 	size_t length;
-	mbuf_t packet;
+	int offset;
+	mbuf_t m;
 	struct msghdr msg;
 	struct sockaddr_in src, dst;
 	char cmsgbuf[CMSG_SPACE(sizeof (struct in_addr))];
 	struct cmsghdr *cmsg;
-	struct ip *ip;
-	struct mbuf *ip_m;
-	
+	struct sctphdr *sh;
+	struct sctp_chunkhdr *ch;
+	uint16_t port;
+
 	bzero((void *)&msg, sizeof(struct msghdr));
 	bzero((void *)&src, sizeof(struct sockaddr_in));
 	bzero((void *)&dst, sizeof(struct sockaddr_in));
 	bzero((void *)cmsgbuf, CMSG_SPACE(sizeof (struct in_addr)));
-	
+
 	msg.msg_name = (void *)&src;
 	msg.msg_namelen = sizeof(struct sockaddr_in);
 	msg.msg_iov = NULL;
@@ -1158,7 +1161,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	msg.msg_flags = 0;
 
 	length = (1<<16);
-	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	error = sock_receivembuf(udp_sock, &msg, &m, 0, &length);
 	if (error) {
 		SCTP_PRINTF("sock_receivembuf returned error %d.\n", error);
 		return;
@@ -1166,49 +1169,82 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	if (length == 0) {
 		return;
 	}
-	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
-		mbuf_freem(packet);
+	if ((m->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(m);
 		return;
 	}
+#ifdef SCTP_MBUF_LOGGING
+	/* Log in any input mbufs */
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
+		struct mbuf *mat;
 
+		for (mat = m; mat; mat = SCTP_BUF_NEXT(mat)) {
+			if (SCTP_BUF_IS_EXTENDED(mat)) {
+				sctp_log_mb(mat, SCTP_MBUF_INPUT);
+			}
+		}
+	}
+#endif
+#ifdef SCTP_PACKET_LOGGING
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING) {
+		sctp_packet_log(m);
+	}
+#endif
+	SCTP_STAT_INCR(sctps_recvpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
+	/* Get SCTP, and first chunk header together in the first mbuf. */
+	offset = sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
+	if (SCTP_BUF_LEN(m) < offset) {
+		if ((m = m_pullup(m, offset)) == NULL) {
+			SCTP_STAT_INCR(sctps_hdrops);
+			return;
+		}
+	}
+	sh = mtod(m, struct sctphdr *);;
+	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
+	offset -= sizeof(struct sctp_chunkhdr);
+	port = src.sin_port;
+	src.sin_port = sh->src_port;
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if ((cmsg->cmsg_level == IPPROTO_IP) && (cmsg->cmsg_type == IP_RECVDSTADDR)) {
 			dst.sin_family = AF_INET;
 			dst.sin_len = sizeof(struct sockaddr_in);
-			dst.sin_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+			dst.sin_port = sh->dest_port;
 			memcpy((void *)&dst.sin_addr, (const void *)CMSG_DATA(cmsg), sizeof(struct in_addr));
 		}
 	}
-	
-	ip_m = sctp_get_mbuf_for_msg(sizeof(struct ip), 1, M_DONTWAIT, 1, MT_DATA);
-	if (ip_m == NULL) {
-		mbuf_freem(packet);
-		return;
+	/* Validate mbuf chain length with IP payload length. */
+	if (SCTP_HEADER_LEN(m) != (int)length) {
+		SCTPDBG(SCTP_DEBUG_INPUT1,
+		        "sctp_over_udp_ipv4_cb(): length:%d reported length:%d\n", (int)length, SCTP_HEADER_LEN(m));
+		SCTP_STAT_INCR(sctps_hdrops);
+		goto out;
 	}
-	ip_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
-	ip = mtod(ip_m, struct ip *);
-	bzero((void *)ip, sizeof(struct ip));
-	ip->ip_v = IPVERSION;
-	ip->ip_len = length;
-	ip->ip_src = src.sin_addr;
-	ip->ip_dst = dst.sin_addr;
-	SCTP_HEADER_LEN(ip_m) = (int)(sizeof(struct ip) + length);
-	SCTP_BUF_LEN(ip_m) = sizeof(struct ip);
-	SCTP_BUF_NEXT(ip_m) = packet;
-
-	/*
-	SCTP_PRINTF("Received a UDP packet of length %d from ", (int)length);
-	print_address((struct sockaddr *)&src);
-	SCTP_PRINTF(" to ");
-	print_address((struct sockaddr *)&dst);
-	SCTP_PRINTF(".\n");
-	SCTP_PRINTF("packet = \n");
-	sctp_print_mbuf_chain(packet);
-	SCTP_PRINTF("ip_m = \n");
-	sctp_print_mbuf_chain(ip_m);
-	*/
-
-	sctp_input_with_port(ip_m, sizeof(struct ip), src.sin_port);
+	/* SCTP does not allow broadcasts or multicasts */
+	if (IN_MULTICAST(ntohl(dst.sin_addr.s_addr))) {
+		goto out;
+	}
+	if (SCTP_IS_IT_BROADCAST(dst.sin_addr, m)) {
+		goto out;
+	}
+#if defined(SCTP_WITH_NO_CSUM)
+	SCTP_STAT_INCR(sctps_recvnocrc);
+#else
+	SCTP_STAT_INCR(sctps_recvswcrc);
+#endif
+	sctp_common_input_processing(&m, 0, offset, length,
+	                             (struct sockaddr *)&src,
+	                             (struct sockaddr *)&dst,
+	                             sh, ch,
+#if !defined(SCTP_WITH_NO_CSUM)
+	                             1,
+#endif
+	                             0,
+	                             SCTP_DEFAULT_VRFID, port);
+ out:
+	if (m) {
+		mbuf_freem(m);
+	}
 	return;
 }
 
@@ -1217,14 +1253,15 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 {
 	errno_t error;
 	size_t length;
-	mbuf_t packet;
+	int offset;
+	mbuf_t m;
 	struct msghdr msg;
 	struct sockaddr_in6 src, dst;
 	char cmsgbuf[CMSG_SPACE(sizeof (struct in6_pktinfo))];
 	struct cmsghdr *cmsg;
-	struct ip6_hdr *ip6;
-	struct mbuf *ip6_m;
-	int offset;
+	struct sctphdr *sh;
+	struct sctp_chunkhdr *ch;
+	uint16_t port;
 
 	bzero((void *)&msg, sizeof(struct msghdr));
 	bzero((void *)&src, sizeof(struct sockaddr_in6));
@@ -1240,7 +1277,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	msg.msg_flags = 0;
 
 	length = (1<<16);
-	error = sock_receivembuf(udp_sock, &msg, &packet, 0, &length);
+	error = sock_receivembuf(udp_sock, &msg, &m, 0, &length);
 	if (error) {
 		SCTP_PRINTF("sock_receivembuf returned error %d.\n", error);
 		return;
@@ -1248,48 +1285,90 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 	if (length == 0) {
 		return;
 	}
-	if ((packet->m_flags & M_PKTHDR) != M_PKTHDR) {
-		mbuf_freem(packet);
+	if ((m->m_flags & M_PKTHDR) != M_PKTHDR) {
+		mbuf_freem(m);
 		return;
 	}
+#ifdef SCTP_MBUF_LOGGING
+	/* Log in any input mbufs */
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
+		struct mbuf *mat;
+
+		for (mat = m; mat; mat = SCTP_BUF_NEXT(mat)) {
+			if (SCTP_BUF_IS_EXTENDED(mat)) {
+				sctp_log_mb(mat, SCTP_MBUF_INPUT);
+			}
+		}
+	}
+#endif
+#ifdef SCTP_PACKET_LOGGING
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING) {
+		sctp_packet_log(m);
+	}
+#endif
+	SCTP_STAT_INCR(sctps_recvpackets);
+	SCTP_STAT_INCR_COUNTER64(sctps_inpackets);
+	/* Get SCTP, and first chunk header together in the first mbuf. */
+	offset = sizeof(struct sctphdr) + sizeof(struct sctp_chunkhdr);
+	if (SCTP_BUF_LEN(m) < offset) {
+		if ((m = m_pullup(m, offset)) == NULL) {
+			SCTP_STAT_INCR(sctps_hdrops);
+			return;
+		}
+	}
+	sh = mtod(m, struct sctphdr *);;
+	ch = (struct sctp_chunkhdr *)((caddr_t)sh + sizeof(struct sctphdr));
+	offset -= sizeof(struct sctp_chunkhdr);
+	port = src.sin6_port;
+	src.sin6_port = sh->src_port;
 	for (cmsg = CMSG_FIRSTHDR(&msg); cmsg; cmsg = CMSG_NXTHDR(&msg, cmsg)) {
 		if ((cmsg->cmsg_level == IPPROTO_IPV6) && (cmsg->cmsg_type == IPV6_PKTINFO)) {
 			dst.sin6_family = AF_INET6;
 			dst.sin6_len = sizeof(struct sockaddr_in6);
-			dst.sin6_port = htons(SCTP_BASE_SYSCTL(sctp_udp_tunneling_port));
+			dst.sin6_port = sh->dest_port;
 			memcpy((void *)&dst.sin6_addr, (const void *)(&((struct in6_pktinfo *)CMSG_DATA(cmsg))->ipi6_addr), sizeof(struct in6_addr));
+#if 0
+ 			if (in6_setscope(&dst.sin6_addr, m->m_pkthdr.rcvif, NULL) != 0) {
+				goto out;
+			}
+#endif
+#if defined(NFAITH) && 0 < NFAITH
+			if (faithprefix(&dst.sin6_addr)) {
+				goto out;
+			}
+#endif
 		}
 	}
-	ip6_m = sctp_get_mbuf_for_msg(sizeof(struct ip6_hdr), 1, M_DONTWAIT, 1, MT_DATA);
-	if (ip6_m == NULL) {
-		mbuf_freem(packet);
-		return;
+	/* Validate mbuf chain length with IP payload length. */
+	if (SCTP_HEADER_LEN(m) != (int)length) {
+		SCTPDBG(SCTP_DEBUG_INPUT1,
+		        "sctp_over_udp_ipv6_cb(): length:%d reported length:%d\n", (int)length, SCTP_HEADER_LEN(m));
+		SCTP_STAT_INCR(sctps_hdrops);
+		goto out;
 	}
-	ip6_m->m_pkthdr.rcvif = packet->m_pkthdr.rcvif;
-	ip6 = mtod(ip6_m, struct ip6_hdr *);
-	bzero((void *)ip6, sizeof(struct ip6_hdr));
-	ip6->ip6_vfc = IPV6_VERSION;
-	ip6->ip6_plen = htons(length);
-	ip6->ip6_src = src.sin6_addr;
-	ip6->ip6_dst = dst.sin6_addr;
-	SCTP_HEADER_LEN(ip6_m) = (int)(sizeof(struct ip6_hdr) + length);
-	SCTP_BUF_LEN(ip6_m) = sizeof(struct ip6_hdr);
-	SCTP_BUF_NEXT(ip6_m) = packet;
-
-	/*
-	SCTP_PRINTF("Received a UDP packet of length %d from ", (int)length);
-	print_address((struct sockaddr *)&src);
-	SCTP_PRINTF(" to ");
-	print_address((struct sockaddr *)&dst);
-	SCTP_PRINTF(".\n");
-	SCTP_PRINTF("packet = \n");
-	sctp_print_mbuf_chain(packet);
-	SCTP_PRINTF("ip_m = \n");
-	sctp_print_mbuf_chain(ip6_m);
-	*/
-
-	offset = sizeof(struct ip6_hdr);
-	sctp6_input_with_port(&ip6_m, &offset, src.sin6_port);
+	/* SCTP does not allow multicasts */
+	if (IN6_IS_ADDR_MULTICAST(&dst.sin6_addr)) {
+		goto out;
+	}
+#if defined(SCTP_WITH_NO_CSUM)
+	SCTP_STAT_INCR(sctps_recvnocrc);
+#else
+	SCTP_STAT_INCR(sctps_recvswcrc);
+#endif
+	sctp_common_input_processing(&m, 0, offset, length,
+	                             (struct sockaddr *)&src,
+	                             (struct sockaddr *)&dst,
+	                             sh, ch,
+#if !defined(SCTP_WITH_NO_CSUM)
+	                             1,
+#endif
+	                             0,
+	                             SCTP_DEFAULT_VRFID, port);
+ out:
+	if (m) {
+		mbuf_freem(m);
+	}
+	return;
 }
 
 socket_t sctp_over_udp_ipv4_so = NULL;
