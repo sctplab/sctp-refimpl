@@ -4250,10 +4250,14 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		SCTPDBG(SCTP_DEBUG_OUTPUT3, "IP output returns %d\n", ret);
 		if (net == NULL) {
 			/* free tempy routes */
+#if defined(__FreeBSD__) && __FreeBSD_version > 901000
+			RO_RTFREE(ro);
+#else
 			if (ro->ro_rt) {
 				RTFREE(ro->ro_rt);
 				ro->ro_rt = NULL;
 			}
+#endif
 		} else {
 			/* PMTU check versus smallest asoc MTU goes here */
 			if ((ro->ro_rt != NULL) &&
@@ -4694,9 +4698,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		}
 		if (net == NULL) {
 			/* Now if we had a temp route free it */
+#if defined(__FreeBSD__) && __FreeBSD_version > 901000
+			RO_RTFREE(ro);
+#else
 			if (ro->ro_rt) {
 				RTFREE(ro->ro_rt);
 			}
+#endif
 		} else {
 			/* PMTU check versus smallest asoc MTU goes here */
 			if (ro->ro_rt == NULL) {
