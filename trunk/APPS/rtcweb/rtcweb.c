@@ -28,7 +28,7 @@
  * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
  * SUCH DAMAGE.
  *
- * $Id: rtcweb.c,v 1.17 2012-06-06 14:51:51 tuexen Exp $
+ * $Id: rtcweb.c,v 1.18 2012-07-05 07:35:55 tuexen Exp $
  */
 
 /*
@@ -953,8 +953,12 @@ handle_stream_reset_event(struct peer_connection *pc, struct sctp_stream_reset_e
 						channel->flags = 0;
 						channel->state = DATA_CHANNEL_CLOSED;
 					} else {
-						reset_outgoing_stream(pc, channel->o_stream);
-						channel->state = DATA_CHANNEL_CLOSING;
+						if (channel->state == DATA_CHANNEL_OPEN) {
+							reset_outgoing_stream(pc, channel->o_stream);
+							channel->state = DATA_CHANNEL_CLOSING;
+						} else {
+							/* XXX: error handling? */
+						}
 					}
 				}
 			}
