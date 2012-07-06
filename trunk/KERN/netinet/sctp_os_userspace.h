@@ -191,6 +191,7 @@ typedef HANDLE userland_thread_t;
 typedef char* caddr_t;
 
 #define getifaddrs(interfaces)  (int)Win_getifaddrs(interfaces)
+#define if_nametoindex(x) (int)win_if_nametoindex(x)
 
 #define bzero(buf, len) memset(buf, 0, len)
 #define bcopy(srcKey, dstKey, len) memcpy(dstKey, srcKey, len)
@@ -1042,6 +1043,13 @@ typedef int SHA512_CTX;
 
 /* end OOTB only stuff */
 
+#define AF_CONN 123
+struct sockaddr_conn {
+	uint8_t sconn_family;
+	uint8_t sconn_len;
+	uint16_t sconn_port;
+	void *sconn_addr;
+};
 
 /*
  * IP output routines
