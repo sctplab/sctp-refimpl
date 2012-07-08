@@ -876,8 +876,8 @@ sctpconn_bind(struct socket *so, struct sockaddr *addr) {
 	error = sctp_inpcb_bind(so, addr, NULL, p);
 	return (error);
 }
-#endif
 
+#endif
 #if (defined(__FreeBSD__) && __FreeBSD_version > 690000) || defined(__Windows__) || defined(__Userspace__)
 void
 sctp_close(struct socket *so)
@@ -6934,7 +6934,6 @@ sctpconn_connect(struct socket *so, struct sockaddr *addr)
 	return (error);
 }
 #endif
-
 int
 #if defined(__FreeBSD__) && __FreeBSD_version >= 500000
 #if __FreeBSD_version >= 700000
