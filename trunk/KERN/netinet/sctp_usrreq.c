@@ -6771,11 +6771,13 @@ sctp_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 
 #if defined(__Userspace__)
+int
 sctpconn_connect(struct socket *so, struct sockaddr *addr)
 {
 #ifdef SCTP_MVRF
 	int i, fnd = 0;
 #endif
+	void *p = NULL;
 	int error = 0;
 	int create_lock_on = 0;
 	uint32_t vrf_id;
