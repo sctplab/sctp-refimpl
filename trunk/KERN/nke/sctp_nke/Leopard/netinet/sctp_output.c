@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 238122 2012-07-04 20:59:30Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 238294 2012-07-09 10:59:39Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5625,6 +5625,11 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	struct sockaddr_in6 *src6 = (struct sockaddr_in6 *)src;
 	struct sockaddr_in6 *sin6;
 #endif
+#if defined(__Userspace__)
+	struct sockaddr_conn *dstconn = (struct sockaddr_conn *)dst;
+	struct sockaddr_conn *srcconn = (struct sockaddr_conn *)src;
+	struct sockaddr_conn *sconn;
+#endif
 	struct sockaddr *to;
 	struct sctp_state_cookie stc;
 	struct sctp_nets *net = NULL;
@@ -5773,6 +5778,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		case AF_INET6:
 		{
 			stc.addr_type = SCTP_IPV6_ADDRESS;
+			memcpy(&stc.address, &src6->sin6_addr, sizeof(struct in6_addr));
 #if defined(__FreeBSD__)
 			stc.scope_id = in6_getscope(&src6->sin6_addr);
 #else
@@ -5817,6 +5823,27 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			memcpy(&stc.laddress, &dst6->sin6_addr, sizeof(struct in6_addr));
 			stc.laddr_type = SCTP_IPV6_ADDRESS;
+			break;
+		}
+#endif
+#if defined(__Userspace__)
+		case AF_CONN:
+		{
+			/* lookup address */
+			stc.address[0] = 0;
+			stc.address[1] = 0;
+			stc.address[2] = 0;
+			stc.address[3] = 0;
+			memcpy(&stc.address, &srcconn->sconn_addr, sizeof(void *));
+			stc.addr_type = SCTP_CONN_ADDRESS;
+			/* local from address */
+			stc.laddress[0] = 0;
+			stc.laddress[1] = 0;
+			stc.laddress[2] = 0;
+			stc.laddress[3] = 0;
+			memcpy(&stc.laddress, &dstconn->sconn_addr, sizeof(void *));
+			stc.laddr_type = SCTP_CONN_ADDRESS;
+			/* scope_id is only for v6 */
 			break;
 		}
 #endif
