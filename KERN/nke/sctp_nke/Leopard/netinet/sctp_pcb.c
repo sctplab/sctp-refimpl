@@ -933,6 +933,16 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 		}
 		break;
 #endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		if (from->sa_family == AF_CONN) {
+			lport = ((struct sockaddr_conn *)to)->sconn_port;
+			rport = ((struct sockaddr_conn *)from)->sconn_port;
+		} else {
+			return (NULL);
+		}
+		break;
+#endif
 	default:
 		return (NULL);
 	}
@@ -1019,6 +1029,19 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 						}
 					}
 #endif
+#if defined(__Userspace__)
+					if (from->sa_family == AF_CONN) {
+						struct sockaddr_conn *intf_addr, *sconn;
+
+						intf_addr = &laddr->ifa->address.sconn;
+						sconn = (struct sockaddr_conn *)to;
+						if (sconn->sconn_addr ==
+						    intf_addr->sconn_addr) {
+							match = 1;
+							break;
+						}
+					}
+#endif
 				}
 			}
 			if (match == 0) {
@@ -1099,6 +1122,26 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 				break;
 			}
 #endif
+#if defined(__Userspace__)
+			case AF_CONN:
+			{
+				struct sockaddr_conn *sconn, *rsconn;
+
+				sconn = (struct sockaddr_conn *)&net->ro._l_addr;
+				rsconn = (struct sockaddr_conn *)from;
+				if (sconn->sconn_addr == rsconn->sconn_addr) {
+					/* found it */
+					if (netp != NULL) {
+						*netp = net;
+					}
+					/* Update the endpoint pointer */
+					*inp_p = inp;
+					SCTP_INP_RUNLOCK(inp);
+					return (stcb);
+				}
+				break;
+			}
+#endif
 			default:
 				/* TSNH */
 				break;
@@ -1142,6 +1185,12 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 	}
 
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) {
+#if defined(__Userspace__)
+		if (to->sa_family == AF_CONN) {
+			SCTP_IPI_ADDR_RUNLOCK();
+			return (1);
+		}
+#endif
 		LIST_FOREACH(sctp_ifn, &vrf->ifnlist, next_ifn) {
 			if ((loopback_scope == 0) &&
 			    SCTP_IFN_IS_IFT_LOOP(sctp_ifn)) {
@@ -1265,6 +1314,20 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 			}
 
 #endif
+#if defined(__Userspace__)
+			case AF_CONN:
+			{
+				struct sockaddr_conn *sconn, *rsconn;
+
+				sconn = (struct sockaddr_conn *)&laddr->ifa->address.sconn;
+				rsconn = (struct sockaddr_conn *)to;
+				if (sconn->sconn_addr == rsconn->sconn_addr) {
+					SCTP_IPI_ADDR_RUNLOCK();
+					return (1);
+				}
+				break;
+			}
+#endif
 			default:
 				/* TSNH */
 				break;
@@ -1296,11 +1359,23 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 	uint16_t rport;
 
 	inp = *inp_p;
-	if (remote->sa_family == AF_INET) {
+	switch (remote->sa_family) {
+#ifdef INET
+	case AF_INET:
 		rport = (((struct sockaddr_in *)remote)->sin_port);
-	} else if (remote->sa_family == AF_INET6) {
+		break;
+#endif
+#ifdef INET6
+	case AF_INET6:
 		rport = (((struct sockaddr_in6 *)remote)->sin6_port);
-	} else {
+		break;
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		rport = (((struct sockaddr_in6 *)remote)->sin6_port);
+		break;
+#endif
+	default:
 		return (NULL);
 	}
 	if (locked_tcb) {
@@ -1458,6 +1533,33 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 					break;
 				}
 #endif
+#if defined(__Userspace__)
+				case AF_CONN:
+				{
+					struct sockaddr_conn *sconn, *rsconn;
+
+					sconn = (struct sockaddr_conn *)&net->ro._l_addr;
+					rsconn = (struct sockaddr_conn *)remote;
+					if (sconn->sconn_addr == rsconn->sconn_addr) {
+						/* found it */
+						if (netp != NULL) {
+							*netp = net;
+						}
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						} else if (locked_tcb != stcb) {
+							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
+						}
+						SCTP_INP_WUNLOCK(inp);
+						SCTP_INP_INFO_RUNLOCK();
+						return (stcb);
+					}
+					break;
+				}
+#endif
 				default:
 					/* TSNH */
 					break;
@@ -1541,6 +1643,33 @@ sctp_findassociation_ep_addr(struct sctp_inpcb **inp_p, struct sockaddr *remote,
 					rsin6 = (struct sockaddr_in6 *)remote;
 					if (SCTP6_ARE_ADDR_EQUAL(sin6,
 					    rsin6)) {
+						/* found it */
+						if (netp != NULL) {
+							*netp = net;
+						}
+						if (locked_tcb == NULL) {
+							SCTP_INP_DECR_REF(inp);
+						} else if (locked_tcb != stcb) {
+							SCTP_TCB_LOCK(locked_tcb);
+						}
+						if (locked_tcb) {
+							atomic_subtract_int(&locked_tcb->asoc.refcnt, 1);
+						}
+						SCTP_INP_WUNLOCK(inp);
+						SCTP_INP_INFO_RUNLOCK();
+						return (stcb);
+					}
+					break;
+				}
+#endif
+#if defined(__Userspace__)
+				case AF_CONN:
+				{
+					struct sockaddr_conn *sconn, *rsconn;
+
+					sconn = (struct sockaddr_conn *)&net->ro._l_addr;
+					rsconn = (struct sockaddr_conn *)remote;
+					if (sconn->sconn_addr == rsconn->sconn_addr) {
 						/* found it */
 						if (netp != NULL) {
 							*netp = net;
@@ -1656,6 +1785,9 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	struct sockaddr_in6 *sin6;
 	struct sockaddr_in6 *intf_addr6;
 #endif
+#if defined(__Userspace__)
+	struct sockaddr_conn *sconn;
+#endif
 
 #ifdef SCTP_MVRF
 	int i;
@@ -1679,6 +1811,11 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 #ifdef INET6
 	case AF_INET6:
 		sin6 = (struct sockaddr_in6 *)nam;
+		break;
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		sconn = (struct sockaddr_conn *)nam;
 		break;
 #endif
 	default:
@@ -1749,6 +1886,13 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 	case AF_INET6:
 		if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 			/* Can't hunt for one that has no address specified */
+			return (NULL);
+		}
+		break;
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		if (sconn->sconn_addr == NULL) {
 			return (NULL);
 		}
 		break;
@@ -1831,6 +1975,14 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 					intf_addr6 = &laddr->ifa->address.sin6;
 					if (SCTP6_ARE_ADDR_EQUAL(sin6,
 					    intf_addr6)) {
+						SCTP_INP_RUNLOCK(inp);
+						return (inp);
+					}
+					break;
+#endif
+#if defined(__Userspace__)
+				case AF_CONN:
+					if (sconn->sconn_addr == laddr->ifa->address.sconn.sconn_addr) {
 						SCTP_INP_RUNLOCK(inp);
 						return (inp);
 					}
@@ -1974,6 +2126,9 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 #ifdef INET6
 	struct sockaddr_in6 *sin6;
 #endif
+#if defined(__Userspace__)
+	struct sockaddr_conn *sconn;
+#endif
 
 	switch (nam->sa_family) {
 #ifdef INET
@@ -1986,6 +2141,12 @@ sctp_pcb_findep(struct sockaddr *nam, int find_tcp_pool, int have_lock,
 	case AF_INET6:
 		sin6 = (struct sockaddr_in6 *)nam;
 		lport = sin6->sin6_port;
+		break;
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		sconn = (struct sockaddr_conn *)nam;
+		lport = sconn->sconn_port;
 		break;
 #endif
 	default:
@@ -3057,6 +3218,24 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			break;
 		}
 #endif
+#if defined(__Userspace__)
+		case AF_CONN:
+		{
+			struct sockaddr_conn *sconn;
+#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+			if (addr->sa_len != sizeof(struct sockaddr_conn)) {
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+				return (EINVAL);
+			}
+#endif
+			sconn = (struct sockaddr_conn *)addr;
+			lport = sconn->sconn_port;
+			if (sconn->sconn_addr != NULL) {
+				bindall = 0;
+			}
+			break;
+		}
+#endif
 		default:
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EAFNOSUPPORT);
 			return (EAFNOSUPPORT);
@@ -3371,6 +3550,17 @@ sctp_inpcb_bind(struct socket *so, struct sockaddr *addr,
 			sin6->sin6_port = 0;
 			break;
 		}
+#if defined(__Userspace__)
+		case AF_CONN:
+		{
+			struct sockaddr_conn *sconn;
+
+			sconn = (struct sockaddr_conn *)&store_sa;
+			memcpy(sconn, addr, sizeof(struct sockaddr_conn));
+			sconn->sconn_port = 0;
+			break;
+		}
+#endif
 		default:
 			break;
 		}
@@ -4220,6 +4410,22 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		break;
 	}
 #endif
+#if defined(__Userspace__)
+	case AF_CONN:
+	{
+		struct sockaddr_conn *sconn;
+
+		sconn = (struct sockaddr_conn *)newaddr;
+		if (sconn->sconn_addr == NULL) {
+			/* Invalid address */
+			return (-1);
+		}
+#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+		sconn->sconn_len = sizeof(struct sockaddr_conn);
+#endif
+		break;
+	}
+#endif
 	default:
 		/* not supported family type */
 		return (-1);
@@ -4249,6 +4455,14 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_in6));
 #endif
 		((struct sockaddr_in6 *)&net->ro._l_addr)->sin6_port = stcb->rport;
+		break;
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+		memcpy(&net->ro._l_addr, newaddr, sizeof(struct sockaddr_conn));
+#endif
+		((struct sockaddr_conn *)&net->ro._l_addr)->sconn_port = stcb->rport;
 		break;
 #endif
 	default:
@@ -4372,6 +4586,11 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 #ifdef INET6
 		case AF_INET6:
+			net->mtu = 1280;
+			break;
+#endif
+#if defined(__Userspace__)
+		case AF_CONN:
 			net->mtu = 1280;
 			break;
 #endif
@@ -4631,6 +4850,12 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			        ntohs(((struct sockaddr_in6 *)firstaddr)->sin6_port));
 			break;
 #endif
+#if defined(__Userspace__)
+		case AF_CONN:
+			SCTPDBG(SCTP_DEBUG_PCB3, "Port:%d\n",
+			        ntohs(((struct sockaddr_conn *)firstaddr)->sconn_port));
+			break;
+#endif
 		default:
 			break;
 		}
@@ -4675,6 +4900,24 @@ sctp_aloc_assoc(struct sctp_inpcb *inp, struct sockaddr *firstaddr,
 			return (NULL);
 		}
 		rport = sin6->sin6_port;
+		break;
+	}
+#endif
+#if defined(__Userspace__)
+	case AF_CONN:
+	{
+		struct sockaddr_conn *sconn;
+
+		sconn = (struct sockaddr_conn *)firstaddr;
+		if ((ntohs(sconn->sconn_port) == 0) ||
+		    (sconn->sconn_addr == NULL)) {
+			/* Invalid address */
+			SCTP_INP_RUNLOCK(inp);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EINVAL);
+			*error = EINVAL;
+			return (NULL);
+		}
+		rport = sconn->sconn_port;
 		break;
 	}
 #endif
@@ -5682,7 +5925,11 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 #else
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
 #endif
+#if defined(__Userspace__)
+	case AF_CONN:
+		answer = inp->ip_inp.inp.inp_vflag & INP_CONN;
 		break;
+#endif
 	default:
 		/* invalid family, so it's unreachable */
 		answer = 0;
@@ -5733,6 +5980,11 @@ sctp_update_ep_vflag(struct sctp_inpcb *inp)
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
 #endif
+			break;
+#endif
+#if defined(__Userspace__)
+		case AF_CONN:
+			inp->ip_inp.inp.inp_vflag |= INP_CONN;
 			break;
 #endif
 		default:
@@ -5797,6 +6049,11 @@ sctp_add_local_addr_ep(struct sctp_inpcb *inp, struct sctp_ifa *ifa, uint32_t ac
 #else
 			inp->ip_inp.inp.inp_vflag |= INP_IPV4;
 #endif
+			break;
+#endif
+#if defined(__Userspace__)
+		case AF_CONN:
+			inp->ip_inp.inp.inp_vflag |= INP_CONN;
 			break;
 #endif
 		default:
@@ -6721,6 +6978,13 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				if (sctp_add_remote_addr(stcb, sa, NULL, SCTP_DONOT_SETSCOPE, SCTP_LOAD_ADDR_3)) {
 					return (-2);
 				}
+			}
+			break;
+#endif
+#if defined(__Userspace__)
+		case AF_CONN:
+			if (sctp_add_remote_addr(stcb, sa, NULL, SCTP_DONOT_SETSCOPE, SCTP_LOAD_ADDR_3)) {
+				return (-2);
 			}
 			break;
 #endif
