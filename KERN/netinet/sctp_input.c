@@ -2786,6 +2786,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 #endif
 		                                     vrf_id, port);
 	}
+
 	if (*stcb == NULL) {
 		/* still no TCB... must be bad cookie-echo */
 		return (NULL);

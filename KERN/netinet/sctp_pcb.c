@@ -5925,6 +5925,7 @@ sctp_destination_is_reachable(struct sctp_tcb *stcb, struct sockaddr *destaddr)
 #else
 		answer = inp->ip_inp.inp.inp_vflag & INP_IPV4;
 #endif
+		break;
 #if defined(__Userspace__)
 	case AF_CONN:
 		answer = inp->ip_inp.inp.inp_vflag & INP_CONN;
