@@ -6135,7 +6135,7 @@ sctp_sorecvmsg(struct socket *so,
 		}
 #endif
 #if defined(SCTP_EMBEDDED_V6_SCOPE)
-#if defined(INET6)
+#ifdef INET6
 		{
 			struct sockaddr_in6 lsa6, *from6;
 
@@ -7316,7 +7316,7 @@ sctp_bindx_delete_address(struct sctp_inpcb *inp,
 	}
 #endif
 	addr_touse = sa;
-#if defined(INET6)
+#ifdef INET6
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
 #if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
