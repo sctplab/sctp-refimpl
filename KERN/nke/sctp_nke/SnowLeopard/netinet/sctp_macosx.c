@@ -635,6 +635,7 @@ sctp_print_addr(struct sockaddr *sa)
 	ip6buf[0] = 0;
 	
 	switch (sa->sa_family) {
+#ifdef INET6
 	case AF_INET6:
 	{
 		struct sockaddr_in6 *sin6;
@@ -643,6 +644,8 @@ sctp_print_addr(struct sockaddr *sa)
 		SCTP_PRINTF("%s", ip6_sprintf(&sin6->sin6_addr));
 		break;
 	}
+#endif
+#ifdef INET
 	case AF_INET:
 	{
 		struct sockaddr_in *sin;
@@ -653,6 +656,7 @@ sctp_print_addr(struct sockaddr *sa)
 		SCTP_PRINTF("%u.%u.%u.%u", p[0], p[1], p[2], p[3]);
 		break;
 	}
+#endif
 	default:
 		break;
 	}
@@ -698,8 +702,12 @@ sctp_addr_watchdog()
 				continue;
 			}
 			switch (sa->sa_family) {
+#ifdef INET
 			case AF_INET:
+#endif
+#ifdef INET6
 			case AF_INET6:
+#endif
 #ifdef SCTP_DEBUG
 				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
 					sctp_print_addr(sa);
@@ -754,8 +762,12 @@ sctp_addr_watchdog()
 				continue;
 			}
 			switch (sa->sa_family) {
+#ifdef INET
 			case AF_INET:
+#endif
+#ifdef INET6
 			case AF_INET6:
+#endif
 #ifdef SCTP_DEBUG
 				if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
 					sctp_print_addr(sa);
@@ -996,14 +1008,14 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 			continue;
 		}
 		switch (ifa->ifa_addr->sa_family) {
-#if defined(INET)
+#ifdef INET
 		case AF_INET:
 			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
 				found_ifa = ifa;
  			}
 			break;
 #endif
-#if defined(INET6)
+#ifdef INET6
 		case AF_INET6:
 			if (SCTP6_ARE_ADDR_EQUAL((struct sockaddr_in6 *)sa,  (struct sockaddr_in6 *)ifa->ifa_addr)) {
 				found_ifa = ifa;
