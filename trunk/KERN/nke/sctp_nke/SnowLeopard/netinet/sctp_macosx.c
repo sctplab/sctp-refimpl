@@ -843,7 +843,7 @@ sctp_vtag_watchdog()
 			}
 		}
 		if ((i % 16) == 0) {
-			SCTP_PRINTF("vtag_timewait[%04x] (f/e/i): ", i);
+			SCTP_PRINTF("SCTP-NKE: vtag_timewait[%04x] (f/e/i): ", i);
 		}
 		SCTP_PRINTF(" %d/%d/%d", free_cnt, expired_cnt, inuse_cnt);
 		if (((i + 1) % 16) == 0) {
