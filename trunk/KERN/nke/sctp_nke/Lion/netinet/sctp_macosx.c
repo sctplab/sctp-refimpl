@@ -665,9 +665,9 @@ sctp_print_addr(struct sockaddr *sa)
 static void
 sctp_addr_watchdog()
 {
-	errno_t error;
-	ifnet_t *ifnetlist;
-	uint32_t i, count;
+	struct ifnet **ifnetlist;
+	struct ifaddr **ifaddrlist;
+	uint32_t i, j, count;
 	struct ifnet *ifn;
 	struct ifaddr *ifa;
 	ifaddr_t ifaddr;
@@ -676,14 +676,12 @@ sctp_addr_watchdog()
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
 
-	ifnetlist = NULL;
-	count = 0;
 	SCTP_IPI_ADDR_RLOCK();
 	vrf = sctp_find_vrf(SCTP_DEFAULT_VRFID);
 	if (vrf == NULL) {
 		SCTP_IPI_ADDR_RUNLOCK();
 		SCTP_PRINTF("SCTP-NKE: Can't find default VRF.\n");
-		goto out;
+		return;
 	}
 #ifdef SCTP_DEBUG
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
@@ -737,12 +735,8 @@ sctp_addr_watchdog()
 	}
 	SCTP_IPI_ADDR_RUNLOCK();
 	
-	ifnetlist = NULL;
-	count = 0;
-	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
-	if (error != 0) {
-		SCTP_PRINTF("SCTP-NKE: ifnet_list_get failed %d\n", error);
-		goto out;
+	if (ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count) != 0) {
+		return;
 	}
 #ifdef SCTP_DEBUG
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
@@ -756,7 +750,11 @@ sctp_addr_watchdog()
 			SCTP_PRINTF("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
 		}
 #endif
-		TAILQ_FOREACH(ifa, &ifn->if_addrlist, ifa_list) {
+		if (ifnet_get_address_list(ifn, &ifaddrlist) != 0) {
+			continue;
+		}
+		for (j = 0; ifaddrlist[j] != NULL; j++) {
+			ifa = ifaddrlist[j];
 			sa = ifa->ifa_addr;
 			if (sa == NULL) {
 				continue;
@@ -797,16 +795,14 @@ sctp_addr_watchdog()
 				break;
 			}
 		}
+		ifnet_free_address_list(ifaddrlist);
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
 			SCTP_PRINTF("\n");
 		}
 #endif
 	}
-out:
-	if (ifnetlist != NULL) {
-		ifnet_list_free(ifnetlist);
-	}
+	ifnet_list_free(ifnetlist);
 	return;
 }
 
@@ -955,12 +951,12 @@ sctp_get_rtaddrs(int addrs, struct sockaddr *sa, struct sockaddr **rti_info)
 
 static void
 sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
-	errno_t error;
-	ifnet_t *ifnetlist;
-	uint32_t i, count;
+	struct ifnet **ifnetlist;
+	struct ifaddr **ifaddrlist;
+	uint32_t i, j, count;
 	struct sockaddr *sa;
 	struct sockaddr *rti_info[RTAX_MAX];
-	struct ifnet *ifn, *found_ifn = NULL;
+	struct ifnet *found_ifn = NULL;
 	struct ifaddr *ifa, *found_ifa = NULL;
 
 	/* handle only the types we want */
@@ -979,28 +975,27 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	 * find the actual kernel ifa/ifn for this address.
 	 * we need this primarily for the v6 case to get the ifa_flags.
 	 */
-	ifnetlist = NULL;
-	count = 0;
-	error = ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count);
-	if (error != 0) {
-		SCTP_PRINTF("SCTP-NKE: ifnet_list_get failed %d\n", error);
-		goto out;
+	if (ifnet_list_get(IFNET_FAMILY_ANY, &ifnetlist, &count) != 0) {
+		return;
 	}
 	for (i = 0; i < count; i++) {
-		ifn = ifnetlist[i];
 		/* find the interface by index */
-		if (ifa_msg->ifam_index == ifn->if_index) {
-			found_ifn = ifn;
+		if (ifa_msg->ifam_index == ifnetlist[i]->if_index) {
+			found_ifn = ifnetlist[i];
 			break;
 		}
 	}
 	if (found_ifn == NULL) {
-		/* TSNH */
-		SCTP_PRINTF("SCTP-NKE: if_index %u not found?!\n", ifa_msg->ifam_index);
-		goto out;
+		ifnet_list_free(ifnetlist);
+		return;
 	}
 	/* verify the address on the interface */
-	TAILQ_FOREACH(ifa, &found_ifn->if_addrlist, ifa_list) {
+	if (ifnet_get_address_list(ifnetlist[i], &ifaddrlist) != 0) {
+		ifnet_list_free(ifnetlist);
+		return;
+	}
+	for (j = 0; ifaddrlist[j] != NULL; j++) {
+		ifa = ifaddrlist[j];
 		if (found_ifa) {
 			break;
 		}
@@ -1027,9 +1022,9 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		}
 	}
 	if (found_ifa == NULL) {
-		/* TSNH */
-		SCTP_PRINTF("SCTP-NKE: ifa not found?!\n");
-		goto out;
+		ifnet_free_address_list(ifaddrlist);
+		ifnet_list_free(ifnetlist);
+		return;
 	}
 	/* relay the appropriate address change to the base code */
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
@@ -1043,10 +1038,8 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		SCTP_PRINTF(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
-out:
-	if (ifnetlist != NULL) {
-		ifnet_list_free(ifnetlist);
-	}
+	ifnet_free_address_list(ifaddrlist);
+	ifnet_list_free(ifnetlist);
 }
 
 
