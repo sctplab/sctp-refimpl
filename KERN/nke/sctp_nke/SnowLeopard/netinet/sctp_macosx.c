@@ -747,7 +747,7 @@ sctp_addr_watchdog()
 		ifn = ifnetlist[i];
 #ifdef SCTP_DEBUG
 		if (SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) {
-			SCTP_PRINTF("SCTP-NKE: \tInterface %s%d (index %d): ", ifn->if_name, ifn->if_unit, ifn->if_index);
+			SCTP_PRINTF("SCTP-NKE: \tInterface %s%d (index %d): ", ifnet_name(ifn), ifnet_unit(ifn), ifnet_index(ifn));
 		}
 #endif
 		if (ifnet_get_address_list(ifn, &ifaddrlist) != 0) {
@@ -779,7 +779,7 @@ sctp_addr_watchdog()
 #endif
 						SCTP_PRINTF("SCTP-NKE: Automatically adding ");
 						sctp_print_addr(sa);
-						SCTP_PRINTF(" to interface %s%d (index %d).\n", ifn->if_name, ifn->if_unit, ifn->if_index);
+						SCTP_PRINTF(" to interface %s%d (index %d).\n", ifnet_name(ifn), ifnet_unit(ifn), ifnet_index(ifn));
 #ifdef SCTP_DEBUG
 					}
 #endif
@@ -980,7 +980,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	}
 	for (i = 0; i < count; i++) {
 		/* find the interface by index */
-		if (ifa_msg->ifam_index == ifnetlist[i]->if_index) {
+		if (ifa_msg->ifam_index == ifnet_index(ifnetlist[i])) {
 			found_ifn = ifnetlist[i];
 			break;
 		}
@@ -990,7 +990,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		return;
 	}
 	/* verify the address on the interface */
-	if (ifnet_get_address_list(ifnetlist[i], &ifaddrlist) != 0) {
+	if (ifnet_get_address_list(found_ifn, &ifaddrlist) != 0) {
 		ifnet_list_free(ifnetlist);
 		return;
 	}
@@ -1030,12 +1030,12 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 	if (ifa_msg->ifam_type == RTM_NEWADDR) {
 		SCTP_PRINTF("SCTP-NKE: Adding ");
 		sctp_print_addr(sa);
-		SCTP_PRINTF(" to interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
+		SCTP_PRINTF(" to interface %s%d (index %d).\n", ifnet_name(found_ifn), ifnet_unit(found_ifn), ifnet_index(found_ifn));
 		sctp_addr_change(found_ifa, RTM_ADD);
 	} else {
 		SCTP_PRINTF("SCTP-NKE: Deleting ");
 		sctp_print_addr(sa);
-		SCTP_PRINTF(" from interface %s%d (index %d).\n", found_ifn->if_name, found_ifn->if_unit, found_ifn->if_index);
+		SCTP_PRINTF(" from interface %s%d (index %d).\n", ifnet_name(found_ifn), ifnet_unit(found_ifn), ifnet_index(found_ifn));
 		sctp_addr_change(found_ifa, RTM_DELETE);
 	}
 	ifnet_free_address_list(ifaddrlist);
