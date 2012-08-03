@@ -320,7 +320,7 @@ sctp_is_desired_interface_type(struct ifnet *ifn)
 int
 sctp_is_vmware_interface(struct ifnet *ifn)
 {
-	return (strncmp(ifn->if_name, "vmnet", 5) == 0);
+	return (strncmp(ifnet_name(ifn), "vmnet", 5) == 0);
 }
 #endif
 
