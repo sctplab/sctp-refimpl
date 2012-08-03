@@ -176,7 +176,7 @@ extern struct fileops socketops;
  */
 /* This could return VOID if the index works but for BSD we provide both. */
 #define SCTP_GET_IFN_VOID_FROM_ROUTE(ro) (void *)ro->ro_rt->rt_ifp
-#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) (ro)->ro_rt->rt_ifp->if_index
+#define SCTP_GET_IF_INDEX_FROM_ROUTE(ro) ifnet_index((ro)->ro_rt->rt_ifp)
 #define SCTP_ROUTE_HAS_VALID_IFN(ro) ((ro)->ro_rt && (ro)->ro_rt->rt_ifp)
 
 #define SCTP_UNUSED __attribute__((unused))
@@ -319,7 +319,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 /*************************/
 /*      MTU              */
 /*************************/
-#define SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, af) ((struct ifnet *)ifn)->if_mtu
+#define SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, af) ifnet_mtu((struct ifnet *)ifn)
 #define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt_rmx.rmx_mtu : 0)
 #define SCTP_GATHER_MTU_FROM_INTFC(sctp_ifn) ((sctp_ifn->ifn_p != NULL) ? ((struct ifnet *)(sctp_ifn->ifn_p))->if_mtu : 0)
 #define SCTP_SET_MTU_OF_ROUTE(sa, rt, mtu) \
