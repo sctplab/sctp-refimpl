@@ -43,7 +43,7 @@
 #include <netinet6/sctp6_var.h>
 #endif
 #include <netinet/sctp.h>
-#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD)
 #include <netinet/udp.h>
 #include <netinet/udp_var.h>
 
@@ -167,7 +167,7 @@ struct protosw *old_pr4;
 struct protosw *old_pr6;
 #endif
 
-#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD)
 static int
 soreceive_fix(struct socket *so, struct sockaddr **psa, struct uio *uio,  struct mbuf **mp0, struct mbuf **controlp, int *flagsp)
 {
@@ -205,7 +205,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_seqpacket.pr_ctloutput = sctp_ctloutput;
 	sctp4_seqpacket.pr_ousrreq   = NULL;
 	sctp4_seqpacket.pr_init      = sctp_init;
-#if !defined(APPLE_LION)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp4_seqpacket.pr_fasttimo  = NULL;
 #endif
 	sctp4_seqpacket.pr_slowtimo  = sctp_slowtimo;
@@ -226,7 +226,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_stream.pr_ctloutput    = sctp_ctloutput;
 	sctp4_stream.pr_ousrreq      = NULL;
 	sctp4_stream.pr_init         = NULL;
-#if !defined(APPLE_LION)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp4_stream.pr_fasttimo     = NULL;
 #endif
 	sctp4_stream.pr_slowtimo     = NULL;
@@ -252,7 +252,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #else
 	sctp6_seqpacket.pr_init      = sctp_init;
 #endif
-#if !defined(APPLE_LION)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp6_seqpacket.pr_fasttimo  = NULL;
 #endif
 	sctp6_seqpacket.pr_slowtimo  = NULL;
@@ -273,7 +273,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_stream.pr_ctloutput    = sctp_ctloutput;
 	sctp6_stream.pr_ousrreq      = NULL;
 	sctp6_stream.pr_init         = NULL;
-#if !defined(APPLE_LION)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp6_stream.pr_fasttimo     = NULL;
 #endif
 	sctp6_stream.pr_slowtimo     = NULL;
@@ -399,7 +399,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_addr_watchdog_limit);
 	sysctl_register_oid(&sysctl__net_inet_sctp_vtag_watchdog_limit);
 
-#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD)
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive_fix;
 #ifdef INET6
@@ -437,7 +437,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 		return (KERN_FAILURE);
 	}
 
-#if defined(APPLE_TIGER) || defined(APPLE_LEOPARD)
+#if defined(APPLE_LEOPARD)
 	lck_rw_lock_exclusive(udbinfo.mtx);
 	udp_usrreqs.pru_soreceive = soreceive;
 #ifdef INET6
