@@ -92,11 +92,9 @@ extern struct fileops socketops;
 
 #include <sys/proc_internal.h>
 #include <sys/file_internal.h>
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 #if defined(APPLE_LEOPARD)
 #define CONFIG_MACF_SOCKET_SUBSET 1
-#endif
-#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
+#else
 #define CONFIG_MACF 1
 #endif
 #include <sys/namei.h>
@@ -104,7 +102,6 @@ extern struct fileops socketops;
 #if CONFIG_MACF_SOCKET_SUBSET
 #include <security/mac_framework.h>
 #endif /* MAC_SOCKET_SUBSET */
-#endif
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
 #ifdef SCTP_DEBUG
@@ -135,7 +132,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	int fd = uap->s;
 	int newfd;
 	short fflag;		/* type must match fp->f_flag */
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	/*
 	 * workaround sonewconn() issue where qlimits are checked.
 	 * i.e. sonewconn() can only be done on listening sockets
@@ -143,7 +139,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	 */
 	int old_qlimit;
 	short old_so_options;
-#endif
 
 	/* AUDIT_ARG(fd, uap->s); */
 	error = fp_getfsock(p, fd, &fp, &head);
@@ -156,7 +151,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		error = EBADF;
 		goto out;
 	}
-#if (defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)  || defined(APPLE_LION)) && CONFIG_MACF_SOCKET_SUBSET
+#if CONFIG_MACF_SOCKET_SUBSET
 	if ((error = mac_socket_check_accept(kauth_cred_get(), head)) != 0)
 		goto out;
 #endif /* MAC_SOCKET_SUBSET */
@@ -169,12 +164,7 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         socket_unlock(head, 0); /* unlock head to avoid deadlock with select, keep a ref on head */
 
 	fflag = fp->f_flag;
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	error = falloc(p, &fp, &newfd, vfs_context_current());
-#else
-	proc_fdlock(p);
-	error = falloc_locked(p, &fp, &newfd, 1);
-#endif
 	if (error) {
 		/*
 		 * Probably ran out of file descriptors. Put the
@@ -183,40 +173,26 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 		 * have a chance at it.
 		 */
 		/* SCTP will NOT put the connection back onto queue */
-#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)
-		proc_fdunlock(p);
-#endif
 		socket_lock(head, 0);
 		goto out;
 	}
-#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)
-	*fdflags(p, newfd) &= ~UF_RESERVED;
-#endif
 	uap->new_sd = newfd;	/* return the new descriptor to the caller */
 
 	/* sctp_get_peeloff() does sonewconn() which expects head to be locked */
 	socket_lock(head, 0);
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	old_qlimit = head->so_qlimit;
 	old_so_options	= head->so_options;
 	head->so_qlimit = 1;
 	head->so_options |= SO_ACCEPTCONN;
-#endif
 	so = sctp_get_peeloff(head, uap->assoc_id, &error);
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 	head->so_qlimit = old_qlimit;
 	head->so_options = old_so_options;
-#endif
 	if (so == NULL) {
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 		goto release_fd;
-#else
-		goto out;
-#endif
 	}
 	socket_unlock(head, 0);
 
-#if (defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)) && CONFIG_MACF_SOCKET_SUBSET
+#if CONFIG_MACF_SOCKET_SUBSET
 	/*
 	 * Pass the pre-accepted socket to the MAC framework. This is
 	 * cheaper than allocating a file descriptor for the socket,
@@ -237,10 +213,6 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
-#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)
-	fp_drop(p, newfd, fp, 1);
-	proc_fdunlock(p);
-#endif
 	socket_lock(head, 0);
 	/* sctp_get_peeloff() returns a new locked socket */
         so->so_state &= ~SS_COMP;
@@ -248,13 +220,11 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
         so->so_head = NULL;
 	socket_unlock(so, 1);
 
-#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
 release_fd:
 	proc_fdlock(p);
 	procfdtbl_releasefd(p, newfd, NULL);
 	fp_drop(p, newfd, fp, 1);
 	proc_fdunlock(p);
-#endif
 out:
 	file_drop(fd);
 	return (error);
@@ -263,22 +233,21 @@ out:
 
 
 /* socket lock pr_xxx functions */
-/* Tiger only */
-#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-int
-sctp_lock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
-#else
+#if defined(APPLE_LEOPARD)
 int
 sctp_lock(struct socket *so, int refcount, int lr)
+#else
+int
+sctp_lock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #endif
 {
 	if (so->so_pcb) {
-#if defined(APPLE_LION)
-		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
-		lck_mtx_lock(&((struct inpcb *)so->so_pcb)->inpcb_mtx);
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 		lck_mtx_lock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+		lck_mtx_lock(&((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #endif
 	} else {
 		panic("sctp_lock: so=%p has so_pcb == NULL.", so);
@@ -295,7 +264,7 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->lock_caller1,
 	             ((struct sctp_inpcb *)so->so_pcb)->lock_caller2,
 	             ((struct sctp_inpcb *)so->so_pcb)->lock_caller3);
-#if (!defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION)) && defined(__ppc__)
+#if defined(APPLE_LEOPARD) && defined(__ppc__)
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller1 = lr;
 	((struct sctp_inpcb *)so->so_pcb)->lock_caller2 = refcount;
 #endif
@@ -303,19 +272,19 @@ sctp_lock(struct socket *so, int refcount, int lr)
 	return (0);
 }
 
-#if defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION)
-int
-sctp_unlock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
-#else
+#if defined(APPLE_LEOPARD)
 int
 sctp_unlock(struct socket *so, int refcount, int lr)
+#else
+int
+sctp_unlock(struct socket *so, int refcount, void *debug SCTP_UNUSED)
 #endif
 {
 	if (so->so_pcb) {
 		SAVE_CALLERS(((struct sctp_inpcb *)so->so_pcb)->unlock_caller1,
 		             ((struct sctp_inpcb *)so->so_pcb)->unlock_caller2,
 		             ((struct sctp_inpcb *)so->so_pcb)->unlock_caller3);
-#if !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && defined(__ppc__)
+#if defined(APPLE_LEOPARD) && defined(__ppc__)
 		((struct sctp_inpcb *)so->so_pcb)->unlock_caller1 = lr;
 		((struct sctp_inpcb *)so->so_pcb)->unlock_caller2 = refcount;
 #endif
@@ -333,12 +302,12 @@ sctp_unlock(struct socket *so, int refcount, int lr)
 		lck_mtx_assert(so->so_proto->pr_domain->dom_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(so->so_proto->pr_domain->dom_mtx);
 	} else {
-#if defined(APPLE_LION)
-		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
-		lck_mtx_unlock(&((struct inpcb *)so->so_pcb)->inpcb_mtx);
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 		lck_mtx_unlock(((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
+		lck_mtx_unlock(&((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #endif
 	}
 	return (0);
@@ -358,10 +327,10 @@ sctp_getlock(struct socket *so, int locktype SCTP_UNUSED)
 	if (so->so_pcb) {
 		if (so->so_usecount < 0)
 			panic("sctp_getlock: so=%p usecount=%x.", so, so->so_usecount);
-#if defined(APPLE_LION)
-		return (&((struct inpcb *)so->so_pcb)->inpcb_mtx);
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		return (((struct inpcb *)so->so_pcb)->inpcb_mtx);
+#else
+		return (&((struct inpcb *)so->so_pcb)->inpcb_mtx);
 #endif
 	} else {
 		panic("sctp_getlock: so=%p has so_pcb == NULL.", so);
@@ -373,10 +342,10 @@ void
 sctp_lock_assert(struct socket *so)
 {
 	if (so->so_pcb) {
-#if defined(APPLE_LION)
-		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
+#else
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_OWNED);
 #endif
 	} else {
 		panic("sctp_lock_assert: so=%p has so->so_pcb == NULL.", so);
@@ -387,10 +356,10 @@ void
 sctp_unlock_assert(struct socket *so)
 {
 	if (so->so_pcb) {
-#if defined(APPLE_LION)
-		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		lck_mtx_assert(((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
+#else
+		lck_mtx_assert(&((struct inpcb *)so->so_pcb)->inpcb_mtx, LCK_MTX_ASSERT_NOTOWNED);
 #endif
 	} else {
 		panic("sctp_unlock_assert: so=%p has so->so_pcb == NULL.", so);
@@ -423,150 +392,6 @@ sctp_stop_main_timer(void) {
 lck_rw_t *sctp_calloutq_mtx;
 #else
 void *sctp_calloutq_mtx;
-#endif
-
-#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) &&!defined(APPLE_LION)
-
-/*
- * here we hack in a fix for Apple's m_copym for the case where the first
- * mbuf in the chain is a M_PKTHDR and the length is zero.
- * NOTE: this is fixed in Leopard
- */
-static void
-sctp_pkthdr_fix(struct mbuf *m)
-{
-	struct mbuf *m_nxt;
-
-	if ((SCTP_BUF_GET_FLAGS(m) & M_PKTHDR) == 0) {
-		/* not a PKTHDR */
-		return;
-	}
-	if (SCTP_BUF_LEN(m) != 0) {
-		/* not a zero length PKTHDR mbuf */
-		return;
-	}
-	/* let's move in a word into the first mbuf... yes, ugly! */
-	m_nxt = SCTP_BUF_NEXT(m);
-	if (m_nxt == NULL) {
-		/* umm... not a very useful mbuf chain... */
-		return;
-	}
-	if ((size_t)SCTP_BUF_LEN(m_nxt) > sizeof(int)) {
-		/* move over an int */
-		bcopy(mtod(m_nxt, caddr_t), mtod(m, caddr_t), sizeof(int));
-		/* update mbuf data pointers and lengths */
-		SCTP_BUF_LEN(m) += sizeof(int);
-		SCTP_BUF_RESV_UF(m_nxt, sizeof(int));
-		SCTP_BUF_LEN(m_nxt) -= sizeof(int);
-	}
-}
-
-inline struct mbuf *
-sctp_m_copym(struct mbuf *m, int off0, int len, int wait)
-{
-	struct mbuf *n, **np;
-	int off = off0;
-	struct mbuf *top;
-	int copyhdr = 0;
-
-	sctp_pkthdr_fix(m);
-
-/*	return (m_copym(m, off, len, wait));*/
-	if (off < 0 || len < 0)
-		panic("sctp_m_copym: bad offset or length");
-	if (off == 0 && m->m_flags & M_PKTHDR)
-		copyhdr = 1;
-
-	while (off >= m->m_len) {
-		if (m == 0)
-			panic("sctp_m_copym: null m");
-		off -= m->m_len;
-		m = m->m_next;
-	}
-	np = &top;
-	top = 0;
-
-	MBUF_LOCK();
-
-	while (len > 0) {
-/*
-		m_range_check(mfree);
-		m_range_check(mclfree);
-		m_range_check(mbigfree);*/
-
-		if (m == 0) {
-			if (len != M_COPYALL)
-				panic("sctp_m_copym: not M_COPYALL");
-			break;
-		}
-		if ((n = mfree)) {
-			MCHECK(n);
-			++mclrefcnt[mtocl(n)];
-			mbstat.m_mtypes[MT_FREE]--;
-			mbstat.m_mtypes[m->m_type]++;
-			mfree = n->m_next;
-			n->m_next = n->m_nextpkt = 0;
-			n->m_type = m->m_type;
-			n->m_data = n->m_dat;
-			n->m_flags = 0;
-		} else {
-		        MBUF_UNLOCK();
-		        n = m_retry(wait, m->m_type);
-		        MBUF_LOCK();
-		}
-		*np = n;
-
-		if (n == 0)
-			goto nospace;
-		if (copyhdr) {
-			M_COPY_PKTHDR(n, m);
-			if (len == M_COPYALL)
-				n->m_pkthdr.len -= off0;
-			else
-				n->m_pkthdr.len = len;
-			copyhdr = 0;
-		}
-		if (len == M_COPYALL) {
-		    if (min(len, (m->m_len - off)) == len) {
-			SCTP_PRINTF("m->m_len %d - off %d = %d, %d\n",
-			       m->m_len, off, m->m_len - off,
-			       min(len, (m->m_len - off)));
-		    }
-		}
-		n->m_len = min(len, (m->m_len - off));
-		if (n->m_len == M_COPYALL) {
-		    SCTP_PRINTF("n->m_len == M_COPYALL, fixing\n");
-		    n->m_len = MHLEN;
-		}
-		if (m->m_flags & M_EXT) {
-			n->m_ext = m->m_ext;
-			insque((queue_t)&n->m_ext.ext_refs, (queue_t)&m->m_ext.ext_refs);
-			n->m_data = m->m_data + off;
-			n->m_flags |= M_EXT;
-		} else {
-			bcopy(mtod(m, caddr_t) + off, mtod(n, caddr_t),
-			    (unsigned)n->m_len);
-		}
-		if (len != M_COPYALL)
-			len -= n->m_len;
-		off = 0;
-		m = m->m_next;
-		np = &n->m_next;
-	}
-	MBUF_UNLOCK();
-
-/*	if (top == 0)
-		MCFail++;
-*/
-
-	return (top);
-nospace:
-	MBUF_UNLOCK();
-
-	m_freem(top);
-/*	MCFail++;*/
-	return (0);
-}
 #endif
 
 /*
@@ -615,7 +440,7 @@ sctp_m_prepend_2(struct mbuf *m, int len, int how)
 	return (m);
 }
 
-#if defined(APPLE_LION) || defined(APPLE_SNOWLEOPARD)
+#if !defined(APPLE_LEOPARD)
 inline struct mbuf *
 m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 {
@@ -885,23 +710,7 @@ sctp_slowtimo(void)
 			       inp, inp->inp_wantcnt, inp->inp_socket->so_usecount);
 		}
 #endif
-#if defined(APPLE_LION)
-		if ((inp->inp_wantcnt == WNT_STOPUSING) && (lck_mtx_try_lock(&inp->inpcb_mtx))) {
-			so = inp->inp_socket;
-			if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
-				lck_mtx_unlock(&inp->inpcb_mtx);
-			} else {
-				LIST_REMOVE(inp, inp_list);
-				inp->inp_socket = NULL;
-				so->so_pcb      = NULL;
-				lck_mtx_unlock(&inp->inpcb_mtx);
-				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
-				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
-				sodealloc(so);
-				SCTP_DECR_EP_COUNT();
-			}
-		}
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 		if ((inp->inp_wantcnt == WNT_STOPUSING) && (lck_mtx_try_lock(inp->inpcb_mtx))) {
 			so = inp->inp_socket;
 			if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
@@ -912,6 +721,22 @@ sctp_slowtimo(void)
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
 				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
+				sodealloc(so);
+				SCTP_DECR_EP_COUNT();
+			}
+		}
+#else
+		if ((inp->inp_wantcnt == WNT_STOPUSING) && (lck_mtx_try_lock(&inp->inpcb_mtx))) {
+			so = inp->inp_socket;
+			if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
+				lck_mtx_unlock(&inp->inpcb_mtx);
+			} else {
+				LIST_REMOVE(inp, inp_list);
+				inp->inp_socket = NULL;
+				so->so_pcb      = NULL;
+				lck_mtx_unlock(&inp->inpcb_mtx);
+				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -1444,10 +1269,10 @@ sctp_over_udp_start(void)
 		return (error);
 	}
 
-#if defined(APPLE_LION)
-	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_RECVPKTINFO, (const void *)&on, (int)sizeof(int));
-#else
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_PKTINFO, (const void *)&on, (int)sizeof(int));
+#else
+	error = sock_setsockopt(sctp_over_udp_ipv6_so, IPPROTO_IPV6, IPV6_RECVPKTINFO, (const void *)&on, (int)sizeof(int));
 #endif
 	if (error) {
 		sock_close(sctp_over_udp_ipv4_so);
