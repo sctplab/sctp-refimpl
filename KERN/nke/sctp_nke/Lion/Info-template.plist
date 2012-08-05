@@ -49,7 +49,7 @@
 		<key>com.apple.kpi.unsupported</key>
 		<string>UNAME_MINUS_R_HERE</string>
 		<key>org.sctp.kpi.sctpsupport</key>
-		<string>UNAME_MINUS_R_HERE</string>
+		<string>11.1.0</string>
 	</dict>
 </dict>
 </plist>
