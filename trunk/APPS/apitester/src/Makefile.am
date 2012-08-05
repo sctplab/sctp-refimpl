@@ -15,7 +15,8 @@ api_tests_SOURCES           = api_tests.c api_tests.h \
                               register_tests.c \
                               $(TEST_SOURCES)
 EXTRA_DIST                  = make_register_tests.sh \
-                              get_descriptions
+                              get_descriptions \
+                              stress-test
 CLEANFILES                  = register_tests.c \
                               test_descriptions.txt
 register_tests.c: $(TEST_SOURCES) make_register_tests.sh
