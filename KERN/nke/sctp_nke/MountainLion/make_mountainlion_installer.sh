@@ -70,6 +70,11 @@ chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/Info-template.p
 chmod 755  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS"
 chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS/SCTPSupport"
 
+chown -R root:wheel "/Library/StartupScripts/SCTP"
+chmod 755  "/Library/StartupScripts/SCTP"
+chmod 755  "/Library/StartupScripts/SCTP/SCTP"
+chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+
 EXECFILE="/Library/StartupItems/SCTP/SCTP"
 
 if [ -f "\${EXECFILE}" ]
@@ -284,9 +289,32 @@ fi
 #
 FirstStart ()
 {
-	cd /System/Library/Extensions
-	chown -R root:wheel SCTP.kext
-	chown -R root:wheel SCTPSupport.kext
+	chown -R root:wheel "/System/Library/Extensions/SCTP.kext"
+	chmod 755 "/System/Library/Extensions/SCTP.kext"
+	chmod 644 "/System/Library/Extensions/SCTP.kext/Contents"
+	chmod 644 "/System/Library/Extensions/SCTP.kext/Contents/Info.plist"
+	chmod 755 "/System/Library/Extensions/SCTP.kext/Contents/MacOS"
+	chmod 644 "/System/Library/Extensions/SCTP.kext/Contents/MacOS/SCTP"
+	chmod 644 "/System/Library/Extensions/SCTP.kext/Contents/Info-template.plist"
+	chmod 644 "/System/Library/Extensions/SCTP.kext/Contents/Info.plist"
+	
+	chown -R root:wheel "/System/Library/Extensions/SCTPSupport.kext"
+	chmod 755  "/System/Library/Extensions/SCTPSupport.kext"
+	chmod 755  "/System/Library/Extensions/SCTPSupport.kext/Contents"
+	chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/Info-template.plist"
+	chmod 755  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS"
+	chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS/SCTPSupport"
+	
+	chown -R root:wheel "/Library/StartupScripts/SCTP"
+	chmod 755  "/Library/StartupScripts/SCTP"
+	chmod 755  "/Library/StartupScripts/SCTP/SCTP"
+	chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+
+	chown -R root:wheel "/Library/StartupScripts/SCTP"
+	chmod 755  "/Library/StartupScripts/SCTP"
+	chmod 755  "/Library/StartupScripts/SCTP/SCTP"
+	chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+
 	PrepareService
 	PrepareSDK
 	StartService
@@ -352,11 +380,12 @@ fi
 
 --EOF--
 
-chmod 644 "${MAINDIR}/Library/StartupItems/SCTP/StartupParameters.plist"
 chown root:wheel "${MAINDIR}/Library/StartupItems/SCTP/StartupParameters.plist"
+chmod 644        "${MAINDIR}/Library/StartupItems/SCTP/StartupParameters.plist"
 chown root:wheel "${MAINDIR}/Library/StartupItems/SCTP/"
-chmod 755	     "${MAINDIR}/Library/StartupItems/SCTP/SCTP"
+chmod 755	     "${MAINDIR}/Library/StartupItems/SCTP"
 chown root:wheel "${MAINDIR}/Library/StartupItems/SCTP/SCTP"
+chmod 755	     "${MAINDIR}/Library/StartupItems/SCTP/SCTP"
 
 /Applications/PackageMaker.app/Contents/MacOS/PackageMaker --scripts "${SCRIPTCDIR}" --resources "${RSRCDIR}" --target 10.7 --root "${MAINDIR}"  --out SCTP_MountainLion_`date +%Y%m%d%H%M`.pkg --id org.sctp.nke --version "$LONGVER" --title SCTP --install-to /  --verbose --root-volume-only --discard-forks
 
