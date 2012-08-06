@@ -54,6 +54,9 @@ cat > "${SCRIPTCDIR}/Postinstall" << --EOF--
 #
 # (c) Copyright 2006-2012 Andreas Fink <andreas@fink.org>
 
+mkdir -p /var/log/sctp
+chown root:wheel /var/log/sctp
+
 chown -R root:wheel "/System/Library/Extensions/SCTP.kext"
 chmod 755 "/System/Library/Extensions/SCTP.kext"
 chmod 644 "/System/Library/Extensions/SCTP.kext/Contents"
@@ -70,10 +73,10 @@ chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/Info-template.p
 chmod 755  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS"
 chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS/SCTPSupport"
 
-chown -R root:wheel "/Library/StartupScripts/SCTP"
-chmod 755  "/Library/StartupScripts/SCTP"
-chmod 755  "/Library/StartupScripts/SCTP/SCTP"
-chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+chown -R root:wheel "/Library/StartupItems/SCTP"
+chmod 755  "/Library/StartupItems/SCTP"
+chmod 755  "/Library/StartupItems/SCTP/SCTP"
+chmod 644  "/Library/StartupItems/SCTP/StartupParameters.plist"
 
 EXECFILE="/Library/StartupItems/SCTP/SCTP"
 
@@ -225,16 +228,22 @@ cd /Applications
 for XCODE in  Xcode*.app
 do
 
-    cd "/Applications/\${XCODE}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
-    for SDK in MacOSX*.sdk
-    do
-        cpio -pdmuv "/Applications/\${XCODE}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/\${SDK}" << --XOF--
+    if [ -d "\${XCODE}" ]
+    then
+        cd "/Applications/\${XCODE}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs"
+        for SDK in MacOSX*.sdk
+        do
+            if [ -d "\${SDK}" ]
+            then
+                cpio -pdmuv "/Applications/\${XCODE}/Contents/Developer/Platforms/MacOSX.platform/Developer/SDKs/\${SDK}" << --XOF--
 /usr/include/netinet/sctp.h
 /usr/include/netinet/sctp_uio.h
 /usr/include/socket.h
 /usr/lib/libsctp.dylib
 --XOF--
-    done
+            fi
+        done
+    fi
 done
 }
 
@@ -305,15 +314,15 @@ FirstStart ()
 	chmod 755  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS"
 	chmod 644  "/System/Library/Extensions/SCTPSupport.kext/Contents/MacOS/SCTPSupport"
 	
-	chown -R root:wheel "/Library/StartupScripts/SCTP"
-	chmod 755  "/Library/StartupScripts/SCTP"
-	chmod 755  "/Library/StartupScripts/SCTP/SCTP"
-	chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+	chown -R root:wheel "/Library/StartupItems/SCTP"
+	chmod 755  "/Library/StartupItems/SCTP"
+	chmod 755  "/Library/StartupItems/SCTP/SCTP"
+	chmod 644  "/Library/StartupItems/SCTP/StartupParameters.plist"
 
-	chown -R root:wheel "/Library/StartupScripts/SCTP"
-	chmod 755  "/Library/StartupScripts/SCTP"
-	chmod 755  "/Library/StartupScripts/SCTP/SCTP"
-	chmod 644  "/Library/StartupScripts/SCTP/StartupParameters.plist"
+	chown -R root:wheel "/Library/StartupItems/SCTP"
+	chmod 755  "/Library/StartupItems/SCTP"
+	chmod 755  "/Library/StartupItems/SCTP/SCTP"
+	chmod 644  "/Library/StartupItems/SCTP/StartupParameters.plist"
 
 	PrepareService
 	PrepareSDK
