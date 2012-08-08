@@ -1062,7 +1062,7 @@ sctp_over_udp_ipv4_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 #else
 	SCTP_STAT_INCR(sctps_recvswcrc);
 #endif
-	sctp_common_input_processing(&m, 0, offset, length,
+	sctp_common_input_processing(&m, 0, offset, (int)length,
 	                             (struct sockaddr *)&src,
 	                             (struct sockaddr *)&dst,
 	                             sh, ch,
@@ -1185,7 +1185,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 #else
 	SCTP_STAT_INCR(sctps_recvswcrc);
 #endif
-	sctp_common_input_processing(&m, 0, offset, length,
+	sctp_common_input_processing(&m, 0, offset, (int)length,
 	                             (struct sockaddr *)&src,
 	                             (struct sockaddr *)&dst,
 	                             sh, ch,
