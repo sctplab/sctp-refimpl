@@ -1,0 +1,4 @@
+set term post landscape  "Times-Roman" 12
+set grid
+set xlabel 'kk'
+

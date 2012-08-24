@@ -1,0 +1,15 @@
+#!/bin/sh
+unifdef -USCOPEDROUTING -D__FreeBSD_cc_version=$1 -USCTP_BASE_FREEBSD -DSCTP_EMBEDDED_V6_SCOPE -U_SCTP_NEEDS_CALLOUT_ -D__FreeBSD_version=$1 -D SCTP_KAME -D__FreeBSD__ -U__Panda__ -U__NetBSD__ -U__OpenBSD__ -U__APPLE__ -USCTP_APPLE_PANTHER -U__Windows__ -U__Userspace__ -U__Userspace_os_Linux  -U__Userspace_os_FreeBSD -U__Userspace_os_Darwin -U_USER_SCTP_NEEDS_CALLOUT_ $2 > temp.file
+#
+unifdef -UHAVE_SCTP_PEELOFF_SOCKOPT -UNEW_STRUCT_ROUTE -U__APPLE__ -UNRND -USCTP_APPLE_FINE_GRAINED_LOCKING -U__APPLE1__ -UHAVE_NRL_INPCB -U__Windows__ temp.file > temp.file2
+#
+unifdef -UKERNEL -USCTP_PROCESS_LEVEL_LOCKS -USCTP_MVRF -U__APPLE__ temp.file2 > temp.file
+#
+unifdef -D__FreeBSD8__ -D__FreeBSD__ -USCTP_PER_SOCKET_LOCKING -DWITH_CONVERT_IP_OFF temp.file > temp.file2
+#
+unifdef -DSCTP_INCRS_DEFINED temp.file2 > export_freebsd/$2
+rm -f temp.file temp.file2
+./s9indent export_freebsd/$2
+mv export_freebsd/$2.s9 export_freebsd/$2
+
+

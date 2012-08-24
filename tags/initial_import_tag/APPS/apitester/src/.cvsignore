@@ -1,0 +1,5 @@
+.deps
+Makefile
+Makefile.in
+api_tests
+register_tests.c

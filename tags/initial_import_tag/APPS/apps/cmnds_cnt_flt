@@ -1,0 +1,284 @@
+#!/bin/sh
+if test $# -ne 2
+then
+echo error use $0 log timeskip
+exit
+fi
+../FreeBSD/prtcwndlog -a $2 -r -g -l $1.recv > $1.rcv.txt
+../FreeBSD/prtcwndlog -r -g -l $1.send | grep FLIGHT > $1.flight.txt
+../FreeBSD/prtcwndlog -r -g -l $1.send | grep ARWND > $1.arwnd.txt
+../FreeBSD/prtcwndlog -r -g -l $1.send | grep RWND | grep -v ARWND > $1.rwnd.txt
+../FreeBSD/prtcwndlog -r -g -l $1.send | grep OUT_QUEUE > $1.outq.txt
+../FreeBSD/cntcwndlog -r -l $1.send -i 500 -c1000 > $1.cnt.txt
+gnuplot <<!
+set output 'lcntplotall.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot000-100.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.000:.100]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot100-200.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.100:.200]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot200-300.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.200:.300]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot300-400.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.300:.400]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot400-500.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.400:.500]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot500-600.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.500:.600]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot600-700.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.600:.700]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot700-800.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.700:.800]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot800-900.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.800:.900]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot900-1000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.900:1.000]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1000-1100.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.000:1.100]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1100-1200.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.100:1.200]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1200-1300.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.200:1.300]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1300-1400.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.300:1.400]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1400-1500.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.400:1.500]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1500-1600.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.500:1.600]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1600-1700.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.600:1.700]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1700-1800.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.700:1.800]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1800-1900.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.800:1.900]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+unset multiplot
+clear
+reset
+set output 'lcntplot1900-2000.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [1.900:2.000]
+plot '$1.flight.txt' title 'snd-flt', \
+'$1.cnt.txt' title 'sack-cnt'
+
+

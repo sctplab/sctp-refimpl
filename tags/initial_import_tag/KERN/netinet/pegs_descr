@@ -1,0 +1,493 @@
+
+All pegs are logged SINCE system start OR since the last peg clear.
+
+SCTP_PEG_SACKS_SEEN 	"sack_rcv"
+Total number of SACK's that have been received by the system since startup.
+
+SCTP_PEG_SACKS_SENT "sack_snt",
+Total number of SACK's the system has sent since system startup.
+
+SCTP_PEG_TSNS_SENT  "tsns_snt"
+Total number of TSN's that have been sent onto the wire by this endpoint.
+
+SCTP_PEG_TSNS_RCVD 	"tsns_rcv"
+Total number of valid TSN's received by this endpoint. This does NOT
+include duplicate TSN's which are counted in a seperate peg.
+
+SCTP_DATAGRAMS_SENT 	"pkt_sent"
+Total number of IP packets placed on the wire by the SCTP code.
+
+SCTP_DATAGRAMS_RCVD "pkt_rcvd"
+Total number of valid SCTP datagrams received. A valid datagram is one
+that DOES NOT have a CRC error and  has a valid port listening for the
+data.
+
+SCTP_RETRANTSN_SENT "tsns_ret"
+Total number of TSN's that were retransmitted by this endpoint.
+
+SCTP_DUPTSN_RECVD   "dup_tsns"
+Total number of duplicate TSN's received (not included in the total
+number of TSN's received.
+
+SCTP_HB_RECV "hbs__rcv"
+Total number of Heartbeats received
+
+SCTP_HB_ACK_RECV "hbackrcv"
+Total number of Heartbeat-ack's received
+
+SCTP_HB_SENT "htb__snt"
+Total number of Heartbeats enqueued to the control output queue.
+
+SCTP_WINDOW_PROBES "win_prbe"
+Total number of TSN's sent has window probes (this includes duplicate
+retransmissions while awaiting the rwnd to raise).
+
+SCTP_DATA_DG_RECV  "pktswdat"
+Total number of datagrams received that carried DATA chunks.
+
+SCTP_TMIT_TIMER  "t3-timeo"
+Total number of T3 re-transmit timers that have gone off.
+
+SCTP_RECV_TIMER    dsack-to"
+Total number of Delayed SACK timers that have gone off.
+
+SCTP_HB_TIMER      "hb_timer"
+Total number of times a HB timer has expired.
+
+SCTP_FAST_RETRAN   "fst_rxts"
+Total number of packets sent that the retransmission was caused by one
+or more TSN's being fast retransmitted.
+
+xxxx SCTP_TIMERS_EXP    "timerexp"
+     Total number of times the timer expiration code has been activated.
+
+SCTP_FR_INAWINDOW "fr_inwin"
+Total number of times we did more than one fast retransmission in a
+single RTT window (thus we did not do a second cwnd reduction).
+
+xxxx SCTP_RWND_BLOCKED  "blk_rwnd"
+     Total number of times that we would have sent more data but we were
+     blocked by the peers RWND.
+
+xxxx SCTP_CWND_BLOCKED "blk_cwnd"
+    Total number of times that we would have sent more data but we were
+    blocked by the destinatioin CWND.
+
+SCTP_RWND_DROPS   "rwnd_drp"
+Total number of times that we dropped inbound data due to the peer
+exceeding our advertised rwnd (the peer over-ran our rwnd).
+
+SCTP_BAD_STRMNO "bad_strm"
+Total number of times a peer sent us data in a stream that did not exist.
+
+xxxx SCTP_BAD_SSN_WRAP  "bad_ssnw"
+     Total number of times a peer sent us a new TSN that had a stream
+     sequence number less than or equal to the one we last delivered.
+
+SCTP_DROP_NOMEMORY  "drpnomem"
+Total number of times we had to drop incoming data due to a shortage of
+memory (either chunk space or mbuf space).
+
+/* 25 */
+xxxx SCTP_DROP_FRAG     "drpfragm"
+     Total number of times we were dealing with reassembled data and the peer
+     sent something out of bounds, i.e. the consistency checks for the
+     reassembled data failed. An example of this would be where we get a TSN
+     marked as un-fragmented but its TSN belongs in the middle of a reassembly.
+
+SCTP_BAD_VTAGS     "badvtags"
+Total number of packets received where the VTAG was invalid.
+
+SCTP_BAD_CSUM  "badcsumv"
+Total number of input packets that had bad checksums and were dropped.
+
+SCTP_INPKTS "packetin"
+Total number of packets received, including ones dropped for checksum or
+other errors.
+
+xxxx SCTP_IN_MCAST    "mcastrcv"
+     Total number of multicast packets received and dropped.
+
+SCTP_HDR_DROPS 	"hdrdrops"
+Total number of header errors, this can be an in-consistent mbuf size,
+packets sent to port 0, or failure of the mbuf system to be able to do
+a pullup to cover the IP and SCTP header.
+
+SCTP_NOPORTS "no_portn"
+Number of ootb packets recieved destined for ports that had no listeners
+and no association.
+
+xxxx SCTP_CWND_NOFILL "cwnd_nf "
+Number of times a destination address was skipped in the transfer of
+stream data into queue to it due to the fact that the flightsize of the
+destination was already at or above the cwnd.
+
+xxxx SCTP_CALLS_TO_CO   "co_snds "
+Total number of calls made to the sctp_chunk_output routine. This is the
+basic call that most all local output is scheduled through.
+
+xxxx SCTP_CO_NODATASNT  "co_nodat"
+Number of times sctp_chunk_output was called and no data was sent.
+
+xxxx SCTP_CWND_NOUSE_SS "cw_nu_ss"
+Number of times a destination's cwnd could have been raised except that
+the full cwnd was not being used.
+
+SCTP_MAX_BURST_APL "max_brst"
+Number of times the max_burst parameter stopped output.
+
+SCTP_EXPRESS_ROUTE "expr_del"
+The total number of times that express delivery was used. Express delivery
+means that the inbound TSN was a total user message, nothing else was
+waiting to be delivered, no fragmented delivery (pd-api) was in progress,
+the message was either un-ordered OR the next stream sequence ready to be
+delivered in its stream, and there was room to put it into the socket
+buffer. When all of the above our true, we deliver right away and thus
+save a huge amount of overhead allocating and tracking the chunk and
+finally delivering it after any re-ordering is sorted out.
+
+xxxx SCTP_NO_COPY_IN "no_cp_in"
+     Number of times the last data chunk in the packet was able to be used
+     withpout a mcopy_m() call, i.e. we stole the mbuf to hold the data without
+     doing a copy.
+
+xxxx SCTP_CACHED_SRC "cach_src"
+     Number of times we were able to use the m_copypacket() function to optimize
+     copying of the data packet to be sent upon the wire.
+
+xxxx SCTP_CWND_NOCUM	  "cw_nocum"
+     Number of times that we had acknowledged data that did not move forward the
+    CWND due to the fact that the cumulative ack point did NOT move forward.
+
+xxxx SCTP_CWND_SS "cw_incss"
+Number of times we increased the CWND in slow start.
+
+xxxx SCTP_CWND_CA "cw_incca"
+Number of times we increased the CWND in congestion avoidance.
+
+xxxx SCTP_CWND_SKIP "cw_skip "
+Number of times loss recover had us skip a CWND update.
+
+xxxx SCTP_CWND_NOUSE_CA "cw_nu_ca"
+Number of times we were not fully using the CWND and we were in congestion
+avoidance so we did NOT grow the cwnd.
+
+xxxx SCTP_MAX_CWND "cw_maxcw"
+Maximum valud we have ever grown cwnd for any destination to.
+
+xxxx SCTP_CWND_DIFF_CA  "diff_ss "
+The largest amount of room in the cwnd window ever seen when the cwnd was
+NOT grown in congestion avoidance.
+
+xxxx SCTP_CWND_DIFF_SA  "diff_ca "
+The largest amount of room in the cwnd window ever seen when the cwnd was
+NOT grown in slow start.
+
+xxxx SCTP_OQS_AT_SS 	"tqs @ ss"
+The total output queue size when the recorded SCTP_CWND_DIFF_SA event was
+found.
+
+xxxx SCTP_SQQ_AT_SS 	"sqs @ ss"
+The total number number of chunks on the sent queue when the recorded
+SCTP_CWND_DIFF_SA event was found.
+
+/* 50 */
+xxxx SCTP_OQS_AT_CA "tqs @ ca"
+The total output queue size when the recorded SCTP_CWND_DIFF_CA event
+was found.
+
+xxxx SCTP_SQQ_AT_CA "sqq @ ca"
+The total number number of chunks on the sent queue when the recorded
+SCTP_CWND_DIFF_CA event was found.
+
+xxxx SCTP_MOVED_MTU  "lmtu_mov"
+In attempting to fill up the send queue, what is the largest mtu ever
+requested to the fill routine.
+
+xxxx SCTP_MOVED_QMAX "lcnt_mov"
+In attempting to fill up the send queue, the largest number of chunks
+ever moved at one call.
+
+xxxx SCTP_SQC_AT_SS  "sndqctss"
+The total number of chunks on the send queue when the recorded
+SCTP_CWND_DIFF_SA event was found.
+
+xxxx SCTP_SQC_AT_CA 	"sndqctca"
+The total number of chunks on the send queue when the recorded
+SCTP_CWND_DIFF_CA event was found.
+
+xxxx SCTP_MOVED_MAX "movemax "
+Number of times that the sctp_fill_outqueue routine was called to move
+data from stream queues to the send queue and completed its task (i.e.
+moved some data).
+
+xxxx SCTP_MOVED_NLEF "move_equ"
+Number of times we were attempting to move data (in sctp_fill_outqueue)
+and we ended due to the fact that there was no data left to move on any
+stream on the output stream wheel.
+
+SCTP_NAGLE_NOQ "nagle_qo"
+Number of times that data was queued by the user but the Nagle algorithm
+dictated that we should not attempt to send any of the data.
+
+SCTP_NAGLE_OFF "nagle_of"
+Number of times that data was queued by the user and Nagle was either off,
+or we had none in flight, or we had a full MTU's worth of data available
+to send so that we would call the output routine if possible.
+
+xxxx SCTP_OUTPUT_FRM_SND "out_fr_s"
+Number of times a user send routine caused the sctp_chunk_output to be
+called.
+
+xxxx SCTP_SOS_NOSNT "sostrnos"
+Number of times no output was sent from sctp_chunk_output and there were
+at least one chunk on a stream queue someplace that for some reason did
+not get put into the send queue.
+
+xxxx SCTP_NOS_NOSNT "nostrnos"
+Number of times no output was sent from sctp_chunk_output and there were
+NONE left on any stream queue.
+
+xxxx SCTP_SOSE_NOSNT "sosnqnos"
+Number of times no output was sent from sctp_chunk_output and there was
+SOME data left on the send queue.
+
+xxx SCTP_NOSE_NOSNT "nosnqnos"
+Number of times no output was sent from sctp_chunk_output and there was
+NO data left on the send queue.
+
+SCTP_DATA_OUT_ERR  "intoperr"
+Total number of times that the lowest level of sctp output returned an
+error indicating output was not peformed. This is either due to a no 
+memory problem, an ip_output error or some other error such as can't
+find a route or select a source address for the destination.
+
+xxxx SCTP_DUP_SSN_RCVD "dupssnrc"
+Number of times a duplicate SSN is found during attempted input to the
+stream reordering queue.
+
+SCTP_DUP_FR "multi-fr"
+Number of times a TSN was fast retransmitted more than once using the
+U-Del algorithm with the highest TSNs.
+
+SCTP_VTAG_EXPR "vtag-exp"
+Number of times the vtag was used to locate the TCB. This is normally the
+fastest way to lookup a TCB so we want this number to be high.
+
+SCTP_VTAG_BOGUS "vtag-bog"
+If vtags are unique across the entire system (currently a compile option)
+then this peg will be incremented when a vtag leads to an association that
+the address the data is from does not belong to. Basically it represents
+v-tag collision.
+
+xxxx SCTP_T3_SAFEGRD "t3-safeg"
+Number of times the safe-guard T3 timer was started. This is invoked when
+there is no timer running and yet there are chunks on the send queue.
+
+SCTP_PDRP_FMBOX "pd--mbox"
+Number of packet drop reports received from middle boxes.
+
+SCTP_PDRP_FEHOS "pd-ehost"
+Number of packet drop reports received from end hosts.
+
+SCTP_PDRP_MB_DA "pdmb_wda"
+Number of chunks reported by packet drops received from middle boxes reporting
+DATA TSN's not sent.
+
+SCTP_PDRP_MB_CT "pdmb_ctl"
+Number of chunks reported by packet drops received from middle boxes reporting
+control chunks not sent.
+
+/* 75 */
+SCTP_PDRP_BWRPT	"pdmb_bwr"
+Number of packet drop chunks that had NO report of a dropped chunk but
+instead were simply a bandwidth or rwnd report.
+
+SCTP_PDRP_CRUPT	"pd_corup"
+The number of packet drop chunks that at least one chunks was skipped due
+to corruption or truncation.
+
+SCTP_PDRP_NEDAT	"pd_nedat"
+The number of packet drop data chunks reported that did not have enough
+data in the chunk to determine if it truely was a dropped chunk.
+
+SCTP_PDRP_PDBRK "pd_errpd"
+The number of times that a packet drop report aborted processing of the
+rest of the packet drop due to an error.
+
+SCTP_PDRP_TSNNF "fst_prep"
+This peg indicates the number of times that a TSN could not be found using
+any method on the send queue.
+
+SCTP_PDRP_DNFND "pd_daNFo"
+The number of times a data chunk could not be found and so an extensive
+search of the sent queue was done ignoring the  tsn order in which the
+send queue is maintained.
+
+SCTP_PDRP_DIWNP	"pd_dIWin"
+The number of times a TSN was reported lost by the peer and that TSN was
+a window probe. This means no fast retransmit will be done on the chunk
+since we want the timer to expire and give the peer application time to
+read from its buffers.
+
+SCTP_PDRP_DIZRW	"pd_dIZrw"
+The number of times a TSN was reported lost by a middle box and that TSN
+was a window probe.
+
+SCTP_PDRP_BADD "pd_BadDa"
+The number of times a data TSN was reported dropped and the sample of data
+inside the returned packet that is checked against the real packet comes
+up incorrect (i.e. the data in the packet drop report does not match the
+data in queue). This causes an abort of the processing of the rest of the
+packet drop chunk.
+
+SCTP_PDRP_MARK "pd_dMark"
+The number of times a data TSN was reported dropped and all tests passed
+so we marked it for immediate fast retransmission.
+
+SCTP_ECNE_RCVD "ecne_rcv"
+The number of ECN echos that we received.
+
+SCTP_CWR_PERFO "cwr_perf"
+The number of times a ECNE caused us to reduce our congestion window.
+
+SCTP_ECNE_SENT "ecne_snt"
+The number of ENCE chunks that have been sent.
+
+SCTP_MSGC_DROP "chun_drp",
+Total number of chunks on queue that were dropped without processing due
+to the peer hitting the total chunk limit.
+
+xxxx SCTP_SEND_QUEUE_POP
+Total number of times from user send module that we went to send and found
+that things were on the send queue (i.e. unsent due to other issues like
+ip_output failing). Thus we will not proceed and call low level send routines
+
+SCTP_ERROUT_FRM_USR
+Total number of times we called the low level output routines and generated
+an ip_output failure.
+
+xxxx SCTP_SENDTO_FULL_CWND
+Total number of times we queued only due to the fact that the selected
+destination  had a full cwnd.
+
+SCTP_QUEONLY_BURSTLMT
+Total number of times we queue only since the burst limit was applied. No
+call to lowlevel output.
+
+SCTP_IFP_QUEUE_FULL
+Total number of times a destination was skipped due to the fact that its
+IFP queue on the outbound interface was full.
+
+xxxx SCTP_NO_TCB_IN_RCV
+
+
+xxxx SCTP_HAD_TCB_IN_RCV
+
+
+xxxx SCTP_PDAPI_UP_IN_RCV
+
+
+xxxx SCTP_PDAPI_HAD_TOWAIT_RCV
+
+
+xxxx SCTP_PDAPI_HAD_TORCVR_RCV
+
+
+xxxx SCTP_PDAPI_NOSTCB_ATC
+
+/* 100 */
+xxxx SCTP_ENTER_SCTPSORCV
+
+
+xxxx SCTP_REACHED_FR_MARK
+
+
+xxxx SCTP_SCTP_BY_ASSOCID
+
+
+xxxx SCTP_ASID_BOGUS
+
+
+SCTP_EARLYFR_STRT_TMR
+
+
+SCTP_EARLYFR_STOP_TMR
+
+
+SCTP_EARLYFR_EXPI_TMR
+
+
+SCTP_EARLYFR_MRK_RETR
+
+
+SCTP_T3_AT_WINPROBE - Number of times the t3 timer expired
+and you were doing a window probe.
+
+xxxx SCTP_RENEGED_ALL - 
+
+
+xxxx SCTP_IRENEGED_ON_ASOC
+
+
+SCTP_EARLYFR_STP_OUT
+
+
+SCTP_EARLYFR_STP_ID_SCK1
+
+
+SCTP_EARLYFR_STP_ID_SCK2
+
+
+SCTP_EARLYFR_STP_ID_SCK3
+
+
+SCTP_EARLYFR_STP_ID_SCK4
+
+
+SCTP_EARLYFR_STR_ID
+
+
+SCTP_EARLYFR_STR_OUT
+
+
+SCTP_EARLYFR_STR_TMR
+
+
+SCTP_T3_MARKED_TSNS - Number of TSN's marked for retransmission
+by the T3 timeout routine.
+
+
+SCTP_AUTH_SENT
+Number of AUTH chunks sent
+
+SCTP_AUTH_RCVD
+Number of AUTH chunks received
+
+SCTP_AUTH_MISSING
+Number of chunks received that required AUTH, but no AUTH present
+
+SCTP_AUTH_HMAC_ID_INVAL
+Number of AUTH chunks received with an invalid HMAC Identifier
+
+SCTP_AUTH_INVALID
+Number of AUTH chunks received with an invalid HMAC value
+
+/* 125 */
+SCTP_AUTH_NO_SECRET_KEY
+Number of AUTH chunks discarded due to a non-populated secret key identifier
+
+xxxx SCTP_AUTH_SENT_NULL_KEY
+Number of AUTH chunks sent using an empty/null key
+
+xxxx SCTP_AUTH_RCVD_NULL_KEY
+
+xxxx SCTP_NOSEND_NET_INPUT
+
+xxxx SCTP_SBWAIT_ON_SEND
+
+xxxx SCTP_SND_WAIT_OLOCK
+xxxx SCTP_WAKEUP_CALLED
+xxxx SCTP_BOGUS_TIMER
+xxxx SCTP_IN_BLOCK 
+xxxx SCTP_LOOP_IN_WHILE

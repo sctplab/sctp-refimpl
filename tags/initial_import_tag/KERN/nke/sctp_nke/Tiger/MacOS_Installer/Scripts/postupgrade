@@ -1,0 +1,17 @@
+#!/bin/bash
+#
+# $1: The full path to the installation package.
+# $2: The full path to the installation destination.
+# $3: The mountpoint of the destination volume.
+# $4: The root directory for the current System folder.
+#
+# (c) Copyright 2006/2007 Andreas Fink <andreas@fink.org>
+#
+if [ "$3" == "/" ]
+then
+	touch /System/Library/Extensions
+	kextcache -e
+	/Library/StartupItems/SCTP/SCTP prepare
+	/Library/StartupItems/SCTP/SCTP start
+fi
+

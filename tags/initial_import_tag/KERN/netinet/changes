@@ -1,0 +1,79 @@
+Patch 24 change log
+
+1) Fix for sctp_sendmsg. If the sa_len was set to 0 all worked as
+   it should... however if sa_len is set to a proper value then
+   garbage would be set as the address size.
+2) debug in timer routine made to print under debug
+   level 1 instead of whenever debug is defined
+3) port 0 check moved before the checksum verification.
+4) Added missing port 0 check for IPv6
+5) Fixed packet-drop processing decrease routine. The
+   fs/cwnd subtraction were done the wrong way.
+6) The initial RTO would not backoff, doubling. This
+   was due to not initializing it to rto.initial.
+7) The parameter length of the stream reset request
+   was incorrect.
+8) All timers that sub-functions that ran threshold_management() had
+   a possibility that the association was destroyed. However no way
+   was it possible to communicate that fact to the calling timeout
+   handler. Thus it was possible that a chunk_output would be
+   called on an association that was free... very bad. This is
+   all fixed and now all t-o functions that do threshold mangagment
+   must return 0 for ok and 1 for association destroyed.
+9) Got rid of  an used define in sctp_constants.h
+10) Rewrite IPv4 src address selection and fixed bound specific
+    IPv6 src address selection.
+11) Missing return when already in SHUTDOWN-RECIEVED.
+12) Improper memset found by Marko Lindholm in the libsctp.a code
+    for sctp_bindx.
+13) Fix the stream reset functions to use the parameters properly
+    per the newly forming draft. Still have a bug here where
+    we can loose multiple stream resets (labeled with FIXME)
+14) Kernel changes for sctp_sendx()
+15) Kernel changes for MSG_SENDALL flag
+16) sctp lib adde of sctp_sendx()
+
+
+Patch 25 all of patch24)
+
+1) Link Local addresses for V6 where the ll address
+   is included implicitly would make a false decision to
+   NOT list addresses. This has been fixed.
+2) Fix switch back after failure
+3) We run only one RTO timer. In the timing of
+   things we would compare to any dest that had been
+   idle longer than the HB-Delay value.. This is
+   incorrect, we should take the longest value and
+   HB if its greater than the RTO.
+4) Fixed shutdown-received state so we get the
+   shutdown and not return without stopping the
+   timer and sending a S-A.
+5) Chunk_output was not being called when a shutdown
+   was queued on the v6 side. This is a bug that
+   was fixed for v4 at the Munester Inter-op, but we
+   missed the V6 side :-<
+6) You can use NULL as the to argument in sctp_sendmsg
+   for 1to1 style sockets.
+7) Performance changes on the sender side of SCTP that
+   provide signifigant gains in SACK processing as
+   well as on destinations that fill up the ifp queue.
+8) Fixed IPV6 to V4 mapping issue with V6 Mapped addresses
+   in sctp_bindx
+9) Get rid of warnings comparison in signed/unsigned.
+10) Purged TCP_MODEL, so now it is always present.
+11) Fixed a socketoption mbuf leak when a setsockopt() failed.
+12) Fixed problem with mapped v4 addresses.
+13) Iterator & was a &&
+14) Link local should also include ipv4 private addresses, since
+    if its on the local link it better be also part of the 
+    private address space :-D
+15) A performance improvement introduced a bug that caused
+    HB's to stop being sent due to a miscaluclation of time.
+16) DSACK timer now configurable on an EP
+17) Whew, 5.3.x compatibile aka SMP with locking now
+    works.
+
+Patch 26 all of patch 25
+
+1)  A new PR_SCTP policy: limited number of retransmissions.
+
