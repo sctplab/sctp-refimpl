@@ -7241,7 +7241,7 @@ sctp_listen(struct socket *so, struct proc *p)
 		so->so_options &= ~SO_ACCEPTCONN;
 #else
 		so->so_options &= ~SO_ACCEPTCONN;
-#else
+#endif
 	}
 
 #if __FreeBSD_version >= 700000 || defined(__Windows__) || defined(__Userspace__)
