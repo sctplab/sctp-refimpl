@@ -4420,7 +4420,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 			/* Invalid address */
 			return (-1);
 		}
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 		sconn->sconn_len = sizeof(struct sockaddr_conn);
 #endif
 		break;

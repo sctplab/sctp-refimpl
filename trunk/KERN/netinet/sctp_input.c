@@ -644,7 +644,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_conn)) {
 			sconn = (struct sockaddr_conn *)&store;
 			sconn->sconn_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 			sconn->sconn_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sconn->sconn_port = stcb->rport;
@@ -2356,7 +2356,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sconn = (struct sockaddr_conn *)initack_src;
 		memset(sconn, 0, sizeof(struct sockaddr_conn));
 		sconn->sconn_family = AF_CONN;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 		sconn->sconn_len = sizeof(struct sockaddr_conn);
 #endif
 		memcpy(&sconn->sconn_addr, cookie->laddress, sizeof(void *));
@@ -2711,7 +2711,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_CONN_ADDRESS:
 		memset(&sconn, 0, sizeof(struct sockaddr_conn));
 		sconn.sconn_family = AF_CONN;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 		sconn.sconn_len = sizeof(struct sockaddr_conn);
 #endif
 		sconn.sconn_port = sh->src_port;

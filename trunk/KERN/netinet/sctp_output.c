@@ -12955,7 +12955,7 @@ sctp_lower_sosend(struct socket *so,
 #endif
 #if defined(__Userspace__)
 		case AF_CONN:
-#if defined(__FreeBSD__) || defined(__APPLE__)
+#ifdef HAVE_SCONN_LEN
 			if (raddr->sconn.sconn_len != sizeof(struct sockaddr_conn)) {
 				SCTP_LTRACE_ERR_RET(inp, stcb, net, SCTP_FROM_SCTP_OUTPUT, EINVAL);
 				error = EINVAL;
