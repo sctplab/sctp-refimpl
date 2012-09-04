@@ -45,6 +45,7 @@
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2ipdef.h>
+#include <ws2def.h>
 #include <iphlpapi.h>
 #include <Mswsock.h>
 #include <Windows.h>
@@ -201,13 +202,15 @@ typedef char* caddr_t;
 #define random() rand()
 #define srandom(s) srand(s)
 #define	MSG_EOR		0x8		/* data completes record */
+#define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
+
 #if defined(CMSG_DATA)
 #undef CMSG_DATA
 #endif
 #define CMSG_DATA(x)   WSA_CMSG_DATA(x)
 #define CMSG_ALIGN(x)  WSA_CMSGDATA_ALIGN(x)
-
-#define	MSG_DONTWAIT	0x80		/* this message should be nonblocking */
+#define CMSG_SPACE(x)  WSA_CMSG_SPACE(x)
+#define CMSG_LEN(x)    WSA_CMSG_LEN(x)
 
 /****  from sctp_os_windows.h ***************/
 #define SCTP_IFN_IS_IFT_LOOP(ifn)	((ifn)->ifn_type == IFT_LOOP)
@@ -247,7 +250,11 @@ typedef char* caddr_t;
 
 #define BIG_ENDIAN 1
 #define LITTLE_ENDIAN 0
+#ifdef WORDS_BIGENDIAN
+#define BYTE_ORDER BIG_ENDIAN
+#else
 #define BYTE_ORDER LITTLE_ENDIAN
+#endif
 
 struct iovec {
 	ULONG len;
@@ -1121,11 +1128,11 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define __DARWIN_ALIGN32(p)       ((__darwin_size_t)((char *)(uintptr_t)(p) + __DARWIN_ALIGNBYTES32) &~ __DARWIN_ALIGNBYTES32)
 #endif
 #define CMSG_ALIGN(n)   __DARWIN_ALIGN32(n)
+#endif
 #define I_AM_HERE \
                 do { \
 			SCTP_PRINTF("%s:%d at %s\n", __FILE__, __LINE__ , __FUNCTION__); \
 		} while (0)
-#endif
 
 #ifndef timevalsub
 #define timevalsub(tp1, tp2)                       \
