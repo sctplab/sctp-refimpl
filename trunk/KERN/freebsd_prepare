@@ -1,5 +1,5 @@
 #!/bin/sh
-unifdef -USCOPEDROUTING -D__FreeBSD_cc_version=$1 -DSCTP_EMBEDDED_V6_SCOPE -U_SCTP_NEEDS_CALLOUT_ -D__FreeBSD_version=$1 -D SCTP_KAME -D__FreeBSD__ -U__Panda__ -U__NetBSD__ -U__OpenBSD__ -U__APPLE__ -U__Windows__ -U__Userspace__ -U__Userspace_os_Linux  -U__Userspace_os_FreeBSD -U__Userspace_os_Darwin -U__Userspace_os_Windows -U_USER_SCTP_NEEDS_CALLOUT_ -UCALLBACK_API $2 > temp.file
+unifdef -USCOPEDROUTING -D__FreeBSD_cc_version=$1 -DSCTP_EMBEDDED_V6_SCOPE -U_SCTP_NEEDS_CALLOUT_ -D__FreeBSD_version=$1 -D SCTP_KAME -D__FreeBSD__ -U__Panda__ -U__NetBSD__ -U__OpenBSD__ -U__APPLE__ -U__Windows__ -U__Userspace__ -U__Userspace_os_Linux  -U__Userspace_os_FreeBSD -U__Userspace_os_Darwin -U__Userspace_os_Windows -U_USER_SCTP_NEEDS_CALLOUT_ $2 > temp.file
 #
 unifdef -USCTP_HMAC_TEST -UHAVE_SCTP_PEELOFF_SOCKOPT -UNEW_STRUCT_ROUTE -U__APPLE__ -UNRND -UHAVE_NRL_INPCB -U__Windows__ temp.file > temp.file2
 #
