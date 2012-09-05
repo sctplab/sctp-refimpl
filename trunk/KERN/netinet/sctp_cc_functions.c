@@ -1075,7 +1075,7 @@ sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_n
 	          old_cwnd, net->cwnd);
 #endif
 	SCTPDBG(SCTP_DEBUG_INDATA1, "Destination %p moved from PF to reachable with cwnd %d.\n",
-	        net, net->cwnd);
+	        (void *)net, net->cwnd);
 }
 
 
