@@ -505,11 +505,7 @@ struct sx {int dummy;};
 #include <netinet/ip_options.h>
 #endif
 
-#if !defined(__Userspace_os_Windows)
-#define SCTP_PRINTF(params...)	printf(params)
-#else
 #define SCTP_PRINTF(...)   printf(__VA_ARGS__)
-#endif
 
 #if defined(__FreeBSD__)
 #ifndef in6pcb
@@ -566,16 +562,6 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 
 #if defined(SCTP_DEBUG)
 #include <netinet/sctp_constants.h>
-#if !defined(__Userspace_os_Windows)
-#define SCTPDBG(level, params...)					\
-{									\
-    do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {					\
-	    SCTP_PRINTF(params);						\
-	}								\
-    } while (0);							\
-}
-#else
 #define SCTPDBG(level, ...)  \
 {                              \
     do {    \
@@ -584,7 +570,6 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
 	}        \
 	} while (0);     \
 }
-#endif
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
     do {								\
@@ -594,7 +579,7 @@ MALLOC_DECLARE(SCTP_M_SOCKOPT);
     } while (0);							\
 }
 #else
-#define SCTPDBG(level, params...)
+#define SCTPDBG(level, ...)
 #define SCTPDBG_ADDR(level, addr)
 #endif
 
