@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 238501 2012-07-15 20:16:17Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 240148 2012-09-05 18:52:01Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -185,7 +185,7 @@ sctp_process_asconf_add_ip(struct sockaddr *src, struct sctp_asconf_paramhdr *ap
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_port = stcb->rport;
@@ -210,7 +210,7 @@ sctp_process_asconf_add_ip(struct sockaddr *src, struct sctp_asconf_paramhdr *ap
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6->sin6_port = stcb->rport;
@@ -335,7 +335,7 @@ sctp_process_asconf_delete_ip(struct sockaddr *src,
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_port = stcb->rport;
@@ -357,7 +357,7 @@ sctp_process_asconf_delete_ip(struct sockaddr *src,
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6->sin6_port = stcb->rport;
@@ -466,7 +466,7 @@ sctp_process_asconf_set_primary(struct sockaddr *src,
 		sin = (struct sockaddr_in *)&sa_store;
 		bzero(sin, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_addr.s_addr = v4addr->addr;
@@ -486,7 +486,7 @@ sctp_process_asconf_set_primary(struct sockaddr *src,
 		sin6 = (struct sockaddr_in6 *)&sa_store;
 		bzero(sin6, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		memcpy((caddr_t)&sin6->sin6_addr, v6addr->addr,
@@ -2301,7 +2301,7 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 		/* set primary queuing succeeded */
 		SCTPDBG(SCTP_DEBUG_ASCONF1,
 			"set_primary_ip_address_sa: queued on tcb=%p, ",
-			stcb);
+			(void *)stcb);
 		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, sa);
 		if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
 #ifdef SCTP_TIMER_BASED_ASCONF
@@ -2314,7 +2314,7 @@ sctp_set_primary_ip_address_sa(struct sctp_tcb *stcb, struct sockaddr *sa)
 		}
 	} else {
 		SCTPDBG(SCTP_DEBUG_ASCONF1, "set_primary_ip_address_sa: failed to add to queue on tcb=%p, ",
-			stcb);
+			(void *)stcb);
 		SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, sa);
 		return (-1);
 	}
@@ -2337,7 +2337,7 @@ sctp_set_primary_ip_address(struct sctp_ifa *ifa)
 						   SCTP_SET_PRIM_ADDR)) {
 				/* set primary queuing succeeded */
 				SCTPDBG(SCTP_DEBUG_ASCONF1, "set_primary_ip_address: queued on stcb=%p, ",
-					stcb);
+					(void *)stcb);
 				SCTPDBG_ADDR(SCTP_DEBUG_ASCONF1, &ifa->address.sa);
 				if (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_OPEN) {
 #ifdef SCTP_TIMER_BASED_ASCONF
@@ -2792,7 +2792,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 #ifdef INET6
 	bzero(&sin6, sizeof(sin6));
 	sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	sin6.sin6_len = sizeof(sin6);
 #endif
 	sin6.sin6_port = stcb->rport;
@@ -2801,7 +2801,7 @@ sctp_process_initack_addresses(struct sctp_tcb *stcb, struct mbuf *m,
 #ifdef INET
 	bzero(&sin, sizeof(sin));
 	sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 	sin.sin_len = sizeof(sin);
 #endif
 	sin.sin_port = stcb->rport;

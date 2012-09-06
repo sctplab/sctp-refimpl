@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 239091 2012-08-06 10:50:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 240148 2012-09-05 18:52:01Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -102,7 +102,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 	struct mbuf *op_err;
 
 	SCTPDBG(SCTP_DEBUG_INPUT2, "sctp_handle_init: handling INIT tcb:%p\n",
-		stcb);
+		(void *)stcb);
 	if (stcb == NULL) {
 		SCTP_INP_RLOCK(inp);
 	}
@@ -612,7 +612,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in)) {
 			sin = (struct sockaddr_in *)&store;
 			sin->sin_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 			sin->sin_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sin->sin_port = stcb->rport;
@@ -628,7 +628,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_in6)) {
 			sin6 = (struct sockaddr_in6 *)&store;
 			sin6->sin6_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 			sin6->sin6_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sin6->sin6_port = stcb->rport;
@@ -644,7 +644,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 		if (cp->heartbeat.hb_info.addr_len == sizeof(struct sockaddr_conn)) {
 			sconn = (struct sockaddr_conn *)&store;
 			sconn->sconn_family = cp->heartbeat.hb_info.addr_family;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 			sconn->sconn_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			sconn->sconn_port = stcb->rport;
@@ -2330,7 +2330,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin = (struct sockaddr_in *)initack_src;
 		memset(sin, 0, sizeof(*sin));
 		sin->sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 		sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 		sin->sin_addr.s_addr = cookie->laddress[0];
@@ -2342,7 +2342,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sin6 = (struct sockaddr_in6 *)initack_src;
 		memset(sin6, 0, sizeof(*sin6));
 		sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 		sin6->sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		sin6->sin6_scope_id = cookie->scope_id;
@@ -2356,7 +2356,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		sconn = (struct sockaddr_conn *)initack_src;
 		memset(sconn, 0, sizeof(struct sockaddr_conn));
 		sconn->sconn_family = AF_CONN;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 		sconn->sconn_len = sizeof(struct sockaddr_conn);
 #endif
 		memcpy(&sconn->sconn_addr, cookie->laddress, sizeof(void *));
@@ -2685,7 +2685,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_IPV6_ADDRESS:
 		memset(&sin6, 0, sizeof(sin6));
 		sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 		sin6.sin6_len = sizeof(sin6);
 #endif
 		sin6.sin6_port = sh->src_port;
@@ -2699,7 +2699,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_IPV4_ADDRESS:
 		memset(&sin, 0, sizeof(sin));
 		sin.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 		sin.sin_len = sizeof(sin);
 #endif
 		sin.sin_port = sh->src_port;
@@ -2711,7 +2711,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 	case SCTP_CONN_ADDRESS:
 		memset(&sconn, 0, sizeof(struct sockaddr_conn));
 		sconn.sconn_family = AF_CONN;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SCONN_LEN
 		sconn.sconn_len = sizeof(struct sockaddr_conn);
 #endif
 		sconn.sconn_port = sh->src_port;
@@ -2754,7 +2754,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 				SCTP_INP_INCR_REF((*stcb)->sctp_ep);
 				if ((*stcb)->sctp_ep != l_inp) {
 					SCTP_PRINTF("Huh? ep:%p diff then l_inp:%p?\n",
-						    (*stcb)->sctp_ep, l_inp);
+						    (void *)(*stcb)->sctp_ep, (void *)l_inp);
 				}
 			}
 		}
@@ -4533,7 +4533,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #endif
 
 	SCTPDBG(SCTP_DEBUG_INPUT1, "sctp_process_control: iphlen=%u, offset=%u, length=%u stcb:%p\n",
-		iphlen, *offset, length, stcb);
+		iphlen, *offset, length, (void *)stcb);
 
 	/* validate chunk header length... */
 	if (ntohs(ch->chunk_length) < sizeof(*ch)) {
@@ -5158,7 +5158,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_ABORT_ASSOCIATION:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_ABORT, stcb %p\n",
-				stcb);
+				(void *)stcb);
 			if ((stcb) && netp && *netp)
 				sctp_handle_abort((struct sctp_abort_chunk *)ch,
 						  stcb, *netp);
@@ -5167,7 +5167,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_SHUTDOWN:
 			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN, stcb %p\n",
-				stcb);
+				(void *)stcb);
 			if ((stcb == NULL) || (chk_length != sizeof(struct sctp_shutdown_chunk))) {
 				*offset = length;
 				if (locked_tcb) {
@@ -5187,7 +5187,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_SHUTDOWN_ACK:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-ACK, stcb %p\n", stcb);
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-ACK, stcb %p\n", (void *)stcb);
 			if ((stcb) && (netp) && (*netp))
 				sctp_handle_shutdown_ack((struct sctp_shutdown_ack_chunk *)ch, stcb, *netp);
 			*offset = length;
@@ -5203,7 +5203,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			break;
 		case SCTP_COOKIE_ECHO:
 			SCTPDBG(SCTP_DEBUG_INPUT3,
-				"SCTP_COOKIE-ECHO, stcb %p\n", stcb);
+				"SCTP_COOKIE-ECHO, stcb %p\n", (void *)stcb);
 			if ((stcb) && (stcb->asoc.total_output_queue_size)) {
 				;
 			} else {
@@ -5309,7 +5309,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_COOKIE_ACK:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_COOKIE-ACK, stcb %p\n", stcb);
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_COOKIE-ACK, stcb %p\n", (void *)stcb);
 			if ((stcb == NULL) || chk_length != sizeof(struct sctp_cookie_ack_chunk)) {
 				if (locked_tcb) {
 					SCTP_TCB_UNLOCK(locked_tcb);
@@ -5399,7 +5399,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			}
 			break;
 		case SCTP_SHUTDOWN_COMPLETE:
-			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-COMPLETE, stcb %p\n", stcb);
+			SCTPDBG(SCTP_DEBUG_INPUT3, "SCTP_SHUTDOWN-COMPLETE, stcb %p\n", (void *)stcb);
 			/* must be first and only chunk */
 			if ((num_chunks > 1) ||
 			    (length - *offset > (int)SCTP_SIZE32(chk_length))) {
@@ -5764,7 +5764,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 		sh->checksum = check;
 		if (calc_check != check) {
 			SCTPDBG(SCTP_DEBUG_INPUT1, "Bad CSUM on SCTP packet calc_check:%x check:%x  m:%p mlen:%d iphlen:%d\n",
-			        calc_check, check, m, length, iphlen);
+			        calc_check, check, (void *)m, length, iphlen);
 			stcb = sctp_findassociation_addr(m, offset, src, dst,
 			                                 sh, ch, &inp, &net, vrf_id);
 			if ((net != NULL) && (port != 0)) {
@@ -5879,13 +5879,13 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 	}
 #endif
 	SCTPDBG(SCTP_DEBUG_INPUT1, "Ok, Common input processing called, m:%p iphlen:%d offset:%d length:%d stcb:%p\n",
-		m, iphlen, offset, length, stcb);
+		(void *)m, iphlen, offset, length, (void *)stcb);
 	if (stcb) {
 		/* always clear this before beginning a packet */
 		stcb->asoc.authenticated = 0;
 		stcb->asoc.seen_a_sack_this_pkt = 0;
 		SCTPDBG(SCTP_DEBUG_INPUT1, "stcb:%p state:%x\n",
-			stcb, stcb->asoc.state);
+			(void *)stcb, stcb->asoc.state);
 
 		if ((stcb->asoc.state & SCTP_STATE_WAS_ABORTED) ||
 		    (stcb->asoc.state & SCTP_STATE_ABOUT_TO_BE_FREED)) {
@@ -6136,9 +6136,9 @@ static void
 sctp_print_mbuf_chain(struct mbuf *m)
 {
 	for (; m; m = SCTP_BUF_NEXT(m)) {
-		SCTP_PRINTF("%p: m_len = %ld\n", m, SCTP_BUF_LEN(m));
+		SCTP_PRINTF("%p: m_len = %ld\n", (void *)m, SCTP_BUF_LEN(m));
 		if (SCTP_BUF_IS_EXTENDED(m))
-			SCTP_PRINTF("%p: extend_size = %d\n", m, SCTP_BUF_EXTEND_SIZE(m));
+			SCTP_PRINTF("%p: extend_size = %d\n", (void *)m, SCTP_BUF_EXTEND_SIZE(m));
 	}
 }
 #endif
@@ -6271,14 +6271,14 @@ sctp_input(i_pak, va_alist)
 	offset -= sizeof(struct sctp_chunkhdr);
 	memset(&src, 0, sizeof(struct sockaddr_in));
 	src.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 	src.sin_len = sizeof(struct sockaddr_in);
 #endif
 	src.sin_port = sh->src_port;
 	src.sin_addr = ip->ip_src;
 	memset(&dst, 0, sizeof(struct sockaddr_in));
 	dst.sin_family = AF_INET;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 	dst.sin_len = sizeof(struct sockaddr_in);
 #endif
 	dst.sin_port = sh->dest_port;

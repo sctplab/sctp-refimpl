@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 240007 2012-09-02 12:37:30Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 240148 2012-09-05 18:52:01Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -716,7 +716,7 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			if (lnet->flight_size != tot_out) {
 				SCTP_PRINTF("net:%p flight was %d corrected to %d\n",
-					    lnet, lnet->flight_size,
+					    (void *)lnet, lnet->flight_size,
 					    tot_out);
 				lnet->flight_size = tot_out;
 			}
@@ -1478,7 +1478,7 @@ sctp_timeout_handler(void *t)
 	if (tmr->self != (void *)tmr) {
 		/*
 		 * SCTP_PRINTF("Stale SCTP timer fired (%p), ignoring...\n",
-		 * tmr);
+		 *             (void *)tmr);
 		 */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
@@ -2180,7 +2180,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	if ((to_ticks <= 0) || (tmr == NULL)) {
 		SCTPDBG(SCTP_DEBUG_TIMER1, "%s: %d:software error to_ticks:%d tmr:%p not set ??\n",
-			__FUNCTION__, t_type, to_ticks, tmr);
+			__FUNCTION__, t_type, to_ticks, (void *)tmr);
 		return;
 	}
 	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
@@ -6113,7 +6113,7 @@ sctp_sorecvmsg(struct socket *so,
 			sin = (struct sockaddr_in *)from;
 			bzero(&sin6, sizeof(sin6));
 			sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 #if defined(__Userspace_os_FreeBSD) || defined(__Userspace_os_Darwin) || defined(__Userspace_os_Windows)
@@ -6952,7 +6952,7 @@ sctp_hashfreedestroy(void *vhashtbl, struct malloc_type *type, u_long hashmask)
 			while (start != NULL) {
 				temp = start;
 				start = start->le_next;
-				SCTP_PRINTF("%s: %p \n", __func__, temp);
+				SCTP_PRINTF("%s: %p \n", __func__, (void *)temp);
 				FREE(temp, type);
 			}
 		}

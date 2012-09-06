@@ -86,7 +86,7 @@ in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 	uint32_t temp;
 #endif
 	bzero(sin, sizeof(*sin));
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 	sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 	sin->sin_family = AF_INET;
@@ -115,8 +115,9 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 }
 #endif
 
+#if !defined(__Userspace__)
 int
-#if defined(__APPLE__) || defined(__Userspace__)
+#if defined(__APPLE__)
 sctp6_input_with_port(struct mbuf **i_pak, int *offp, uint16_t port)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type *i_pak)
@@ -230,7 +231,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	offset -= sizeof(struct sctp_chunkhdr);
 	memset(&src, 0, sizeof(struct sockaddr_in6));
 	src.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	src.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	src.sin6_port = sh->src_port;
@@ -245,7 +246,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #endif
 	memset(&dst, 0, sizeof(struct sockaddr_in6));
 	dst.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	dst.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	dst.sin6_port = sh->dest_port;
@@ -329,7 +330,6 @@ sctp6_input(struct mbuf **i_pak, int *offp)
 }
 #endif
 
-#if !defined(__Userspace__)
 #if defined(__Panda__)
 void
 #else
@@ -556,7 +556,7 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 		m_copydata(ip6cp->ip6c_m, ip6cp->ip6c_off, sizeof(sh),
 		    (caddr_t)&sh);
 		ip6cp->ip6c_src->sin6_port = sh.src_port;
-#if !defined(__Windows__)
+#ifdef HAVE_SIN6_LEN
 		final.sin6_len = sizeof(final);
 #endif
 		final.sin6_family = AF_INET6;
@@ -1360,7 +1360,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	sin6->sin6_len = sizeof(*sin6);
 #endif
 
@@ -1493,7 +1493,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	memset(sin6, 0, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	sin6->sin6_len = sizeof(*sin6);
 #endif
 
