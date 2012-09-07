@@ -3585,9 +3585,9 @@ process_chunk_drop(struct sctp_tcb *stcb, struct sctp_chunk_desc *desc,
 }
 
 void
-sctp_reset_in_stream(struct sctp_tcb *stcb, int number_entries, uint16_t * list)
+sctp_reset_in_stream(struct sctp_tcb *stcb, uint32_t number_entries, uint16_t * list)
 {
-	int i;
+	uint32_t i;
 	uint16_t temp;
 
 	/*
@@ -4018,8 +4018,7 @@ sctp_handle_str_reset_request_out(struct sctp_tcb *stcb,
 			}
 			liste->tsn = tsn;
 			liste->number_entries = number_entries;
-			memcpy(&liste->req, req,
-			    (sizeof(struct sctp_stream_reset_out_request) + (number_entries * sizeof(uint16_t))));
+			memcpy(&liste->list_of_streams, req->list_of_streams, number_entries * sizeof(uint16_t));
 			TAILQ_INSERT_TAIL(&asoc->resetHead, liste, next_resp);
 			asoc->last_reset_action[0] = SCTP_STREAM_RESET_RESULT_PERFORMED;
 		}
