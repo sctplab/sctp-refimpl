@@ -530,6 +530,7 @@
 					KERNEL_PRIVATE,
 					APPLE_LION,
 					SCTP_LOCAL_TRACE_BUF,
+					HAVE_SA_LEN,
 					HAVE_SIN_LEN,
 					HAVE_SIN6_LEN,
 				);
@@ -575,6 +576,7 @@
 					KERNEL,
 					KERNEL_PRIVATE,
 					APPLE_LION,
+					HAVE_SA_LEN,
 					HAVE_SIN_LEN,
 					HAVE_SIN6_LEN,
 				);
