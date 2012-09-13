@@ -51,7 +51,24 @@
 #include <Windows.h>
 #include "user_environment.h"
 typedef CRITICAL_SECTION userland_mutex_t;
+#if _WIN32_WINNT < 0x0600
+enum {
+	C_SIGNAL = 0,
+	C_BROADCAST = 1,
+	C_MAX_EVENTS = 2
+};
+typedef struct
+{
+	u_int waiters_count;
+	CRITICAL_SECTION waiters_count_lock;
+	HANDLE events_[C_MAX_EVENTS];
+} userland_cond_t;
+#define InitializeConditionVariable(cond) InitializeXPConditionVariable(cond)
+#define SleepConditionVariableCS(cond, mtx, time) SleepXPConditionVariable(cond, mtx)
+#define WakeAllConditionVariable(cond) WakeAllXPConditionVariable(cond)
+#else
 typedef CONDITION_VARIABLE userland_cond_t;
+#endif
 typedef HANDLE userland_thread_t;
 #define ADDRESS_FAMILY	unsigned __int8
 #define IPVERSION  4
@@ -209,7 +226,7 @@ typedef char* caddr_t;
 #endif
 #define CMSG_DATA(x)   WSA_CMSG_DATA(x)
 #define CMSG_ALIGN(x)  WSA_CMSGDATA_ALIGN(x)
-#if (_WIN32_WINNT < 0x0600)
+#if _WIN32_WINNT < 0x0600
 #define CMSG_SPACE(x)  WSA_CMSG_SPACE(x)
 #define CMSG_LEN(x)    WSA_CMSG_LEN(x)
 #endif
