@@ -6718,7 +6718,7 @@ sctp_copy_mbufchain(struct mbuf *clonechain,
 	}
 }
 
-int
+static int
 sctp_med_chunk_output(struct sctp_inpcb *inp,
 		      struct sctp_tcb *stcb,
 		      struct sctp_association *asoc,
