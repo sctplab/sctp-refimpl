@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 240007 2012-09-02 12:37:30Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 242325 2012-10-29 20:42:48Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -76,9 +76,9 @@ extern struct sctp_cc_functions sctp_cc_functions[];
 extern struct sctp_ss_functions sctp_ss_functions[];
 
 void
-sctp_sblog(struct sockbuf *sb,
-    struct sctp_tcb *stcb, int from, int incr)
+sctp_sblog(struct sockbuf *sb, struct sctp_tcb *stcb, int from, int incr)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.sb.stcb = stcb;
@@ -95,11 +95,13 @@ sctp_sblog(struct sockbuf *sb,
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.close.inp = (void *)inp;
@@ -119,12 +121,13 @@ sctp_log_closing(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int16_t loc)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
-
 
 void
 rto_logging(struct sctp_nets *net, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	memset(&sctp_clog, 0, sizeof(sctp_clog));
@@ -137,11 +140,13 @@ rto_logging(struct sctp_nets *net, int from)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t tsn, uint16_t sseq, uint16_t stream, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.strlog.stcb = stcb;
@@ -157,11 +162,13 @@ sctp_log_strm_del_alt(struct sctp_tcb *stcb, uint32_t tsn, uint16_t sseq, uint16
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.nagle.stcb = (void *)stcb;
@@ -176,11 +183,13 @@ sctp_log_nagle_event(struct sctp_tcb *stcb, int action)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps, uint16_t dups, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.sack.cumack = cumack;
@@ -195,11 +204,13 @@ sctp_log_sack(uint32_t old_cumack, uint32_t cumack, uint32_t tsn, uint16_t gaps,
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	memset(&sctp_clog, 0, sizeof(sctp_clog));
@@ -213,12 +224,13 @@ sctp_log_map(uint32_t map, uint32_t cum, uint32_t high, int from)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
-sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
-    int from)
+sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	memset(&sctp_clog, 0, sizeof(sctp_clog));
@@ -232,11 +244,13 @@ sctp_log_fr(uint32_t biggest_tsn, uint32_t biggest_new_tsn, uint32_t tsn,
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_mb(struct mbuf *m, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.mb.mp = m;
@@ -261,12 +275,13 @@ sctp_log_mb(struct mbuf *m, int from)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
-sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_read *poschk,
-    int from)
+sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_read *poschk, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	if (control == NULL) {
@@ -291,11 +306,13 @@ sctp_log_strm_del(struct sctp_queued_to_read *control, struct sctp_queued_to_rea
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.cwnd.net = net;
@@ -326,20 +343,22 @@ sctp_log_cwnd(struct sctp_tcb *stcb, struct sctp_nets *net, int augment, uint8_t
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 #ifndef __APPLE__
 void
 sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	memset(&sctp_clog, 0, sizeof(sctp_clog));
 	if (inp) {
- 		sctp_clog.x.lock.sock = (void *) inp->sctp_socket;
+		sctp_clog.x.lock.sock = (void *) inp->sctp_socket;
 
 	} else {
- 		sctp_clog.x.lock.sock = (void *) NULL;
+		sctp_clog.x.lock.sock = (void *) NULL;
 	}
 	sctp_clog.x.lock.inp = (void *) inp;
 #if (defined(__FreeBSD__) && __FreeBSD_version >= 503000) || (defined(__APPLE__))
@@ -377,12 +396,14 @@ sctp_log_lock(struct sctp_inpcb *inp, struct sctp_tcb *stcb, uint8_t from)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 #endif
 
 void
 sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int burst, uint8_t from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	memset(&sctp_clog, 0, sizeof(sctp_clog));
@@ -405,11 +426,13 @@ sctp_log_maxburst(struct sctp_tcb *stcb, struct sctp_nets *net, int error, int b
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_rwnd(uint8_t from, uint32_t peers_rwnd, uint32_t snd_size, uint32_t overhead)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.rwnd.rwnd = peers_rwnd;
@@ -423,11 +446,13 @@ sctp_log_rwnd(uint8_t from, uint32_t peers_rwnd, uint32_t snd_size, uint32_t ove
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_rwnd_set(uint8_t from, uint32_t peers_rwnd, uint32_t flight_size, uint32_t overhead, uint32_t a_rwndval)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.rwnd.rwnd = peers_rwnd;
@@ -441,11 +466,13 @@ sctp_log_rwnd_set(uint8_t from, uint32_t peers_rwnd, uint32_t flight_size, uint3
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mbcnt_q, uint32_t mbcnt)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.mbcnt.total_queue_size = total_oq;
@@ -459,20 +486,24 @@ sctp_log_mbcnt(uint8_t from, uint32_t total_oq, uint32_t book, uint32_t total_mb
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_misc_ints(uint8_t from, uint32_t a, uint32_t b, uint32_t c, uint32_t d)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	SCTP_CTR6(KTR_SCTP, "SCTP:%d[%d]:%x-%x-%x-%x",
 	     SCTP_LOG_MISC_EVENT,
 	     from,
 	     a, b, c, d);
+#endif
 }
 
 void
 sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t wake_cnt, int from)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.wake.stcb = (void *)stcb;
@@ -499,7 +530,7 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t wake_cnt, int from)
 		sctp_clog.x.wake.sctpflags |= 2;
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_WAKEINPUT)
 		sctp_clog.x.wake.sctpflags |= 4;
-        /* what about the sb */
+	/* what about the sb */
 	if (stcb->sctp_socket) {
 		struct socket *so = stcb->sctp_socket;
 
@@ -514,11 +545,13 @@ sctp_wakeup_log(struct sctp_tcb *stcb, uint32_t wake_cnt, int from)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 void
 sctp_log_block(uint8_t from, struct sctp_association *asoc, int sendlen)
 {
+#if defined(__FreeBSD__) || defined(SCTP_LOCAL_TRACE_BUF)
 	struct sctp_cwnd_log sctp_clog;
 
 	sctp_clog.x.blk.onsb = asoc->total_output_queue_size;
@@ -535,6 +568,7 @@ sctp_log_block(uint8_t from, struct sctp_association *asoc, int sendlen)
 	     sctp_clog.x.misc.log2,
 	     sctp_clog.x.misc.log3,
 	     sctp_clog.x.misc.log4);
+#endif
 }
 
 int
@@ -716,7 +750,7 @@ sctp_auditing(int from, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			}
 			if (lnet->flight_size != tot_out) {
 				SCTP_PRINTF("net:%p flight was %d corrected to %d\n",
-					    lnet, lnet->flight_size,
+					    (void *)lnet, lnet->flight_size,
 					    tot_out);
 				lnet->flight_size = tot_out;
 			}
@@ -1478,7 +1512,7 @@ sctp_timeout_handler(void *t)
 	if (tmr->self != (void *)tmr) {
 		/*
 		 * SCTP_PRINTF("Stale SCTP timer fired (%p), ignoring...\n",
-		 * tmr);
+		 *             (void *)tmr);
 		 */
 #if defined(__FreeBSD__) && __FreeBSD_version >= 801000
 		CURVNET_RESTORE();
@@ -2180,7 +2214,7 @@ sctp_timer_start(int t_type, struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	if ((to_ticks <= 0) || (tmr == NULL)) {
 		SCTPDBG(SCTP_DEBUG_TIMER1, "%s: %d:software error to_ticks:%d tmr:%p not set ??\n",
-			__FUNCTION__, t_type, to_ticks, tmr);
+			__FUNCTION__, t_type, to_ticks, (void *)tmr);
 		return;
 	}
 	if (SCTP_OS_TIMER_PENDING(&tmr->timer)) {
@@ -4399,8 +4433,9 @@ void
 sctp_print_address(struct sockaddr *sa)
 {
 #ifdef INET6
+#if defined(__FreeBSD__) && __FreeBSD_version >= 700000
 	char ip6buf[INET6_ADDRSTRLEN];
-	ip6buf[0] = 0;
+#endif
 #endif
 
 	switch (sa->sa_family) {
@@ -4423,14 +4458,17 @@ sctp_print_address(struct sockaddr *sa)
 			    ntohs(sin6->sin6_port),
 			    sin6->sin6_scope_id);
 #else
-		SCTP_PRINTF("IPv6 address: %s:port:%d scope:%u\n",
 #if defined(__FreeBSD__) && __FreeBSD_version >= 700000
+		SCTP_PRINTF("IPv6 address: %s:port:%d scope:%u\n",
 			    ip6_sprintf(ip6buf, &sin6->sin6_addr),
-#else
-			    ip6_sprintf(&sin6->sin6_addr),
-#endif
 			    ntohs(sin6->sin6_port),
 			    sin6->sin6_scope_id);
+#else
+		SCTP_PRINTF("IPv6 address: %s:port:%d scope:%u\n",
+			    ip6_sprintf(&sin6->sin6_addr),
+			    ntohs(sin6->sin6_port),
+			    sin6->sin6_scope_id);
+#endif
 #endif
 		break;
 	}
@@ -6067,13 +6105,13 @@ sctp_sorecvmsg(struct socket *so,
 	}
 #endif
 	if (fromlen && from) {
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		cp_len = min((size_t)fromlen, (size_t)control->whoFrom->ro._l_addr.sa.sa_len);
 #endif
 		switch (control->whoFrom->ro._l_addr.sa.sa_family) {
 #ifdef INET6
 			case AF_INET6:
-#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+#ifndef HAVE_SA_LEN
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr_in6));
 #endif
 				((struct sockaddr_in6 *)from)->sin6_port = control->port_from;
@@ -6081,7 +6119,7 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 #ifdef INET
 			case AF_INET:
-#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+#ifndef HAVE_SA_LEN
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr_in));
 #endif
 				((struct sockaddr_in *)from)->sin_port = control->port_from;
@@ -6089,14 +6127,14 @@ sctp_sorecvmsg(struct socket *so,
 #endif
 #if defined(__Userspace__)
 			case AF_CONN:
-#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+#ifndef HAVE_SA_LEN
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr_conn));
 #endif
 				((struct sockaddr_conn *)from)->sconn_port = control->port_from;
 				break;
 #endif
 			default:
-#if defined(__Windows__) || defined(__Userspace_os_Linux) || defined(__Userspace_os_Windows)
+#ifndef HAVE_SA_LEN
 				cp_len = min((size_t)fromlen, sizeof(struct sockaddr));
 #endif
 				break;
@@ -6113,7 +6151,7 @@ sctp_sorecvmsg(struct socket *so,
 			sin = (struct sockaddr_in *)from;
 			bzero(&sin6, sizeof(sin6));
 			sin6.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 			sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 #if defined(__Userspace_os_FreeBSD) || defined(__Userspace_os_Darwin) || defined(__Userspace_os_Windows)
@@ -6778,7 +6816,7 @@ sctp_soreceive(	struct socket *so,
 	if (psa) {
 		from = (struct sockaddr *)sockbuf;
 		fromlen = sizeof(sockbuf);
-#if !defined(__Windows__)
+#ifdef HAVE_SA_LEN
 		from->sa_len = 0;
 #endif
 	} else {
@@ -6801,7 +6839,7 @@ sctp_soreceive(	struct socket *so,
 	}
 	if (psa) {
 		/* copy back the address info */
-#if !defined(__Windows__)
+#ifdef HAVE_SA_LEN
 		if (from && from->sa_len) {
 #else
 		if (from) {
@@ -6952,7 +6990,7 @@ sctp_hashfreedestroy(void *vhashtbl, struct malloc_type *type, u_long hashmask)
 			while (start != NULL) {
 				temp = start;
 				start = start->le_next;
-				SCTP_PRINTF("%s: %p \n", __func__, temp);
+				SCTP_PRINTF("%s: %p \n", __func__, (void *)temp);
 				FREE(temp, type);
 			}
 		}
@@ -7069,7 +7107,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 		case AF_INET:
 			(*num_v4) += 1;
 			incr = sizeof(struct sockaddr_in);
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 			if (sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
@@ -7094,7 +7132,7 @@ sctp_connectx_helper_find(struct sctp_inpcb *inp, struct sockaddr *addr,
 			}
 			(*num_v6) += 1;
 			incr = sizeof(struct sockaddr_in6);
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 			if (sa->sa_len != incr) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 				*error = EINVAL;
@@ -7171,7 +7209,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 #ifdef INET6
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -7200,7 +7238,7 @@ sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 #endif
 #ifdef INET
 	if (sa->sa_family == AF_INET) {
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -7321,7 +7359,7 @@ sctp_bindx_delete_address(struct sctp_inpcb *inp,
 #ifdef INET6
 	if (sa->sa_family == AF_INET6) {
 		struct sockaddr_in6 *sin6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (sa->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -7350,7 +7388,7 @@ sctp_bindx_delete_address(struct sctp_inpcb *inp,
 #endif
 #ifdef INET
 	if (sa->sa_family == AF_INET) {
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (sa->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTPUTIL, EINVAL);
 			*error = EINVAL;
@@ -7651,7 +7689,11 @@ sctp_recv_udp_tunneled_packet(struct mbuf *m, int off, struct inpcb *ignored)
 	switch (iph->ip_v) {
 #ifdef INET
 	case IPVERSION:
+#if __FreeBSD_version >= 1000000
+		iph->ip_len = htons(ntohs(iph->ip_len) - sizeof(struct udphdr));
+#else
 		iph->ip_len -= sizeof(struct udphdr);
+#endif
 		sctp_input_with_port(m, off, port);
 		break;
 #endif
