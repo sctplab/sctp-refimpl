@@ -61,9 +61,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_uio.h 242327 2012-10-29 20:47:32Z tuex
 #include <netinet/in.h>
 #endif
 #endif
-#if defined(__Userspace_os_Windows)
-#define __P(Protos) Protos
-#endif
 
 typedef uint32_t sctp_assoc_t;
 
