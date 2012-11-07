@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 237715 2012-06-28 16:01:08Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 242708 2012-11-07 20:59:00Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -207,7 +207,11 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 	struct sctp_sndrcvinfo *outinfo;
 	struct sctp_rcvinfo *rcvinfo;
 	struct sctp_nxtinfo *nxtinfo;
+#if defined(__Userspace_os_Windows)
+	WSACMSGHDR *cmh;
+#else
 	struct cmsghdr *cmh;
+#endif
 	struct mbuf *ret;
 	int len;
 	int use_extended;
@@ -252,7 +256,11 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 	SCTP_BUF_LEN(ret) = 0;
 
 	/* We need a CMSG header followed by the struct */
+#if defined(__Userspace_os_Windows)
+	cmh = mtod(ret, WSACMSGHDR *);
+#else
 	cmh = mtod(ret, struct cmsghdr *);
+#endif
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVRCVINFO)) {
 		cmh->cmsg_level = IPPROTO_SCTP;
 		cmh->cmsg_len = CMSG_LEN(sizeof(struct sctp_rcvinfo));
@@ -266,7 +274,11 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 		rcvinfo->rcv_cumtsn = sinfo->sinfo_cumtsn;
 		rcvinfo->rcv_context = sinfo->sinfo_context;
 		rcvinfo->rcv_assoc_id = sinfo->sinfo_assoc_id;
+#if defined(__Userspace_os_Windows)
+		cmh = (WSACMSGHDR *)((caddr_t)cmh + CMSG_SPACE(sizeof(struct sctp_rcvinfo)));
+#else
 		cmh = (struct cmsghdr *)((caddr_t)cmh + CMSG_SPACE(sizeof(struct sctp_rcvinfo)));
+#endif
 		SCTP_BUF_LEN(ret) += CMSG_SPACE(sizeof(struct sctp_rcvinfo));
 	}
 	if (provide_nxt) {
@@ -288,7 +300,11 @@ sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
 		nxtinfo->nxt_ppid = seinfo->sreinfo_next_ppid;
 		nxtinfo->nxt_length = seinfo->sreinfo_next_length;
 		nxtinfo->nxt_assoc_id = seinfo->sreinfo_next_aid;
+#if defined(__Userspace_os_Windows)
+		cmh = (WSACMSGHDR *)((caddr_t)cmh + CMSG_SPACE(sizeof(struct sctp_nxtinfo)));
+#else
 		cmh = (struct cmsghdr *)((caddr_t)cmh + CMSG_SPACE(sizeof(struct sctp_nxtinfo)));
+#endif
 		SCTP_BUF_LEN(ret) += CMSG_SPACE(sizeof(struct sctp_nxtinfo));
 	}
 	if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_RECVDATAIOEVNT)) {
@@ -2107,7 +2123,7 @@ finish_express_del:
 		 */
 		struct sctp_queued_to_read *ctl, *nctl;
 
-		sctp_reset_in_stream(stcb, liste->number_entries, liste->req.list_of_streams);
+		sctp_reset_in_stream(stcb, liste->number_entries, liste->list_of_streams);
 		TAILQ_REMOVE(&asoc->resetHead, liste, next_resp);
 		SCTP_FREE(liste, SCTP_M_STRESET);
 		/*sa_ignore FREED_MEMORY*/
@@ -2989,6 +3005,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 					}
 					/* NR Sack code here */
 					if (nr_sacking) {
+						tp1->sent = SCTP_DATAGRAM_NR_MARKED; 
 						if (tp1->data) {
 							/* sa_ignore NO_NULL_CHK */
 							sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
@@ -3585,7 +3602,8 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 	}
 	TAILQ_FOREACH_SAFE(tp1, &asoc->sent_queue, sctp_next, tp2) {
 		if (tp1->sent != SCTP_FORWARD_TSN_SKIP &&
-		    tp1->sent != SCTP_DATAGRAM_RESEND) {
+		    tp1->sent != SCTP_DATAGRAM_RESEND &&
+		    tp1->sent != SCTP_DATAGRAM_NR_MARKED) {
 			/* no chance to advance, out of here */
 			break;
 		}
@@ -3642,7 +3660,8 @@ sctp_try_advance_peer_ack_point(struct sctp_tcb *stcb,
 		 * the chunk, advance our peer ack point and we can check
 		 * the next chunk.
 		 */
-		if (tp1->sent == SCTP_FORWARD_TSN_SKIP) {
+		if ((tp1->sent == SCTP_FORWARD_TSN_SKIP) ||
+		    (tp1->sent == SCTP_DATAGRAM_NR_MARKED)) {
 			/* advance PeerAckPoint goes forward */
 			if (SCTP_TSN_GT(tp1->rec.data.TSN_seq, asoc->advanced_peer_ack_point)) {
 				asoc->advanced_peer_ack_point = tp1->rec.data.TSN_seq;
@@ -4423,7 +4442,7 @@ sctp_handle_sack(struct mbuf *m, int offset_seg, int offset_dup,
 			            cum_ack, send_s);
 			if (tp1) {
 				SCTP_PRINTF("Got send_s from tsn:%x + 1 of tp1:%p\n",
-				            tp1->rec.data.TSN_seq, tp1);
+				            tp1->rec.data.TSN_seq, (void *)tp1);
 			}
 		hopeless_peer:
 			*abort_now = 1;
