@@ -3005,7 +3005,7 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 					}
 					/* NR Sack code here */
 					if (nr_sacking) {
-+						tp1->sent = SCTP_DATAGRAM_NR_MARKED; 
+						tp1->sent = SCTP_DATAGRAM_NR_MARKED; 
 						if (tp1->data) {
 							/* sa_ignore NO_NULL_CHK */
 							sctp_free_bufspace(stcb, &stcb->asoc, tp1, 1);
