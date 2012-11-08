@@ -2000,7 +2000,8 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 		SCTP_TCB_SEND_LOCK(stcb);
 
 		sctp_report_all_outbound(stcb, 0, 1, SCTP_SO_NOT_LOCKED);
-		for (i = 0; i<stcb->asoc.streamoutcnt; i++) {
+		for (i = 0; i < stcb->asoc.streamoutcnt; i++) {
+			stcb->asoc.strmout[i].chunks_on_queues = 0;
 			stcb->asoc.strmout[i].stream_no = i;
 			stcb->asoc.strmout[i].next_sequence_send = 0;
 			stcb->asoc.strmout[i].last_msg_incomplete = 0;
