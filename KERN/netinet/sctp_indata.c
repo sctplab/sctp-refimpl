@@ -3006,6 +3006,13 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 					}
 					/* NR Sack code here */
 					if (nr_sacking) {
+						if (stcb->asoc.strmout[tp1->rec.data.stream_number].chunks_on_queues > 0) {
+							stcb->asoc.strmout[tp1->rec.data.stream_number].chunks_on_queues--;
+#ifdef INVARIANTS
+						} else {
+							panic("No chunks on the queues for sid %u.", tp1->rec.data.stream_number);
+#endif
+						}
 						tp1->sent = SCTP_DATAGRAM_NR_MARKED; 
 						if (tp1->data) {
 							/* sa_ignore NO_NULL_CHK */
