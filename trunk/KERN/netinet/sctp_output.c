@@ -7806,6 +7806,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		*locked = 1;
 	}
 	asoc->chunks_on_out_queue++;
+	strq->chunks_on_queues++;
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
  out_of:
