@@ -3005,7 +3005,8 @@ sctp_process_segment_range(struct sctp_tcb *stcb, struct sctp_tmit_chunk **p_tp1
 						tp1->rec.data.chunk_was_revoked = 0;
 					}
 					/* NR Sack code here */
-					if (nr_sacking) {
+					if (nr_sacking &&
+					    (tp1->sent != SCTP_DATAGRAM_NR_MARKED)) {
 						if (stcb->asoc.strmout[tp1->rec.data.stream_number].chunks_on_queues > 0) {
 							stcb->asoc.strmout[tp1->rec.data.stream_number].chunks_on_queues--;
 #ifdef INVARIANTS
