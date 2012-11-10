@@ -10524,7 +10524,7 @@ sctp_fill_in_rest:
 
 		TAILQ_FOREACH(at, &asoc->sent_queue, sctp_next) {
 			if ((at->sent != SCTP_FORWARD_TSN_SKIP) &&
-			    (at->sent != SCTP_DATAGRAM_NR_MARKED)) {
+			    (at->sent != SCTP_DATAGRAM_NR_ACKED)) {
 				/* no more to look at */
 				break;
 			}

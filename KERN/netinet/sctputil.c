@@ -3886,7 +3886,7 @@ sctp_report_all_outbound(struct sctp_tcb *stcb, uint16_t error, int holds_lock, 
 	TAILQ_FOREACH_SAFE(chk, &asoc->sent_queue, sctp_next, nchk) {
 		TAILQ_REMOVE(&asoc->sent_queue, chk, sctp_next);
 		asoc->sent_queue_cnt--;
-		if (chk->sent != SCTP_DATAGRAM_NR_MARKED) {
+		if (chk->sent != SCTP_DATAGRAM_NR_ACKED) {
 			if (asoc->strmout[chk->rec.data.stream_number].chunks_on_queues > 0) {
 				asoc->strmout[chk->rec.data.stream_number].chunks_on_queues--;
 #ifdef INVARIANTS

@@ -5668,7 +5668,7 @@ sctp_free_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int from_inpcbfre
 	}
 	/* sent queue SHOULD be empty */
 	TAILQ_FOREACH_SAFE(chk, &asoc->sent_queue, sctp_next, nchk) {
-		if (chk->sent != SCTP_DATAGRAM_NR_MARKED) {
+		if (chk->sent != SCTP_DATAGRAM_NR_ACKED) {
 			if (asoc->strmout[chk->rec.data.stream_number].chunks_on_queues > 0) {
 				asoc->strmout[chk->rec.data.stream_number].chunks_on_queues--;
 #ifdef INVARIANTS
