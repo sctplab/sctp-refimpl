@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 238501 2012-07-15 20:16:17Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet6/sctp6_usrreq.c 243186 2012-11-17 20:04:04Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -86,7 +86,7 @@ in6_sin6_2_sin(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 	uint32_t temp;
 #endif
 	bzero(sin, sizeof(*sin));
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN_LEN
 	sin->sin_len = sizeof(struct sockaddr_in);
 #endif
 	sin->sin_family = AF_INET;
@@ -115,8 +115,9 @@ in6_sin6_2_sin_in_sock(struct sockaddr *nam)
 }
 #endif
 
+#if !defined(__Userspace__)
 int
-#if defined(__APPLE__) || defined(__Userspace__)
+#if defined(__APPLE__) || defined(__FreeBSD__)
 sctp6_input_with_port(struct mbuf **i_pak, int *offp, uint16_t port)
 #elif defined( __Panda__)
 sctp6_input(pakhandle_type *i_pak)
@@ -140,7 +141,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	uint32_t mflowid;
 	uint8_t use_mflowid;
 #endif
-#if !(defined(__APPLE__) || defined (__Userspace__))
+#if !(defined(__APPLE__) || defined (__FreeBSD__))
 	uint16_t port = 0;
 #endif
 
@@ -230,7 +231,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 	offset -= sizeof(struct sctp_chunkhdr);
 	memset(&src, 0, sizeof(struct sockaddr_in6));
 	src.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	src.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	src.sin6_port = sh->src_port;
@@ -245,7 +246,7 @@ sctp6_input(struct mbuf **i_pak, int *offp, int proto)
 #endif
 	memset(&dst, 0, sizeof(struct sockaddr_in6));
 	dst.sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	dst.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 	dst.sin6_port = sh->dest_port;
@@ -329,7 +330,14 @@ sctp6_input(struct mbuf **i_pak, int *offp)
 }
 #endif
 
-#if !defined(__Userspace__)
+#if defined(__FreeBSD__)
+int
+sctp6_input(struct mbuf **i_pak, int *offp, int proto SCTP_UNUSED)
+{
+	return (sctp6_input_with_port(i_pak, offp, 0));
+}
+#endif
+
 #if defined(__Panda__)
 void
 #else
@@ -513,7 +521,7 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 	vrf_id = SCTP_DEFAULT_VRFID;
 #endif
 
-#if !defined(__Windows__)
+#ifdef HAVE_SA_LEN
 	if (pktdst->sa_family != AF_INET6 ||
 	    pktdst->sa_len != sizeof(struct sockaddr_in6))
 #else
@@ -556,7 +564,7 @@ sctp6_ctlinput(int cmd, struct sockaddr *pktdst, void *d)
 		m_copydata(ip6cp->ip6c_m, ip6cp->ip6c_off, sizeof(sh),
 		    (caddr_t)&sh);
 		ip6cp->ip6c_src->sin6_port = sh.src_port;
-#if !defined(__Windows__)
+#ifdef HAVE_SIN6_LEN
 		final.sin6_len = sizeof(final);
 #endif
 		final.sin6_family = AF_INET6;
@@ -853,7 +861,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 		switch (addr->sa_family) {
 #ifdef INET
 		case AF_INET:
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 			if (addr->sa_len != sizeof(struct sockaddr_in)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 				return (EINVAL);
@@ -863,7 +871,7 @@ sctp6_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 #ifdef INET6
 		case AF_INET6:
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 			if (addr->sa_len != sizeof(struct sockaddr_in6)) {
 				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 				return (EINVAL);
@@ -1193,7 +1201,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 	switch (addr->sa_family) {
 #ifdef INET
 	case AF_INET:
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (addr->sa_len != sizeof(struct sockaddr_in)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return (EINVAL);
@@ -1203,7 +1211,7 @@ sctp6_connect(struct socket *so, struct mbuf *nam, struct proc *p)
 #endif
 #ifdef INET6
 	case AF_INET6:
-#if !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SA_LEN
 		if (addr->sa_len != sizeof(struct sockaddr_in6)) {
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, EINVAL);
 			return (EINVAL);
@@ -1360,7 +1368,7 @@ sctp6_getaddr(struct socket *so, struct mbuf *nam)
 	bzero(sin6, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	sin6->sin6_len = sizeof(*sin6);
 #endif
 
@@ -1493,7 +1501,7 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	memset(sin6, 0, sizeof(*sin6));
 #endif
 	sin6->sin6_family = AF_INET6;
-#if !defined(__Windows__) && !defined(__Userspace_os_Linux) && !defined(__Userspace_os_Windows)
+#ifdef HAVE_SIN6_LEN
 	sin6->sin6_len = sizeof(*sin6);
 #endif
 
