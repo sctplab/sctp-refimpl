@@ -6133,6 +6133,7 @@ sctp_print_mbuf_chain(struct mbuf *m)
 #endif
 
 #ifdef INET
+#if !defined(__Userspace__)
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 void
 sctp_input_with_port(struct mbuf *i_pak, int off, uint16_t port)
@@ -6387,4 +6388,5 @@ sctp_input(struct mbuf *m, int off)
 #endif
 	sctp_input_with_port(m, off, 0);
 }
+#endif
 #endif
