@@ -7747,7 +7747,7 @@ sctp_over_udp_start(void)
 #ifdef INET
 	struct sockaddr_in sin;
 #endif
-#ifdef INET
+#ifdef INET6
 	struct sockaddr_in6 sin6;
 #endif
 	/*
