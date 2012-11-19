@@ -1,0 +1,7 @@
+#!/bin/sh
+N=$1
+I=0
+while [ $I -lt $N ]; do
+	./api_tests -r > /dev/null &
+	I=`expr $I + 1`
+done 

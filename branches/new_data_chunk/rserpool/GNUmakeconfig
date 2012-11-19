@@ -1,0 +1,285 @@
+# This is where you build.
+GUESS_HOST:=$(shell uname)
+OS_VERSION:=$(shell uname -r)
+HDW_VERSION:=$(shell uname -m)
+OPT_CFLAGS=
+
+# The default COMPILERFLAGS
+COMPILERFLAGS=-DWITH_IP_HDRINCL
+AR=ar
+RANLIB=ranlib
+COMPILER=gcc
+
+
+ifeq ($(GUESS_HOST),Darwin)
+TARGET=Darwin
+HOST=powerpc
+COMPILERDIR=/usr
+
+COMPILEFLAGS=  -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror -L/sw/lib
+
+LIBDIR=Darwin
+OBJDIR=Darwin
+EXEDIR=Darwin
+MACHINE=PPC
+
+CC=$(COMPILER)
+
+# add RANLIB for archives
+(%): %
+	$(AR) $(ARFLAGS) $@ $<
+	$(RANLIB) $@
+
+endif
+
+
+ifeq ($(GUESS_HOST),SunOS)
+
+# This is what you build for.
+TARGET=Solaris
+HOST=sparc-sun-sunos4.1
+COMPILERDIR=/usr
+
+ifeq ($(OS_VERSION), 5.5.1)
+OS_VER= -DSOL_25
+else
+OS_VER= -DSOL_26
+endif
+
+COMPILEFLAGS= -DWITH_IP_HDRINCL
+# _USE_SELECT_ *not* included in COMPILERFLAGS
+
+LIBDIR=solaris
+OBJDIR=solaris
+EXEDIR=solaris
+MACHINE=SOLARIS
+
+CC=$(COMPILER)
+
+endif
+# ^^^ ifeq ($(GUESS_HOST),SunOS)
+
+
+ifeq ($(GUESS_HOST),LynxOS)
+
+# This is what you build for.
+TARGET=LynxOS
+HOST=lynxos
+COMPILERDIR=/usr
+
+
+LIBDIR=lynx
+OBJDIR=lynx
+EXEDIR=lynx
+MACHINE=LYNX
+OPT_CFLAGS= -mthreads
+
+CC=$(COMPILER) 
+COMPILEFLAGS= -DCYGNUS -D_NO_SIOCGIFMTU_ -DHAVE_SA_LEN -DWITH_IP_HDRINCL
+# _USE_SELECT_ *not* included in COMPILERFLAGS
+
+endif
+# ^^^ ifeq ($(GUESS_HOST),LynxOS)
+
+
+ifeq ($(GUESS_HOST),OSF1)
+
+# This is what you build for.
+TARGET=TRU64
+HOST=Alpha 
+COMPILERDIR=/usr
+
+COMPILER=cc
+
+LIBDIR=tru64
+OBJDIR=tru64
+EXEDIR=tru64
+MACHINE=TRU64
+
+COMPILEFLAGS= -D_NO_SIOCGIFMTU_ -std -DDEBUG_ON  -DWITH_IP_HDRINCL
+
+endif
+# ^^^ ifeq ($(GUESS_HOST),OSF1)
+
+ifeq ($(GUESS_HOST),FreeBSD)
+# This is what you build for.
+TARGET=FreeBSD
+HOST=i386 
+
+COMPILER=cc
+
+LIBDIR=FreeBSD
+OBJDIR=FreeBSD
+EXEDIR=FreeBSD
+MACHINE=FREEBSD
+
+CC=$(COMPILER) 
+
+COMPILEFLAGS=  -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM -Wunused -Wimplicit -Werror
+
+endif
+# ^^^ ifeq ($(GUESS_HOST),FreeBSD)
+
+ifeq ($(GUESS_HOST),OpenBSD)
+# This is what you build for.
+TARGET=OpenBSD
+HOST=i386 
+
+COMPILER=cc
+
+LIBDIR=OpenBSD
+OBJDIR=OpenBSD
+EXEDIR=OpenBSD
+MACHINE=OpenBSD
+
+CC=$(COMPILER) 
+
+COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM
+
+endif
+# ^^^ ifeq ($(GUESS_HOST),OpenBSD)
+
+ifeq ($(GUESS_HOST),NetBSD)
+# This is what you build for.
+TARGET=NetBSD
+HOST=i386 
+
+COMPILER=cc
+
+LIBDIR=NetBSD
+OBJDIR=NetBSD
+EXEDIR=NetBSD
+MACHINE=NETBSD
+
+CC=$(COMPILER) 
+
+COMPILEFLAGS=  -I/usr/local/include -L/usr/local/lib -I/usr/pkg/include -L/usr/pkg/lib -I/usr/include -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DHAS_DEVICE_RANDOM
+
+endif
+ # ^^^ ifeq ($(GUESS_HOST),NetBSD)
+
+
+
+ifeq ($(GUESS_HOST),Linux)
+
+# This is what you build for.
+TARGET=linux
+HOST=linux
+COMPILERDIR=/usr
+
+LIBDIR=linux
+OBJDIR=linux
+EXEDIR=linux
+MACHINE=LINUX
+OS_VER= 
+#
+# If you minimize time calls, any user input may cause false
+# time-outs, however it will cut down on system calls.
+#
+#COMPILEFLAGS=  -DCYGNUS -DWITH_IP_HDRINCL -DMINIMIZE_TIME_CALLS 
+#
+
+# Linux V6 code is brain dead and can't select source addresses
+# for raw packets, not counting other problems ... sigh
+COMPILEFLAGS=  -DCYGNUS -DWITH_IP_HDRINCL -DOS_CANT_SELECT_SRC -DHAS_DEVICE_RANDOM
+
+# _USE_SELECT_ *not* included in COMPILERFLAGS
+
+CC=$(COMPILER) 
+
+
+endif
+
+ifeq ($(GUESS_HOST),AIX)
+
+# This is what you build for.
+TARGET=AIX
+HOST=aix
+COMPILERDIR=/usr/local
+
+COMPILEFLAGS= -DWITH_IP_HDRINCL -DHAVE_SA_LEN -DDEBUG_ON
+
+LIBDIR=aix
+OBJDIR=aix
+EXEDIR=aix
+MACHINE=AIX
+
+CC=$(COMPILER)
+
+endif
+
+C++ = $(CC)
+CXX = $(CC)
+
+LEX=flex
+#############################################
+# The header file and libraries directories.
+#############################################
+
+# QUANTIX Include
+INCLUDE_DIR=$(TOPDIR)/include
+INCLUDE_INCLUDE=-I$(INCLUDE_DIR)
+
+# Base
+BASE_DIR=$(TOPDIR)/lib
+BASE_INCLUDE=-I$(BASE_DIR)
+LIBBASE=libbaselib.a
+
+RSP_DIR=$(TOPDIR)/rsplib
+RSP_INCLUDE=-I$(RSP_DIR)
+LIBRSERPOOL=librsplib.a
+
+# Getopt
+LIBGETOPT=libgetopt.a
+
+# apps include
+APPS_DIR=$(TOPDIR)/apps
+APPS_INCLUDE=-I$(APPS_DIR)
+
+INCLUDE_CFLAGS= $(INCLUDE_INCLUDE) \
+	-I$(TOPDIR)/../KERN \
+	$(BASE_INCLUDE) \
+	$(RSP_INCLUDE) \
+	$(APPS_INCLUDE)
+
+##################################
+#GPROF_LIBS=
+#OPT_CFLAGS+= -Wall -g -pg
+#GPROF_LIBS=-ldl
+#OPT_CFLAGS+= -Wall -O3
+OPT_CFLAGS+= -Wall -g 
+
+
+WARNING_CLFLAGS=
+
+CFLAGS= -D$(MACHINE) \
+	-L../../KERN/usr.lib \
+	$(COMPILEFLAGS) \
+	-I.. \
+        $(OS_VER) \
+        $(LOCAL_CFLAGS) \
+        $(OPT_CFLAGS) \
+        $(INCLUDE_CFLAGS) \
+        $(MEMORY_CFLAGS) \
+        $(WARNING_CLFLAGS)
+
+ifeq ($(HDW_VERSION),PowerPC)
+CFLAGS+= -D__PPC__ -D__Lynx__ -O3
+endif
+
+CXXFLAGS=$(CFLAGS)
+C++FLAGS=$(CFLAGS)
+
+# APPLICATION_LIBS is for the libraries specific to an applications.
+LDLIBS= $(APPLICATION_LIBS) \
+        $(CFLAGS) \
+	$(RSP_DIR)/$(OBJDIR)/$(LIBRSERPOOL) \
+        $(BASE_DIR)/$(OBJDIR)/$(LIBBASE) \
+        $(LOCAL_LIBS) \
+        $(GPROF_LIBS)
+#        -L/opt/FSFlibg++/lib
+
+COMPILE.cc=$(CXX) -c  $(CXXFLAGS) -o $@
+COMPILE.c=gcc -c  $(CFLAGS) -o $@
+
+BINDIR=$(TOPDIR)/lib/bin

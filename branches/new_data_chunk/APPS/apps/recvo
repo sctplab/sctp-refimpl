@@ -1,0 +1,11 @@
+set output 'plot.ps'
+set terminal post landscape 'Times-Roman' 12
+set terminal post color
+set xlabel 'time'
+set ylabel 'size'
+set multiplot
+set key outside Right title 'Legend' box 1
+set xrange [.000:.004]
+plot 'log1.rcv.enter.txt' title 'ent-r', \
+'log1.rcv.exit.txt' title 'ext-r'
+quit

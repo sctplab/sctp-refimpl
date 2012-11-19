@@ -1,0 +1,24 @@
+#!/bin/sh
+#batch 1 1452 1 
+START=$1
+END=$2
+DELTA=$3
+TIME=$4
+LOCAL_ADDR=$5
+REMOTE_ADDR=$6
+VAR=$START
+
+if [ $START -lt $END ]
+then
+	while [ $VAR -le $END ]; do
+		./tsctp -v -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
+		VAR=`expr $VAR + $DELTA`
+		sleep 5
+	done
+else
+	while [ $VAR -ge $END ]; do
+		./tsctp -v -l $VAR -T $TIME -L $LOCAL_ADDR $REMOTE_ADDR 
+		VAR=`expr $VAR - $DELTA`
+		sleep 5
+	done
+fi

@@ -1,0 +1,15 @@
+sctp:on
+peer:10.1.5.24:0:bsd1:4:
+peer:10.1.5.23:0:bsd2:4:
+peer:10.1.5.22:0:bsd5:4:
+peer:10.1.5.21:0:bsd6:4:
+peer:10.1.5.20:0:bsd7:4:
+peer:10.1.5.19:0:bsd8:4:
+peer:10.1.5.18:0:bsd9:4:
+peer:10.1.5.17:0:bsd10:4:
+peer:10.1.5.16:0:bsd11:4:
+peer:10.1.5.15:0:bsd4:8:
+times:0
+sends:1448
+sendc:2
+bind:10.1.5.14:0:bsd3:8:

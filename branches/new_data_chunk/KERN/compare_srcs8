@@ -1,0 +1,24 @@
+#!/bin/sh
+if test $# -gt 0
+then
+echo use $1 as the src tree
+SRC=$1
+else
+echo use src as the src tree
+SRC=src
+fi
+./export_to_freebsd 800000
+cd export_freebsd/netinet
+for j in `ls *.c *.h`
+do
+echo /usr/$SRC/sys/netinet/$j
+diff -c $j /usr/$SRC/sys/netinet/$j
+done
+cd ../netinet6
+for j in `ls *.c *.h`
+do
+echo /usr/$SRC/sys/netinet6/$j
+diff -c $j /usr/$SRC/sys/netinet6/$j
+done
+echo "Thats all"
+

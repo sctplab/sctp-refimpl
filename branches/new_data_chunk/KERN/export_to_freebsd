@@ -1,0 +1,33 @@
+#!/bin/sh
+if test $# -lt 1 
+then
+echo "$0 version [600000, 601000, 602000, 700000, 701000, 800000 900000]"
+exit
+fi
+if test $1 -eq "900000"
+then
+    ver=900001
+    echo "using ver:$ver"
+    prepare_script="freebsd_prepare"
+fi
+if test $1 -eq "800000"
+then
+    ver=801001
+    echo "using ver:$ver"
+    prepare_script="freebsd_prepare"
+fi
+if test $1 -ne "800000"
+then
+    echo "using ver:$1"
+    ver=$1
+    prepare_script="freebsd_prepare"
+fi
+if test $# -eq 2
+then
+prepare_script=$2
+fi
+echo "prepare script is $prepare_script version $ver $j"
+for j in `cat export_freebsd_list`
+do
+	./$prepare_script $ver $j
+done
