@@ -430,8 +430,8 @@ extern void getwintimeofday(struct timeval *tv);
 /* align to 32-bit sizes */
 #define SCTP_SIZE32(x)	((((x) + 3) >> 2) << 2)
 
-#define IS_SCTP_CONTROL(a) ((a)->chunk_type != SCTP_DATA)
-#define IS_SCTP_DATA(a) ((a)->chunk_type == SCTP_DATA)
+#define IS_SCTP_CONTROL(a) (((a)->chunk_type != SCTP_DATA) && ((a)->chunk_type != SCTP_NDATA))
+#define IS_SCTP_DATA(a) (((a)->chunk_type == SCTP_DATA) || ((a)->chunk_type == SCTP_NDATA))
 
 
 /* SCTP parameter types */

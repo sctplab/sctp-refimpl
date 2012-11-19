@@ -1432,6 +1432,15 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 	return (0);
 }
 
+static int
+sctp_process_a_ndata_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
+    struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
+    struct sctp_nets *net, uint32_t *high_tsn, int *abort_flag,
+    int *break_flag, int last_chunk)
+{
+	return (1);
+}
+
 
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
@@ -2614,8 +2623,15 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			stop_proc = 1;
 			continue;
 		}
-		if (ch->ch.chunk_type == SCTP_DATA) {
-			if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1) {
+		if ((ch->ch.chunk_type == SCTP_DATA) ||
+		    (ch->ch.chunk_type == SCTP_NDATA)) {
+			int clen;
+			if (ch->ch.chunk_type == SCTP_DATA) {
+				clen = sizeof(struct sctp_data_chunk);
+			} else {
+				clen = sizeof(struct sctp_ndata_chunk);
+			}
+			if ((size_t)chk_length < clen + 1) {
 				/*
 				 * Need to send an abort since we had a
 				 * invalid data chunk.
@@ -2658,10 +2674,18 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			} else {
 				last_chunk = 0;
 			}
-			if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
-						      chk_length, net, high_tsn, &abort_flag, &break_flag,
-						      last_chunk)) {
-				num_chunks++;
+			if (ch->ch.chunk_type == SCTP_DATA) {
+				if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
+							      chk_length, net, high_tsn, &abort_flag, &break_flag,
+							      last_chunk)) {
+					num_chunks++;
+				}
+			} else {
+				if (sctp_process_a_ndata_chunk(stcb, asoc, mm, *offset, ch,
+							      chk_length, net, high_tsn, &abort_flag, &break_flag,
+							      last_chunk)) {
+					num_chunks++;
+				}
 			}
 			if (abort_flag)
 				return (2);
