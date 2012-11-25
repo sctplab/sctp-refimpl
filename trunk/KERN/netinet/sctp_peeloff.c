@@ -169,7 +169,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	return (0);
 }
 
-
+#if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 struct socket *
 sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 {
@@ -313,3 +313,4 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	return (newso);
 #endif
 }
+#endif
