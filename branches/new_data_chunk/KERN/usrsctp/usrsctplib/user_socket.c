@@ -38,6 +38,7 @@
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
 #include <netinet/sctp_input.h>
+#include <netinet/sctp_peeloff.h>
 #ifdef INET6
 #include <netinet6/sctp6_var.h>
 #endif
@@ -1750,11 +1751,10 @@ soaccept(struct socket *so, struct sockaddr **nam)
  * kern_accept modified for __Userspace__
  */
 int
-user_accept(struct socket *aso,  struct sockaddr **name, socklen_t *namelen, struct socket **ptr_accept_ret_sock)
+user_accept(struct socket *head,  struct sockaddr **name, socklen_t *namelen, struct socket **ptr_accept_ret_sock)
 {
 	struct sockaddr *sa = NULL;
 	int error;
-	struct socket *head = aso;
 	struct socket *so = NULL;
 
 
@@ -1926,6 +1926,35 @@ struct socket *
 userspace_accept(struct socket *so, struct sockaddr *aname, socklen_t *anamelen)
 {
 	return (usrsctp_accept(so, aname, anamelen));
+}
+
+struct socket *
+usrsctp_peeloff(struct socket *head, sctp_assoc_t id)
+{
+	struct socket *so;
+
+	if ((errno = sctp_can_peel_off(head, id)) != 0) {
+		return (NULL);
+	}
+	if ((so = sonewconn(head, SS_ISCONNECTED)) == NULL) {
+		return (NULL);
+	}
+	ACCEPT_LOCK();
+	SOCK_LOCK(so);
+	soref(so);
+	TAILQ_REMOVE(&head->so_comp, so, so_list);
+	head->so_qlen--;
+	so->so_state |= (head->so_state & SS_NBIO);
+	so->so_qstate &= ~SQ_COMP;
+	so->so_head = NULL;
+	SOCK_UNLOCK(so);
+	ACCEPT_UNLOCK();
+	if ((errno = sctp_do_peeloff(head, so, id)) != 0) {
+		so->so_count = 0;
+		sodealloc(so);
+		return (NULL);
+	}
+	return (so);
 }
 
 int
@@ -2314,7 +2343,9 @@ usrsctp_bindx(struct socket *so, struct sockaddr *addrs, int addrcnt, int flags)
 	struct sctp_getaddresses *gaddrs;
 	struct sockaddr *sa;
 	struct sockaddr_in *sin;
+#ifdef INET6
 	struct sockaddr_in6 *sin6;
+#endif
 	int i;
 	size_t argsz;
 	uint16_t sport = 0;
@@ -3007,6 +3038,46 @@ free_mbuf:
 }
 #endif
 
+#if 0
+#define HEADER "\n0000 "
+#define TRAILER "# SCTP_PACKET\n"
+
+char *
+usrsctp_dumppacket(unsigned char *packet, size_t len)
+{
+	size_t i, pos;
+	char *buf;
+
+	if ((buf = malloc(strlen(HEADER) + 3 * len + strlen(TRAILER) + 1)) == NULL) {
+		return (NULL);
+	}
+	/* XXX: Add timestamp header */
+	pos = 0;
+	stpcpy(buf + pos, HEADER);
+	pos += strlen(HEADER);
+	for (i = 0; i < len; i++) {
+		uint8_t byte, low, high;
+
+		byte = (uint8_t)packet[i];
+		high = byte / 16;
+		low = byte % 16;
+		buf[pos++] = high < 10 ? '0' + high : 'a' + (high - 10);
+		buf[pos++] = low < 10 ? '0' + low : 'a' + (low - 10);
+		buf[pos++] = ' ';
+	}
+	stpcpy(buf + pos, TRAILER);
+	pos += strlen(TRAILER);
+	buf[pos++] = '\0';
+	return (buf);
+}
+
+void
+usrsctp_freedumpbuffer(char *buf)
+{
+	free(buf);
+}
+#endif
+
 void
 usrsctp_conninput(void *addr, const void *buffer, size_t length, uint8_t ecn_bits)
 {
@@ -3014,7 +3085,13 @@ usrsctp_conninput(void *addr, const void *buffer, size_t length, uint8_t ecn_bit
 	struct mbuf *m;
 	struct sctphdr *sh;
 	struct sctp_chunkhdr *ch;
+#if 0
+	char *buf;
 
+	buf = usrsctp_dumppacket((unsigned char *)buffer, length);
+	printf("%s", buf);
+	usrsctp_freedumpbuffer(buf);
+#endif
 	memset(&src, 0, sizeof(struct sockaddr_conn));
 	src.sconn_family = AF_CONN;
 #ifdef HAVE_SCONN_LEN

@@ -104,10 +104,6 @@ extern struct fileops socketops;
 #endif /* MAC_SOCKET_SUBSET */
 #endif /* HAVE_SCTP_PEELOFF_SOCKOPT */
 
-#ifdef SCTP_DEBUG
-extern uint32_t sctp_debug_on;
-#endif /* SCTP_DEBUG */
-
 #if defined(HAVE_SCTP_PEELOFF_SOCKOPT)
 
 /*

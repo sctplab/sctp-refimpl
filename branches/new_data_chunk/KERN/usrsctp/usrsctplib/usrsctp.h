@@ -913,6 +913,9 @@ usrsctp_bind(struct socket *so,
              struct sockaddr *name,
              socklen_t namelen);
 
+#define SCTP_BINDX_ADD_ADDR 0x00008001
+#define SCTP_BINDX_REM_ADDR 0x00008002
+
 int
 usrsctp_bindx(struct socket *so,
               struct sockaddr *addrs,
@@ -927,6 +930,9 @@ struct socket *
 usrsctp_accept(struct socket *so,
                struct sockaddr * aname,
                socklen_t * anamelen);
+
+struct socket *
+usrsctp_peeloff(struct socket *, sctp_assoc_t);
 
 int
 usrsctp_connect(struct socket *so,
@@ -955,6 +961,12 @@ usrsctp_set_non_blocking(struct socket *, int);
 
 int
 usrsctp_get_non_blocking(struct socket *);
+
+char *
+usrsctp_dumppacket(unsigned char *, size_t);
+
+void
+usrsctp_freedumpbuffer(char *);
 
 #define USRSCTP_SYSCTL_DECL(__field)           \
 void usrsctp_sysctl_set_ ## __field(uint32_t value);\
