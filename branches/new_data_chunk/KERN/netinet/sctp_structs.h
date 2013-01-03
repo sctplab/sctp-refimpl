@@ -1215,6 +1215,7 @@ struct sctp_association {
 	uint8_t peer_supports_strreset;
 	uint8_t local_strreset_support;
 
+	uint8_t peer_supports_ndata;
         uint8_t peer_supports_nat;
 	/*
 	 * packet drop's are supported by the peer, we don't really care
