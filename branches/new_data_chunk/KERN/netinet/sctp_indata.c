@@ -870,7 +870,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		asoc->size_on_reasm_queue = chk->send_size;
 		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-		if (chk->rec.data.TSN_seq == cum_ackp1) {
+		/* Check for evil for non-NDATA chunks */
+		if ((chk->rec.data.TSN_seq == chk->rec.data.fsn_num) && (chk->rec.data.TSN_seq == cum_ackp1)) {
 			if (asoc->fragmented_delivery_inprogress == 0 &&
 			    (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) !=
 			    SCTP_DATA_FIRST_FRAG) {
@@ -1012,7 +1013,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* Find its place */
 	TAILQ_FOREACH(at, &asoc->reasmqueue, sctp_next) {
-		if (SCTP_TSN_GT(at->rec.data.TSN_seq, chk->rec.data.TSN_seq)) {
+		if (SCTP_TSN_GT(at->rec.data.fsn_num, chk->rec.data.fsn_num)) {
 			/*
 			 * one in queue is bigger than the new one, insert
 			 * before this one
@@ -1023,7 +1024,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			next = at;
 			TAILQ_INSERT_BEFORE(at, chk, sctp_next);
 			break;
-		} else if (at->rec.data.TSN_seq == chk->rec.data.TSN_seq) {
+		} else if (at->rec.data.fsn_num == chk->rec.data.fsn_num) {
 			/* Gak, He sent me a duplicate str seq number */
 			/*
 			 * foo bar, I guess I will just free this new guy,
@@ -1055,8 +1056,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* Now the audits */
 	if (prev) {
-		prev_tsn = chk->rec.data.TSN_seq - 1;
-		if (prev_tsn == prev->rec.data.TSN_seq) {
+		prev_tsn = chk->rec.data.fsn_num - 1;
+		if (prev_tsn == prev->rec.data.fsn_num) {
 			/*
 			 * Ok the one I am dropping onto the end is the
 			 * NEXT. A bit of valdiation here.
@@ -1212,8 +1213,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 	}
 	if (next) {
-		post_tsn = chk->rec.data.TSN_seq + 1;
-		if (post_tsn == next->rec.data.TSN_seq) {
+		post_tsn = chk->rec.data.fsn_num + 1;
+		if (post_tsn == next->rec.data.fsn_num) {
 			/*
 			 * Ok the one I am inserting ahead of is my NEXT
 			 * one. A bit of valdiation here.
@@ -1872,6 +1873,7 @@ failed_express_del:
 		}
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
+		chk->rec.data.fsn_num = fsn_num;
 		chk->rec.data.stream_seq = strmseq;
 		chk->rec.data.stream_number = strmno;
 		chk->rec.data.payloadtype = protocol_id;

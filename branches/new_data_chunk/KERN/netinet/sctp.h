@@ -487,11 +487,6 @@ struct sctp_error_unrecognized_chunk {
 /* ECN Nonce: SACK Chunk Specific Flags */
 #define SCTP_SACK_NONCE_SUM        0x01
 
-/* NData chunk flags */
-#define SCTP_NDATA_SACK_IMMEDIATELY	0x01
-#define SCTP_NDATA_NO_FRAGMENTS		0x02
-#define SCTP_NDATA_LAST_FRAMGMENT	0x04
-
 /* CMT DAC algorithm SACK flag */
 #define SCTP_SACK_CMT_DAC          0x80
 
