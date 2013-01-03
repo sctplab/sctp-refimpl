@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 243558 2012-11-26 08:50:00Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 244730 2012-12-27 08:10:58Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -795,31 +795,25 @@ sctp_bind(struct socket *so, struct mbuf *nam, struct proc *p)
 	struct sockaddr *addr = nam ? mtod(nam, struct sockaddr *): NULL;
 
 #endif
-	struct sctp_inpcb *inp = NULL;
-	int error;
-
-#ifdef INET
-	if (addr && addr->sa_family != AF_INET) {
-		/* must be a v4 address! */
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-		return (EINVAL);
-	}
-#endif				/* INET6 */
-#ifdef HAVE_SA_LEN
-	if (addr && (addr->sa_len != sizeof(struct sockaddr_in))) {
-		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-		return (EINVAL);
-	}
-#endif
+	struct sctp_inpcb *inp;
 
 	inp = (struct sctp_inpcb *)so->so_pcb;
 	if (inp == NULL) {
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
 	}
-
-	error = sctp_inpcb_bind(so, addr, NULL, p);
-	return (error);
+	if (addr != NULL) {
+#ifdef HAVE_SA_LEN
+		if ((addr->sa_family != AF_INET) ||
+		    (addr->sa_len != sizeof(struct sockaddr_in))) {
+#else
+		if (addr->sa_family != AF_INET) {
+#endif
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			return (EINVAL);
+		}
+	}
+	return (sctp_inpcb_bind(so, addr, NULL, p));
 }
 
 #endif
@@ -860,24 +854,25 @@ sctpconn_attach(struct socket *so, int proto SCTP_UNUSED, uint32_t vrf_id)
 int
 sctpconn_bind(struct socket *so, struct sockaddr *addr)
 {
-	int error;
+	struct sctp_inpcb *inp;
 
-	if ((addr != NULL) && (addr->sa_family != AF_CONN)) {
-		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+	inp = (struct sctp_inpcb *)so->so_pcb;
+	if (inp == NULL) {
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 		return (EINVAL);
 	}
+	if (addr != NULL) {
 #ifdef HAVE_SA_LEN
-	if ((addr != NULL) && (addr->sa_len != sizeof(struct sockaddr_conn))) {
-		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-		return (EINVAL);
-	}
+		if ((addr->sa_family != AF_CONN) ||
+		    (addr->sa_len != sizeof(struct sockaddr_conn))) {
+#else
+		if (addr->sa_family != AF_CONN) {
 #endif
-	if (so->so_pcb == NULL) {
-		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
-		return (EINVAL);
+			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+			return (EINVAL);
+		}
 	}
-	error = sctp_inpcb_bind(so, addr, NULL, NULL);
-	return (error);
+	return (sctp_inpcb_bind(so, addr, NULL, NULL));
 }
 
 #endif
@@ -1176,7 +1171,7 @@ sctp_disconnect(struct socket *so)
 					/* Left with Data unread */
 					struct mbuf *err;
 
-					err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr), 0, M_DONTWAIT, 1, MT_DATA);
+					err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr), 0, M_NOWAIT, 1, MT_DATA);
 					if (err) {
 						/*
 						 * Fill in the user
@@ -1271,7 +1266,7 @@ sctp_disconnect(struct socket *so)
 					struct mbuf *op_err;
 				abort_anyway:
 					op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
-								       0, M_DONTWAIT, 1, MT_DATA);
+								       0, M_NOWAIT, 1, MT_DATA);
 					if (op_err) {
 						/* Fill in the user initiated abort */
 						struct sctp_paramhdr *ph;
@@ -1484,7 +1479,7 @@ sctp_shutdown(struct socket *so)
 				struct mbuf *op_err;
 			abort_anyway:
 				op_err = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + sizeof(uint32_t)),
-							       0, M_DONTWAIT, 1, MT_DATA);
+							       0, M_NOWAIT, 1, MT_DATA);
 				if (op_err) {
 					/* Fill in the user initiated abort */
 					struct sctp_paramhdr *ph;

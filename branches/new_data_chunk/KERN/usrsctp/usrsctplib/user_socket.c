@@ -56,6 +56,10 @@ userland_cond_t accept_cond = PTHREAD_COND_INITIALIZER;
 userland_mutex_t accept_mtx;
 userland_cond_t accept_cond;
 #endif
+#ifdef _WIN32
+#include <time.h>
+#include <sys/timeb.h>
+#endif
 
 MALLOC_DEFINE(M_PCB, "sctp_pcb", "sctp pcb");
 MALLOC_DEFINE(M_SONAME, "sctp_soname", "sctp soname");
@@ -937,7 +941,7 @@ struct mbuf* mbufalloc(size_t size, void* data, unsigned char fill)
 
     /* First one gets a header equal to sizeof(struct sctp_data_chunk) */
     left = size;
-    head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1, M_WAIT, 0, MT_DATA);
+    head = m = sctp_get_mbuf_for_msg((left + resv_upfront), 1, M_WAITOK, 0, MT_DATA);
     if (m == NULL) {
         SCTP_PRINTF("%s: ENOMEN: Memory allocation failure\n", __func__);
         return (NULL);
@@ -962,7 +966,7 @@ struct mbuf* mbufalloc(size_t size, void* data, unsigned char fill)
         left -= willcpy;
         cpsz += willcpy;
         if (left > 0) {
-            SCTP_BUF_NEXT(m) = sctp_get_mbuf_for_msg(left, 0, M_WAIT, 0, MT_DATA);
+            SCTP_BUF_NEXT(m) = sctp_get_mbuf_for_msg(left, 0, M_WAITOK, 0, MT_DATA);
             if (SCTP_BUF_NEXT(m) == NULL) {
                 /*
                  * the head goes back to caller, he can free
@@ -1600,7 +1604,7 @@ sowakeup(struct socket *so, struct sockbuf *sb)
 	if ((so->so_state & SS_ASYNC) && so->so_sigio != NULL)
 		pgsigio(&so->so_sigio, SIGIO, 0);
 	if (sb->sb_flags & SB_UPCALL)
-		(*so->so_upcall)(so, so->so_upcallarg, M_DONTWAIT);
+		(*so->so_upcall)(so, so->so_upcallarg, M_NOWAIT);
 	if (sb->sb_flags & SB_AIO)
 		aio_swake(so, sb);
 	mtx_assert(SOCKBUF_MTX(sb), MA_NOTOWNED);
@@ -3038,37 +3042,111 @@ free_mbuf:
 }
 #endif
 
-#if 0
-#define HEADER "\n0000 "
+void
+usrsctp_register_address(void *addr)
+{
+	struct sockaddr_conn sconn;
+
+	memset(&sconn, 0, sizeof(struct sockaddr_conn));
+	sconn.sconn_family = AF_CONN;
+#ifdef HAVE_SCONN_LEN
+	sconn.sconn_len = sizeof(struct sockaddr_conn);
+#endif
+	sconn.sconn_port = 0;
+	sconn.sconn_addr = addr;
+	sctp_add_addr_to_vrf(SCTP_DEFAULT_VRFID,
+	                     NULL,
+	                     0xffffffff,
+	                     0,
+	                     "conn",
+	                     NULL,
+	                     (struct sockaddr *)&sconn,
+	                     0,
+	                     0);
+}
+
+void
+usrsctp_deregister_address(void *addr)
+{
+	struct sockaddr_conn sconn;
+
+	memset(&sconn, 0, sizeof(struct sockaddr_conn));
+	sconn.sconn_family = AF_CONN;
+#ifdef HAVE_SCONN_LEN
+	sconn.sconn_len = sizeof(struct sockaddr_conn);
+#endif
+	sconn.sconn_port = 0;
+	sconn.sconn_addr = addr;
+	sctp_del_addr_from_vrf(SCTP_DEFAULT_VRFID,
+	                       (struct sockaddr *)&sconn,
+	                       0xffffffff,
+	                       "conn");
+}
+
+#define PREAMBLE_FORMAT "\n%c %02d:%02d:%02d.%06d "
+#define PREAMBLE_LENGTH 19
+#define HEADER "0000 "
 #define TRAILER "# SCTP_PACKET\n"
 
 char *
-usrsctp_dumppacket(unsigned char *packet, size_t len)
+usrsctp_dumppacket(void *buf, size_t len, int outbound)
 {
 	size_t i, pos;
-	char *buf;
+	char *dump_buf, *packet;
+#ifdef _WIN32
+	struct timeb tb;
+	struct tm t;
+#else
+	struct timeval tv;
+	struct tm *t;
+#endif
 
-	if ((buf = malloc(strlen(HEADER) + 3 * len + strlen(TRAILER) + 1)) == NULL) {
+	if ((len == 0) || (buf == NULL)) {
 		return (NULL);
 	}
-	/* XXX: Add timestamp header */
+	if ((dump_buf = malloc(PREAMBLE_LENGTH + strlen(HEADER) + 3 * len + strlen(TRAILER) + 1)) == NULL) {
+		return (NULL);
+	}
 	pos = 0;
-	stpcpy(buf + pos, HEADER);
+#ifdef _WIN32
+	ftime(&tb);
+	localtime_s(&t, &tb.time);
+	_snprintf_s(dump_buf, PREAMBLE_LENGTH + 1, PREAMBLE_LENGTH, PREAMBLE_FORMAT,
+	            outbound ? 'O' : 'I',
+	            t.tm_hour, t.tm_min, t.tm_sec, 1000 * tb.millitm);	
+#else
+	gettimeofday(&tv, NULL);
+	t = localtime(&tv.tv_sec);
+	snprintf(dump_buf, PREAMBLE_LENGTH + 1, PREAMBLE_FORMAT,
+	         outbound ? 'O' : 'I',
+	         t->tm_hour, t->tm_min, t->tm_sec, tv.tv_usec);
+#endif
+	pos += PREAMBLE_LENGTH;
+#ifdef _WIN32
+	strncpy_s(dump_buf + pos, strlen(HEADER) + 1, HEADER, strlen(HEADER));
+#else
+	strcpy(dump_buf + pos, HEADER);
+#endif	
 	pos += strlen(HEADER);
+	packet = (char *)buf;
 	for (i = 0; i < len; i++) {
 		uint8_t byte, low, high;
 
 		byte = (uint8_t)packet[i];
 		high = byte / 16;
 		low = byte % 16;
-		buf[pos++] = high < 10 ? '0' + high : 'a' + (high - 10);
-		buf[pos++] = low < 10 ? '0' + low : 'a' + (low - 10);
-		buf[pos++] = ' ';
+		dump_buf[pos++] = high < 10 ? '0' + high : 'a' + (high - 10);
+		dump_buf[pos++] = low < 10 ? '0' + low : 'a' + (low - 10);
+		dump_buf[pos++] = ' ';
 	}
-	stpcpy(buf + pos, TRAILER);
+#ifdef _WIN32
+	strncpy_s(dump_buf + pos, strlen(TRAILER) + 1, TRAILER, strlen(TRAILER));
+#else
+	strcpy(dump_buf + pos, TRAILER);
+#endif
 	pos += strlen(TRAILER);
-	buf[pos++] = '\0';
-	return (buf);
+	dump_buf[pos++] = '\0';
+	return (dump_buf);
 }
 
 void
@@ -3076,7 +3154,6 @@ usrsctp_freedumpbuffer(char *buf)
 {
 	free(buf);
 }
-#endif
 
 void
 usrsctp_conninput(void *addr, const void *buffer, size_t length, uint8_t ecn_bits)
@@ -3085,13 +3162,7 @@ usrsctp_conninput(void *addr, const void *buffer, size_t length, uint8_t ecn_bit
 	struct mbuf *m;
 	struct sctphdr *sh;
 	struct sctp_chunkhdr *ch;
-#if 0
-	char *buf;
 
-	buf = usrsctp_dumppacket((unsigned char *)buffer, length);
-	printf("%s", buf);
-	usrsctp_freedumpbuffer(buf);
-#endif
 	memset(&src, 0, sizeof(struct sockaddr_conn));
 	src.sconn_family = AF_CONN;
 #ifdef HAVE_SCONN_LEN
@@ -3104,7 +3175,7 @@ usrsctp_conninput(void *addr, const void *buffer, size_t length, uint8_t ecn_bit
 	dst.sconn_len = sizeof(struct sockaddr_conn);
 #endif
 	dst.sconn_addr = addr;
-	if ((m = sctp_get_mbuf_for_msg(length, 1, M_DONTWAIT, 0, MT_DATA)) == NULL) {
+	if ((m = sctp_get_mbuf_for_msg(length, 1, M_NOWAIT, 0, MT_DATA)) == NULL) {
 		return;
 	}
 	m_copyback(m, 0, length, (caddr_t)buffer);
