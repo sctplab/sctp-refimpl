@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 235828 2012-05-23 11:26:28Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_header.h 240198 2012-09-07 13:36:42Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_HEADER_H_
@@ -185,7 +185,11 @@ struct sctp_init {
 } SCTP_PACKED;
 #define SCTP_IDENTIFICATION_SIZE 16
 #define SCTP_ADDRESS_SIZE 4
+#if defined(__Userspace__)
+#define SCTP_RESERVE_SPACE 5
+#else
 #define SCTP_RESERVE_SPACE 6
+#endif
 /* state cookie header */
 struct sctp_state_cookie {	/* this is our definition... */
 	uint8_t identification[SCTP_IDENTIFICATION_SIZE];/* id of who we are */
@@ -207,6 +211,9 @@ struct sctp_state_cookie {	/* this is our definition... */
 	uint16_t myport;	/* my port address used in the INIT */
 	uint8_t ipv4_addr_legal;/* Are V4 addr legal? */
 	uint8_t ipv6_addr_legal;/* Are V6 addr legal? */
+#if defined(__Userspace__)
+	uint8_t conn_addr_legal;
+#endif
 	uint8_t local_scope;	/* IPv6 local scope flag */
 	uint8_t site_scope;	/* IPv6 site scope flag */
 
@@ -520,16 +527,6 @@ struct sctp_stream_reset_add_strm {
  * convience structures, note that if you are making a request for specific
  * streams then the request will need to be an overlay structure.
  */
-
-struct sctp_stream_reset_out_req {
-	struct sctp_chunkhdr ch;
-	struct sctp_stream_reset_out_request sr_req;
-} SCTP_PACKED;
-
-struct sctp_stream_reset_in_req {
-	struct sctp_chunkhdr ch;
-	struct sctp_stream_reset_in_request sr_req;
-} SCTP_PACKED;
 
 struct sctp_stream_reset_tsn_req {
 	struct sctp_chunkhdr ch;
