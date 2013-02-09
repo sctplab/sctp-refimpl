@@ -514,11 +514,21 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_SOCKET_GONE	0x10000000
 #define SCTP_PCB_FLAGS_SOCKET_ALLGONE	0x20000000
 #define SCTP_PCB_FLAGS_SOCKET_CANT_READ	0x40000000
+#if defined(__Userspace__)
+#define SCTP_PCB_FLAGS_BOUND_CONN       0x80000000
+
+/* flags to copy to new PCB */
+#define SCTP_PCB_COPY_FLAGS		(SCTP_PCB_FLAGS_BOUNDALL|\
+					 SCTP_PCB_FLAGS_WAKEINPUT|\
+					 SCTP_PCB_FLAGS_BOUND_V6|\
+					 SCTP_PCB_FLAGS_BOUND_CONN)
+#else
+
 /* flags to copy to new PCB */
 #define SCTP_PCB_COPY_FLAGS		(SCTP_PCB_FLAGS_BOUNDALL|\
 					 SCTP_PCB_FLAGS_WAKEINPUT|\
 					 SCTP_PCB_FLAGS_BOUND_V6)
-
+#endif
 
 /*
  * PCB Features (in sctp_features bitmask)
