@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 243882 2012-12-05 08:04:20Z glebius $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 246588 2013-02-09 08:27:08Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -997,7 +997,6 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 	} else {
 		/* no outstanding data to send, so move on... */
 		/* send SHUTDOWN-ACK */
-		sctp_send_shutdown_ack(stcb, net);
 		/* move to SHUTDOWN-ACK-SENT state */
 		if ((SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) ||
 		    (SCTP_GET_STATE(asoc) == SCTP_STATE_SHUTDOWN_RECEIVED)) {
@@ -1006,6 +1005,7 @@ sctp_handle_shutdown(struct sctp_shutdown_chunk *cp,
 		SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_ACK_SENT);
 		SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
 		sctp_stop_timers_for_shutdown(stcb);
+		sctp_send_shutdown_ack(stcb, net);
 		sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNACK, stcb->sctp_ep,
 				 stcb, net);
 	}

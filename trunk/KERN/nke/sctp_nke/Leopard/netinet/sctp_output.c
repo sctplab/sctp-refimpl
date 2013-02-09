@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 244033 2012-12-08 15:11:09Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 246588 2013-02-09 08:27:08Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -6882,12 +6882,13 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_RECEIVED) &&
 				    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 					/* only send SHUTDOWN the first time through */
-					sctp_send_shutdown(stcb, net);
 					if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 						SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 					}
 					SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 					SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
+					sctp_stop_timers_for_shutdown(stcb);
+					sctp_send_shutdown(stcb, net);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 							 net);
 					sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
@@ -14010,18 +14011,19 @@ dataless_eof:
 			    (SCTP_GET_STATE(asoc) != SCTP_STATE_SHUTDOWN_ACK_SENT)) {
 				struct sctp_nets *netp;
 
-				if (stcb->asoc.alternate) {
-					netp = stcb->asoc.alternate;
-				} else {
-					netp = stcb->asoc.primary_destination;
-				}
 				/* only send SHUTDOWN the first time through */
-				sctp_send_shutdown(stcb, netp);
 				if (SCTP_GET_STATE(asoc) == SCTP_STATE_OPEN) {
 					SCTP_STAT_DECR_GAUGE32(sctps_currestab);
 				}
 				SCTP_SET_STATE(asoc, SCTP_STATE_SHUTDOWN_SENT);
 				SCTP_CLEAR_SUBSTATE(asoc, SCTP_STATE_SHUTDOWN_PENDING);
+				sctp_stop_timers_for_shutdown(stcb);
+				if (stcb->asoc.alternate) {
+					netp = stcb->asoc.alternate;
+				} else {
+					netp = stcb->asoc.primary_destination;
+				}
+				sctp_send_shutdown(stcb, netp);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWN, stcb->sctp_ep, stcb,
 				                 netp);
 				sctp_timer_start(SCTP_TIMER_TYPE_SHUTDOWNGUARD, stcb->sctp_ep, stcb,
