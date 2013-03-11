@@ -11537,7 +11537,7 @@ sctp_send_resp_msg(struct sockaddr *src, struct sockaddr *dst,
 #else
 #if defined(__FreeBSD__) && __FreeBSD_version >= 800000
 #if __FreeBSD_version > 803000 && __FreeBSD_version < 900000
-			sctphdr->checksum = sctp_calculate_cksum(m, sizeof(struct ip6_hdr));
+			shout->checksum = sctp_calculate_cksum(mout, sizeof(struct ip6_hdr));
 			SCTP_STAT_INCR(sctps_sendswcrc);
 #else
 #if __FreeBSD_version > 901000
