@@ -173,7 +173,7 @@ sctp_iterator_thread(void *v SCTP_UNUSED)
 	panic("Hmm. thread_terminate() continues...");
 #endif
 #if defined(__Userspace__)
-	return NULL;
+	return (NULL);
 #endif
 #endif
 }

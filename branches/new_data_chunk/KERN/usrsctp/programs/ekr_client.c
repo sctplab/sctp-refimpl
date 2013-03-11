@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2011-2012 Michael Tuexen
+ * Copyright (C) 2011-2013 Michael Tuexen
  *
  * All rights reserved.
  *
@@ -34,6 +34,7 @@
 #include <stdio.h>
 #include <stdlib.h>
 #include <string.h>
+#include <stdarg.h>
 #include <sys/types.h>
 #ifndef _WIN32
 #include <sys/socket.h>
@@ -137,8 +138,21 @@ receive_cb(struct socket *sock, union sctp_sockstore addr, void *data,
 			       rcv.rcv_context);
 		}
 		free(data);
+	} else {
+		usrsctp_deregister_address(ulp_info);
+		usrsctp_close(sock);
 	}
 	return 1;
+}
+
+void
+debug_printf(const char *format, ...)
+{
+	va_list ap;
+
+	va_start(ap, format);
+	vprintf(format, ap);
+	va_end(ap);
 }
 
 int
@@ -161,7 +175,7 @@ main(int argc, char *argv[])
 	struct sctp_sndinfo sndinfo;
 	char buffer[BUFFER_SIZE];
 
-	usrsctp_init(0, conn_output);
+	usrsctp_init(0, conn_output, debug_printf);
 	/* set up a connected UDP socket */
 #ifdef _WIN32
 	if ((fd = socket(AF_INET, SOCK_DGRAM, IPPROTO_UDP)) == INVALID_SOCKET) {
@@ -207,13 +221,14 @@ main(int argc, char *argv[])
 #ifdef SCTP_DEBUG
 	usrsctp_sysctl_set_sctp_debug_on(SCTP_DEBUG_NONE);
 #endif
+	usrsctp_sysctl_set_sctp_ecn_enable(0);
 	usrsctp_register_address((void *)&fd);
 #ifdef _WIN32
 	tid = CreateThread(NULL, 0, (LPTHREAD_START_ROUTINE)&handle_packets, (void *)&fd, 0, NULL);
 #else
 	pthread_create(&tid, NULL, &handle_packets, (void *)&fd);
 #endif
-	if ((s = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP, receive_cb, NULL, 0, NULL)) == NULL) {
+	if ((s = usrsctp_socket(AF_CONN, SOCK_STREAM, IPPROTO_SCTP, receive_cb, NULL, 0, &fd)) == NULL) {
 		perror("usrsctp_socket");
 	}
 
@@ -255,8 +270,7 @@ main(int argc, char *argv[])
 		perror("usrsctp_sendv");
 	}
 
-	usrsctp_close(s);
-	usrsctp_deregister_address((void *)&fd);
+	usrsctp_shutdown(s, SHUT_WR);
 	while (usrsctp_finish() != 0) {
 #ifdef _WIN32
 		Sleep(1000);
