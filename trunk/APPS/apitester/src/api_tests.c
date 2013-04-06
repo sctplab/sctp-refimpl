@@ -145,7 +145,7 @@ enable_tests(int number_of_suites, char *suite_name[])
 int
 main(int argc, char *argv[])
 {
-	char c;
+	int c;
 	int delay = 0;
 	int ignore_failed = 1;
 	int test_randomly = 0;
