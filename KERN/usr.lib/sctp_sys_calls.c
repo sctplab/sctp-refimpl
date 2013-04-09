@@ -50,8 +50,6 @@ __FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 246629 2013-02-10 19:21:1
 #include <netinet/sctp_uio.h>
 #include <netinet/sctp.h>
 
-#include <net/if_dl.h>
-
 #ifndef IN6_IS_ADDR_V4MAPPED
 #define IN6_IS_ADDR_V4MAPPED(a)		      \
 	((*(const uint32_t *)(const void *)(&(a)->s6_addr[0]) == 0) &&	\
@@ -62,6 +60,8 @@ __FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 246629 2013-02-10 19:21:1
 #define SCTP_CONTROL_VEC_SIZE_RCV  16384
 
 #ifdef SCTP_DEBUG_PRINT_ADDRESS
+
+#include <net/if_dl.h>
 
 #define SCTP_STRING_BUF_SZ 256
 
