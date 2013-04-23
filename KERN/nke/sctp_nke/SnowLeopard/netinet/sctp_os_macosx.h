@@ -132,13 +132,13 @@ extern struct fileops socketops;
 /*
  * debug macro
  */
-#define SCTP_PRINTF(params...)	printf(params)
+#define SCTP_PRINTF(...)	printf(__VA_ARGS__)
 #if defined(SCTP_DEBUG)
-#define SCTPDBG(level, params...)					\
+#define SCTPDBG(level, ...)						\
 {									\
     do {								\
 	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level) {			\
-	    SCTP_PRINTF(params);					\
+	    SCTP_PRINTF(__VA_ARGS__);					\
 	}								\
     } while (0);							\
 }
