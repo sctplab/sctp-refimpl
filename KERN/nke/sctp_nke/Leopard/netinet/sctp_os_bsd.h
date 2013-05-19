@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 237715 2012-06-28 16:01:08Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 250809 2013-05-19 16:06:43Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -487,6 +487,7 @@ typedef struct rtentry	sctp_rtentry_t;
 { \
 	int o_flgs = IP_RAWOUTPUT; \
 	struct sctp_tcb *local_stcb = stcb; \
+	M_SETFIB(o_pak, 0); \
 	if (local_stcb && \
 	    local_stcb->sctp_ep && \
 	    local_stcb->sctp_ep->sctp_socket) \
@@ -497,6 +498,7 @@ typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
 { \
 	struct sctp_tcb *local_stcb = stcb; \
+	M_SETFIB(o_pak, 0); \
 	if (local_stcb && local_stcb->sctp_ep) \
 		result = ip6_output(o_pak, \
 				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
