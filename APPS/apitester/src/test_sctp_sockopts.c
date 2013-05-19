@@ -7205,14 +7205,14 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_1)
 				      &flags[1],
 				      &ipv6_flowlabel[1],
 				      &ipv4_tos[1]);
-	if (result< 0) {
+	if (result < 0) {
 		close(fds[0]);
 		close(fds[1]);
 		return(strerror(errno));
 	}
 	close(fds[0]);
 	close(fds[1]);
-	if(flags[1] != flags[0]) {
+	if ((flags[1] & ~SPP_IPV6_FLOWLABEL) != flags[0]) {
 		return "failed, flags changed";
 	}
 	if (ipv6_flowlabel[1] != newval) {
@@ -7288,7 +7288,7 @@ DEFINE_APITEST(paddrpara, sso_av6_flo_1_M)
 	}
 	close(fds[0]);
 	close(fds[1]);
-	if(flags[1] != flags[0]) {
+	if ((flags[1] & ~SPP_IPV6_FLOWLABEL) != flags[0]) {
 		return "failed, flags changed";
 	}
 	if (ipv6_flowlabel[1] != newval) {
