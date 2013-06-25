@@ -643,23 +643,21 @@ sctp_vtag_watchdog()
 		expired_cnt = 0;
 		inuse_cnt = 0;
 		other_cnt = 0;
-		if (!LIST_EMPTY(chain)) {
-			LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-				for (j = 0; j < SCTP_NUMBER_IN_VTAG_BLOCK; j++) {
-					if ((twait_block->vtag_block[j].v_tag == 0) &&
-					    (twait_block->vtag_block[j].lport == 0) &&
-					    (twait_block->vtag_block[j].rport == 0) &&
-					    (twait_block->vtag_block[j].tv_sec_at_expire == 0)) {
-						free_cnt++;
-					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
-					           (twait_block->vtag_block[j].tv_sec_at_expire < (uint32_t)now.tv_sec)) {
-						expired_cnt++;
-					} else if ((twait_block->vtag_block[j].v_tag != 0) &&
-					           (twait_block->vtag_block[j].tv_sec_at_expire >= (uint32_t)now.tv_sec)) {
-						inuse_cnt++;
-					} else {
-						other_cnt++;
-					}
+		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+			for (j = 0; j < SCTP_NUMBER_IN_VTAG_BLOCK; j++) {
+				if ((twait_block->vtag_block[j].v_tag == 0) &&
+				    (twait_block->vtag_block[j].lport == 0) &&
+				    (twait_block->vtag_block[j].rport == 0) &&
+				    (twait_block->vtag_block[j].tv_sec_at_expire == 0)) {
+					free_cnt++;
+				} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					   (twait_block->vtag_block[j].tv_sec_at_expire < (uint32_t)now.tv_sec)) {
+					expired_cnt++;
+				} else if ((twait_block->vtag_block[j].v_tag != 0) &&
+					   (twait_block->vtag_block[j].tv_sec_at_expire >= (uint32_t)now.tv_sec)) {
+					inuse_cnt++;
+				} else {
+					other_cnt++;
 				}
 			}
 		}
