@@ -4704,7 +4704,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 		if ((ch->chunk_type == SCTP_ABORT_ASSOCIATION) ||
 		    (ch->chunk_type == SCTP_SHUTDOWN_COMPLETE) ||
 		    (ch->chunk_type == SCTP_PACKET_DROPPED)) {
-			/* Take the T-bit into always into account. */
+			/* Take the T-bit always into account. */
 			if ((((ch->chunk_flags & SCTP_HAD_NO_TCB) == 0) &&
 			     (vtag_in == asoc->my_vtag)) ||
 			    (((ch->chunk_flags & SCTP_HAD_NO_TCB) == SCTP_HAD_NO_TCB) &&
