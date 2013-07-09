@@ -5865,7 +5865,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #ifdef INET
 		case AF_INET:
 			if (ipsec4_in_reject(m, &inp->ip_inp.inp)) {
-#if defined(__FreeBSD__) && (__FreeBSD_version > 1000000)
+#if defined(__FreeBSD__) && (__FreeBSD_version > 1000036)
 				IPSECSTAT_INC(in_polvio);
 #else
 				MODULE_GLOBAL(ipsec4stat).in_polvio++;
@@ -5878,7 +5878,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #ifdef INET6
 		case AF_INET6:
 			if (ipsec6_in_reject(m, &inp->ip_inp.inp)) {
-#if defined(__FreeBSD__) && (__FreeBSD_version > 1000000)
+#if defined(__FreeBSD__) && (__FreeBSD_version > 1000036)
 				IPSEC6STAT_INC(in_polvio);
 #else
 				MODULE_GLOBAL(ipsec6stat).in_polvio++;
