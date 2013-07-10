@@ -83,15 +83,18 @@ DEFINE_APITEST(bind, v4tov6_s_a_s_p)
 {
 	int fd;
 	unsigned short port;
+	const int off = 0;
 
 	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-
+	if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(int)) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
 	if (sctp_bind(fd, INADDR_LOOPBACK, 12345) < 0) {
 		close(fd);
 		return strerror(errno);
 	}
-
 	port = sctp_get_local_port(fd);
 	close(fd);
 
@@ -112,15 +115,18 @@ DEFINE_APITEST(bind, v4tov6_w_a_s_p)
 {
 	int fd;
 	unsigned short port;
+	const int off = 0;
 
 	if ((fd = socket(AF_INET6, SOCK_STREAM, IPPROTO_SCTP)) < 0)
 		return strerror(errno);
-
+	if (setsockopt(fd, IPPROTO_IPV6, IPV6_V6ONLY, &off, sizeof(int)) < 0) {
+		close(fd);
+		return strerror(errno);
+	}
 	if (sctp_bind(fd, INADDR_ANY, 12345) < 0) {
 		close(fd);
 		return strerror(errno);
 	}
-
 	port = sctp_get_local_port(fd);
 	close(fd);
 

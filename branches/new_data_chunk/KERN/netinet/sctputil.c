@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 247412 2013-02-27 19:51:47Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 251248 2013-06-02 10:35:08Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2756,7 +2756,7 @@ sctp_notify_assoc_change(uint16_t state, struct sctp_tcb *stcb,
 				if (stcb->asoc.peer_supports_prsctp) {
 					sac->sac_info[i++] = SCTP_ASSOC_SUPPORTS_PR;
 				}
-					if (stcb->asoc.peer_supports_auth) {
+				if (stcb->asoc.peer_supports_auth) {
 					sac->sac_info[i++] = SCTP_ASSOC_SUPPORTS_AUTH;
 				}
 				if (stcb->asoc.peer_supports_asconf) {
@@ -2774,17 +2774,17 @@ sctp_notify_assoc_change(uint16_t state, struct sctp_tcb *stcb,
 		}
 		SCTP_BUF_LEN(m_notify) = sac->sac_length;
 		control = sctp_build_readq_entry(stcb, stcb->asoc.primary_destination,
-						 0, 0, stcb->asoc.context, 0, 0, 0,
-						 m_notify);
+		                                 0, 0, stcb->asoc.context, 0, 0, 0,
+		                                 m_notify);
 		if (control != NULL) {
 			control->length = SCTP_BUF_LEN(m_notify);
 			/* not that we need this */
 			control->tail_mbuf = m_notify;
 			control->spec_flags = M_NOTIFICATION;
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
-					  control,
-					  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD,
-					  so_locked);
+			                  control,
+			                  &stcb->sctp_socket->so_rcv, 1, SCTP_READ_LOCK_NOT_HELD,
+			                  so_locked);
 		} else {
 			sctp_m_freem(m_notify);
 		}
@@ -2807,8 +2807,14 @@ set_error:
 				stcb->sctp_socket->so_error = ECONNRESET;
 			}
 		} else {
-			SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ECONNABORTED);
-			stcb->sctp_socket->so_error = ECONNABORTED;
+			if ((SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_WAIT) ||
+			    (SCTP_GET_STATE(&stcb->asoc) == SCTP_STATE_COOKIE_ECHOED)) {
+				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ETIMEDOUT);
+				stcb->sctp_socket->so_error = ETIMEDOUT;
+			} else {
+				SCTP_LTRACE_ERR_RET(NULL, stcb, NULL, SCTP_FROM_SCTPUTIL, ECONNABORTED);
+				stcb->sctp_socket->so_error = ECONNABORTED;
+			}
 		}
 	}
 	/* Wake ANY sleepers */
@@ -2929,10 +2935,10 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	/* not that we need this */
 	control->tail_mbuf = m_notify;
 	sctp_add_to_readq(stcb->sctp_ep, stcb,
-			  control,
-			  &stcb->sctp_socket->so_rcv, 1,
-			  SCTP_READ_LOCK_NOT_HELD,
-			  SCTP_SO_NOT_LOCKED);
+	                  control,
+	                  &stcb->sctp_socket->so_rcv, 1,
+	                  SCTP_READ_LOCK_NOT_HELD,
+	                  SCTP_SO_NOT_LOCKED);
 }
 
 
@@ -3684,8 +3690,8 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		sctp_unlock_assert(SCTP_INP_SO(stcb->sctp_ep));
 	}
 #endif
-	if (stcb && ((stcb->asoc.state & SCTP_STATE_COOKIE_WAIT) ||
-	             (stcb->asoc.state &  SCTP_STATE_COOKIE_ECHOED))) {
+	if ((stcb->asoc.state & SCTP_STATE_COOKIE_WAIT) ||
+	    (stcb->asoc.state &  SCTP_STATE_COOKIE_ECHOED)) {
 		if ((notification == SCTP_NOTIFY_INTERFACE_DOWN) ||
 		    (notification == SCTP_NOTIFY_INTERFACE_UP) ||
 		    (notification == SCTP_NOTIFY_INTERFACE_CONFIRMED)) {
@@ -3704,7 +3710,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		}
 		if (stcb->asoc.peer_supports_auth == 0) {
 			sctp_ulp_notify(SCTP_NOTIFY_NO_PEER_AUTH, stcb, 0,
-					NULL, so_locked);
+			                NULL, so_locked);
 		}
 		break;
 	case SCTP_NOTIFY_ASSOC_DOWN:
@@ -3755,7 +3761,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		}
 	case SCTP_NOTIFY_SPECIAL_SP_FAIL:
 		sctp_notify_send_failed2(stcb, error,
-					 (struct sctp_stream_queue_pending *)data, so_locked);
+		                         (struct sctp_stream_queue_pending *)data, so_locked);
 		break;
 	case SCTP_NOTIFY_SENT_DG_FAIL:
 		sctp_notify_send_failed(stcb, 1, error,
@@ -3763,7 +3769,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_UNSENT_DG_FAIL:
 		sctp_notify_send_failed(stcb, 0, error,
-					(struct sctp_tmit_chunk *)data, so_locked);
+		                        (struct sctp_tmit_chunk *)data, so_locked);
 		break;
 	case SCTP_NOTIFY_PARTIAL_DELVIERY_INDICATION:
 		{
@@ -3774,16 +3780,16 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 		}
 	case SCTP_NOTIFY_ASSOC_LOC_ABORTED:
-		if ((stcb) && (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
-			       ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))) {
+		if (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
+		    ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED)) {
 			sctp_notify_assoc_change(SCTP_CANT_STR_ASSOC, stcb, error, data, 0, so_locked);
 		} else {
 			sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, data, 0, so_locked);
 		}
 		break;
 	case SCTP_NOTIFY_ASSOC_REM_ABORTED:
-		if ((stcb) && (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
-				((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED))) {
+		if (((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_WAIT) ||
+		    ((stcb->asoc.state & SCTP_STATE_MASK) == SCTP_STATE_COOKIE_ECHOED)) {
 			sctp_notify_assoc_change(SCTP_CANT_STR_ASSOC, stcb, error, data, 1, so_locked);
 		} else {
 			sctp_notify_assoc_change(SCTP_COMM_LOST, stcb, error, data, 1, so_locked);
@@ -3793,7 +3799,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		sctp_notify_assoc_change(SCTP_RESTART, stcb, error, NULL, 0, so_locked);
 		if (stcb->asoc.peer_supports_auth == 0) {
 			sctp_ulp_notify(SCTP_NOTIFY_NO_PEER_AUTH, stcb, 0,
-					NULL, so_locked);
+			                NULL, so_locked);
 		}
 		break;
 	case SCTP_NOTIFY_STR_RESET_SEND:
@@ -3804,7 +3810,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_STR_RESET_FAILED_OUT:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data),
-					 (SCTP_STREAM_RESET_OUTGOING_SSN|SCTP_STREAM_RESET_FAILED));
+		                         (SCTP_STREAM_RESET_OUTGOING_SSN|SCTP_STREAM_RESET_FAILED));
 		break;
 	case SCTP_NOTIFY_STR_RESET_DENIED_OUT:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data),
@@ -3812,7 +3818,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_STR_RESET_FAILED_IN:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data),
-					 (SCTP_STREAM_RESET_INCOMING|SCTP_STREAM_RESET_FAILED));
+		                         (SCTP_STREAM_RESET_INCOMING|SCTP_STREAM_RESET_FAILED));
 		break;
 	case SCTP_NOTIFY_STR_RESET_DENIED_IN:
 		sctp_notify_stream_reset(stcb, error, ((uint16_t *) data),
@@ -3824,29 +3830,29 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_ASCONF_DELETE_IP:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_REMOVED, data,
-		    error);
+		                             error);
 		break;
 	case SCTP_NOTIFY_ASCONF_SET_PRIMARY:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_MADE_PRIM, data,
-		    error);
+		                             error);
 		break;
 	case SCTP_NOTIFY_PEER_SHUTDOWN:
 		sctp_notify_shutdown_event(stcb);
 		break;
 	case SCTP_NOTIFY_AUTH_NEW_KEY:
 		sctp_notify_authentication(stcb, SCTP_AUTH_NEW_KEY, error,
-					   (uint16_t)(uintptr_t)data,
-					   so_locked);
+		                           (uint16_t)(uintptr_t)data,
+		                           so_locked);
 		break;
 	case SCTP_NOTIFY_AUTH_FREE_KEY:
 		sctp_notify_authentication(stcb, SCTP_AUTH_FREE_KEY, error,
-					   (uint16_t)(uintptr_t)data,
-					   so_locked);
+		                           (uint16_t)(uintptr_t)data,
+		                           so_locked);
 		break;
 	case SCTP_NOTIFY_NO_PEER_AUTH:
 		sctp_notify_authentication(stcb, SCTP_AUTH_NO_AUTH, error,
-					   (uint16_t)(uintptr_t)data,
-					   so_locked);
+		                           (uint16_t)(uintptr_t)data,
+		                           so_locked);
 		break;
 	case SCTP_NOTIFY_SENDER_DRY:
 		sctp_notify_sender_dry_event(stcb, so_locked);
@@ -4155,7 +4161,7 @@ sctp_abort_an_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	if (stcb == NULL) {
 		/* Got to have a TCB */
 		if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-			if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+			if (LIST_EMPTY(&inp->sctp_asoc_list)) {
 #if defined(__APPLE__)
 				if (!so_locked) {
 					SCTP_SOCKET_LOCK(so, 1);
@@ -4222,7 +4228,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset,
 	SCTP_STAT_INCR_COUNTER32(sctps_outoftheblue);
 	/* Generate a TO address for future reference */
 	if (inp && (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE)) {
-		if (LIST_FIRST(&inp->sctp_asoc_list) == NULL) {
+		if (LIST_EMPTY(&inp->sctp_asoc_list)) {
 #if defined(__APPLE__)
 			SCTP_SOCKET_LOCK(SCTP_INP_SO(inp), 1);
 #endif
@@ -4737,12 +4743,12 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 			char *buffer;
 			struct sctp_rcvinfo rcv;
 			union sctp_sockstore addr;
-			int flags = 0;
+			int flags;
 
 			if ((buffer = malloc(control->length)) == NULL) {
 				return;
 			}
-			so = inp->sctp_socket;
+			so = stcb->sctp_socket;
 			for (m = control->data; m; m = SCTP_BUF_NEXT(m)) {
 				sctp_sbfree(control, control->stcb, &so->so_rcv, m);
 			}
@@ -4779,11 +4785,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 				addr.sa = control->whoFrom->ro._l_addr.sa;
 				break;
 			}
+			flags = MSG_EOR;
 			if (control->spec_flags & M_NOTIFICATION) {
 				flags |= MSG_NOTIFICATION;
-			}
-			if (control->spec_flags & M_EOR) {
-				flags |= MSG_EOR;
 			}
 			inp->recv_callback(so, addr, buffer, control->length, rcv, flags, inp->ulp_info);
 			SCTP_TCB_LOCK(stcb);
@@ -4957,12 +4961,12 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			char *buffer;
 			struct sctp_rcvinfo rcv;
 			union sctp_sockstore addr;
-			int flags = 0;
+			int flags;
 
 			if ((buffer = malloc(control->length)) == NULL) {
 				return (-1);
 			}
-			so = inp->sctp_socket;
+			so = stcb->sctp_socket;
 			for (m = control->data; m; m = SCTP_BUF_NEXT(m)) {
 				sctp_sbfree(control, control->stcb, &so->so_rcv, m);
 			}
@@ -4999,11 +5003,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 				addr.sa = control->whoFrom->ro._l_addr.sa;
 				break;
 			}
+			flags = 0;
 			if (control->spec_flags & M_NOTIFICATION) {
 				flags |= MSG_NOTIFICATION;
-			}
-			if (control->spec_flags & M_EOR) {
-				flags |= MSG_EOR;
 			}
 			inp->recv_callback(so, addr, buffer, control->length, rcv, flags, inp->ulp_info);
 			SCTP_TCB_LOCK(stcb);
@@ -5704,7 +5706,7 @@ sctp_sorecvmsg(struct socket *so,
 	if (rwnd_req < SCTP_MIN_RWND)
 		rwnd_req = SCTP_MIN_RWND;
 	in_eeor_mode = sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR);
-	if (SCTP_BASE_SYSCTL(sctp_logging_level) &SCTP_RECV_RWND_LOGGING_ENABLE) {
+	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_RECV_RWND_LOGGING_ENABLE) {
 #if defined(__APPLE__)
 #if defined(APPLE_LEOPARD)
 		sctp_misc_ints(SCTP_SORECV_ENTER,

@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 246687 2013-02-11 21:02:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 252779 2013-07-05 10:08:49Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2529,7 +2529,7 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 	if (sh->v_tag) {
 		/* we only go down this path if vtag is non-zero */
 		stcb = sctp_findassoc_by_vtag(src, dst, ntohl(sh->v_tag),
-		                                inp_p, netp, sh->src_port, sh->dest_port, 0, vrf_id, 0);
+		                              inp_p, netp, sh->src_port, sh->dest_port, 0, vrf_id, 0);
 		if (stcb) {
 			return (stcb);
 		}
@@ -2545,11 +2545,11 @@ sctp_findassociation_addr(struct mbuf *m, int offset,
 	}
 	if (inp_p) {
 		stcb = sctp_findassociation_addr_sa(src, dst, inp_p, netp,
-		    find_tcp_pool, vrf_id);
+		                                    find_tcp_pool, vrf_id);
 		inp = *inp_p;
 	} else {
 		stcb = sctp_findassociation_addr_sa(src, dst, &inp, netp,
-		    find_tcp_pool, vrf_id);
+		                                    find_tcp_pool, vrf_id);
 	}
 	SCTPDBG(SCTP_DEBUG_PCB1, "stcb:%p inp:%p\n", (void *)stcb, (void *)inp);
 	if (stcb == NULL && inp) {
@@ -2735,8 +2735,13 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	inp->ip_inp.inp.inp_socket = so;
 #ifdef INET6
 #if !defined(__Userspace__) && !defined(__Windows__)
-	if (MODULE_GLOBAL(ip6_auto_flowlabel)) {
-		inp->ip_inp.inp.inp_flags |= IN6P_AUTOFLOWLABEL;
+	if (INP_SOCKAF(so) == AF_INET6) {
+		if (MODULE_GLOBAL(ip6_auto_flowlabel)) {
+			inp->ip_inp.inp.inp_flags |= IN6P_AUTOFLOWLABEL;
+		}
+		if (MODULE_GLOBAL(ip6_v6only)) {
+			inp->ip_inp.inp.inp_flags |= IN6P_IPV6_V6ONLY;
+		}
 	}
 #endif
 #endif
@@ -2922,9 +2927,6 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	m->initial_rto = SCTP_BASE_SYSCTL(sctp_rto_initial_default);
 	m->initial_init_rto_max = SCTP_BASE_SYSCTL(sctp_init_rto_max_default);
 	m->sctp_sack_freq = SCTP_BASE_SYSCTL(sctp_sack_freq_default);
-
-	m->max_open_streams_intome = MAX_SCTP_STREAMS;
-
 	m->max_init_times = SCTP_BASE_SYSCTL(sctp_init_rtx_max_default);
 	m->max_send_times = SCTP_BASE_SYSCTL(sctp_assoc_rtx_max_default);
 	m->def_net_failure = SCTP_BASE_SYSCTL(sctp_path_rtx_max_default);
@@ -2936,6 +2938,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 
 	m->sctp_default_cc_module = SCTP_BASE_SYSCTL(sctp_default_cc_module);
 	m->sctp_default_ss_module = SCTP_BASE_SYSCTL(sctp_default_ss_module);
+	m->max_open_streams_intome = SCTP_BASE_SYSCTL(sctp_nr_incoming_streams_default);
 	/* number of streams to pre-open on a association */
 	m->pre_open_stream_count = SCTP_BASE_SYSCTL(sctp_nr_outgoing_streams_default);
 
@@ -5186,23 +5189,21 @@ sctp_delete_from_timewait(uint32_t tag, uint16_t lport, uint16_t rport)
 	int i;
 
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-	if (!LIST_EMPTY(chain)) {
-		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-			  if ((twait_block->vtag_block[i].v_tag == tag) &&
-			      (twait_block->vtag_block[i].lport == lport) &&
-			      (twait_block->vtag_block[i].rport == rport)) {
-					twait_block->vtag_block[i].tv_sec_at_expire = 0;
-					twait_block->vtag_block[i].v_tag = 0;
-					twait_block->vtag_block[i].lport = 0;
-					twait_block->vtag_block[i].rport = 0;
-					found = 1;
-					break;
-				}
-			}
-			if (found)
+	LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+		for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+		  if ((twait_block->vtag_block[i].v_tag == tag) &&
+		      (twait_block->vtag_block[i].lport == lport) &&
+		      (twait_block->vtag_block[i].rport == rport)) {
+				twait_block->vtag_block[i].tv_sec_at_expire = 0;
+				twait_block->vtag_block[i].v_tag = 0;
+				twait_block->vtag_block[i].lport = 0;
+				twait_block->vtag_block[i].rport = 0;
+				found = 1;
 				break;
+			}
 		}
+		if (found)
+			break;
 	}
 }
 
@@ -5216,19 +5217,17 @@ sctp_is_in_timewait(uint32_t tag, uint16_t lport, uint16_t rport)
 
 	SCTP_INP_INFO_WLOCK();
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
-	if (!LIST_EMPTY(chain)) {
-		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-			        if ((twait_block->vtag_block[i].v_tag == tag)  &&
-				    (twait_block->vtag_block[i].lport == lport)  &&
-				    (twait_block->vtag_block[i].rport == rport)) {
-					found = 1;
-					break;
-				}
-			}
-			if (found)
+	LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
+		for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+			if ((twait_block->vtag_block[i].v_tag == tag)  &&
+			    (twait_block->vtag_block[i].lport == lport)  &&
+			    (twait_block->vtag_block[i].rport == rport)) {
+				found = 1;
 				break;
+			}
 		}
+		if (found)
+			break;
 	}
 	SCTP_INP_INFO_WUNLOCK();
 	return (found);
@@ -5250,42 +5249,40 @@ sctp_add_vtag_to_timewait(uint32_t tag, uint32_t time, uint16_t lport, uint16_t 
 	(void)SCTP_GETTIME_TIMEVAL(&now);
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	set = 0;
-	if (!LIST_EMPTY(chain)) {
+	LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 		/* Block(s) present, lets find space, and expire on the fly */
-		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-				if ((twait_block->vtag_block[i].v_tag == 0) &&
-				    !set) {
-					twait_block->vtag_block[i].tv_sec_at_expire =
-						now.tv_sec + time;
+		for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+			if ((twait_block->vtag_block[i].v_tag == 0) &&
+			    !set) {
+				twait_block->vtag_block[i].tv_sec_at_expire =
+					now.tv_sec + time;
+				twait_block->vtag_block[i].v_tag = tag;
+				twait_block->vtag_block[i].lport = lport;
+				twait_block->vtag_block[i].rport = rport;
+				set = 1;
+			} else if ((twait_block->vtag_block[i].v_tag) &&
+				    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
+				/* Audit expires this guy */
+				twait_block->vtag_block[i].tv_sec_at_expire = 0;
+				twait_block->vtag_block[i].v_tag = 0;
+				twait_block->vtag_block[i].lport = 0;
+				twait_block->vtag_block[i].rport = 0;
+				if (set == 0) {
+					/* Reuse it for my new tag */
+					twait_block->vtag_block[i].tv_sec_at_expire = now.tv_sec + time;
 					twait_block->vtag_block[i].v_tag = tag;
 					twait_block->vtag_block[i].lport = lport;
 					twait_block->vtag_block[i].rport = rport;
 					set = 1;
-				} else if ((twait_block->vtag_block[i].v_tag) &&
-					    ((long)twait_block->vtag_block[i].tv_sec_at_expire < now.tv_sec)) {
-					/* Audit expires this guy */
-					twait_block->vtag_block[i].tv_sec_at_expire = 0;
-					twait_block->vtag_block[i].v_tag = 0;
-					twait_block->vtag_block[i].lport = 0;
-					twait_block->vtag_block[i].rport = 0;
-					if (set == 0) {
-						/* Reuse it for my new tag */
-						twait_block->vtag_block[i].tv_sec_at_expire = now.tv_sec + time;
-						twait_block->vtag_block[i].v_tag = tag;
-						twait_block->vtag_block[i].lport = lport;
-						twait_block->vtag_block[i].rport = rport;
-						set = 1;
-					}
 				}
 			}
-			if (set) {
-				/*
-				 * We only do up to the block where we can
-				 * place our tag for audits
-				 */
-				break;
-			}
+		}
+		if (set) {
+			/*
+			 * We only do up to the block where we can
+			 * place our tag for audits
+			 */
+			break;
 		}
 	}
 	/* Need to add a new block to chain */
@@ -7654,30 +7651,28 @@ skip_vtag_check:
 
 	chain = &SCTP_BASE_INFO(vtag_timewait)[(tag % SCTP_STACK_VTAG_HASH_SIZE)];
 	/* Now what about timed wait ? */
-	if (!LIST_EMPTY(chain)) {
+	LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
 		/*
 		 * Block(s) are present, lets see if we have this tag in the
 		 * list
 		 */
-		LIST_FOREACH(twait_block, chain, sctp_nxt_tagblock) {
-			for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
-				if (twait_block->vtag_block[i].v_tag == 0) {
-					/* not used */
-					continue;
-				} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire  <
-					   now->tv_sec) {
-					/* Audit expires this guy */
-					twait_block->vtag_block[i].tv_sec_at_expire = 0;
-					twait_block->vtag_block[i].v_tag = 0;
-					twait_block->vtag_block[i].lport = 0;
-					twait_block->vtag_block[i].rport = 0;
-				} else if ((twait_block->vtag_block[i].v_tag == tag) &&
-					   (twait_block->vtag_block[i].lport == lport) &&
-					   (twait_block->vtag_block[i].rport == rport)) {
-					/* Bad tag, sorry :< */
-					SCTP_INP_INFO_RUNLOCK();
-					return (0);
-				}
+		for (i = 0; i < SCTP_NUMBER_IN_VTAG_BLOCK; i++) {
+			if (twait_block->vtag_block[i].v_tag == 0) {
+				/* not used */
+				continue;
+			} else if ((long)twait_block->vtag_block[i].tv_sec_at_expire  <
+				   now->tv_sec) {
+				/* Audit expires this guy */
+				twait_block->vtag_block[i].tv_sec_at_expire = 0;
+				twait_block->vtag_block[i].v_tag = 0;
+				twait_block->vtag_block[i].lport = 0;
+				twait_block->vtag_block[i].rport = 0;
+			} else if ((twait_block->vtag_block[i].v_tag == tag) &&
+				   (twait_block->vtag_block[i].lport == lport) &&
+				   (twait_block->vtag_block[i].rport == rport)) {
+				/* Bad tag, sorry :< */
+				SCTP_INP_INFO_RUNLOCK();
+				return (0);
 			}
 		}
 	}

@@ -37,6 +37,9 @@ extern "C" {
 
 #include <sys/types.h>
 #ifdef _WIN32
+#ifdef _MSC_VER
+#pragma warning(disable: 4200)
+#endif
 #include <winsock2.h>
 #include <ws2tcpip.h>
 #include <ws2ipdef.h>
@@ -73,6 +76,9 @@ extern "C" {
 #define MSG_EOR   0x8
 #ifndef EWOULDBLOCK
 #define EWOULDBLOCK  WSAEWOULDBLOCK
+#endif
+#ifndef EINPROGRESS
+#define EINPROGRESS  WSAEINPROGRESS
 #endif
 #define SHUT_RD    1
 #define SHUT_WR    2
@@ -1013,6 +1019,7 @@ USRSCTP_SYSCTL_DECL(sctp_init_rtx_max_default)
 USRSCTP_SYSCTL_DECL(sctp_assoc_rtx_max_default)
 USRSCTP_SYSCTL_DECL(sctp_path_rtx_max_default)
 USRSCTP_SYSCTL_DECL(sctp_add_more_threshold)
+USRSCTP_SYSCTL_DECL(sctp_nr_incoming_streams_default)
 USRSCTP_SYSCTL_DECL(sctp_nr_outgoing_streams_default)
 USRSCTP_SYSCTL_DECL(sctp_cmt_on_off)
 USRSCTP_SYSCTL_DECL(sctp_cmt_use_dac)
@@ -1058,6 +1065,11 @@ USRSCTP_SYSCTL_DECL(sctp_debug_on)
 #define SCTP_DEBUG_ALL  0xffffffff
 #endif
 #undef USRSCTP_SYSCTL_DECL
+#ifdef _WIN32
+#ifdef _MSC_VER
+#pragma warning(default: 4200)
+#endif
+#endif
 #ifdef  __cplusplus
 }
 #endif
