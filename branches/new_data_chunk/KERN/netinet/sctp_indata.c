@@ -1442,7 +1442,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	/* Process a data chunk */
 	/* struct sctp_tmit_chunk *chk; */
 	struct sctp_tmit_chunk *chk;
-	uint32_t tsn, gap;
+	uint32_t tsn, fsn, gap;
 	struct mbuf *dmbuf;
 	int the_len;
 	int need_reasm_check = 0;
@@ -1451,7 +1451,6 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	struct sctp_queued_to_read *control;
 	int ordered;
 	uint32_t protocol_id;
-	uint32_t fsn_num;
 	uint8_t chunk_flags;
 	struct sctp_stream_reset_list *liste;
 	struct sctp_ndata_chunk *nch;
@@ -1460,7 +1459,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	tsn = ntohl(ch->dp.tsn);
 	if (chtype == SCTP_NDATA) {
 		nch = (struct sctp_ndata_chunk *)ch;
-		fsn = ntohl(ch->dp.fsn);
+		fsn = ntohl(nch->dp.fsn);
 	} else {
 		fsn = tsn;
 		nch = NULL;
@@ -1687,15 +1686,17 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * From here down we may find ch-> invalid
 	 * so its a good idea NOT to use it.
 	 *************************************/
-
+	if (nch) {
+		the_len = (chk_length - sizeof(struct sctp_ndata_chunk));
+	} else {
+		the_len = (chk_length - sizeof(struct sctp_data_chunk));
+	}
 	if (last_chunk == 0) {
 		if (nch) {
-			the_len = (chk_length - sizeof(struct sctp_ndata_chunk));
 			dmbuf = SCTP_M_COPYM(*m,
 					     (offset + sizeof(struct sctp_ndata_chunk)),
 					     the_len, M_NOWAIT);
 		} else {
-			the_len = (chk_length - sizeof(struct sctp_data_chunk));
 			dmbuf = SCTP_M_COPYM(*m,
 					     (offset + sizeof(struct sctp_data_chunk)),
 					     the_len, M_NOWAIT);
@@ -1872,7 +1873,7 @@ failed_express_del:
 		}
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
-		chk->rec.data.fsn_num = fsn_num;
+		chk->rec.data.fsn_num = fsn;
 		chk->rec.data.stream_seq = strmseq;
 		chk->rec.data.stream_number = strmno;
 		chk->rec.data.payloadtype = protocol_id;

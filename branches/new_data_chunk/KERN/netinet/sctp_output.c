@@ -7345,8 +7345,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 	struct sctp_association *asoc;
 	struct sctp_stream_queue_pending *sp;
 	struct sctp_tmit_chunk *chk;
-	struct sctp_data_chunk *dchkh;
-	struct sctp_ndata_chunk *ndchkh;
+	struct sctp_data_chunk *dchkh=NULL;
+	struct sctp_ndata_chunk *ndchkh=NULL;
 	uint32_t to_move, length, leading;
 	uint8_t rcv_flags = 0;
 	uint8_t some_taken;
@@ -7368,7 +7368,7 @@ one_more_time:
 		if (sp) {
 			goto one_more_time;
 		}
-		if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_EXPLICIT_EOR) == 0) &&
+		if ((sctp_is_feature_on(stcb->sctp_ep, SCTP_PCB_FLAGS_EXPLICIT_EOR) == 0) &&
 		    (stcb->asoc.peer_supports_ndata == 0) &&
 		    (strq->last_msg_incomplete)) {
 			SCTP_PRINTF("Huh? Stream:%d lm_in_c=%d but queue is NULL\n",
