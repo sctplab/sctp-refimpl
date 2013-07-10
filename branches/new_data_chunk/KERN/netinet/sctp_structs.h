@@ -558,6 +558,7 @@ struct sctp_stream_queue_pending {
 	struct sctp_nets *net;
 	TAILQ_ENTRY (sctp_stream_queue_pending) next;
 	TAILQ_ENTRY (sctp_stream_queue_pending) ss_next;
+	uint32_t fsn;
 	uint32_t length;
 	uint32_t timetolive;
 	uint32_t ppid;
