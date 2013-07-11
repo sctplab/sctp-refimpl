@@ -1,0 +1,6 @@
+#!/bin/sh
+sysctl net.inet.sctp.heartbeat_interval=250
+sysctl net.inet.sctp.rto_min=25
+sysctl net.inet.sctp.rto_max=75
+sysctl net.inet.sctp.assoc_rtx_max=2
+sysctl net.inet.sctp.rto_initial=100
