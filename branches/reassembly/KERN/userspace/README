@@ -1,0 +1,34 @@
+The umem slab allocator used here is released under the CDDL v1.0 license.
+
+--------------
+
+--- Feb 24, 2010 ---
+
+All you should have to do now is :
+make
+
+And to destroy everything:
+make destroy
+
+---
+
+In the old system, in order to build, on Linux and Mac OS X:
+make
+
+On FreeBSD:
+make MAKE=gmake
+
+If you want to make changes to any files then rebuild, first do:
+make destroy
+ ...before doing the above.
+
+Once this is complete, the build/user_lib directory will contain the necessary
+libraries to build userspace applications.  For an example of how to build a
+userspace application, see the file userspace_app.make .
+
+
+NOTES
+----------
+
+On FreeBSD, if the slab allocator is giving your problems, try to
+up the sysctl -w vm.max_proc_mmap value.

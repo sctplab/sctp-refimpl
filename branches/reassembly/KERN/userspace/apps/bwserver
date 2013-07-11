@@ -1,0 +1,45 @@
+#!/bin/sh
+# bwserver builds and launches the bandwidth benchmark server according to the user specifications
+# E.g. ./bwserver serv-port k will build using SCTP kernel stack
+# ./bwserver serv-port u will build using SCTP __Userspace__ stack
+
+if [ $# -ne 2 ];
+then
+    echo "Usage: $0 serv-port mode(enter k for SCTP kernel stack, u for SCTP userpace stack with libumem, or m for SCTP userspace stack with malloc)"
+    exit 1
+fi
+
+if  [ "$2" != "k"  -a  "$2" != "u" -a "$2" != "m" ]; 
+then
+    echo "For mode: enter k for SCTP kernel stack, u for SCTP userpace stack with libumem, or m for SCTP userspace stack with malloc"
+    exit 1
+fi
+
+make clean -f hmakefile
+
+# Build application according to user specified parameters
+if [ "$2" = "m" ];
+then
+    gcc -g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ -D__Userspace_os_Linux -DSCTP_SIMPLE_ALLOCATOR -DSCTP_USERMODE -Wall  -I.  -I../build -o osubw_sctpserver osubw_sctpserver.c -L../build -luserspace -lm -lcrypto -pthread
+elif [ "$2" = "u" ];
+then
+    v1=`uname`
+    v2="-D__Userspace_os_"
+    v3="$v2$v1"
+    v4=`uname -p | sed 's/386/486/' | sed 's/amd/x86-/'`
+if [ "$v1" = "FreeBSD" ];
+then
+    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DSCTP_USERMODE -Wall -march=$v4" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
+else
+    make BUILD=bserver CFLAGS="-g -U__FreeBSD__ -U__APPLE__ -U__Panda__ -U__Windows__ -D__Userspace__ $v3 -DSCTP_USERMODE -Wall" CPPFLAGS="-I.  -I./user_include" LDFLAGS="-L./user_lib -L." LIBS="-lumem -luserspace -lcrypto  -lpthread #-latomic_ops " -f hmakefile
+fi
+else
+    make BUILD=bserver CFLAGS="-g  -USCTP_USERMODE  -Wall" CPPFLAGS="-I/usr/include" LDFLAGS="" LIBS="-lsctp" -f hmakefile
+fi
+
+
+# Launch application with appropriate parameters
+echo "./osubw_sctpserver $1"
+./osubw_sctpserver $1
+
+

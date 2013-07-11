@@ -1,0 +1,128 @@
+This directory contains your kernel patch for
+FreeBSD 6.0, 6.1 and if your brave 7.0.
+
+You should make a directory someplace and 
+unpack this tarball into it.
+
+so you do:
+vvvvvvv  STEP 1   vvvvvvvvvvvvvvv
+cd ~
+mkdir sctpCode
+cd sctpCode
+tar -zxf ~/sctp_tarball.tgz
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Now with that done go in to
+KERN
+
+vvvvvvv  STEP 2   vvvvvvvvvvvvvvv
+cd KERN
+or
+cd ~/sctpCode/KERN
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Once there you should run the script
+setup_freebsd_src.sh. You will be
+asked for you source directory, which
+you own and some other questions. Assuming
+my source directory is
+/usr/src/sys 
+and my home directory where the
+source is, is
+/usr/rrs/sctpCode
+and I am on 7.0 
+
+Here is how I would run it note lines
+with <--cr--> are what I input.
+
+vvvvvvv  STEP 3   vvvvvvvvvvvvvvv
+bash-stewlap: ./setup_freebsd_src.sh<--cr--> 
+Where is your cvs path (e.g. /usr/rrs/sctpCVS)?
+/usr/rrs/sctpCode<--cr--> 
+Where is your kernel source code that you are using (e.g. /usr/src/sys)?
+/usr/src/sys<--cr--> 
+Will you be using 7.0 Current or FreeBSD 6.1 or 6.0 (7 or 61 or 60)?
+7<--cr--> 
+I will use 7.0 then, if unsure hit ctl-c else return
+
+Linking /usr/rrs/sctpCode/KERN/freebsd7/conf/files
+Linking /usr/rrs/sctpCode/KERN/freebsd7/conf/options
+Linking /usr/rrs/sctpCode/KERN/freebsd7/kern/syscalls.master
+Linking /usr/rrs/sctpCode/KERN/freebsd7/kern/uipc_syscalls.c
+Linking /usr/rrs/sctpCode/KERN/freebsd7/net/rtsock.c
+Linking /usr/rrs/sctpCode/KERN/freebsd7/netinet/in_proto.c
+Linking /usr/rrs/sctpCode/KERN/freebsd7/netinet6/in6_proto.c
+Linking /usr/rrs/sctpCode/KERN/freebsd7/sys/mbuf.h
+Linking /usr/rrs/sctpCode/KERN/freebsd7/sys/socket.h
+Preparing kernel SCTP sources now
+Linking in SCTP sources
+mv -f init_sysent.c init_sysent.c.bak
+mv -f syscalls.c syscalls.c.bak
+mv -f ../sys/syscall.h ../sys/syscall.h.bak
+mv -f ../sys/syscall.mk ../sys/syscall.mk.bak
+mv -f ../sys/sysproto.h ../sys/sysproto.h.bak
+sh makesyscalls.sh syscalls.master
+You may now go to your kernel source tree /usr/src/sys
+Configure a new kernel with:
+options SCTP
+And build as normal
+This script as already did a 
+make sysent
+In /usr/src/sys/kern so the syscalls are present
+in the kernel. However you probably need to
+copy these to /usr/include/sys and also
+do a  make buildworld and make installworld
+which will get the sctp_xxx calls into libc
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+vvvvvvv  STEP 4   vvvvvvvvvvvvvvv
+Now once your script is run you are ready to
+go build a kernel. You need to put in it
+
+option SCTP
+
+to turn on SCTP.. and then do a normal
+config and make with your kernel. I won't
+tell you how to do this, if you don't know
+how go see the freebsd.org web site handbook.
+
+You also will probably need to go cp
+from your source tree:
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+vvvvvvv  STEP 5a  vvvvvvvvvvvvvvv
+cd /usr/src/sys/sys <cr>
+cp mbuf.h /usr/include/sys
+cp socket.h /usr/include/sys
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+You will also want to copy out
+syscall.h
+syscall.mk
+sysproto.h
+
+vvvvvvv  STEP 5b  vvvvvvvvvvvvvvv
+cp syscall.h /usr/include/sys/
+cp syscall.mk /usr/include/sys/
+cp sysproto.h /usr/include/sys/
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+Next to get the libsctp.a/.so go in to
+
+vvvvvvv  STEP 6   vvvvvvvvvvvvvvv
+cd sctpCode/KERN/usr.lib
+make
+cp libsctp* /lib
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+And then you probably will want to do
+
+vvvvvvv  STEP 7   vvvvvvvvvvvvvvv
+cd ~/sctpCode/KERN/export_freebsd/netinet
+cp *.h /usr/include/netinet
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+
+At this point you can reboot and you
+should have a working SCTP kernel.

@@ -1,0 +1,18 @@
+X HB should not be disabled until after confirmations
+X New algo for slowing down reduction of sat stuff.
+X prohibit sat stuff if ever the RTT goes under 500ms
+X Should a HB be sent to a both dest on t3? - No just lower threshold
+X bind should zero out when doing ifa_ifawithaddr() so
+  that if the user forgets it will still find the ifa.
+- random numbers for ephemerial ports.
++ need to make sctplib a .so as well as the .a
+- need to be sure no cwnd advance is done with any
+  data chunk marked for retran. Since its the old
+  dest (which you don't know) that actually deserves
+  the bump.
+- Alternate route code should be written so that
+  we go in and attempt to diversify the routes at
+  the SCTP level after the load_addresses_from_init()
+  is run. This will allow us to have as diverse routes
+  as possible.
+
