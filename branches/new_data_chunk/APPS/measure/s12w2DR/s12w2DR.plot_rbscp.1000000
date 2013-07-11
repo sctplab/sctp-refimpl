@@ -1,7 +1,0 @@
-set multiplot
-set title '1000000 byte transfer'
-set key outside Left title '  Legend' box 1
-plot 's12w2DR.sctp.1000000' smooth be title '  sctp-s12w2DR' ,  \
-'s12w2DR.tcp.1000000' smooth be title '  tcp-s12w2DR' , \
-'../base//base.tcp.1000000' smooth be title '  tcp-base' , \
-'../base//base.sctp.1000000' smooth be title '  sctp-base'

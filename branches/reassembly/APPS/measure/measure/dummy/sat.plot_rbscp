@@ -1,6 +1,0 @@
-set xrange [0:100]
-set multiplot
-set title 'Live satellite transfer'
-set key outside Left title '  Legend' box 1
-plot 'sat.sctp' smooth be title '  sctp-no.sym' ,  \
-'sat.tcp' smooth be title '  tcp-no.sym' 
