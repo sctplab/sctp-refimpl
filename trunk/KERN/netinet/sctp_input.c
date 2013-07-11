@@ -5998,7 +5998,8 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 	if ((length > offset) &&
 	    (stcb != NULL) &&
 	    !SCTP_BASE_SYSCTL(sctp_auth_disable) &&
-	    sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.local_auth_chunks) &&
+	    (sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.local_auth_chunks) ||
+	     sctp_auth_is_required_chunk(SCTP_DATA, stcb->asoc.local_auth_chunks)) &&
 	    !stcb->asoc.authenticated) {
 		/* "silently" ignore */
 		SCTP_STAT_INCR(sctps_recvauthmissing);
