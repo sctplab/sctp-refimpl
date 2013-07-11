@@ -293,13 +293,16 @@ handle_notification(char *receive_buffer, int *notDone)
 	}
 	case SCTP_STREAM_RESET_EVENT:
 	{
+#ifdef UPDATED_SRESET
 		int len;
 		char *strscope="unknown";
+#endif
 		strrst = (struct sctp_stream_reset_event *)&snp->sn_strreset_event;
 		if(verbose) {
 			printf("SCTP_STREAM_RESET_EVENT: assoc=0x%x\n",
 			       (uint32_t)strrst->strreset_assoc_id);
 		}
+#ifdef UPDATED_SRESET
 		if (strrst->strreset_flags & SCTP_STRRESET_INBOUND_STR) {
 			strscope = "inbound";
 		} else if (strrst->strreset_flags & SCTP_STRRESET_OUTBOUND_STR) {
@@ -332,7 +335,7 @@ handle_notification(char *receive_buffer, int *notDone)
 				}
 			}
 		}
-		
+#endif		
 	}
 	break;
 	case SCTP_SEND_FAILED:

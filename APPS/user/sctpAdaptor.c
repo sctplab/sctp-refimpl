@@ -212,11 +212,14 @@ handle_notification(int fd,char *notify_buf)
 	  break;
 	case SCTP_STREAM_RESET_EVENT:
 	{
+#if defined(UPDATED_SRESET)
 		int len;
 		char *strscope="unknown";
+#endif
 		strrst = (struct sctp_stream_reset_event *)&snp->sn_strreset_event;
 		printf("SCTP_STREAM_RESET_EVENT: assoc=0x%x\n",
 		       (uint32_t)strrst->strreset_assoc_id);
+#if defined(UPDATED_SRESET)
 		if(strrst->strreset_flags & SCTP_STRRESET_FAILED) {
 			printf("Failed\n");
 			break;
@@ -257,6 +260,7 @@ handle_notification(int fd,char *notify_buf)
 				printf(" have been reset %s\n",strscope);
 			}
 		}
+#endif
 	}
 	break;
 #endif

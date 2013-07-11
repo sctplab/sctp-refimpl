@@ -7370,6 +7370,11 @@ sctp_load_addresses_from_init(struct sctp_tcb *stcb, struct mbuf *m,
 				case SCTP_AUTHENTICATION:
 					stcb->asoc.peer_supports_auth = 1;
 					break;
+				case SCTP_NDATA:
+					if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_USE_NDATA)) {
+						stcb->asoc.peer_supports_ndata = 1;
+					}
+					break;
 				default:
 					/* one I have not learned yet */
 					break;

@@ -870,7 +870,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 */
 		asoc->size_on_reasm_queue = chk->send_size;
 		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-		if (chk->rec.data.TSN_seq == cum_ackp1) {
+		/* Check for evil for non-NDATA chunks */
+		if ((chk->rec.data.TSN_seq == chk->rec.data.fsn_num) && (chk->rec.data.TSN_seq == cum_ackp1)) {
 			if (asoc->fragmented_delivery_inprogress == 0 &&
 			    (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) !=
 			    SCTP_DATA_FIRST_FRAG) {
@@ -1012,7 +1013,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* Find its place */
 	TAILQ_FOREACH(at, &asoc->reasmqueue, sctp_next) {
-		if (SCTP_TSN_GT(at->rec.data.TSN_seq, chk->rec.data.TSN_seq)) {
+		if (SCTP_TSN_GT(at->rec.data.fsn_num, chk->rec.data.fsn_num)) {
 			/*
 			 * one in queue is bigger than the new one, insert
 			 * before this one
@@ -1023,7 +1024,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			next = at;
 			TAILQ_INSERT_BEFORE(at, chk, sctp_next);
 			break;
-		} else if (at->rec.data.TSN_seq == chk->rec.data.TSN_seq) {
+		} else if (at->rec.data.fsn_num == chk->rec.data.fsn_num) {
 			/* Gak, He sent me a duplicate str seq number */
 			/*
 			 * foo bar, I guess I will just free this new guy,
@@ -1055,8 +1056,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* Now the audits */
 	if (prev) {
-		prev_tsn = chk->rec.data.TSN_seq - 1;
-		if (prev_tsn == prev->rec.data.TSN_seq) {
+		prev_tsn = chk->rec.data.fsn_num - 1;
+		if (prev_tsn == prev->rec.data.fsn_num) {
 			/*
 			 * Ok the one I am dropping onto the end is the
 			 * NEXT. A bit of valdiation here.
@@ -1212,8 +1213,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 	}
 	if (next) {
-		post_tsn = chk->rec.data.TSN_seq + 1;
-		if (post_tsn == next->rec.data.TSN_seq) {
+		post_tsn = chk->rec.data.fsn_num + 1;
+		if (post_tsn == next->rec.data.fsn_num) {
 			/*
 			 * Ok the one I am inserting ahead of is my NEXT
 			 * one. A bit of valdiation here.
@@ -1432,17 +1433,16 @@ sctp_does_tsn_belong_to_reasm(struct sctp_association *asoc,
 	return (0);
 }
 
-
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
     struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
     struct sctp_nets *net, uint32_t *high_tsn, int *abort_flag,
-    int *break_flag, int last_chunk)
+    int *break_flag, int last_chunk, uint8_t chtype)
 {
 	/* Process a data chunk */
 	/* struct sctp_tmit_chunk *chk; */
 	struct sctp_tmit_chunk *chk;
-	uint32_t tsn, gap;
+	uint32_t tsn, fsn, gap;
 	struct mbuf *dmbuf;
 	int the_len;
 	int need_reasm_check = 0;
@@ -1453,9 +1453,17 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	uint32_t protocol_id;
 	uint8_t chunk_flags;
 	struct sctp_stream_reset_list *liste;
+	struct sctp_ndata_chunk *nch;
 
 	chk = NULL;
 	tsn = ntohl(ch->dp.tsn);
+	if (chtype == SCTP_NDATA) {
+		nch = (struct sctp_ndata_chunk *)ch;
+		fsn = ntohl(nch->dp.fsn);
+	} else {
+		fsn = tsn;
+		nch = NULL;
+	}
 	chunk_flags = ch->ch.chunk_flags;
 	if ((chunk_flags & SCTP_DATA_SACK_IMMEDIATELY) == SCTP_DATA_SACK_IMMEDIATELY) {
 		asoc->send_sack = 1;
@@ -1678,12 +1686,21 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * From here down we may find ch-> invalid
 	 * so its a good idea NOT to use it.
 	 *************************************/
-
-	the_len = (chk_length - sizeof(struct sctp_data_chunk));
+	if (nch) {
+		the_len = (chk_length - sizeof(struct sctp_ndata_chunk));
+	} else {
+		the_len = (chk_length - sizeof(struct sctp_data_chunk));
+	}
 	if (last_chunk == 0) {
-		dmbuf = SCTP_M_COPYM(*m,
-				     (offset + sizeof(struct sctp_data_chunk)),
-				     the_len, M_NOWAIT);
+		if (nch) {
+			dmbuf = SCTP_M_COPYM(*m,
+					     (offset + sizeof(struct sctp_ndata_chunk)),
+					     the_len, M_NOWAIT);
+		} else {
+			dmbuf = SCTP_M_COPYM(*m,
+					     (offset + sizeof(struct sctp_data_chunk)),
+					     the_len, M_NOWAIT);
+		}
 #ifdef SCTP_MBUF_LOGGING
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
 			struct mbuf *mat;
@@ -1700,7 +1717,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		int l_len;
 		dmbuf = *m;
 		/* lop off the top part */
-		m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
+		if (nch) {
+			m_adj(dmbuf, (offset + sizeof(struct sctp_ndata_chunk)));
+		} else {
+			m_adj(dmbuf, (offset + sizeof(struct sctp_data_chunk)));
+		}
 		if (SCTP_BUF_NEXT(dmbuf) == NULL) {
 			l_len = SCTP_BUF_LEN(dmbuf);
 		} else {
@@ -1852,6 +1873,7 @@ failed_express_del:
 		}
 		chk->rec.data.TSN_seq = tsn;
 		chk->no_fr_allowed = 0;
+		chk->rec.data.fsn_num = fsn;
 		chk->rec.data.stream_seq = strmseq;
 		chk->rec.data.stream_number = strmno;
 		chk->rec.data.payloadtype = protocol_id;
@@ -2612,8 +2634,15 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			stop_proc = 1;
 			continue;
 		}
-		if (ch->ch.chunk_type == SCTP_DATA) {
-			if ((size_t)chk_length < sizeof(struct sctp_data_chunk) + 1) {
+		if ((ch->ch.chunk_type == SCTP_DATA) ||
+		    (ch->ch.chunk_type == SCTP_NDATA)) {
+			int clen;
+			if (ch->ch.chunk_type == SCTP_DATA) {
+				clen = sizeof(struct sctp_data_chunk);
+			} else {
+				clen = sizeof(struct sctp_ndata_chunk);
+			}
+			if ((size_t)chk_length < clen + 1) {
 				/*
 				 * Need to send an abort since we had a
 				 * invalid data chunk.
@@ -2658,7 +2687,7 @@ sctp_process_data(struct mbuf **mm, int iphlen, int *offset, int length,
 			}
 			if (sctp_process_a_data_chunk(stcb, asoc, mm, *offset, ch,
 						      chk_length, net, high_tsn, &abort_flag, &break_flag,
-						      last_chunk)) {
+						      last_chunk, ch->ch.chunk_type)) {
 				num_chunks++;
 			}
 			if (abort_flag)

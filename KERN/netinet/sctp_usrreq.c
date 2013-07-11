@@ -4152,6 +4152,23 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		}
 		break;
 	}
+	case SCTP_NDATA_ENABLE:
+		SCTP_CHECK_AND_CAST(mopt, optval, uint32_t, optsize);		
+		if (*mopt) {
+			/* Turn it on */
+			if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE))  &&
+			    (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_INTERLEAVE_STRMS))) {
+				sctp_feature_on(inp, SCTP_PCB_FLAGS_USE_NDATA);
+			} else {
+				/* Must have Frag interleave and stream interleave on */
+				SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+				error = EINVAL;
+			}
+		} else {
+			/* Turn it off */
+			sctp_feature_off(inp, SCTP_PCB_FLAGS_USE_NDATA);
+		}
+		break;
 	case SCTP_CMT_ON_OFF:
 		if (SCTP_BASE_SYSCTL(sctp_cmt_on_off)) {
 			struct sctp_assoc_value *av;

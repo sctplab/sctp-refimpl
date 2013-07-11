@@ -1799,7 +1799,7 @@ cmd_getloopsleep(char *argv[], int argc)
 int
 cmd_addstreams(char *argv[], int argc)
 {
-#if defined(__BSD_SCTP_STACK__)
+#if defined(__BSD_SCTP_STACK__) && defined(UPDATED_SRESET)
 	char buffer[2048];
 	struct sctp_stream_reset *strrst;
 	memset(buffer,0,sizeof(buffer));
@@ -1830,7 +1830,7 @@ cmd_addstreams(char *argv[], int argc)
 int
 cmd_streamreset(char *argv[], int argc)
 {
-#if defined(__BSD_SCTP_STACK__)
+#if defined(__BSD_SCTP_STACK__) && defined(UPDATED_SRESET)
 	char buffer[2048];
 	struct sctp_stream_reset *strrst;
 	int flag=0;

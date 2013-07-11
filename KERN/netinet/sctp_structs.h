@@ -445,6 +445,7 @@ struct sctp_data_chunkrec {
 	 */
 	uint32_t fast_retran_tsn;	/* sending_seq at the time of FR */
 	struct timeval timetodrop;	/* time we drop it from queue */
+	uint32_t fsn_num;		/* Fragment Sequence Number */
 	uint8_t doing_fast_retransmit;
 	uint8_t rcv_flags;	/* flags pulled from data chunk on inbound for
 				 * outbound holds sending flags for PR-SCTP.
@@ -557,6 +558,7 @@ struct sctp_stream_queue_pending {
 	struct sctp_nets *net;
 	TAILQ_ENTRY (sctp_stream_queue_pending) next;
 	TAILQ_ENTRY (sctp_stream_queue_pending) ss_next;
+	uint32_t fsn;
 	uint32_t length;
 	uint32_t timetolive;
 	uint32_t ppid;
@@ -1217,6 +1219,7 @@ struct sctp_association {
 	uint8_t peer_supports_strreset;
 	uint8_t local_strreset_support;
 
+	uint8_t peer_supports_ndata;
         uint8_t peer_supports_nat;
 	/*
 	 * packet drop's are supported by the peer, we don't really care
