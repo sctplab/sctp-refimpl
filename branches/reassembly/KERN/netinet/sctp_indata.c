@@ -133,28 +133,21 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
+	memset(read_queue_e, 0, sizeof(struct sctp_queued_to_read));
 	read_queue_e->sinfo_stream = stream_no;
 	read_queue_e->sinfo_ssn = stream_seq;
 	read_queue_e->sinfo_flags = (flags << 8);
 	read_queue_e->sinfo_ppid = ppid;
 	read_queue_e->sinfo_context = context;
-	read_queue_e->sinfo_timetolive = 0;
 	read_queue_e->sinfo_tsn = tsn;
 	read_queue_e->sinfo_cumtsn = tsn;
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
+	TAILQ_INIT(&read_queue_e->reasm);
 	read_queue_e->whoFrom = net;
-	read_queue_e->length = 0;
 	atomic_add_int(&net->ref_count, 1);
 	read_queue_e->data = dm;
-	read_queue_e->spec_flags = 0;
-	read_queue_e->tail_mbuf = NULL;
-	read_queue_e->aux_data = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
-	read_queue_e->do_not_ref_stcb = 0;
-	read_queue_e->end_added = 0;
-	read_queue_e->some_taken = 0;
-	read_queue_e->pdapi_aborted = 0;
 failed_build:
 	return (read_queue_e);
 }
@@ -173,28 +166,21 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	if (read_queue_e == NULL) {
 		goto failed_build;
 	}
+	memset(read_queue_e, 0, sizeof(struct sctp_queued_to_read));
 	read_queue_e->sinfo_stream = chk->rec.data.stream_number;
 	read_queue_e->sinfo_ssn = chk->rec.data.stream_seq;
 	read_queue_e->sinfo_flags = (chk->rec.data.rcv_flags << 8);
 	read_queue_e->sinfo_ppid = chk->rec.data.payloadtype;
 	read_queue_e->sinfo_context = stcb->asoc.context;
-	read_queue_e->sinfo_timetolive = 0;
+	TAILQ_INIT(&read_queue_e->reasm);
 	read_queue_e->sinfo_tsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_cumtsn = chk->rec.data.TSN_seq;
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = chk->whoTo;
-	read_queue_e->aux_data = NULL;
-	read_queue_e->length = 0;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
 	read_queue_e->data = chk->data;
-	read_queue_e->tail_mbuf = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
-	read_queue_e->spec_flags = 0;
-	read_queue_e->do_not_ref_stcb = 0;
-	read_queue_e->end_added = 0;
-	read_queue_e->some_taken = 0;
-	read_queue_e->pdapi_aborted = 0;
 failed_build:
 	return (read_queue_e);
 }
@@ -843,7 +829,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				return;
 			}
 		}
-		TAILQ_FOREACH(at, strm->reasm, sctp_next) {
+		TAILQ_FOREACH(at, &control->reasm, sctp_next) {
 			if (SCTP_TSN_GT(at->rec.data.fsn_num, chk->rec.data.fsn_num)) {
 				/*
 				 * This one in queue is bigger than the new one, insert
@@ -877,7 +863,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					/* check it first */
 					asoc->size_on_reasm_queue += chk->send_size;
 					sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-					TAILQ_INSERT_AFTER(&asoc->reasmqueue, at, chk, sctp_next);
+					TAILQ_INSERT_AFTER(&control->reasm, at, chk, sctp_next);
 					break;
 				}
 			}
@@ -885,7 +871,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* Ok lets see if we can suck any up into the control structure */
 	next_fsn = control->fsn_included + 1;
-	TAILQ_FOREACH(at, strm->reasm, sctp_next) {
+	TAILQ_FOREACH(at, &control->reasm, sctp_next) {
 		if (at->rec.data.fsn_num == next_fsn) {
 			/* We can add this one now to the control */
 			next_fsn++;
@@ -903,7 +889,7 @@ find_reasm_entry(struct sctp_stream_in *strm, uint16_t strmseq, uint8_t chflags)
 	if (chflags & SCTP_DATA_UNORDERED) {
 		return (strm->unord_reasm);
 	}
-	TAILQ_FOREACH(reasm, &strm->inqueue ,next_instrm) {
+	TAILQ_FOREACH(reasm, &strm->inqueue, next_instrm) {
 		if (reasm->sinfo_ssn == strmseq) {
 			break;
 		}
@@ -4620,7 +4606,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_stream_in *strm;
 	/*
-	 * For now large messages held on the reasmqueue that are
+	 * For now large messages held on the stream reasm that are
 	 * complete will be tossed too. We could in theory do more
 	 * work to spin through and stop after dumping one msg aka
 	 * seeing the start of a new msg at the head, and call the
@@ -4646,9 +4632,14 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	}
 	TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
 	if (control->on_read_q == 0) {
-
+		sctp_free_remote_addr(ctl->whoFrom);
+		if (control->data) {
+			sctp_m_freem(control->data);
+			control->data = NULL;
+		}
+		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_readq), control);
+		SCTP_DECR_READQ_COUNT();
 	}
-	
 }
 
 

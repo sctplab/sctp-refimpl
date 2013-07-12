@@ -1165,7 +1165,6 @@ sctp_init_asoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	TAILQ_INIT(&asoc->asconf_send_queue);
 	TAILQ_INIT(&asoc->send_queue);
 	TAILQ_INIT(&asoc->sent_queue);
-	TAILQ_INIT(&asoc->reasmqueue);
 	TAILQ_INIT(&asoc->resetHead);
 	asoc->max_inbound_streams = inp->sctp_ep.max_open_streams_intome;
 	TAILQ_INIT(&asoc->asconf_queue);
