@@ -4801,6 +4801,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	}
 #endif
 	TAILQ_INSERT_TAIL(&inp->read_queue, control, next);
+	control->on_read_q = 1;
 	if (inp_read_lock_held == 0)
 		SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {

@@ -518,6 +518,8 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	/* Non sinfo stuff */
 	uint32_t length;	/* length of data */
 	uint32_t held_length;	/* length held in sb */
+	uint32_t top_fsn;	/* Highest FSN in queue */
+	uint32_t fsn_included;  /* Highest FSN in *data portion */
 	struct sctp_nets *whoFrom;	/* where it came from */
 	struct mbuf *data;	/* front of the mbuf chain of data with
 				 * PKT_HDR */
@@ -525,12 +527,17 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	struct mbuf *aux_data;  /* used to hold/cache  control if o/s does not take it from us */
 	struct sctp_tcb *stcb;	/* assoc, used for window update */
 	TAILQ_ENTRY(sctp_queued_to_read) next;
+	TAILQ_ENTRY(sctp_queued_to_read) next_instrm;
+	struct sctpchunk_listhead reasm;
 	uint16_t port_from;
 	uint16_t spec_flags;	/* Flags to hold the notification field */
 	uint8_t  do_not_ref_stcb;
 	uint8_t  end_added;
 	uint8_t  pdapi_aborted;
 	uint8_t  some_taken;
+	uint8_t  last_frag_seen;
+	uint8_t  first_frag_seen;
+	uint8_t  on_read_q;
 };
 
 /* This data structure will be on the outbound
@@ -583,6 +590,7 @@ struct sctp_stream_queue_pending {
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
 	struct sctp_readhead inqueue;
+	struct sctp_queued_to_read *unord_reasm;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
 	uint8_t  delivery_started;
@@ -844,9 +852,6 @@ struct sctp_association {
 	 */
 	struct sctpchunk_listhead sent_queue;
 	struct sctpchunk_listhead send_queue;
-
-	/* re-assembly queue for fragmented chunks on the inbound path */
-	struct sctpchunk_listhead reasmqueue;
 
 	/* Scheduling queues */
 	union scheduling_data ss_data;
