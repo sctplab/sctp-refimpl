@@ -4153,7 +4153,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		break;
 	}
 	case SCTP_NDATA_ENABLE:
-		SCTP_CHECK_AND_CAST(mopt, optval, uint32_t, optsize);		
+		SCTP_CHECK_AND_CAST(mopt, optval, uint32_t, optsize);
 		if (*mopt) {
 			/* Turn it on */
 			if ((sctp_is_feature_on(inp, SCTP_PCB_FLAGS_FRAG_INTERLEAVE))  &&
