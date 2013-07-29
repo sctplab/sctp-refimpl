@@ -44,8 +44,6 @@
 #if defined(__Userspace_os_Windows)
 #include <winsock2.h>
 #include <ws2tcpip.h>
-#include <ws2ipdef.h>
-#include <ws2def.h>
 #include <iphlpapi.h>
 #include <Mswsock.h>
 #include <Windows.h>
@@ -63,6 +61,10 @@ typedef struct
 	CRITICAL_SECTION waiters_count_lock;
 	HANDLE events_[C_MAX_EVENTS];
 } userland_cond_t;
+void InitializeXPConditionVariable(userland_cond_t *);
+void DeleteXPConditionVariable(userland_cond_t *);
+int SleepXPConditionVariable(userland_cond_t *, userland_mutex_t *);
+void WakeAllXPConditionVariable(userland_cond_t *);
 #define InitializeConditionVariable(cond) InitializeXPConditionVariable(cond)
 #define DeleteConditionVariable(cond) DeleteXPConditionVariable(cond)
 #define SleepConditionVariableCS(cond, mtx, time) SleepXPConditionVariable(cond, mtx)
@@ -210,8 +212,10 @@ typedef HANDLE userland_thread_t;
 
 typedef char* caddr_t;
 
+int Win_getifaddrs(struct ifaddrs**);
 #define getifaddrs(interfaces)  (int)Win_getifaddrs(interfaces)
-#define if_nametoindex(x) (int)win_if_nametoindex(x)
+int win_if_nametoindex(const char *);
+#define if_nametoindex(x) win_if_nametoindex(x)
 
 #define bzero(buf, len) memset(buf, 0, len)
 #define bcopy(srcKey, dstKey, len) memcpy(dstKey, srcKey, len)
