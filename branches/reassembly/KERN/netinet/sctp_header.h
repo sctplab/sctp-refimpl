@@ -175,6 +175,7 @@ struct sctp_ndata {
 	uint16_t stream_id;
 	uint16_t stream_sequence;
 	uint32_t protocol_id;
+	uint32_t msg_id;	/* Fragment Index */
 	uint32_t fsn;		/* Fragment Sequence Number */
 	/* user data follows */
 } SCTP_PACKED;

@@ -152,7 +152,7 @@ failed_build:
 	return (read_queue_e);
 }
 
-
+#ifdef FOOOO
 /*
  * Build out our readq entry based on the incoming packet.
  */
@@ -184,7 +184,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 failed_build:
 	return (read_queue_e);
 }
-
+#endif
 
 struct mbuf *
 sctp_build_ctl_nchunk(struct sctp_inpcb *inp, struct sctp_sndrcvinfo *sinfo)
@@ -357,15 +357,9 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 	}
 }
 
-static void
-sctp_service_reassembly(struct sctp_tcb *stcb, struct sctp_association *asoc)
-{
-	struct sctp_tmit_chunk *chk, *nchk;
-
-}
-
-int
+static int
 sctp_place_control_in_stream(struct sctp_stream_in *strm, 
+     struct sctp_association *asoc,
      struct sctp_queued_to_read *control)
 {
 	struct sctp_queued_to_read *at;
@@ -379,17 +373,17 @@ sctp_place_control_in_stream(struct sctp_stream_in *strm,
 		return (0);
 	} else {
 		TAILQ_FOREACH(at, &strm->inqueue, next_instrm) {
-			if (SCTP_SSN_GT(at->sinfo_ssn, control->sinfo_ssn)) {
+			if (SCTP_TSN_GT(at->msg_id, control->msg_id)) {
 				/*
 				 * one in queue is bigger than the
 				 * new one, insert before this one
 				 */
 				TAILQ_INSERT_BEFORE(at, control, next_instrm);
 				break;
-			} else if (at->sinfo_ssn == control->sinfo_ssn) {
+			} else if (at->msg_id == control->msg_id) {
 				/*
-				 * Gak, He sent me a duplicate str
-				 * seq number
+				 * Gak, He sent me a duplicate msg
+				 * id number?? how
 				 */
 				/*
 				 * foo bar, I guess I will just free
@@ -431,7 +425,7 @@ sctp_place_control_in_stream(struct sctp_stream_in *strm,
 	return (0);
 }
 
-void
+static void
 sctp_abort_in_reasm(struct sctp_tcb *stcb, 
     struct sctp_stream_in *strm, 
     struct sctp_queued_to_read *control,
@@ -601,7 +595,7 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 		 * Ok, we did not deliver this guy, find the correct place
 		 * to put it on the queue.
 		 */
-		(void)sctp_place_control_in_stream(strm, control);
+		(void)sctp_place_control_in_stream(strm, asoc, control);
 	}
 }
 
@@ -630,13 +624,13 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
 		} else {
 			/* Can't do anything more on this stream */
-			return;
+			return(ret);
 		}
 		control = TAILQ_NEXT(control, next_instrm);
 	}
 deliver_more:
 	if (control == NULL) {
-		return;
+		return(ret);
 	}
 	next_to_del = strm->last_sequence_delivered + 1;
 	if ((control->sinfo_ssn == next_to_del) && 
@@ -647,10 +641,22 @@ deliver_more:
 			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
 			ret++;
-		}
+		} 
 		if (((control->sinfo_flags >> 8) & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG) {
 			/* A singleton now slipping through - mark it non-revokable too */
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
+		} else if (control->end_added == 0) {
+			/* Check if we can defer adding until its all there */
+			uint32_t pd_point;
+			if (stcb->sctp_socket) {
+				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
+				    stcb->sctp_ep->partial_delivery_point);
+			} else {
+				pd_point = stcb->sctp_ep->partial_delivery_point;
+			}
+			if (control->length < pd_point) {
+				goto out;
+			}
 		}
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		                  control,
@@ -662,10 +668,11 @@ deliver_more:
 			goto deliver_more;
 		}
 	}
+out:
 	return (ret);
 }
 
-void
+static void
 sctp_setup_tail_pointer(struct sctp_queued_to_read *control)
 {
 	struct mbuf *m, *prev = NULL;
@@ -697,7 +704,7 @@ sctp_setup_tail_pointer(struct sctp_queued_to_read *control)
 	}
 }
 
-void
+static void
 sctp_add_to_tail_pointer(struct sctp_queued_to_read *control, struct mbuf *m)
 {
 	struct mbuf *prev=NULL;
@@ -733,8 +740,10 @@ sctp_add_to_tail_pointer(struct sctp_queued_to_read *control, struct mbuf *m)
 	}
 }
 
-void
-sctp_add_chk_to_control(struct sctp_queued_to_read *control, struct sctp_tmit_chunk *chk)
+static void
+sctp_add_chk_to_control(struct sctp_queued_to_read *control, 
+   struct sctp_tcb *stcb, struct sctp_association *asoc,
+   struct sctp_tmit_chunk *chk)
 {
 	/* 
 	 * Given a control and a chunk, merge the 
@@ -766,18 +775,18 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control, struct sctp_tmit_ch
  */
 static void
 sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
-    struct sctp_stream_in *strm, 
-    struct sctp_queued_to_read *control,
-    struct sctp_tmit_chunk *chk, 
-    int created_control;
-    int *abort_flag)
+			  struct sctp_stream_in *strm, 
+			  struct sctp_queued_to_read *control,
+			  struct sctp_tmit_chunk *chk, 
+			  int created_control,
+			  int *abort_flag)
 {
-	uint32_t prev_fsn;
+	uint32_t next_fsn;
 	struct sctp_tmit_chunk *at;
 
 	/* Must be added to the stream-in queue */
 	if (created_control) {
-		if (sctp_place_control_in_stream(strm, control)) {
+		if (sctp_place_control_in_stream(strm, asoc, control)) {
 			/* Duplicate SSN? */
 			sctp_m_freem(chk->data);
 			chk->data = NULL;
@@ -806,7 +815,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		control->first_frag_seen = 1;
 		control->fsn_included = chk->rec.data.fsn_num;
-		asoc->size_on_reasm_queue -= chk->send_size;
 		control->data = chk->data;
 		sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 		chk->data = NULL;
@@ -875,22 +883,22 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		if (at->rec.data.fsn_num == next_fsn) {
 			/* We can add this one now to the control */
 			next_fsn++;
-			sctp_add_chk_to_control(control, chk);
+			sctp_add_chk_to_control(control, stcb, asoc, chk);
 		} else {
 			break;
 		}
 	}
 }
 
-struct sctp_queued_to_read *
-find_reasm_entry(struct sctp_stream_in *strm, uint16_t strmseq, uint8_t chflags)
+static struct sctp_queued_to_read *
+find_reasm_entry(struct sctp_stream_in *strm, uint32_t msg_id, uint8_t chflags)
 {
 	struct sctp_queued_to_read *reasm;
 	if (chflags & SCTP_DATA_UNORDERED) {
 		return (strm->unord_reasm);
 	}
 	TAILQ_FOREACH(reasm, &strm->inqueue, next_instrm) {
-		if (reasm->sinfo_ssn == strmseq) {
+		if (reasm->msg_id == msg_id) {
 			break;
 		}
 	}
@@ -906,7 +914,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	/* Process a data chunk */
 	/* struct sctp_tmit_chunk *chk; */
 	struct sctp_tmit_chunk *chk;
-	uint32_t tsn, fsn, gap;
+	uint32_t tsn, fsn, gap, msg_id;
 	struct mbuf *dmbuf;
 	int the_len;
 	int need_reasm_check = 0;
@@ -924,9 +932,11 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	tsn = ntohl(ch->dp.tsn);
 	if (chtype == SCTP_NDATA) {
 		nch = (struct sctp_ndata_chunk *)ch;
+		msg_id = ntohl(nch->dp.msg_id);
 		fsn = ntohl(nch->dp.fsn);
 	} else {
 		fsn = tsn;
+		msg_id = (uint32_t)(ntohs(ch->dp.stream_sequence));
 		nch = NULL;
 	}
 	chunk_flags = ch->ch.chunk_flags;
@@ -1046,7 +1056,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		return (0);
 	}
-	strm = asoc->strmin[strmno];
+	strm = &asoc->strmin[strmno];
 	strmseq = ntohs(ch->dp.stream_sequence);
 	/* 
 	 * If we are using NDATA, and not we are a fragmented
@@ -1055,7 +1065,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		/* See if we can find the re-assembly entity */
-		control = find_reasm_entry(strm, strmseq, chunk_flags);
+		control = find_reasm_entry(strm, msg_id, chunk_flags);
 	}
 	/* now do the tests */
 	if (((asoc->cnt_on_all_streams +
@@ -1241,7 +1251,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					   protocol_id,
 					   strmno, strmseq,
 					   chunk_flags,
-					   NULL, fsn);
+					   NULL, fsn, msg_id);
 		if (control == NULL) {
 			SCTP_STAT_INCR(sctps_nomem);
 			return (0);
@@ -1439,7 +1449,7 @@ finish_express_del:
 			/* All can be removed */
 			TAILQ_FOREACH_SAFE(ctl, &asoc->pending_reply_queue, next, nctl) {
 				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
-				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
+				sctp_queue_data_to_stream(stcb, strm, asoc, ctl, abort_flag, &need_reasm_check);
 				if (*abort_flag) {
 					return (0);
 				}
@@ -1455,7 +1465,7 @@ finish_express_del:
 				 * ctl->sinfo_tsn > liste->tsn
 				 */
 				TAILQ_REMOVE(&asoc->pending_reply_queue, ctl, next);
-				sctp_queue_data_to_stream(stcb, asoc, ctl, abort_flag);
+				sctp_queue_data_to_stream(stcb, strm, asoc, ctl, abort_flag, &need_reasm_check);
 				if (*abort_flag) {
 					return (0);
 				}
@@ -4603,8 +4613,8 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	uint16_t stream, uint16_t seq)
 {
 	struct sctp_queued_to_read *control;
-	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_stream_in *strm;
+	struct sctp_tmit_chunk *chk, *nchk;
 	/*
 	 * For now large messages held on the stream reasm that are
 	 * complete will be tossed too. We could in theory do more
@@ -4613,7 +4623,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	 * delivery function... to see if it can be delivered... But
 	 * for now we just dump everything on the queue.
 	 */
-	strm = asoc->strmin[strmno];
+	strm = &asoc->strmin[stream];
 	control = find_reasm_entry(strm, seq, 0);
 	if (control == NULL) {
 		/* Not found */
@@ -4632,7 +4642,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	}
 	TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
 	if (control->on_read_q == 0) {
-		sctp_free_remote_addr(ctl->whoFrom);
+		sctp_free_remote_addr(control->whoFrom);
 		if (control->data) {
 			sctp_m_freem(control->data);
 			control->data = NULL;
@@ -4665,7 +4675,6 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 	unsigned int i, fwd_sz, m_size;
 	uint32_t str_seq;
 	struct sctp_stream_in *strm;
-	struct sctp_tmit_chunk *chk, *nchk;
 	struct sctp_queued_to_read *ctl, *sv;
 
 	asoc = &stcb->asoc;

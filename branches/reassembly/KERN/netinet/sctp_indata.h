@@ -49,7 +49,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
     struct mbuf *dm);
 
 
-#define sctp_build_readq_entry_mac(_ctl, in_it, context, net, tsn, ppid, stream_no, stream_seq, flags, dm, tfsn) do { \
+#define sctp_build_readq_entry_mac(_ctl, in_it, context, net, tsn, ppid, stream_no, stream_seq, flags, dm, tfsn, msgid) do { \
 	if (_ctl) { \
 		atomic_add_int(&((net)->ref_count), 1); \
 		memset(_ctl, 0, sizeof(struct sctp_queued_to_read)); \
@@ -57,6 +57,7 @@ sctp_build_readq_entry(struct sctp_tcb *stcb,
 		(_ctl)->sinfo_ssn = stream_seq; \
 		TAILQ_INIT(&_ctl->reasm);	\
 		(_ctl)->top_fsn = tfsn; \
+		(_ctl)->msg_id = msgid; \
 		(_ctl)->sinfo_flags = (flags << 8); \
 		(_ctl)->sinfo_ppid = ppid; \
 		(_ctl)->sinfo_context = context; \

@@ -7733,7 +7733,7 @@ sctp_drain_mbufs(struct sctp_tcb *stcb)
 					asoc->size_on_reasm_queue = sctp_sbspace_sub(asoc->size_on_reasm_queue, chk->send_size);
 					sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 					SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
-					TAILQ_REMOVE(&asoc->strmin[strmat].inqueue.reasm, chk, sctp_next);
+					TAILQ_REMOVE(&ctl->reasm, chk, sctp_next);
 					if (chk->data) {
 						sctp_m_freem(chk->data);
 						chk->data = NULL;

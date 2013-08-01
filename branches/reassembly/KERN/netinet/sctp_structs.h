@@ -516,6 +516,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint32_t sinfo_cumtsn;	/* Use this in reassembly as last TSN */
 	sctp_assoc_t sinfo_assoc_id;	/* our assoc id */
 	/* Non sinfo stuff */
+	uint32_t msg_id;	/* Fragment Index */
 	uint32_t length;	/* length of data */
 	uint32_t held_length;	/* length held in sb */
 	uint32_t top_fsn;	/* Highest FSN in queue */
@@ -566,6 +567,7 @@ struct sctp_stream_queue_pending {
 	TAILQ_ENTRY (sctp_stream_queue_pending) next;
 	TAILQ_ENTRY (sctp_stream_queue_pending) ss_next;
 	uint32_t fsn;
+	uint32_t msg_id;
 	uint32_t length;
 	uint32_t timetolive;
 	uint32_t ppid;
@@ -918,7 +920,7 @@ struct sctp_association {
 	uint32_t stream_scheduling_module;
 
 	uint32_t vrf_id;
-
+	uint32_t assoc_msg_id;
 	uint32_t cookie_preserve_req;
 	/* ASCONF next seq I am sending out, inits at init-tsn */
 	uint32_t asconf_seq_out;

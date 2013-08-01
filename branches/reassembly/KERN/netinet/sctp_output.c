@@ -3227,10 +3227,11 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 #endif
 
 	/**
-	 * Rules: - Find the route if needed, cache if I can. - Look at
-	 * interface address in route, Is it in the bound list. If so we
-	 * have the best source. - If not we must rotate amongst the
-	 * addresses.
+	 * Rules: 
+	 * - Find the route if needed, cache if I can. 
+	 * - Look at interface address in route, Is it in the bound list. If so we
+	 *   have the best source. 
+	 * - If not we must rotate amongst the addresses.
 	 *
 	 * Cavets and issues
 	 *
@@ -6535,6 +6536,7 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
+	sp->fsn = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
 	if (sp->sinfo_flags & SCTP_ADDR_OVER) {
 		sp->net = net;
 		atomic_add_int(&sp->net->ref_count, 1);
@@ -7801,6 +7803,7 @@ re_look:
 		ndchkh->dp.stream_id = htons(strq->stream_no);
 		ndchkh->dp.stream_sequence = htons(chk->rec.data.stream_seq);
 		ndchkh->dp.protocol_id = chk->rec.data.payloadtype;
+		ndchkh->dp.msg_id = htonl(sp->msg_id);
 		ndchkh->dp.fsn = htonl(sp->fsn);
 		sp->fsn++;
 		ndchkh->ch.chunk_length = htons(chk->send_size);
@@ -12748,6 +12751,7 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
+	sp->fsn = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
 	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
