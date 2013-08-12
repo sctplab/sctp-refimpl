@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 253472 2013-07-19 21:16:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 254248 2013-08-12 13:52:15Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -7330,16 +7330,16 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 
 static uint32_t
 sctp_move_to_outqueue(struct sctp_tcb *stcb,
-		      struct sctp_stream_out *strq,
-		      uint32_t goal_mtu,
-		      uint32_t frag_point,
-		      int *locked,
-		      int *giveup,
-		      int eeor_mode,
-		      int *bail,
-		      int so_locked
+                      struct sctp_stream_out *strq,
+                      uint32_t goal_mtu,
+                      uint32_t frag_point,
+                      int *locked,
+                      int *giveup,
+                      int eeor_mode,
+                      int *bail,
+                      int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
-		      SCTP_UNUSED
+                      SCTP_UNUSED
 #endif
 	)
 {
@@ -7394,11 +7394,11 @@ one_more_time:
 			if ((sp->put_last_out == 0) && (sp->discard_rest == 0)) {
 				SCTP_PRINTF("Gak, put out entire msg with NO end!-1\n");
 				SCTP_PRINTF("sender_done:%d len:%d msg_comp:%d put_last_out:%d send_lock:%d\n",
-					    sp->sender_all_done,
-					    sp->length,
-					    sp->msg_is_complete,
-					    sp->put_last_out,
-					    send_lock_up);
+				            sp->sender_all_done,
+				            sp->length,
+				            sp->msg_is_complete,
+				            sp->put_last_out,
+				            send_lock_up);
 			}
 			if ((TAILQ_NEXT(sp, next) == NULL) && (send_lock_up  == 0)) {
 				SCTP_TCB_SEND_LOCK(stcb);
@@ -7860,7 +7860,7 @@ re_look:
 		/* we can't be locked to it */
 		*locked = 0;
 		stcb->asoc.locked_on_sending = NULL;
-	} else  {
+	} else {
 		/* more to go, we are locked */
 		if (stcb->asoc.peer_supports_ndata == 0)
 			*locked = 1;

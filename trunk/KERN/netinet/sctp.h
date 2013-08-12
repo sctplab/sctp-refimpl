@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 246595 2013-02-09 17:26:14Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp.h 254248 2013-08-12 13:52:15Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_H_
@@ -569,7 +569,7 @@ struct sctp_error_unrecognized_chunk {
 #define SCTP_PCB_FLAGS_ASSOC_RESETEVNT   0x0000000020000000
 #define SCTP_PCB_FLAGS_STREAM_CHANGEEVNT 0x0000000040000000
 #define SCTP_PCB_FLAGS_RECVNSENDFAILEVNT 0x0000000080000000
-#define SCTP_PCB_FLAGS_USE_NDATA	 0x0000000100000000
+#define SCTP_PCB_FLAGS_USE_NDATA         0x0000000100000000
 
 /*-
  * mobility_features parameters (by micchie).Note
