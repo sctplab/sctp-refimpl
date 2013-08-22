@@ -480,6 +480,13 @@ typedef struct rtentry	sctp_rtentry_t;
 /* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
+#if __FreeBSD_version > 1000044
+/*
+ * SCTP protocol specific mbuf flags.
+ */
+#define	M_NOTIFICATION		M_PROTO5	/* SCTP notification */
+#endif
+
 /*
  * IP output routines
  */
