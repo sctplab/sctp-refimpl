@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 250962 2013-05-24 09:21:18Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 254527 2013-08-19 14:25:11Z andre $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -484,7 +484,7 @@ typedef struct rtentry	sctp_rtentry_t;
 /*
  * SCTP protocol specific mbuf flags.
  */
-#define	M_NOTIFICATION		M_PROTO5	/* SCTP notification */
+#define	M_NOTIFICATION		M_PROTO1	/* SCTP notification */
 #endif
 
 /*
