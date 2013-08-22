@@ -537,6 +537,7 @@ typedef struct rtentry	sctp_rtentry_t;
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
 }
 #endif
+
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed,
 		      int want_header, int how, int allonebuf, int type);
