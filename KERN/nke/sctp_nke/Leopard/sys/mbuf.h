@@ -218,7 +218,6 @@ struct mbuf {
 #define	M_FIRSTFRAG	0x0800	/* packet is first fragment */
 #define	M_LASTFRAG	0x1000	/* packet is last fragment */
 #define	M_PROMISC	0x2000	/* packet is promiscuous (shouldn't go to stack) */
-#define M_NOTIFICATION  M_PROTO1 /* notification event */
 
 /* flags copied when copying m_pkthdr */
 #define M_COPYFLAGS     (M_PKTHDR|M_EOR|M_PROTO1|M_PROTO2|M_PROTO3 | \

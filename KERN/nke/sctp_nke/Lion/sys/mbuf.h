@@ -258,7 +258,6 @@ struct mbuf {
 #define	M_PROMISC	0x2000	/* packet is promiscuous (shouldn't go to stack) */
 #define	M_HASFCS	0x4000	/* packet has FCS */
 #define	M_TAGHDR	0x8000	/* m_tag hdr structure at top of mbuf data */
-#define M_NOTIFICATION  M_PROTO1 /* notification event */
 
 /*
  * Flags to purge when crossing layers.
