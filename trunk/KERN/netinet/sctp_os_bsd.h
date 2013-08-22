@@ -490,6 +490,31 @@ typedef struct rtentry	sctp_rtentry_t;
 /*
  * IP output routines
  */
+#if __FreeBSD_version > 1000044
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
+{ \
+	int o_flgs = IP_RAWOUTPUT; \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && \
+	    local_stcb->sctp_ep && \
+	    local_stcb->sctp_ep->sctp_socket) \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
+	m_clrprotoflags(o_pak); \
+	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
+}
+
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
+{ \
+	struct sctp_tcb *local_stcb = stcb; \
+	m_clrprotoflags(o_pak); \
+	if (local_stcb && local_stcb->sctp_ep) \
+		result = ip6_output(o_pak, \
+				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
+				    (ro), 0, 0, ifp, NULL); \
+	else \
+		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
+}
+#else
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = IP_RAWOUTPUT; \
@@ -511,7 +536,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
 }
-
+#endif
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed,
 		      int want_header, int how, int allonebuf, int type);
