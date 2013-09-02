@@ -563,7 +563,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 #define SCTP_SHA256_CTX		SHA256_CTX
 #define SCTP_SHA256_INIT	SHA256_Init
 #define SCTP_SHA256_UPDATE	SHA256_Update
-#define SCTP_SHA3256_FINAL(x,y)	SHA256_Final((caddr_t)x, y)
+#define SCTP_SHA256_FINAL(x,y)	SHA256_Final((caddr_t)x, y)
 #endif
 
 #endif
