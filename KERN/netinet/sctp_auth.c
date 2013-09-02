@@ -755,10 +755,11 @@ sctp_default_supported_hmaclist(void)
 #endif
 	if (new_list == NULL)
 		return (NULL);
-	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
 #if defined(SCTP_SUPPORT_HMAC_SHA256)
+	/* We prefer SHA256, so list it first */
 	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA256);
 #endif
+	(void)sctp_auth_add_hmacid(new_list, SCTP_AUTH_HMAC_ID_SHA1);
 	return (new_list);
 }
 
