@@ -806,13 +806,12 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc)
 			 * but should we?
 			 */
 			if (stcb->sctp_socket) {
-				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
+				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
 				               stcb->sctp_ep->partial_delivery_point);
 			} else {
 				pd_point = stcb->sctp_ep->partial_delivery_point;
 			}
 			if (sctp_is_all_msg_on_reasm(asoc, &tsize) || (tsize >= pd_point)) {
-
 				/*
 				 * Yes, we setup to start reception, by
 				 * backing down the TSN just in case we
@@ -2503,7 +2502,7 @@ sctp_service_queues(struct sctp_tcb *stcb, struct sctp_association *asoc)
 		 * delivery queue and something can be delivered.
 		 */
 		if (stcb->sctp_socket) {
-			pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
+			pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
 				       stcb->sctp_ep->partial_delivery_point);
 		} else {
 			pd_point = stcb->sctp_ep->partial_delivery_point;
