@@ -171,10 +171,10 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 	      sctp_assoc_t *id)
 {
 	char *buf;
-	int i, ret, cnt, *aa;
+	int i, ret, *aa;
 	char *cpto;
 	const struct sockaddr *at;
-	size_t len = sizeof(int);
+	size_t len;
 
 	/* validate the address count and list */
 	if ((addrs == NULL) || (addrcnt <= 0)) {
@@ -185,8 +185,8 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 		errno = E2BIG;
 		return (-1);
 	}
+	len = sizeof(int);
 	at = addrs;
-	cnt = 0;
 	cpto = buf + sizeof(int);
 	/* validate all the addresses and get the size */
 	for (i = 0; i < addrcnt; i++) {
@@ -231,6 +231,7 @@ sctp_connectx(int sd, const struct sockaddr *addrs, int addrcnt,
 	if ((ret == 0) && (id != NULL)) {
 		*id = *(sctp_assoc_t *)buf;
 	}
+	free(buf);
 	return (ret);
 }
 
