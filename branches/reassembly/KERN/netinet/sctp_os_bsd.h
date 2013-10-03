@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 250962 2013-05-24 09:21:18Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 255160 2013-09-02 22:48:41Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -116,6 +116,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 250962 2013-05-24 09:21:18Z t
 
 #if __FreeBSD_version >= 700000
 #include <netinet/ip_options.h>
+#endif
+
+#include <crypto/sha1.h>
+#if defined(SCTP_SUPPORT_HMAC_SHA256)
+#include <crypto/sha2/sha2.h>
 #endif
 
 #if defined(__FreeBSD__)
@@ -480,9 +485,41 @@ typedef struct rtentry	sctp_rtentry_t;
 /* This is re-pulse ourselves for sendbuf */
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
+#if __FreeBSD_version > 1000044
+/*
+ * SCTP protocol specific mbuf flags.
+ */
+#define	M_NOTIFICATION		M_PROTO1	/* SCTP notification */
+#endif
+
 /*
  * IP output routines
  */
+#if __FreeBSD_version > 1000044
+#define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
+{ \
+	int o_flgs = IP_RAWOUTPUT; \
+	struct sctp_tcb *local_stcb = stcb; \
+	if (local_stcb && \
+	    local_stcb->sctp_ep && \
+	    local_stcb->sctp_ep->sctp_socket) \
+		o_flgs |= local_stcb->sctp_ep->sctp_socket->so_options & SO_DONTROUTE; \
+	m_clrprotoflags(o_pak); \
+	result = ip_output(o_pak, NULL, ro, o_flgs, 0, NULL); \
+}
+
+#define SCTP_IP6_OUTPUT(result, o_pak, ro, ifp, stcb, vrf_id) \
+{ \
+	struct sctp_tcb *local_stcb = stcb; \
+	m_clrprotoflags(o_pak); \
+	if (local_stcb && local_stcb->sctp_ep) \
+		result = ip6_output(o_pak, \
+				    ((struct in6pcb *)(local_stcb->sctp_ep))->in6p_outputopts, \
+				    (ro), 0, 0, ifp, NULL); \
+	else \
+		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
+}
+#else
 #define SCTP_IP_OUTPUT(result, o_pak, ro, stcb, vrf_id) \
 { \
 	int o_flgs = IP_RAWOUTPUT; \
@@ -504,6 +541,7 @@ typedef struct rtentry	sctp_rtentry_t;
 	else \
 		result = ip6_output(o_pak, NULL, (ro), 0, 0, ifp, NULL); \
 }
+#endif
 
 struct mbuf *
 sctp_get_mbuf_for_msg(unsigned int space_needed,
@@ -513,22 +551,19 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
 /*
  * SCTP AUTH
  */
-#define HAVE_SHA2
-
 #define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
 
-#ifdef USE_SCTP_SHA1
-#include <netinet/sctp_sha1.h>
-#else
-#include <crypto/sha1.h>
 /* map standard crypto API names */
-#define SHA1_Init	SHA1Init
-#define SHA1_Update	SHA1Update
-#define SHA1_Final(x,y)	SHA1Final((caddr_t)x, y)
-#endif
+#define SCTP_SHA1_CTX		SHA1_CTX
+#define SCTP_SHA1_INIT		SHA1Init
+#define SCTP_SHA1_UPDATE	SHA1Update
+#define SCTP_SHA1_FINAL(x,y)	SHA1Final((caddr_t)x, y)
 
-#if defined(HAVE_SHA2)
-#include <crypto/sha2/sha2.h>
+#if defined(SCTP_SUPPORT_HMAC_SHA256)
+#define SCTP_SHA256_CTX		SHA256_CTX
+#define SCTP_SHA256_INIT	SHA256_Init
+#define SCTP_SHA256_UPDATE	SHA256_Update
+#define SCTP_SHA256_FINAL(x,y)	SHA256_Final((caddr_t)x, y)
 #endif
 
 #endif

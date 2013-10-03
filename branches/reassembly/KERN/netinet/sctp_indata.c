@@ -899,7 +899,7 @@ deliver_more:
 			/* Check if we can defer adding until its all there */
 			uint32_t pd_point;
 			if (stcb->sctp_socket) {
-				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket),
+				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
 				    stcb->sctp_ep->partial_delivery_point);
 			} else {
 				pd_point = stcb->sctp_ep->partial_delivery_point;
@@ -1137,8 +1137,8 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		nch = NULL;
 		old_data = 1;
 	}
-	ordered = ((chunk_flags & SCTP_DATA_UNORDERED) == 0);
 	chunk_flags = ch->ch.chunk_flags;
+	ordered = ((chunk_flags & SCTP_DATA_UNORDERED) == 0);
 	if ((chunk_flags & SCTP_DATA_SACK_IMMEDIATELY) == SCTP_DATA_SACK_IMMEDIATELY) {
 		asoc->send_sack = 1;
 	}
