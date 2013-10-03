@@ -539,6 +539,7 @@ struct sctp_queued_to_read {	/* sinfo structure Pluse more */
 	uint8_t  last_frag_seen;
 	uint8_t  first_frag_seen;
 	uint8_t  on_read_q;
+	uint8_t  old_data;
 };
 
 /* This data structure will be on the outbound
@@ -592,7 +593,7 @@ struct sctp_stream_queue_pending {
 TAILQ_HEAD(sctpwheelunrel_listhead, sctp_stream_in);
 struct sctp_stream_in {
 	struct sctp_readhead inqueue;
-	struct sctp_queued_to_read *unord_reasm;
+	struct sctp_readhead uno_inqueue;
 	uint16_t stream_no;
 	uint16_t last_sequence_delivered;	/* used for re-order */
 	uint8_t  delivery_started;
