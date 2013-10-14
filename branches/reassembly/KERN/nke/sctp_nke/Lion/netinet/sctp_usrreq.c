@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 246687 2013-02-11 21:02:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 253858 2013-08-01 12:05:23Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -85,13 +85,14 @@ sctp_init(void)
 
 #endif
 #if defined(__Userspace_os_Windows)
+#if defined(INET) || defined(INET6)
 	WSADATA wsaData;
-	int Ret;
 
-	if ((Ret = WSAStartup(MAKEWORD(2,2), &wsaData))!=0) {
+	if (WSAStartup(MAKEWORD(2,2), &wsaData) != 0) {
 		SCTP_PRINTF("WSAStartup failed\n");
 		exit (-1);
 	}
+#endif
 	InitializeConditionVariable(&accept_cond);
 	InitializeCriticalSection(&accept_mtx);
 #endif
@@ -237,6 +238,9 @@ sctp_finish(void)
 	sctp_pcb_finish();
 #if defined(__Windows__)
 	sctp_finish_sysctls();
+#if defined(INET) || defined(INET6)
+	WSACleanup();
+#endif
 #endif
 }
 
@@ -4726,7 +4730,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 		sctp_hmaclist_t *hmaclist;
 		uint16_t hmacid;
 		uint32_t i;
-		size_t found;
 
 		SCTP_CHECK_AND_CAST(shmac, optval, struct sctp_hmacalgo, optsize);
 		if (optsize < sizeof(struct sctp_hmacalgo) + shmac->shmac_number_of_idents * sizeof(uint16_t)) {
@@ -4751,14 +4754,14 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 				goto sctp_set_hmac_done;
 			}
 		}
-		found = 0;
 		for (i = 0; i < hmaclist->num_algo; i++) {
 			if (hmaclist->hmac[i] == SCTP_AUTH_HMAC_ID_SHA1) {
 				/* already in list */
-				found = 1;
+				break;
 			}
 		}
-		if (!found) {
+		if (i == hmaclist->num_algo) {
+			/* not found in list */
 			sctp_free_hmaclist(hmaclist);
 			SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 			error = EINVAL;

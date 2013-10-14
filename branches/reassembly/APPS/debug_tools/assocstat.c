@@ -78,7 +78,7 @@ int main(int argc, char *argv[])
 	}
 
 #define p(f, n)                                                        \
-	printf("%-10.10s=%08lX%s", n, stat.f, ((cnt++&3)==3)?"\n":" ")
+	printf("%-10.10s=%08lX%s", n, (unsigned long)stat.f, ((cnt++&3)==3)?"\n":" ")
 #define nl(n)                                                          \
 	do {                                                           \
 		printf("%s%s\n", ((cnt&3)==0)?"":"\n", n);             \
@@ -230,7 +230,7 @@ int main(int argc, char *argv[])
 	offset = 0;
 	xinp = (struct xsctp_inpcb *)(buf + offset);
 	while (xinp->last == 0) {
-		printf("\nEndpoint with port=%d, flags=%x, features=%x, FragPoint=%u, Msgs(R/S/SF)=%u/%u/%u, Queue(Len/Max)=%u/%u\n",
+		printf("\nEndpoint with port=%d, flags=%x, features=%llX, FragPoint=%u, Msgs(R/S/SF)=%u/%u/%u, Queue(Len/Max)=%u/%u\n",
 		       xinp->local_port, xinp->flags, xinp->features, xinp->fragmentation_point, xinp->total_recvs, xinp->total_sends, xinp->total_nospaces, xinp->qlen, xinp->maxqlen);
 		offset += sizeof(struct xsctp_inpcb);
 		printf("\tLocal addresses:");

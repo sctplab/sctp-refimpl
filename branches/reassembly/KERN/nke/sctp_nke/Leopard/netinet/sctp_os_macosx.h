@@ -416,6 +416,11 @@ typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_ZERO_COPY_SENDQ_EVENT(inp, so)
 
 /*
+ * SCTP protocol specific mbuf flags.
+ */
+#define	M_NOTIFICATION		M_PROTO1	/* SCTP notification */
+
+/*
  * IP output routines
  */
 #define SCTP_IP_ID(inp) (ip_id)
@@ -450,19 +455,12 @@ sctp_get_mbuf_for_msg(unsigned int space_needed,
  */
 #define SCTP_READ_RANDOM(buf, len)	read_random(buf, len)
 
-#ifdef USE_SCTP_SHA1
-#include <netinet/sctp_sha1.h>
-#else
 #include <libkern/crypto/sha1.h>
 /* map standard crypto API names */
-#define SHA1_Init	SHA1Init
-#define SHA1_Update	SHA1Update
-#define SHA1_Final(x,y)	SHA1Final((caddr_t)x, y)
-#endif
-
-#if defined(HAVE_SHA2)
-#include <crypto/sha2/sha2.h>
-#endif
+#define SCTP_SHA1_CTX           SHA1_CTX
+#define SCTP_SHA1_INIT          SHA1Init
+#define SCTP_SHA1_UPDATE        SHA1Update
+#define SCTP_SHA1_FINAL(x,y)    SHA1Final((caddr_t)x, y)
 
 /*
  * Other MacOS specific

@@ -185,7 +185,6 @@ struct sctp_ndata_chunk {
 	struct sctp_ndata dp;
 } SCTP_PACKED;
 
-
 /*
  * Structures for the control chunks
  */

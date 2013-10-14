@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 253472 2013-07-19 21:16:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 255434 2013-09-09 21:40:07Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3628,7 +3628,7 @@ sctp_process_cmsgs_for_init(struct sctp_tcb *stcb, struct mbuf *control, int *er
 
 static struct sctp_tcb *
 sctp_findassociation_cmsgs(struct sctp_inpcb **inp_p,
-                           in_port_t port,
+                           uint16_t port,
                            struct mbuf *control,
                            struct sctp_nets **net_p,
                            int *error)
@@ -5729,6 +5729,14 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 	SCTP_BUF_LEN(m) = sizeof(struct sctp_init_chunk);
 
+	/*
+	 * We might not overwrite the identification[] completely and on
+	 * some platforms time_entered will contain some padding.
+	 * Therefore zero out the cookie to avoid putting
+	 * uninitialized memory on the wire.
+	 */
+	memset(&stc, 0, sizeof(struct sctp_state_cookie));
+
 	/* the time I built cookie */
 	(void)SCTP_GETTIME_TIMEVAL(&stc.time_entered);
 
@@ -5891,6 +5899,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 			memcpy(&stc.laddress, &dstconn->sconn_addr, sizeof(void *));
 			stc.laddr_type = SCTP_CONN_ADDRESS;
 			/* scope_id is only for v6 */
+			stc.scope_id = 0;
 			break;
 		}
 #endif
@@ -5986,11 +5995,19 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__Userspace__)
 		case AF_CONN:
 			sconn = (struct sockaddr_conn *)to;
+			stc.address[0] = 0;
+			stc.address[1] = 0;
+			stc.address[2] = 0;
+			stc.address[3] = 0;
 			memcpy(&stc.address, &sconn->sconn_addr, sizeof(void *));
 			stc.addr_type = SCTP_CONN_ADDRESS;
+			stc.laddress[0] = 0;
+			stc.laddress[1] = 0;
+			stc.laddress[2] = 0;
+			stc.laddress[3] = 0;
 			memcpy(&stc.laddress, &sconn->sconn_addr, sizeof(void *));
-			stc.scope_id = 0;
 			stc.laddr_type = SCTP_CONN_ADDRESS;
+			stc.scope_id = 0;
 			break;
 #endif
 		}
@@ -6426,7 +6443,6 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 static void
 sctp_set_prsctp_policy(struct sctp_stream_queue_pending *sp)
 {
-	sp->pr_sctp_on = 0;
 	/*
 	 * We assume that the user wants PR_SCTP_TTL if the user
 	 * provides a positive lifetime but does not specify any
@@ -6436,7 +6452,6 @@ sctp_set_prsctp_policy(struct sctp_stream_queue_pending *sp)
 	 */
 	if (PR_SCTP_ENABLED(sp->sinfo_flags)) {
 		sp->act_flags |= PR_SCTP_POLICY(sp->sinfo_flags);
-		sp->pr_sctp_on = 1;
 	} else {
 		return;
 	}
@@ -6773,7 +6788,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 		/* TSNH */
 		return;
 	}
-	if ((ca->m) && ca->sndlen) {
+	if (ca->sndlen > 0) {
 		m = SCTP_M_COPYM(ca->m, 0, M_COPYALL, M_NOWAIT);
 		if (m == NULL) {
 			/* can't copy so we are done */
@@ -6802,35 +6817,39 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 	}
 	if (ca->sndrcv.sinfo_flags & SCTP_ABORT) {
 		/* Abort this assoc with m as the user defined reason */
-		if (m) {
+		if (m != NULL) {
+			SCTP_BUF_PREPEND(m, sizeof(struct sctp_paramhdr), M_NOWAIT);
+		} else {
+			m = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+			                          0, M_NOWAIT, 1, MT_DATA);
+			SCTP_BUF_LEN(m) = sizeof(struct sctp_paramhdr);
+		}
+		if (m != NULL) {
 			struct sctp_paramhdr *ph;
 
-			SCTP_BUF_PREPEND(m, sizeof(struct sctp_paramhdr), M_NOWAIT);
-			if (m) {
-				ph = mtod(m, struct sctp_paramhdr *);
-				ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
-				ph->param_length = htons(sizeof(struct sctp_paramhdr) + ca->sndlen);
-			}
-			/* We add one here to keep the assoc from
-			 * dis-appearing on us.
-			 */
-			atomic_add_int(&stcb->asoc.refcnt, 1);
-			sctp_abort_an_association(inp, stcb, m, SCTP_SO_NOT_LOCKED);
-			/* sctp_abort_an_association calls sctp_free_asoc()
-			 * free association will NOT free it since we
-			 * incremented the refcnt .. we do this to prevent
-			 * it being freed and things getting tricky since
-			 * we could end up (from free_asoc) calling inpcb_free
-			 * which would get a recursive lock call to the
-			 * iterator lock.. But as a consequence of that the
-			 * stcb will return to us un-locked.. since free_asoc
-			 * returns with either no TCB or the TCB unlocked, we
-			 * must relock.. to unlock in the iterator timer :-0
-			 */
-			SCTP_TCB_LOCK(stcb);
-			atomic_add_int(&stcb->asoc.refcnt, -1);
-			goto no_chunk_output;
+			ph = mtod(m, struct sctp_paramhdr *);
+			ph->param_type = htons(SCTP_CAUSE_USER_INITIATED_ABT);
+			ph->param_length = htons(sizeof(struct sctp_paramhdr) + ca->sndlen);
 		}
+		/* We add one here to keep the assoc from
+		 * dis-appearing on us.
+		 */
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		sctp_abort_an_association(inp, stcb, m, SCTP_SO_NOT_LOCKED);
+		/* sctp_abort_an_association calls sctp_free_asoc()
+		 * free association will NOT free it since we
+		 * incremented the refcnt .. we do this to prevent
+		 * it being freed and things getting tricky since
+		 * we could end up (from free_asoc) calling inpcb_free
+		 * which would get a recursive lock call to the
+		 * iterator lock.. But as a consequence of that the
+		 * stcb will return to us un-locked.. since free_asoc
+		 * returns with either no TCB or the TCB unlocked, we
+		 * must relock.. to unlock in the iterator timer :-0
+		 */
+		SCTP_TCB_LOCK(stcb);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
+		goto no_chunk_output;
 	} else {
 		if (m) {
 			ret = sctp_msg_append(stcb, net, m,
@@ -6913,8 +6932,7 @@ sctp_sendall_iterator(struct sctp_inpcb *inp, struct sctp_tcb *stcb, void *ptr,
 
 	if ((sctp_is_feature_off(inp, SCTP_PCB_FLAGS_NODELAY)) &&
 	    (stcb->asoc.total_flight > 0) &&
-	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))
-	    ) {
+	    (un_sent < (int)(stcb->asoc.smallest_mtu - SCTP_MIN_OVERHEAD))) {
 		do_chunk_output = 0;
 	}
 	if (do_chunk_output)
@@ -7056,13 +7074,10 @@ sctp_sendall(struct sctp_inpcb *inp, struct uio *uio, struct mbuf *m,
 		/* Gather the length of the send */
 		struct mbuf *mat;
 
-		mat = m;
 		ca->sndlen = 0;
-		while (m) {
-			ca->sndlen += SCTP_BUF_LEN(m);
-			m = SCTP_BUF_NEXT(m);
+		for (mat = m; mat; mat = SCTP_BUF_NEXT(mat)) {
+			ca->sndlen += SCTP_BUF_LEN(mat);
 		}
-		ca->m = mat;
 	}
 	ret = sctp_initiate_iterator(NULL, sctp_sendall_iterator, NULL,
 				     SCTP_PCB_ANY_FLAGS, SCTP_PCB_ANY_FEATURES,
@@ -7264,8 +7279,8 @@ sctp_clean_up_ctl(struct sctp_tcb *stcb, struct sctp_association *asoc, int so_l
 
 static int
 sctp_can_we_split_this(struct sctp_tcb *stcb,
-					   uint32_t length,
-		       uint32_t goal_mtu, uint32_t frag_point, int eeor_on)
+                       uint32_t length,
+                       uint32_t goal_mtu, uint32_t frag_point, int eeor_on)
 {
 	/* Make a decision on if I should split a
 	 * msg into multiple parts. This is only asked of
@@ -7324,18 +7339,18 @@ sctp_can_we_split_this(struct sctp_tcb *stcb,
 
 static uint32_t
 sctp_move_to_outqueue(struct sctp_tcb *stcb,
-	struct sctp_stream_out *strq,
-	uint32_t goal_mtu,
-	uint32_t frag_point,
-	int *locked,
-        int *giveup,
-	int eeor_mode,
-        int *bail,
-	int so_locked
+                      struct sctp_stream_out *strq,
+                      uint32_t goal_mtu,
+                      uint32_t frag_point,
+                      int *locked,
+                      int *giveup,
+                      int eeor_mode,
+                      int *bail,
+                      int so_locked
 #if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
-	SCTP_UNUSED
+                      SCTP_UNUSED
 #endif
-)
+	)
 {
 	/* Move from the stream to the send_queue keeping track of the total */
 	struct sctp_association *asoc;
@@ -7349,7 +7364,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 
 	SCTP_TCB_LOCK_ASSERT(stcb);
 	asoc = &stcb->asoc;
- one_more_time:
+one_more_time:
 	/*sa_ignore FREED_MEMORY*/
 	sp = TAILQ_FIRST(&strq->outqueue);
 	if (sp == NULL) {
@@ -7384,11 +7399,11 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 			if ((sp->put_last_out == 0) && (sp->discard_rest == 0)) {
 				SCTP_PRINTF("Gak, put out entire msg with NO end!-1\n");
 				SCTP_PRINTF("sender_done:%d len:%d msg_comp:%d put_last_out:%d send_lock:%d\n",
-				             sp->sender_all_done,
-				             sp->length,
-				             sp->msg_is_complete,
-				             sp->put_last_out,
-				             send_lock_up);
+				            sp->sender_all_done,
+				            sp->length,
+				            sp->msg_is_complete,
+				            sp->put_last_out,
+				            send_lock_up);
 			}
 			if ((TAILQ_NEXT(sp, next) == NULL) && (send_lock_up  == 0)) {
 				SCTP_TCB_SEND_LOCK(stcb);
@@ -7461,7 +7476,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 	if (stcb->asoc.state & SCTP_STATE_CLOSED_SOCKET) {
 		sp->msg_is_complete = 1;
 	}
- re_look:
+re_look:
 	length = sp->length;
 	if (sp->msg_is_complete) {
 		/* The message is complete */
@@ -7560,7 +7575,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		sp->data = sp->tail_mbuf = NULL;
 	} else {
 		struct mbuf *m;
-  dont_do_it:
+	dont_do_it:
 		chk->data = SCTP_M_COPYM(sp->data, 0, to_move, M_NOWAIT);
 		chk->last_mbuf = NULL;
 		if (chk->data == NULL) {
@@ -7778,13 +7793,8 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 		}
 		chk->send_size += pads;
 	}
-	/* We only re-set the policy if it is on */
-	if (sp->pr_sctp_on) {
-		sctp_set_prsctp_policy(sp);
+	if (PR_SCTP_ENABLED(chk->flags)) {
 		asoc->pr_sctp_cnt++;
-		chk->pr_sctp_on = 1;
-	} else {
-		chk->pr_sctp_on = 0;
 	}
 	if (sp->msg_is_complete && (sp->length == 0) && (sp->sender_all_done)) {
 		/* All done pull and kill the message */
@@ -7825,7 +7835,7 @@ sctp_move_to_outqueue(struct sctp_tcb *stcb,
 	strq->chunks_on_queues++;
 	TAILQ_INSERT_TAIL(&asoc->send_queue, chk, sctp_next);
 	asoc->send_queue_cnt++;
- out_of:
+out_of:
 	if (send_lock_up) {
 		SCTP_TCB_SEND_UNLOCK(stcb);
 	}
@@ -7979,7 +7989,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 #endif
 	)
 {
-	/*
+	/**
 	 * Ok this is the generic chunk service queue. we must do the
 	 * following: - Service the stream queue that is next, moving any
 	 * message (note I must get a complete message i.e. FIRST/MIDDLE and
