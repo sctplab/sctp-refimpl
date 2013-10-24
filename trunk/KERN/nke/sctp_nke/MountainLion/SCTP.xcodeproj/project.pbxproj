@@ -476,7 +476,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.8;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Debug;
@@ -502,7 +502,7 @@
 				HEADER_SEARCH_PATHS = "$(SRCROOT)";
 				MACOSX_DEPLOYMENT_TARGET = 10.7;
 				ONLY_ACTIVE_ARCH = YES;
-				SDKROOT = macosx;
+				SDKROOT = macosx10.8;
 				USER_HEADER_SEARCH_PATHS = "";
 			};
 			name = Release;
@@ -552,6 +552,7 @@
 				ONLY_ACTIVE_ARCH = YES;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = SCTP;
+				SDKROOT = macosx10.8;
 				USER_HEADER_SEARCH_PATHS = "";
 				VALID_ARCHS = "i386 x86_64";
 				WRAPPER_EXTENSION = kext;
@@ -598,6 +599,7 @@
 				MODULE_VERSION = 6.0.0;
 				OTHER_CFLAGS = "";
 				PRODUCT_NAME = SCTP;
+				SDKROOT = macosx10.8;
 				USER_HEADER_SEARCH_PATHS = "";
 				WRAPPER_EXTENSION = kext;
 				ZERO_LINK = NO;
