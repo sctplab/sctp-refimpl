@@ -4377,7 +4377,7 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 #endif
 		if (set_scope) {
 #ifdef SCTP_DONT_DO_PRIVADDR_SCOPE
-			stcb->ipv4_local_scope = 1;
+			stcb->asoc.scope.ipv4_local_scope = 1;
 #else
 			if (IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
 				stcb->asoc.scope.ipv4_local_scope = 1;
