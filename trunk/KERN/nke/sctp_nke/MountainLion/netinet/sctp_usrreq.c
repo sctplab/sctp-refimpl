@@ -3958,7 +3958,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			}
 		}
 		if (error == 0) {
-			*optsize = sizeof(struct sctp_paddrparams);
+			*optsize = sizeof(struct sctp_udpencaps);
 		}
 		break;
 	}
