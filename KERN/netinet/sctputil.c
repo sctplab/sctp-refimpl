@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 255190 2013-09-03 19:31:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 257555 2013-11-02 20:12:19Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -7484,8 +7484,13 @@ sctp_bindx_delete_address(struct sctp_inpcb *inp,
 int
 sctp_local_addr_count(struct sctp_tcb *stcb)
 {
-	int loopback_scope, ipv4_local_scope, local_scope, site_scope;
-	int ipv4_addr_legal, ipv6_addr_legal;
+	int loopback_scope;
+#if defined(INET)
+	int ipv4_local_scope, ipv4_addr_legal;
+#endif
+#if defined (INET6)
+	int local_scope, site_scope, ipv6_addr_legal;
+#endif
 #if defined(__Userspace__)
 	int conn_addr_legal;
 #endif
@@ -7496,11 +7501,15 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 
 	/* Turn on all the appropriate scopes */
 	loopback_scope = stcb->asoc.scope.loopback_scope;
+#if defined(INET)
 	ipv4_local_scope = stcb->asoc.scope.ipv4_local_scope;
+	ipv4_addr_legal = stcb->asoc.scope.ipv4_addr_legal;
+#endif
+#if defined(INET6)
 	local_scope = stcb->asoc.scope.local_scope;
 	site_scope = stcb->asoc.scope.site_scope;
-	ipv4_addr_legal = stcb->asoc.scope.ipv4_addr_legal;
 	ipv6_addr_legal = stcb->asoc.scope.ipv6_addr_legal;
+#endif
 #if defined(__Userspace__)
 	conn_addr_legal = stcb->asoc.scope.conn_addr_legal;
 #endif
