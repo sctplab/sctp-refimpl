@@ -1,4 +1,0 @@
-Preethi reports two panics
-
-1) When she does a control-c in her apache receiver
-2) When a sendfile is done by apache

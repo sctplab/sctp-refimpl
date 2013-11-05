@@ -1,1 +1,0 @@
-cc -O ./src/netpipe.c ./src/sctp.c -DSCTP  -o NPsctp -I./src

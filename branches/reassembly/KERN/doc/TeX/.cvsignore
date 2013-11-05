@@ -1,6 +1,0 @@
-*.aux
-*.log
-bsdcan_sctp.pdf
-bsdcan_sctp.ps
-client
-server

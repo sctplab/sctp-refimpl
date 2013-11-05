@@ -1,8 +1,0 @@
-set nomultiplot
-set output 'ipsec.ps'
-set terminal post landscape 'Times-Roman' 12
-set terminal post color
-set xlabel 'Size of transfer in 10kbytes '
-set ylabel 'Time of Transfer'
-load 'ipsec.plot_rbscp'
-reset
