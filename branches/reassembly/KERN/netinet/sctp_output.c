@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 255434 2013-09-09 21:40:07Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 257555 2013-11-02 20:12:19Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -1972,9 +1972,11 @@ sctp_is_address_in_scope(struct sctp_ifa *ifa,
 static struct mbuf *
 sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa, uint16_t *len)
 {
+#if defined(INET) || defined(INET6)
 	struct sctp_paramhdr *parmh;
 	struct mbuf *mret;
 	uint16_t plen;
+#endif
 
 	switch (ifa->address.sa.sa_family) {
 #ifdef INET
@@ -1990,6 +1992,7 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa, uint16_t *len)
 	default:
 		return (m);
 	}
+#if defined(INET) || defined(INET6)
 	if (M_TRAILINGSPACE(m) >= plen) {
 		/* easy side we just drop it on the end */
 		parmh = (struct sctp_paramhdr *)(SCTP_BUF_AT(m, SCTP_BUF_LEN(m)));
@@ -2052,6 +2055,7 @@ sctp_add_addr_to_mbuf(struct mbuf *m, struct sctp_ifa *ifa, uint16_t *len)
 		*len += plen;
 	}
 	return (mret);
+#endif
 }
 
 
@@ -3932,7 +3936,9 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 	struct sctphdr *sctphdr;
 	int packet_length;
 	int ret;
+#if defined(INET) || defined(INET6)
 	uint32_t vrf_id;
+#endif
 #if defined(INET) || defined(INET6)
 #if !defined(__Panda__)
 	struct mbuf *o_pak;
@@ -3958,12 +3964,13 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctp_m_freem(m);
 		return (EFAULT);
 	}
+#if defined(INET) || defined(INET6)
 	if (stcb) {
 		vrf_id = stcb->asoc.vrf_id;
 	} else {
 		vrf_id = inp->def_vrf_id;
 	}
-
+#endif
 	/* fill in the HMAC digest for any AUTH chunk in the packet */
 	if ((auth != NULL) && (stcb != NULL)) {
 		sctp_fill_hmac_digest_m(m, auth_offset, auth, stcb, auth_keyid);
@@ -4807,8 +4814,12 @@ sctp_lowlevel_chunk_output(struct sctp_inpcb *inp,
 		sctphdr->dest_port = dest_port;
 		sctphdr->v_tag = v_tag;
 		sctphdr->checksum = 0;
+#if defined(SCTP_WITH_NO_CSUM)
+		SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 		sctphdr->checksum = sctp_calculate_cksum(m, 0);
 		SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 		if (tos_value == 0) {
 			tos_value = inp->ip_inp.inp.inp_ip_tos;
 		}
@@ -11303,7 +11314,10 @@ sctp_send_resp_msg(struct sockaddr *src, struct sockaddr *dst,
 	struct sctphdr *shout;
 	struct sctp_chunkhdr *ch;
 	struct udphdr *udp;
-	int len, cause_len, padding_len, ret;
+	int len, cause_len, padding_len;
+#if defined(INET) || defined(INET6)
+	int ret;
+#endif
 #ifdef INET
 #if defined(__APPLE__) || defined(__Panda__)
 	sctp_route_t ro;
@@ -11636,8 +11650,12 @@ sctp_send_resp_msg(struct sockaddr *src, struct sockaddr *dst,
 		struct sockaddr_conn *sconn;
 
 		sconn = (struct sockaddr_conn *)src;
+#if defined(SCTP_WITH_NO_CSUM)
+		SCTP_STAT_INCR(sctps_sendnocrc);
+#else
 		shout->checksum = sctp_calculate_cksum(mout, 0);
 		SCTP_STAT_INCR(sctps_sendswcrc);
+#endif
 #ifdef SCTP_PACKET_LOGGING
 		if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_LAST_PACKET_TRACING) {
 			sctp_packet_log(mout);
@@ -11646,7 +11664,7 @@ sctp_send_resp_msg(struct sockaddr *src, struct sockaddr *dst,
 		/* Don't alloc/free for each packet */
 		if ((buffer = malloc(len)) != NULL) {
 			m_copydata(mout, 0, len, buffer);
-			ret = SCTP_BASE_VAR(conn_output)(sconn->sconn_addr, buffer, len, 0, 0);
+			SCTP_BASE_VAR(conn_output)(sconn->sconn_addr, buffer, len, 0, 0);
 			free(buffer);
 		}
 		sctp_m_freem(mout);

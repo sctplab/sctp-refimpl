@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 255190 2013-09-03 19:31:59Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 257555 2013-11-02 20:12:19Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -4775,11 +4775,9 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 				addr.sin6 = control->whoFrom->ro._l_addr.sin6;
 				break;
 #endif
-#if defined(__Userspace__)
 			case AF_CONN:
 				addr.sconn = control->whoFrom->ro._l_addr.sconn;
 				break;
-#endif
 			default:
 				addr.sa = control->whoFrom->ro._l_addr.sa;
 				break;
@@ -4791,6 +4789,8 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 			inp->recv_callback(so, addr, buffer, control->length, rcv, flags, inp->ulp_info);
 			SCTP_TCB_LOCK(stcb);
 			atomic_subtract_int(&stcb->asoc.refcnt, 1);
+			sctp_free_remote_addr(control->whoFrom);
+			control->whoFrom = NULL;
 			sctp_m_freem(control->data);
 			control->data = NULL;
 			control->length = 0;
@@ -5002,11 +5002,9 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 				addr.sin6 = control->whoFrom->ro._l_addr.sin6;
 				break;
 #endif
-#if defined(__Userspace__)
 			case AF_CONN:
 				addr.sconn = control->whoFrom->ro._l_addr.sconn;
 				break;
-#endif
 			default:
 				addr.sa = control->whoFrom->ro._l_addr.sa;
 				break;
@@ -5023,6 +5021,8 @@ sctp_append_to_readq(struct sctp_inpcb *inp,
 			control->tail_mbuf = NULL;
 			control->length = 0;
 			if (control->end_added) {
+				sctp_free_remote_addr(control->whoFrom);
+				control->whoFrom = NULL;
 				sctp_free_a_readq(stcb, control);
 			} else {
 				control->some_taken = 1;
@@ -6998,7 +6998,7 @@ sctp_hashinit_flags(int elements, struct malloc_type *type,
 		hashtbl = malloc((u_long)hashsize * sizeof(*hashtbl));
 	else {
 #ifdef INVARIANTS
-		SCTP_PRINTF("flag incorrect in hashinit_flags");
+		SCTP_PRINTF("flag incorrect in hashinit_flags.\n");
 #endif
 		return (NULL);
 	}
@@ -7022,7 +7022,7 @@ sctp_hashdestroy(void *vhashtbl, struct malloc_type *type, u_long hashmask)
 	hashtbl = vhashtbl;
 	for (hp = hashtbl; hp <= &hashtbl[hashmask]; hp++)
 		if (!LIST_EMPTY(hp)) {
-			SCTP_PRINTF("hashdestroy: hash not empty");
+			SCTP_PRINTF("hashdestroy: hash not empty.\n");
 			return;
 		}
 	FREE(hashtbl, type);
@@ -7484,8 +7484,13 @@ sctp_bindx_delete_address(struct sctp_inpcb *inp,
 int
 sctp_local_addr_count(struct sctp_tcb *stcb)
 {
-	int loopback_scope, ipv4_local_scope, local_scope, site_scope;
-	int ipv4_addr_legal, ipv6_addr_legal;
+	int loopback_scope;
+#if defined(INET)
+	int ipv4_local_scope, ipv4_addr_legal;
+#endif
+#if defined (INET6)
+	int local_scope, site_scope, ipv6_addr_legal;
+#endif
 #if defined(__Userspace__)
 	int conn_addr_legal;
 #endif
@@ -7496,11 +7501,15 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 
 	/* Turn on all the appropriate scopes */
 	loopback_scope = stcb->asoc.scope.loopback_scope;
+#if defined(INET)
 	ipv4_local_scope = stcb->asoc.scope.ipv4_local_scope;
+	ipv4_addr_legal = stcb->asoc.scope.ipv4_addr_legal;
+#endif
+#if defined(INET6)
 	local_scope = stcb->asoc.scope.local_scope;
 	site_scope = stcb->asoc.scope.site_scope;
-	ipv4_addr_legal = stcb->asoc.scope.ipv4_addr_legal;
 	ipv6_addr_legal = stcb->asoc.scope.ipv6_addr_legal;
+#endif
 #if defined(__Userspace__)
 	conn_addr_legal = stcb->asoc.scope.conn_addr_legal;
 #endif
