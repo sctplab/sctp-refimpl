@@ -5,6 +5,7 @@ echo "$0 version [600000, 601000, 602000, 700000, 701000, 800000 900000 1000000]
 exit
 fi
 ver="$1"
+prepare_script="freebsd_prepare"
 if  test $1 -eq "900000"
 then
     ver=900001
