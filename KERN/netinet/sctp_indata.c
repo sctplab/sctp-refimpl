@@ -910,17 +910,19 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		pd_point = stcb->sctp_ep->partial_delivery_point;
 	}
 	control = TAILQ_FIRST(&strm->uno_inqueue);
-	if (control->old_data) {
-		/* Special handling needed for "old" data format */
-		nctl = TAILQ_NEXT(control, next_instrm);
-		if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
-			goto done_un;
+	if (control) {
+		if (control->old_data) {
+			/* Special handling needed for "old" data format */
+			nctl = TAILQ_NEXT(control, next_instrm);
+			if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
+				goto done_un;
+			}
+			control = nctl;
 		}
-		control = nctl;
-	}
-	if (control->old_data) {
-		/* Huh - TSNH */
-		panic("Found more than one control of old data type?");
+		if (control && (control->old_data)) {
+			/* Huh - TSNH */
+			panic("Found more than one control of old data type?");
+		}
 	}
 	if (strm->pd_api_started) {
 		/* Can't add more */
