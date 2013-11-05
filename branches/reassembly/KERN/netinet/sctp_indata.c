@@ -734,7 +734,7 @@ sctp_build_pd_unordered(struct sctp_tcb *stcb, struct sctp_association *asoc, st
 	nchk = TAILQ_NEXT(fchk, sctp_next);
 
 	/* Dump it into the entry */
-	sctp_add_chk_to_control(nctl, stcb, asoc, fchk);
+	sctp_add_chk_to_control(control, stcb, asoc, fchk);
 
 	while (nchk) {
 		TAILQ_REMOVE(&bctl->reasm, nchk, sctp_next);
@@ -961,7 +961,7 @@ deliver_more:
 		/* Ok the guy at the top was being partially delivered
 		 * completed, so we remove it. Note
 		 * the pd_api flag was taken off when the
-		 * chunk was merged on in sctp_queue_data_for_reasm() below.
+		 * chunk was merged on in sctp_queue_data_for_reasm below.
 		 */
 		if (control->end_added) {
 			nctl = TAILQ_NEXT(control, next_instrm);
@@ -977,7 +977,7 @@ deliver_more:
 	if ((control->sinfo_ssn == next_to_del) && 
 	    (control->first_frag_seen)) {
 		/* Ok we can deliver it onto the stream. */
-		if (control->end_added) && (strm->pd_api_started == 0)) {
+		if ((control->end_added) && (strm->pd_api_started == 0)) {
 			/* We are done with it afterwards */
 			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
