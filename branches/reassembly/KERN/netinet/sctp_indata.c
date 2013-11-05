@@ -795,12 +795,13 @@ repeat:
 				}
 			}
 		}
-		if (length > pd_point) {
+		if ((length > pd_point) && (strm->pd_api_started == 0)) {
 			/* Ok we need to do a pd-api */
 			sctp_build_pd_unordered(stcb, asoc, strm, control, fchk, lchk);
 			sctp_add_to_readq(stcb->sctp_ep, stcb, strm->uno_pd,
 		                  &stcb->sctp_socket->so_rcv, strm->uno_pd->end_added,
 		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
+			strm->pd_api_started = 1;
 		}
 	} else {
 		/* I have a PD-API going on in uno_pd, have I got more in the reasm for this one? */
@@ -817,6 +818,7 @@ repeat:
 				if (strm->uno_pd->end_added) {
 					/* We are done */
 					strm->uno_pd = NULL;
+					strm->pd_api_started = 0;
 					goto repeat;
 				}
 			} else {
@@ -920,6 +922,10 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		/* Huh - TSNH */
 		panic("Found more than one control of old data type?");
 	}
+	if (strm->pd_api_started) {
+		/* Can't add more */
+		return(0);
+	}
 	while (control) {
 		nctl = TAILQ_NEXT(control, next_instrm);
 		if (control->end_added) {
@@ -933,47 +939,45 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 			}
 		} else {
 			/* Can we do a PD-API for this un-ordered guy? */
-			if (control->length < pd_point) {
+			if ((control->length < pd_point) && (strm->pd_api_started == 0)) {
+				strm->pd_api_started = 1;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  control,
 						  &stcb->sctp_socket->so_rcv, control->end_added,
 						  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 				
+				break;
 			}
 		}
 		control = nctl;
 	}
 done_un:
 	control = TAILQ_FIRST(&strm->inqueue);
-	if (control && (control->sinfo_ssn == strm->last_sequence_delivered)) {
-		/* Case where we have put this on 
-		 * the queue already or at least its done.
-		 */
-		nctl = TAILQ_NEXT(control, next_instrm);
-		if (control->end_added) {
-			/* We just put the last bit on */
-			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
-			if (control->on_read_q == 0) {
-				sctp_add_to_readq(stcb->sctp_ep, stcb,
-						  control,
-						  &stcb->sctp_socket->so_rcv, control->end_added,
-						  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-			}
-		} else {
-			/* Can't do anything more on this stream */
-			return(ret);
-		}
-		control = nctl;
-	}
 deliver_more:
 	if (control == NULL) {
 		return(ret);
+	}
+	if (strm->last_sequence_delivered == control->sinfo_ssn) {
+		/* Ok the guy at the top was being partially delivered
+		 * completed, so we remove it. Note
+		 * the pd_api flag was taken off when the
+		 * chunk was merged on in sctp_queue_data_for_reasm() below.
+		 */
+		if (control->end_added) {
+			nctl = TAILQ_NEXT(control, next_instrm);
+			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);			
+			control = nctl;
+		}
+	}
+	if (strm->pd_api_started) {
+		/* Can't add more must have gotten an un-ordered above being partially delivered. */
+		return(0);
 	}
 	next_to_del = strm->last_sequence_delivered + 1;
 	if ((control->sinfo_ssn == next_to_del) && 
 	    (control->first_frag_seen)) {
 		/* Ok we can deliver it onto the stream. */
-		if (control->end_added) {
+		if (control->end_added) && (strm->pd_api_started == 0)) {
 			/* We are done with it afterwards */
 			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
@@ -984,7 +988,8 @@ deliver_more:
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else if (control->end_added == 0) {
 			/* Check if we can defer adding until its all there */
-			if (control->length < pd_point) {
+			if ((control->length < pd_point) || (strm->pd_api_started)) {
+				/* Don't need it or cannot add more (one being delivered that way) */
 				goto out;
 			}
 		}
@@ -996,6 +1001,9 @@ deliver_more:
 		if ((control->end_added) && (control->last_frag_seen)){
 			control = nctl;
 			goto deliver_more;
+		} else {
+			/* We are now doing PD API */
+			strm->pd_api_started = 1;
 		}
 	}
 out:
@@ -1029,6 +1037,7 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 		/* Its complete */
 		control->end_added = 1;
+		control->last_frag_seen = 1;
 	}
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 } 
@@ -1048,7 +1057,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			  int *abort_flag)
 {
 	uint32_t next_fsn;
-	struct sctp_tmit_chunk *at;
+	struct sctp_tmit_chunk *at, *nat;
 
 	/* Must be added to the stream-in queue */
 	if (created_control) {
@@ -1142,7 +1151,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * one
 					 */
 					/* check it first */
-					asoc->size_on_reasm_queue += chk->send_size;
 					sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 					TAILQ_INSERT_AFTER(&control->reasm, at, chk, sctp_next);
 					break;
@@ -1150,15 +1158,25 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			}
 		}
 	}
-	/* Ok lets see if we can suck any up into the control structure */
-	next_fsn = control->fsn_included + 1;
-	TAILQ_FOREACH(at, &control->reasm, sctp_next) {
-		if (at->rec.data.fsn_num == next_fsn) {
-			/* We can add this one now to the control */
-			next_fsn++;
-			sctp_add_chk_to_control(control, stcb, asoc, chk);
-		} else {
-			break;
+	/* 
+	 * Ok lets see if we can suck any up into the control 
+	 * structure that are in seq if it makes sense.
+	 */
+	if (control->first_frag_seen) {
+		next_fsn = control->fsn_included + 1;
+		TAILQ_FOREACH_SAFE(at, &control->reasm, sctp_next, nat) {
+			if (at->rec.data.fsn_num == next_fsn) {
+				/* We can add this one now to the control */
+				next_fsn++;
+				TAILQ_REMOVE(&control->reasm, at, sctp_next);
+				sctp_add_chk_to_control(control, stcb, asoc, chk);
+				if (control->on_read_q && strm->pd_api_started && control->end_added) {
+					/* Ok end is on, and we were the pd-api guy clear the flag */
+					strm->pd_api_started = 0;
+				}
+			} else {
+				break;
+			}
 		}
 	}
 }
