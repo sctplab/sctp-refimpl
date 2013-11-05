@@ -34,20 +34,27 @@
 #include <sys/cdefs.h>
 __FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 252585 2013-07-03 18:48:43Z tuexen $");
 #endif
-
 #include <netinet/sctp_os.h>
+#ifdef __FreeBSD__
+#include <sys/proc.h>
+#endif
 #include <netinet/sctp_var.h>
 #include <netinet/sctp_sysctl.h>
-#include <netinet/sctp_pcb.h>
 #include <netinet/sctp_header.h>
+#include <netinet/sctp_pcb.h>
 #include <netinet/sctputil.h>
 #include <netinet/sctp_output.h>
-#include <netinet/sctp_input.h>
-#include <netinet/sctp_indata.h>
 #include <netinet/sctp_uio.h>
+#include <netinet/sctp_auth.h>
 #include <netinet/sctp_timer.h>
-
-
+#include <netinet/sctp_asconf.h>
+#include <netinet/sctp_indata.h>
+#include <netinet/sctp_bsd_addr.h>
+#include <netinet/sctp_input.h>
+#include <netinet/sctp_crc32.h>
+#ifdef __FreeBSD__
+#include <netinet/sctp_lock_bsd.h>
+#endif
 /*
  * NOTES: On the outbound side of things I need to check the sack timer to
  * see if I should generate a sack into the chunk queue (if I have data to
@@ -903,6 +910,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	uint32_t pd_point;
 	int ret = 0;
 
+	printf("Delivery reasm check\n");
 	if (stcb->sctp_socket) {
 		pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
 			       stcb->sctp_ep->partial_delivery_point);
@@ -913,6 +921,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	if (control) {
 		if (control->old_data) {
 			/* Special handling needed for "old" data format */
+			printf("Old Unordered check\n");
 			nctl = TAILQ_NEXT(control, next_instrm);
 			if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
 				goto done_un;
@@ -926,9 +935,11 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	}
 	if (strm->pd_api_started) {
 		/* Can't add more */
+		printf("PD API up all done\n");
 		return(0);
 	}
 	while (control) {
+		printf("Have %p for unordered tocheck\n", control);
 		nctl = TAILQ_NEXT(control, next_instrm);
 		if (control->end_added) {
 			/* We just put the last bit on */
@@ -957,6 +968,7 @@ done_un:
 	control = TAILQ_FIRST(&strm->inqueue);
 deliver_more:
 	if (control == NULL) {
+		printf("Nothing in the inqueue\n");
 		return(ret);
 	}
 	if (strm->last_sequence_delivered == control->sinfo_ssn) {
@@ -965,6 +977,7 @@ deliver_more:
 		 * the pd_api flag was taken off when the
 		 * chunk was merged on in sctp_queue_data_for_reasm below.
 		 */
+		printf("last ctrl:%p delivered was this end:%d\n", control, control->end_added);
 		if (control->end_added) {
 			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);			
@@ -973,12 +986,16 @@ deliver_more:
 	}
 	if (strm->pd_api_started) {
 		/* Can't add more must have gotten an un-ordered above being partially delivered. */
+		printf("PD API up no more\n");
 		return(0);
 	}
 	next_to_del = strm->last_sequence_delivered + 1;
+	printf("Next to deliver in this stream is %d this control:%d fir:%d\n", next_to_del,
+	       control->sinfo_ssn, control->first_frag_seen);
 	if ((control->sinfo_ssn == next_to_del) && 
 	    (control->first_frag_seen)) {
 		/* Ok we can deliver it onto the stream. */
+		printf("Deliverable maybe end:%d\n", control->end_added);
 		if ((control->end_added) && (strm->pd_api_started == 0)) {
 			/* We are done with it afterwards */
 			nctl = TAILQ_NEXT(control, next_instrm);
@@ -990,11 +1007,14 @@ deliver_more:
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else if (control->end_added == 0) {
 			/* Check if we can defer adding until its all there */
+			printf("Check PDAPI possiblity len:%d pd_point:%d pdapi up:%d\n",
+			       control->length, pd_point, strm->pd_api_started);
 			if ((control->length < pd_point) || (strm->pd_api_started)) {
 				/* Don't need it or cannot add more (one being delivered that way) */
 				goto out;
 			}
 		}
+		printf("Adding to read queue\n");
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		                  control,
 		                  &stcb->sctp_socket->so_rcv, control->end_added,
@@ -1002,13 +1022,16 @@ deliver_more:
 		strm->last_sequence_delivered = next_to_del;
 		if ((control->end_added) && (control->last_frag_seen)){
 			control = nctl;
+			printf("We can deliver more %p\n", nctl);
 			goto deliver_more;
 		} else {
 			/* We are now doing PD API */
+			printf("PDAPI is up\n");
 			strm->pd_api_started = 1;
 		}
 	}
 out:
+	printf("Ret:%d\n", ret);
 	return (ret);
 }
 
@@ -1022,6 +1045,25 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	 * data from the chk onto the control and free
 	 * up the chunk resources.
 	 */
+	if (control->on_read_q) {
+		/* 
+		 * Its being pd-api'd so we must fix the 
+		 * socket buffer by adding it in.
+		 */
+		struct mbuf *m;
+
+		m = chk->data;
+		while (m) {
+			if (SCTP_BUF_LEN(m) == 0) {
+				/* Skip mbufs with NO length */
+				m = SCTP_BUF_NEXT(m);
+				continue;
+			}
+			sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m);
+			atomic_add_int(&control->length, SCTP_BUF_LEN(m));
+			m = SCTP_BUF_NEXT(m);
+		}
+	}
 	if (control->data == NULL) {
 		control->data = chk->data;		
 		sctp_setup_tail_pointer(control);
@@ -1061,8 +1103,11 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	uint32_t next_fsn;
 	struct sctp_tmit_chunk *at, *nat;
 
+
 	/* Must be added to the stream-in queue */
 	if (created_control) {
+		printf("Placing a new control element %p into strm:%p (%d)\n",
+		       control, strm, strm->stream_no);
 		if (sctp_place_control_in_stream(strm, asoc, control)) {
 			/* Duplicate SSN? */
 			sctp_m_freem(chk->data);
@@ -1071,10 +1116,12 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			return;
 		}
 	}
+	printf("Adding data:%p to control:%p\n", chk, control);
 	/* 
 	 * For old un-ordered data chunks.
 	 */
 	if (control->old_data && ((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED)) {
+		printf("Injecting old type unordered\n");
 		sctp_inject_old_data_unordered(stcb, asoc, strm, control, chk, abort_flag);
 		return;
 	}
@@ -1086,6 +1133,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 *  o if its not in order we place it on the list in its place.
 	 */
 	if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
+		printf("Very first TSN\n");
 		/* Its the very first one. */
 		if (control->first_frag_seen) {
 			/* 
@@ -1106,6 +1154,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_setup_tail_pointer(control);
 	} else {
 		/* Place the chunk in our list */
+		printf("Another TSN\n");
 		if(control->last_frag_seen == 0) {
 			/* Still willing to raise highest FSN seen */
 			if (SCTP_TSN_GT(chk->rec.data.fsn_num, control->top_fsn)) {
@@ -1166,10 +1215,13 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 	if (control->first_frag_seen) {
 		next_fsn = control->fsn_included + 1;
+		printf("The first is here can we condense? in:%d next:%d\n", 
+		       control->fsn_included, next_fsn);
 		TAILQ_FOREACH_SAFE(at, &control->reasm, sctp_next, nat) {
 			if (at->rec.data.fsn_num == next_fsn) {
 				/* We can add this one now to the control */
 				next_fsn++;
+				printf("Adding chk:%p in\n", at);
 				TAILQ_REMOVE(&control->reasm, at, sctp_next);
 				sctp_add_chk_to_control(control, stcb, asoc, chk);
 				if (control->on_read_q && strm->pd_api_started && control->end_added) {
