@@ -163,7 +163,7 @@ failed_build:
  */
 static struct sctp_queued_to_read *
 sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
-    struct sctp_tmit_chunk *chk)
+			   struct sctp_tmit_chunk *chk)
 {
 	struct sctp_queued_to_read *read_queue_e = NULL;
 
@@ -183,7 +183,7 @@ sctp_build_readq_entry_chk(struct sctp_tcb *stcb,
 	read_queue_e->sinfo_assoc_id = sctp_get_associd(stcb);
 	read_queue_e->whoFrom = chk->whoTo;
 	atomic_add_int(&chk->whoTo->ref_count, 1);
-	read_queue_e->data = chk->data;
+	read_queue_e->data = NULL;
 	read_queue_e->stcb = stcb;
 	read_queue_e->port_from = stcb->rport;
 failed_build:
@@ -695,13 +695,14 @@ sctp_build_one_up_to(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 	}
 	/* Now lets remove and prep */
 	TAILQ_REMOVE(&control->reasm, chk, sctp_next);
-	sctp_setup_tail_pointer(nctl);
+	sctp_add_chk_to_control(nctl, stcb, asoc, chk);
 
 	/* Now get all the chunks moved out */
 	TAILQ_FOREACH_SAFE(chk, &control->reasm, sctp_next, nchk) {
 		TAILQ_REMOVE(&control->reasm, chk, sctp_next);
 		sctp_add_chk_to_control(nctl, stcb, asoc, chk);
 		if (chk == lchk) {
+			nctl->top_fsn = chk->rec.data.fsn_num;
 			break;
 		}
 	}
@@ -715,8 +716,41 @@ sctp_build_one_up_to(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 }
 
 static int
+sctp_build_pd_unordered(struct sctp_tcb *stcb, struct sctp_association *asoc, struct sctp_stream_in *strm,
+			struct sctp_queued_to_read *bctl,
+			struct sctp_tmit_chunk *fchk, struct sctp_tmit_chunk *lchk)			
+{
+	struct sctp_queued_to_read *control;
+	struct sctp_tmit_chunk *nchk, *tmp;
+
+	strm->uno_pd = sctp_build_readq_entry_chk(stcb, fchk);
+	control = strm->uno_pd;
+	if (control == NULL) {
+		/* No memory? */
+		return(-1);
+	}
+	/* Pull off the first chunk and setup the next */
+	TAILQ_REMOVE(&bctl->reasm, fchk, sctp_next);
+	nchk = TAILQ_NEXT(fchk, sctp_next);
+
+	/* Dump it into the entry */
+	sctp_add_chk_to_control(nctl, stcb, asoc, fchk);
+
+	while (nchk) {
+		TAILQ_REMOVE(&bctl->reasm, nchk, sctp_next);
+		tmp = TAILQ_NEXT(nchk, sctp_next);
+		sctp_add_chk_to_control(control, stcb, asoc, nchk);
+		if (nchk == lchk) {
+			break;
+		}
+		nchk = tmp;
+	}
+	return(0);
+}
+
+static int
 sctp_handle_old_data(struct sctp_tcb *stcb, struct sctp_association *asoc, struct sctp_stream_in *strm,
-     struct sctp_queued_to_read *control)
+		     struct sctp_queued_to_read *control, uint32_t pd_point)
 {
 	/* Special handling for the old un-ordered data chunk. 
 	 * All the chunks/TSN's go to msg_id 0. So
@@ -727,31 +761,67 @@ sctp_handle_old_data(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 	 * entries in reality, unless the guy is sending both
 	 * unordered NDATA and unordered DATA...
 	 */
-	struct sctp_tmit_chunk *chk, *fchk;
+	struct sctp_tmit_chunk *chk, *fchk, *lchk;
 	uint32_t fsn;
+	uint32_t length;
 repeat:
 	fchk = TAILQ_FIRST(&control->reasm);
 	if (fchk == NULL) {
 		return(0);
 	}
-	if ((fchk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
-		/* Nothing to do.. no first */
-		return(0);
-	}
-	fsn = fchk->rec.data.fsn_num;
-	TAILQ_FOREACH(chk, &control->reasm, sctp_next) {
-		if (chk->rec.data.fsn_num != fsn) {
-			break;
+	if (strm->uno_pd == NULL)  {
+		/* No PD-API is happening for un-ordered */
+		if ((fchk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
+			/* Nothing to do.. no first */
+			return (0);
 		}
-		if ((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == 0) {
-			/* Ok, we have them in order now 
-			 * fchk -> chk.
-			 * We need to build a read_q_entry and put the chk -> fchk
-			 * into it, and then throw it on the read queue. Once
-			 * done with that we repeat the whole thing.
-			 */
-			if (sctp_build_one_up_to(stcb, asoc, strm, control, chk) == 0) {
-				goto repeat;
+		length = 0;
+		fsn = fchk->rec.data.fsn_num;
+		TAILQ_FOREACH(chk, &control->reasm, sctp_next) {
+			if (chk->rec.data.fsn_num != fsn) {
+				break;
+			}
+			length += chk->send_size;
+			lchk = chk;
+			if ((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == 0) {
+				/* Ok, we have them in order now 
+				 * fchk -> chk.
+				 * We need to build a read_q_entry and put the chk -> fchk
+				 * into it, and then throw it on the read queue. Once
+				 * done with that we repeat the whole thing.
+				 */
+				if (sctp_build_one_up_to(stcb, asoc, strm, control, chk) == 0) {
+					goto repeat;
+				}
+			}
+		}
+		if (length > pd_point) {
+			/* Ok we need to do a pd-api */
+			sctp_build_pd_unordered(stcb, asoc, strm, control, fchk, lchk);
+			sctp_add_to_readq(stcb->sctp_ep, stcb, strm->uno_pd,
+		                  &stcb->sctp_socket->so_rcv, strm->uno_pd->end_added,
+		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
+		}
+	} else {
+		/* I have a PD-API going on in uno_pd, have I got more in the reasm for this one? */
+		/* Get the last placed on */
+		fsn = strm->uno_pd->fsn_included + 1;
+
+		/* Now what can we add? */
+		TAILQ_FOREACH_SAFE(chk, &control->reasm, sctp_next, lchk) {
+			if (chk->rec.data.fsn_num == fsn) {
+				/* Ok lets add it */
+				TAILQ_REMOVE(&control->reasm, chk, sctp_next);
+				sctp_add_chk_to_control(strm->uno_pd, stcb, asoc, chk);
+				fsn++;
+				if (strm->uno_pd->end_added) {
+					/* We are done */
+					strm->uno_pd = NULL;
+					goto repeat;
+				}
+			} else {
+				/* Can't add more */
+				break;
 			}
 		}
 	}
@@ -828,16 +898,27 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	 */
 	struct sctp_queued_to_read *control, *nctl=NULL;
 	uint16_t next_to_del;
+	uint32_t pd_point;
 	int ret = 0;
 
+	if (stcb->sctp_socket) {
+		pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
+			       stcb->sctp_ep->partial_delivery_point);
+	} else {
+		pd_point = stcb->sctp_ep->partial_delivery_point;
+	}
 	control = TAILQ_FIRST(&strm->uno_inqueue);
 	if (control->old_data) {
 		/* Special handling needed for "old" data format */
 		nctl = TAILQ_NEXT(control, next_instrm);
-		if (sctp_handle_old_data(stcb, asoc, strm, control)) {
+		if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
 			goto done_un;
 		}
 		control = nctl;
+	}
+	if (control->old_data) {
+		/* Huh - TSNH */
+		panic("Found more than one control of old data type?");
 	}
 	while (control) {
 		nctl = TAILQ_NEXT(control, next_instrm);
@@ -851,8 +932,14 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 						  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
 			}
 		} else {
-			/* Can't do anything more on this stream for un-ordered what about ordered */
-			goto done_un;
+			/* Can we do a PD-API for this un-ordered guy? */
+			if (control->length < pd_point) {
+				sctp_add_to_readq(stcb->sctp_ep, stcb,
+						  control,
+						  &stcb->sctp_socket->so_rcv, control->end_added,
+						  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
+				
+			}
 		}
 		control = nctl;
 	}
@@ -897,13 +984,6 @@ deliver_more:
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else if (control->end_added == 0) {
 			/* Check if we can defer adding until its all there */
-			uint32_t pd_point;
-			if (stcb->sctp_socket) {
-				pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
-				    stcb->sctp_ep->partial_delivery_point);
-			} else {
-				pd_point = stcb->sctp_ep->partial_delivery_point;
-			}
 			if (control->length < pd_point) {
 				goto out;
 			}
@@ -940,8 +1020,12 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	}
 	control->fsn_included = chk->rec.data.fsn_num;
 	asoc->size_on_reasm_queue -= chk->send_size;
+	control->length += chk->send_size;
 	sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 	chk->data = NULL;
+	if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
+		control->first_frag_seen = 1;
+	}
 	if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 		/* Its complete */
 		control->end_added = 1;
