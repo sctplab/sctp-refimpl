@@ -637,6 +637,9 @@ static void
 sctp_setup_tail_pointer(struct sctp_queued_to_read *control)
 {
 	struct mbuf *m, *prev = NULL;
+	struct sctp_tcb *stcb;
+
+	stcb = control->stcb;
 	control->held_length = 0;
 	control->length = 0;
 	m = control->data;
@@ -658,6 +661,13 @@ sctp_setup_tail_pointer(struct sctp_queued_to_read *control)
 		}
 		prev = m;
 		atomic_add_int(&control->length, SCTP_BUF_LEN(m));
+		if (control->on_read_q) {
+			/* 
+			 * On read queue so we must increment the
+			 * SB stuff, we assume caller has done any locks of SB.
+			 */
+			sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m);
+		}
 		m = SCTP_BUF_NEXT(m);
 	}
 	if (prev) {
