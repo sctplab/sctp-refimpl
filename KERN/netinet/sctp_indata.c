@@ -1093,11 +1093,7 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		 * Its being pd-api'd so we must 
 		 * do some locks.
 		 */
-		atomic_add_int(&stcb->asoc.refcnt, 1);
-		SCTP_TCB_UNLOCK(stcb);
-		SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
-		SCTP_TCB_LOCK(stcb);
-		atomic_add_int(&stcb->asoc.refcnt, -1);
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
 	if (control->data == NULL) {
 		control->data = chk->data;		
@@ -1119,7 +1115,7 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		control->last_frag_seen = 1;
 	}
 	if (control->on_read_q) {
-		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
+		SCTP_INP_READ_LOCK(stcb->sctp_ep);
 	}
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 } 
