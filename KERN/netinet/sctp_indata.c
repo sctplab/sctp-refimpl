@@ -1006,11 +1006,11 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	}
 done_un:
 	control = TAILQ_FIRST(&strm->inqueue);
-	nctl = TAILQ_NEXT(control, next_instrm);
 deliver_more:
 	if (control == NULL) {
 		return(ret);
 	}
+	nctl = TAILQ_NEXT(control, next_instrm);
 	if (strm->last_sequence_delivered == control->sinfo_ssn) {
 		/* Ok the guy at the top was being partially delivered
 		 * completed, so we remove it. Note
