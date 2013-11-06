@@ -822,7 +822,6 @@ sctp_handle_old_data(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 repeat:
 	lchk = fchk = TAILQ_FIRST(&control->reasm);
 	if (fchk == NULL) {
-		printf("No fchk in control:%p\n", control);
 		return(0);
 	}
 	if (strm->uno_pd == NULL)  {
@@ -847,7 +846,6 @@ repeat:
 				 * into it, and then throw it on the read queue. Once
 				 * done with that we repeat the whole thing.
 				 */
-				printf("Ok lets buildone up we found the last in order - its complete\n");
 				if (sctp_build_one_up_to(stcb, asoc, strm, control, chk) == 0) {
 					goto repeat;
 				} else {
@@ -1158,7 +1156,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * For old un-ordered data chunks.
 	 */
 	if (control->old_data && ((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED)) {
-		printf("Injecting old type unordered ctl:%p\n", control);
 		sctp_inject_old_data_unordered(stcb, asoc, strm, control, chk, abort_flag);
 		return;
 	}
