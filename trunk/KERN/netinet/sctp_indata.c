@@ -808,6 +808,7 @@ repeat:
 			sctp_add_to_readq(stcb->sctp_ep, stcb, strm->uno_pd,
 		                  &stcb->sctp_socket->so_rcv, strm->uno_pd->end_added,
 		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
+			printf("Start pd-api 3\n");
 			strm->pd_api_started = 1;
 		}
 	} else {
@@ -825,6 +826,7 @@ repeat:
 				if (strm->uno_pd->end_added) {
 					/* We are done */
 					strm->uno_pd = NULL;
+					printf("Start pd-api ends 2\n");
 					strm->pd_api_started = 0;
 					goto repeat;
 				}
@@ -953,6 +955,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		} else {
 			/* Can we do a PD-API for this un-ordered guy? */
 			if ((control->length < pd_point) && (strm->pd_api_started == 0)) {
+				printf("Start pd-api 1\n");
 				strm->pd_api_started = 1;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  control,
@@ -1026,7 +1029,7 @@ deliver_more:
 			goto deliver_more;
 		} else {
 			/* We are now doing PD API */
-			printf("PDAPI is up\n");
+			printf("Start pd-api 2\n");
 			strm->pd_api_started = 1;
 		}
 	}
@@ -1218,6 +1221,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		printf("The first is here can we condense? in:%d next:%d\n", 
 		       control->fsn_included, next_fsn);
 		TAILQ_FOREACH_SAFE(at, &control->reasm, sctp_next, nat) {
+			printf("Look at at:%p fsn:%d\n", at, at->rec.data.fsn_num);
 			if (at->rec.data.fsn_num == next_fsn) {
 				/* We can add this one now to the control */
 				next_fsn++;
@@ -1226,6 +1230,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				sctp_add_chk_to_control(control, stcb, asoc, chk);
 				if (control->on_read_q && strm->pd_api_started && control->end_added) {
 					/* Ok end is on, and we were the pd-api guy clear the flag */
+					printf("Start pd-api ends 1\n");
 					strm->pd_api_started = 0;
 				}
 			} else {
