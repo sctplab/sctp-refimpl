@@ -824,8 +824,10 @@ repeat:
 		}
 		length = 0;
 		fsn = fchk->rec.data.fsn_num;
-		printf("First fsn is %d\n", fsn);
+		printf("First fsn is %p 0x%x\n", fchk, fsn);
 		TAILQ_FOREACH(chk, &control->reasm, sctp_next) {
+			printf("Compare chk:%p fsn:0x%x to fsn:%x\n",
+			       chk, chk->rec.data.fsn_num, fsn);
 			if (chk->rec.data.fsn_num != fsn) {
 				printf("can't find my first fsn:%d at head\n",
 				       chk->rec.data.fsn_num);
@@ -834,16 +836,19 @@ repeat:
 			length += chk->send_size;
 			lchk = chk;
 			fsn++;
-			if ((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == 0) {
+			if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
 				/* Ok, we have them in order now 
 				 * fchk -> chk.
 				 * We need to build a read_q_entry and put the chk -> fchk
 				 * into it, and then throw it on the read queue. Once
 				 * done with that we repeat the whole thing.
 				 */
-				printf("Ok lets buildone up we found the last in order\n");
+				printf("Ok lets buildone up we found the last in order - its complete\n");
 				if (sctp_build_one_up_to(stcb, asoc, strm, control, chk) == 0) {
 					goto repeat;
+				} else {
+					printf("Build it failed??\n");
+					return(0);
 				}
 			}
 		}
@@ -901,6 +906,8 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 	if (TAILQ_EMPTY(&control->reasm)) {
 		printf("chk %p into empty queue\n", chk);
 		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);		
+		asoc->size_on_reasm_queue += chk->send_size;
+		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 		return;
 	}
 	TAILQ_FOREACH(at, &control->reasm, sctp_next) {
