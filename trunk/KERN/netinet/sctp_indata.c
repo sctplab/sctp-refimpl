@@ -89,8 +89,9 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 * sctp_soreceive then we will fix this so that ONLY this
 	 * associations data is taken into account.
 	 */
-	if (stcb->sctp_socket == NULL)
+	if (stcb->sctp_socket == NULL) {
 		return (calc);
+	}
 
 	if (stcb->asoc.sb_cc == 0 &&
 	    asoc->size_on_reasm_queue == 0 &&
@@ -101,16 +102,15 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	}
 	/* get actual space */
 	calc = (uint32_t) sctp_sbspace(&stcb->asoc, &stcb->sctp_socket->so_rcv);
-
 	/*
 	 * take out what has NOT been put on socket queue and we yet hold
 	 * for putting up.
 	 */
 	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_reasm_queue +
 	                                         asoc->cnt_on_reasm_queue * MSIZE));
+	printf("drop reasm %d reasm:%d\n", calc, asoc->size_on_reasm_queue);
 	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_all_streams +
 	                                         asoc->cnt_on_all_streams * MSIZE));
-
 	if (calc == 0) {
 		/* out of space */
 		return (calc);
@@ -861,6 +861,7 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 			 * This one in queue is bigger than the new one, insert
 			 * the new one before at.
 			 */
+			printf("Add send_size:%d for chk:%p to reasm\n", chk->send_size, chk);
 			asoc->size_on_reasm_queue += chk->send_size;
 			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 			TAILQ_INSERT_BEFORE(at, chk, sctp_next);
@@ -887,6 +888,7 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 				 * one
 				 */
 				/* check it first */
+				printf("Add send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
 				asoc->size_on_reasm_queue += chk->send_size;
 				sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 				TAILQ_INSERT_AFTER(&control->reasm, at, chk, sctp_next);
@@ -1074,7 +1076,9 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		sctp_add_to_tail_pointer(control, chk->data);
 	}
 	control->fsn_included = chk->rec.data.fsn_num;
+	printf("Subtracet send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
 	asoc->size_on_reasm_queue -= chk->send_size;
+	sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 	control->length += chk->send_size;
 	sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 	chk->data = NULL;
@@ -1209,6 +1213,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			/* Goes on the end */
 			printf("Inserting at tail chk:%p tsn:%d\n",
 			       chk, chk->rec.data.fsn_num);
+			asoc->size_on_reasm_queue += chk->send_size;
+			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 			TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);
 		}
 	}
