@@ -1093,7 +1093,6 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	printf("Subtracet send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
 	asoc->size_on_reasm_queue -= chk->send_size;
 	sctp_ucount_decr(asoc->cnt_on_reasm_queue);
-	control->length += chk->send_size;
 	printf("%s:Mark non-revoke control:%p tsn:%d\n", 
 	       __FUNCTION__,
 	       chk, chk->rec.data.TSN_seq);
