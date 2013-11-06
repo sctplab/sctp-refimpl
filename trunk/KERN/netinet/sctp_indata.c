@@ -827,21 +827,14 @@ repeat:
 	}
 	if (strm->uno_pd == NULL)  {
 		/* No PD-API is happening for un-ordered */
-		printf("No PD-API up\n");
 		if ((fchk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
 			/* Nothing to do.. no first */
-			printf("No first\n");
 			return (0);
 		}
 		length = 0;
 		fsn = fchk->rec.data.fsn_num;
-		printf("First fsn is %p 0x%x\n", fchk, fsn);
 		TAILQ_FOREACH(chk, &control->reasm, sctp_next) {
-			printf("Compare chk:%p fsn:0x%x to fsn:%x\n",
-			       chk, chk->rec.data.fsn_num, fsn);
 			if (chk->rec.data.fsn_num != fsn) {
-				printf("can't find my first fsn:%d at head\n",
-				       chk->rec.data.fsn_num);
 				break;
 			}
 			length += chk->send_size;
@@ -913,9 +906,7 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 	 * Here we need to place the chunk into the control structure
 	 * sorted in the correct order. 
 	 */
-	printf("Injecting old data now\n");
 	if (TAILQ_EMPTY(&control->reasm)) {
-		printf("chk %p into empty queue ctl%p\n", chk, control);
 		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);		
 		asoc->size_on_reasm_queue += chk->send_size;
 		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
@@ -927,7 +918,6 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 			 * This one in queue is bigger than the new one, insert
 			 * the new one before at.
 			 */
-			printf("Add send_size:%d for chk:%p to reasm\n", chk->send_size, chk);
 			asoc->size_on_reasm_queue += chk->send_size;
 			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 			inserted = 1;
@@ -952,7 +942,6 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 
 	}
 	if (inserted == 0) {
-		printf("Add send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
 		asoc->size_on_reasm_queue += chk->send_size;
 		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);
@@ -985,7 +974,6 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	if (control) {
 		if (control->old_data) {
 			/* Special handling needed for "old" data format */
-			printf("Old Unordered check ctl:%p\n", control);
 			nctl = TAILQ_NEXT(control, next_instrm);
 			if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
 				goto done_un;
@@ -1000,7 +988,6 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	}
 	if (strm->pd_api_started) {
 		/* Can't add more */
-		printf("PD API up all done\n");
 		return(0);
 	}
 	while (control) {
@@ -1049,7 +1036,6 @@ deliver_more:
 	}
 	if (strm->pd_api_started) {
 		/* Can't add more must have gotten an un-ordered above being partially delivered. */
-		printf("PD API up no more\n");
 		return(0);
 	}
 	next_to_del = strm->last_sequence_delivered + 1;
