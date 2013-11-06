@@ -328,7 +328,7 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 {
 	uint32_t gap, i, cumackp1;
 	int fnd = 0;
-
+	int in_r=0, in_nr=0;
 	if (SCTP_BASE_SYSCTL(sctp_do_drain) == 0) {
 		return;
 	}
@@ -340,15 +340,25 @@ sctp_mark_non_revokable(struct sctp_association *asoc, uint32_t tsn)
 		return;
 	}
 	SCTP_CALC_TSN_TO_GAP(gap, tsn, asoc->mapping_array_base_tsn);
-	if (!SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap)) {
+	in_r = SCTP_IS_TSN_PRESENT(asoc->mapping_array, gap);
+	in_nr = SCTP_IS_TSN_PRESENT(asoc->nr_mapping_array, gap);
+	if ((in_r == 0) && (in_nr == 0)) {
+#ifdef INVARIANTS
+		panic("Things are really messed up now");
+#else
 		SCTP_PRINTF("gap:%x tsn:%x\n", gap, tsn);
 		sctp_print_mapping_array(asoc);
-#ifdef INVARIANTS
-		panic("Things are really messed up now!!");
 #endif
 	}
-	SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
-	SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
+	if (in_nr == 0)
+		SCTP_SET_TSN_PRESENT(asoc->nr_mapping_array, gap);
+	if (in_r) 
+		SCTP_UNSET_TSN_PRESENT(asoc->mapping_array, gap);
+	if ((in_r == 0) && (in_nr)) {
+		printf("%s:TSN %d was in_r:%d but in_nr:%d\n",
+		       __FUNCTION__,
+		       tsn, in_r, in_nr);
+	}
 	if (SCTP_TSN_GT(tsn, asoc->highest_tsn_inside_nr_map)) {
 		asoc->highest_tsn_inside_nr_map = tsn;
 	}
@@ -572,6 +582,8 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 		asoc->size_on_all_streams -= control->length;
 		sctp_ucount_decr(asoc->cnt_on_all_streams);
 		strm->last_sequence_delivered++;
+		printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+		       __FUNCTION__, control, control->sinfo_tsn);
 		sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		sctp_add_to_readq(stcb->sctp_ep, stcb,
 		                  control,
@@ -596,6 +608,9 @@ sctp_queue_data_to_stream(struct sctp_tcb *stcb,
 					sctp_log_strm_del(control, NULL,
 							  SCTP_STR_LOG_FROM_IMMED_DEL);
 				}
+				printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+				       __FUNCTION__,
+				       control, control->sinfo_tsn);
 				sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 				                  control,
@@ -1008,6 +1023,9 @@ deliver_more:
 		} 
 		if (((control->sinfo_flags >> 8) & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG) {
 			/* A singleton now slipping through - mark it non-revokable too */
+			printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+			       __FUNCTION__,
+			       control, control->sinfo_tsn);
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 		} else if (control->end_added == 0) {
 			/* Check if we can defer adding until its all there */
@@ -1079,6 +1097,9 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	asoc->size_on_reasm_queue -= chk->send_size;
 	sctp_ucount_decr(asoc->cnt_on_reasm_queue);
 	control->length += chk->send_size;
+	printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+	       __FUNCTION__,
+	       chk, chk->rec.data.TSN_seq);
 	sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 	chk->data = NULL;
 	if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
@@ -1154,6 +1175,9 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		control->first_frag_seen = 1;
 		control->fsn_included = chk->rec.data.fsn_num;
 		control->data = chk->data;
+		printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+		       __FUNCTION__,
+		       chk, chk->rec.data.TSN_seq);
 		sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 		chk->data = NULL;
 		sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
@@ -1747,6 +1771,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		if (chunk_flags & SCTP_DATA_UNORDERED) {
 			/* queue directly into socket buffer */
+			printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+			       __FUNCTION__,
+			       control, control->sinfo_tsn);
 			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
 			sctp_add_to_readq(stcb->sctp_ep, stcb,
 			                  control,
