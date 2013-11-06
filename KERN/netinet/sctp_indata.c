@@ -388,7 +388,18 @@ sctp_place_control_in_stream(struct sctp_stream_in *strm,
 	bits = (control->sinfo_flags >> 8);
 
 	if (bits & SCTP_DATA_UNORDERED) {
+		struct sctp_queued_to_read *fctl;
 		q = &strm->uno_inqueue;
+		if (control->old_data) {
+			fctl = TAILQ_FIRST(q);
+			if (fctl && fctl->old_data) {
+				panic("Double insert old.. evil you");
+			}
+			TAILQ_INSERT_HEAD(q, control, next_instrm);
+		} else {
+			TAILQ_INSERT_TAIL(q, control, next_instrm);			
+		}
+		return(0);
 	} else {
 		q = &strm->inqueue;
 	}
@@ -904,7 +915,7 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 	 */
 	printf("Injecting old data now\n");
 	if (TAILQ_EMPTY(&control->reasm)) {
-		printf("chk %p into empty queue\n", chk);
+		printf("chk %p into empty queue ctl%p\n", chk, control);
 		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);		
 		asoc->size_on_reasm_queue += chk->send_size;
 		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
@@ -974,7 +985,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	if (control) {
 		if (control->old_data) {
 			/* Special handling needed for "old" data format */
-			printf("Old Unordered check\n");
+			printf("Old Unordered check ctl:%p\n", control);
 			nctl = TAILQ_NEXT(control, next_instrm);
 			if (sctp_handle_old_data(stcb, asoc, strm, control, pd_point)) {
 				goto done_un;
@@ -983,6 +994,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		}
 		if (control && (control->old_data)) {
 			/* Huh - TSNH */
+			printf("another control %p and its old too?\n", control);
 			panic("Found more than one control of old data type?");
 		}
 	}
@@ -1160,7 +1172,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * For old un-ordered data chunks.
 	 */
 	if (control->old_data && ((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED)) {
-		printf("Injecting old type unordered\n");
+		printf("Injecting old type unordered ctl:%p\n", control);
 		sctp_inject_old_data_unordered(stcb, asoc, strm, control, chk, abort_flag);
 		return;
 	}
@@ -1268,7 +1280,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 }
 
 static struct sctp_queued_to_read *
-find_reasm_entry(struct sctp_stream_in *strm, uint32_t msg_id, int ordered)
+find_reasm_entry(struct sctp_stream_in *strm, uint32_t msg_id, int ordered, int old)
 {
 	struct sctp_queued_to_read *reasm;
 	if (ordered) {
@@ -1278,6 +1290,14 @@ find_reasm_entry(struct sctp_stream_in *strm, uint32_t msg_id, int ordered)
 			}
 		}
 	} else {
+		if (old) {
+			reasm = TAILQ_FIRST(&strm->uno_inqueue);
+			if ((reasm) && 
+			    (reasm->old_data == 0)) {
+				return (NULL);
+			}
+			return (reasm);
+		}
 		TAILQ_FOREACH(reasm, &strm->uno_inqueue, next_instrm) {
 			if (reasm->msg_id == msg_id) {
 				break;
@@ -1452,7 +1472,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		/* See if we can find the re-assembly entity */
-		control = find_reasm_entry(strm, msg_id, ordered);
+		control = find_reasm_entry(strm, msg_id, ordered, old_data);
 	}
 	/* now do the tests */
 	if (((asoc->cnt_on_all_streams +
@@ -5015,7 +5035,7 @@ sctp_flush_reassm_for_str_seq(struct sctp_tcb *stcb,
 	 * for now we just dump everything on the queue.
 	 */
 	strm = &asoc->strmin[stream];
-	control = find_reasm_entry(strm, seq, 0);
+	control = find_reasm_entry(strm, seq, 0, 0);
 	if (control == NULL) {
 		/* Not found */
 		return;
