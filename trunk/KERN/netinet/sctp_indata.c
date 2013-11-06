@@ -1241,7 +1241,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* We can add this one now to the control */
 				next_fsn++;
 				TAILQ_REMOVE(&control->reasm, at, sctp_next);
-				sctp_add_chk_to_control(control, stcb, asoc, chk);
+				sctp_add_chk_to_control(control, stcb, asoc, at);
 				if (control->on_read_q && strm->pd_api_started && control->end_added) {
 					/* Ok end is on, and we were the pd-api guy clear the flag */
 					printf("Start pd-api ends 1\n");
