@@ -421,6 +421,7 @@ sctp_process_init(struct sctp_init_chunk *cp, struct sctp_tcb *stcb)
 		asoc->strmin[i].last_sequence_delivered = 0xffff;
 		TAILQ_INIT(&asoc->strmin[i].inqueue);
 		TAILQ_INIT(&asoc->strmin[i].uno_inqueue);
+		asoc->strmin[i].pd_api_started = 0;
 		asoc->strmin[i].delivery_started = 0;
 	}
 	/*
@@ -4105,6 +4106,7 @@ sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *ch
 				stcb->asoc.strmin[i].stream_no = i;
 				stcb->asoc.strmin[i].last_sequence_delivered = oldstrm[i].last_sequence_delivered;
 				stcb->asoc.strmin[i].delivery_started = oldstrm[i].delivery_started;
+				stcb->asoc.strmin[i].pd_api_started = oldstrm[i].pd_api_started;
 				/* now anything on those queues? */
 				TAILQ_FOREACH_SAFE(ctl, &oldstrm[i].inqueue, next, nctl) {
 					TAILQ_REMOVE(&oldstrm[i].inqueue, ctl, next);
@@ -4121,6 +4123,7 @@ sctp_handle_str_reset_add_strm(struct sctp_tcb *stcb, struct sctp_tmit_chunk *ch
 				TAILQ_INIT(&stcb->asoc.strmin[i].uno_inqueue);
 				stcb->asoc.strmin[i].stream_no = i;
 				stcb->asoc.strmin[i].last_sequence_delivered = 0xffff;
+				stcb->asoc.strmin[i].pd_api_started = 0;
 				stcb->asoc.strmin[i].delivery_started = 0;
 			}
 			SCTP_FREE(oldstrm, SCTP_M_STRMI);
