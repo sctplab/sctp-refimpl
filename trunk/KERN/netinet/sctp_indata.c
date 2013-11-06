@@ -809,24 +809,31 @@ sctp_handle_old_data(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 	uint32_t fsn;
 	uint32_t length;
 repeat:
-	fchk = TAILQ_FIRST(&control->reasm);
+	lchk = fchk = TAILQ_FIRST(&control->reasm);
 	if (fchk == NULL) {
+		printf("No fchk in control:%p\n", control);
 		return(0);
 	}
 	if (strm->uno_pd == NULL)  {
 		/* No PD-API is happening for un-ordered */
+		printf("No PD-API up\n");
 		if ((fchk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
 			/* Nothing to do.. no first */
+			printf("No first\n");
 			return (0);
 		}
 		length = 0;
 		fsn = fchk->rec.data.fsn_num;
+		printf("First fsn is %d\n", fsn);
 		TAILQ_FOREACH(chk, &control->reasm, sctp_next) {
 			if (chk->rec.data.fsn_num != fsn) {
+				printf("can't find my first fsn:%d at head\n",
+				       chk->rec.data.fsn_num);
 				break;
 			}
 			length += chk->send_size;
 			lchk = chk;
+			fsn++;
 			if ((chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) == 0) {
 				/* Ok, we have them in order now 
 				 * fchk -> chk.
@@ -834,6 +841,7 @@ repeat:
 				 * into it, and then throw it on the read queue. Once
 				 * done with that we repeat the whole thing.
 				 */
+				printf("Ok lets buildone up we found the last in order\n");
 				if (sctp_build_one_up_to(stcb, asoc, strm, control, chk) == 0) {
 					goto repeat;
 				}
@@ -884,11 +892,14 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 			       int *abort_flag)
 {
 	struct sctp_tmit_chunk *at;
+	int inserted = 0;
 	/*
 	 * Here we need to place the chunk into the control structure
 	 * sorted in the correct order. 
 	 */
+	printf("Injecting old data now\n");
 	if (TAILQ_EMPTY(&control->reasm)) {
+		printf("chk %p into empty queue\n", chk);
 		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);		
 		return;
 	}
@@ -901,6 +912,7 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 			printf("Add send_size:%d for chk:%p to reasm\n", chk->send_size, chk);
 			asoc->size_on_reasm_queue += chk->send_size;
 			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
+			inserted = 1;
 			TAILQ_INSERT_BEFORE(at, chk, sctp_next);
 			break;
 		} else if (at->rec.data.fsn_num == chk->rec.data.fsn_num) {
@@ -918,20 +930,14 @@ sctp_inject_old_data_unordered(struct sctp_tcb *stcb, struct sctp_association *a
 			}
 			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 			return;
-		} else {
-			if (TAILQ_NEXT(at, sctp_next) == NULL) {
-				/*
-				 * We are at the end, insert it after this
-				 * one
-				 */
-				/* check it first */
-				printf("Add send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
-				asoc->size_on_reasm_queue += chk->send_size;
-				sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-				TAILQ_INSERT_AFTER(&control->reasm, at, chk, sctp_next);
-				break;
-			}
-		}
+		} 
+
+	}
+	if (inserted == 0) {
+		printf("Add send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
+		asoc->size_on_reasm_queue += chk->send_size;
+		sctp_ucount_incr(asoc->cnt_on_reasm_queue);
+		TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);
 	}
 }
 
