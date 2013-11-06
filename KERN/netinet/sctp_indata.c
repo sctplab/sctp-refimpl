@@ -108,7 +108,6 @@ sctp_calc_rwnd(struct sctp_tcb *stcb, struct sctp_association *asoc)
 	 */
 	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_reasm_queue +
 	                                         asoc->cnt_on_reasm_queue * MSIZE));
-	printf("drop reasm %d reasm:%d\n", calc, asoc->size_on_reasm_queue);
 	calc = sctp_sbspace_sub(calc, (uint32_t)(asoc->size_on_all_streams +
 	                                         asoc->cnt_on_all_streams * MSIZE));
 	if (calc == 0) {
@@ -1067,6 +1066,11 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		 */
 		struct mbuf *m;
 
+		atomic_add_int(&stcb->asoc.refcnt, 1);
+		SCTP_TCB_UNLOCK(stcb);
+		SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
+		SCTP_TCB_LOCK(stcb);
+		atomic_add_int(&stcb->asoc.refcnt, -1);
 		m = chk->data;
 		while (m) {
 			if (SCTP_BUF_LEN(m) == 0) {
@@ -1102,6 +1106,9 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		/* Its complete */
 		control->end_added = 1;
 		control->last_frag_seen = 1;
+	}
+	if (control->on_read_q) {
+		SOCKBUF_UNLOCK(&stcb->sctp_socket->so_rcv);
 	}
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 } 
