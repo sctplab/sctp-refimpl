@@ -669,6 +669,12 @@ static void
 sctp_add_to_tail_pointer(struct sctp_queued_to_read *control, struct mbuf *m)
 {
 	struct mbuf *prev=NULL;
+	struct sctp_tcb *stcb;
+
+	stcb = control->stcb;
+	if (stcb == NULL) {
+		panic("Control broken");
+	}
 	if (control->tail_mbuf == NULL) {
 		/* TSNH */
 		control->data = m;
@@ -693,6 +699,13 @@ sctp_add_to_tail_pointer(struct sctp_queued_to_read *control, struct mbuf *m)
 			continue;
 		}
 		prev = m;
+		if (control->on_read_q) {
+			/* 
+			 * On read queue so we must increment the
+			 * SB stuff, we assume caller has done any locks of SB.
+			 */
+			sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m);
+		}
 		atomic_add_int(&control->length, SCTP_BUF_LEN(m));
 		m = SCTP_BUF_NEXT(m);
 	}
@@ -928,7 +941,6 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	uint32_t pd_point;
 	int ret = 0;
 
-	printf("Delivery reasm check\n");
 	if (stcb->sctp_socket) {
 		pd_point = min(SCTP_SB_LIMIT_RCV(stcb->sctp_socket) >> SCTP_PARTIAL_DELIVERY_SHIFT,
 			       stcb->sctp_ep->partial_delivery_point);
@@ -957,7 +969,6 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		return(0);
 	}
 	while (control) {
-		printf("Have %p for unordered tocheck\n", control);
 		nctl = TAILQ_NEXT(control, next_instrm);
 		if (control->end_added) {
 			/* We just put the last bit on */
@@ -996,7 +1007,6 @@ deliver_more:
 		 * the pd_api flag was taken off when the
 		 * chunk was merged on in sctp_queue_data_for_reasm below.
 		 */
-		printf("last ctrl:%p delivered was this end:%d\n", control, control->end_added);
 		if (control->end_added) {
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);			
 			control = nctl;
@@ -1051,8 +1061,8 @@ out:
 
 void
 sctp_add_chk_to_control(struct sctp_queued_to_read *control, 
-   struct sctp_tcb *stcb, struct sctp_association *asoc,
-   struct sctp_tmit_chunk *chk)
+			struct sctp_tcb *stcb, struct sctp_association *asoc,
+			struct sctp_tmit_chunk *chk)
 {
 	/* 
 	 * Given a control and a chunk, merge the 
@@ -1061,27 +1071,14 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	 */
 	if (control->on_read_q) {
 		/* 
-		 * Its being pd-api'd so we must fix the 
-		 * socket buffer by adding it in.
+		 * Its being pd-api'd so we must 
+		 * do some locks.
 		 */
-		struct mbuf *m;
-
 		atomic_add_int(&stcb->asoc.refcnt, 1);
 		SCTP_TCB_UNLOCK(stcb);
 		SOCKBUF_LOCK(&stcb->sctp_socket->so_rcv);
 		SCTP_TCB_LOCK(stcb);
 		atomic_add_int(&stcb->asoc.refcnt, -1);
-		m = chk->data;
-		while (m) {
-			if (SCTP_BUF_LEN(m) == 0) {
-				/* Skip mbufs with NO length */
-				m = SCTP_BUF_NEXT(m);
-				continue;
-			}
-			sctp_sballoc(stcb, &stcb->sctp_socket->so_rcv, m);
-			atomic_add_int(&control->length, SCTP_BUF_LEN(m));
-			m = SCTP_BUF_NEXT(m);
-		}
 	}
 	if (control->data == NULL) {
 		control->data = chk->data;		
@@ -1090,12 +1087,8 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		sctp_add_to_tail_pointer(control, chk->data);
 	}
 	control->fsn_included = chk->rec.data.fsn_num;
-	printf("Subtracet send_size:%d for chk:%p to reasm at end\n", chk->send_size, chk);
 	asoc->size_on_reasm_queue -= chk->send_size;
 	sctp_ucount_decr(asoc->cnt_on_reasm_queue);
-	printf("%s:Mark non-revoke control:%p tsn:%d\n", 
-	       __FUNCTION__,
-	       chk, chk->rec.data.TSN_seq);
 	sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 	chk->data = NULL;
 	if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
@@ -1132,8 +1125,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 
 	/* Must be added to the stream-in queue */
 	if (created_control) {
-		printf("Placing a new control element %p into strm:%p (%d)\n",
-		       control, strm, strm->stream_no);
 		if (sctp_place_control_in_stream(strm, asoc, control)) {
 			/* Duplicate SSN? */
 			sctp_m_freem(chk->data);
@@ -1142,7 +1133,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			return;
 		}
 	}
-	printf("Adding data:%p to control:%p\n", chk, control);
 	/* 
 	 * For old un-ordered data chunks.
 	 */
@@ -1159,7 +1149,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 *  o if its not in order we place it on the list in its place.
 	 */
 	if (chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) {
-		printf("Very first TSN\n");
 		/* Its the very first one. */
 		if (control->first_frag_seen) {
 			/* 
@@ -1174,9 +1163,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		control->first_frag_seen = 1;
 		control->fsn_included = chk->rec.data.fsn_num;
 		control->data = chk->data;
-		printf("%s:Mark non-revoke control:%p tsn:%d\n", 
-		       __FUNCTION__,
-		       chk, chk->rec.data.TSN_seq);
 		sctp_mark_non_revokable(asoc, chk->rec.data.TSN_seq);
 		chk->data = NULL;
 		sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
@@ -1184,7 +1170,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	} else {
 		/* Place the chunk in our list */
 		int inserted=0;
-		printf("Another TSN\n");
 		if(control->last_frag_seen == 0) {
 			/* Still willing to raise highest FSN seen */
 			if (SCTP_TSN_GT(chk->rec.data.fsn_num, control->top_fsn)) {
@@ -1208,9 +1193,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				asoc->size_on_reasm_queue += chk->send_size;
 				sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-				printf("Insert chk:%p tsn:%d before at:%p tsn:%d\n",
-				       chk, chk->rec.data.fsn_num,
-				       at, at->rec.data.fsn_num);
 				TAILQ_INSERT_BEFORE(at, chk, sctp_next);
 				inserted = 1;
 				break;
@@ -1233,8 +1215,6 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		}
 		if (inserted == 0) {
 			/* Goes on the end */
-			printf("Inserting at tail chk:%p tsn:%d\n",
-			       chk, chk->rec.data.fsn_num);
 			asoc->size_on_reasm_queue += chk->send_size;
 			sctp_ucount_incr(asoc->cnt_on_reasm_queue);
 			TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);
@@ -1246,14 +1226,10 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 */
 	if (control->first_frag_seen) {
 		next_fsn = control->fsn_included + 1;
-		printf("The first is here can we condense? in:%d next:%d\n", 
-		       control->fsn_included, next_fsn);
 		TAILQ_FOREACH_SAFE(at, &control->reasm, sctp_next, nat) {
-			printf("Look at at:%p fsn:%d\n", at, at->rec.data.fsn_num);
 			if (at->rec.data.fsn_num == next_fsn) {
 				/* We can add this one now to the control */
 				next_fsn++;
-				printf("Adding chk:%p in\n", at);
 				TAILQ_REMOVE(&control->reasm, at, sctp_next);
 				sctp_add_chk_to_control(control, stcb, asoc, chk);
 				if (control->on_read_q && strm->pd_api_started && control->end_added) {
