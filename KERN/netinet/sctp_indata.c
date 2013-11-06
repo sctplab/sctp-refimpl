@@ -971,6 +971,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 	}
 done_un:
 	control = TAILQ_FIRST(&strm->inqueue);
+	nctl = TAILQ_NEXT(control, next_instrm);
 deliver_more:
 	if (control == NULL) {
 		printf("Nothing in the inqueue\n");
@@ -984,7 +985,6 @@ deliver_more:
 		 */
 		printf("last ctrl:%p delivered was this end:%d\n", control, control->end_added);
 		if (control->end_added) {
-			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);			
 			control = nctl;
 		}
@@ -1003,7 +1003,6 @@ deliver_more:
 		printf("Deliverable maybe end:%d\n", control->end_added);
 		if ((control->end_added) && (strm->pd_api_started == 0)) {
 			/* We are done with it afterwards */
-			nctl = TAILQ_NEXT(control, next_instrm);
 			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
 			ret++;
 		} 

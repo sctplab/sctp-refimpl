@@ -6562,7 +6562,8 @@ sctp_msg_append(struct sctp_tcb *stcb,
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
-	sp->fsn = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
+	sp->fsn = 0;
+	sp->msg_id = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
 	if (sp->sinfo_flags & SCTP_ADDR_OVER) {
 		sp->net = net;
 		atomic_add_int(&sp->net->ref_count, 1);
@@ -12779,7 +12780,8 @@ sctp_copy_it_in(struct sctp_tcb *stcb,
 	sp->timetolive = srcv->sinfo_timetolive;
 	sp->ppid = srcv->sinfo_ppid;
 	sp->context = srcv->sinfo_context;
-	sp->fsn = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
+	sp->fsn = 0;
+	sp->msg_id = atomic_fetchadd_int(&stcb->asoc.assoc_msg_id, 1);
 	(void)SCTP_GETTIME_TIMEVAL(&sp->ts);
 
 	sp->stream = srcv->sinfo_stream;
