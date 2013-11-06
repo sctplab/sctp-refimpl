@@ -1157,6 +1157,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		sctp_setup_tail_pointer(control);
 	} else {
 		/* Place the chunk in our list */
+		int inserted=0;
 		printf("Another TSN\n");
 		if(control->last_frag_seen == 0) {
 			/* Still willing to raise highest FSN seen */
@@ -1181,7 +1182,11 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				 */
 				asoc->size_on_reasm_queue += chk->send_size;
 				sctp_ucount_incr(asoc->cnt_on_reasm_queue);
+				printf("Insert chk:%p tsn:%d before at:%p tsn:%d\n",
+				       chk, chk->rec.data.fsn_num,
+				       at, at->rec.data.fsn_num);
 				TAILQ_INSERT_BEFORE(at, chk, sctp_next);
+				inserted = 1;
 				break;
 			} else if (at->rec.data.fsn_num == chk->rec.data.fsn_num) {
 				/* Gak, He sent me a duplicate str seq number */
@@ -1198,18 +1203,13 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				}
 				sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 				return;
-			} else {
-				if (TAILQ_NEXT(at, sctp_next) == NULL) {
-					/*
-					 * We are at the end, insert it after this
-					 * one
-					 */
-					/* check it first */
-					sctp_ucount_incr(asoc->cnt_on_reasm_queue);
-					TAILQ_INSERT_AFTER(&control->reasm, at, chk, sctp_next);
-					break;
-				}
-			}
+			} 
+		}
+		if (inserted == 0) {
+			/* Goes on the end */
+			printf("Inserting at tail chk:%p tsn:%d\n",
+			       chk, chk->rec.data.fsn_num);
+			TAILQ_INSERT_TAIL(&control->reasm, chk, sctp_next);
 		}
 	}
 	/* 
