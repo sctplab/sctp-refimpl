@@ -989,7 +989,6 @@ done_un:
 	nctl = TAILQ_NEXT(control, next_instrm);
 deliver_more:
 	if (control == NULL) {
-		printf("Nothing in the inqueue\n");
 		return(ret);
 	}
 	if (strm->last_sequence_delivered == control->sinfo_ssn) {
@@ -1010,50 +1009,44 @@ deliver_more:
 		return(0);
 	}
 	next_to_del = strm->last_sequence_delivered + 1;
-	printf("Next to deliver in this stream is %d this control:%d fir:%d\n", next_to_del,
-	       control->sinfo_ssn, control->first_frag_seen);
-	if ((control->sinfo_ssn == next_to_del) && 
-	    (control->first_frag_seen)) {
-		/* Ok we can deliver it onto the stream. */
-		printf("Deliverable maybe end:%d\n", control->end_added);
-		if ((control->end_added) && (strm->pd_api_started == 0)) {
-			/* We are done with it afterwards */
-			TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
-			ret++;
-		} 
-		if (((control->sinfo_flags >> 8) & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG) {
-			/* A singleton now slipping through - mark it non-revokable too */
-			printf("%s:Mark non-revoke control:%p tsn:%d\n", 
-			       __FUNCTION__,
-			       control, control->sinfo_tsn);
-			sctp_mark_non_revokable(asoc, control->sinfo_tsn);
-		} else if (control->end_added == 0) {
-			/* Check if we can defer adding until its all there */
-			printf("Check PDAPI possiblity len:%d pd_point:%d pdapi up:%d\n",
-			       control->length, pd_point, strm->pd_api_started);
-			if ((control->length < pd_point) || (strm->pd_api_started)) {
-				/* Don't need it or cannot add more (one being delivered that way) */
-				goto out;
+	if (control) {
+		if ((control->sinfo_ssn == next_to_del) && 
+		    (control->first_frag_seen)) {
+			/* Ok we can deliver it onto the stream. */
+			if ((control->end_added) && (strm->pd_api_started == 0)) {
+				/* We are done with it afterwards */
+				TAILQ_REMOVE(&strm->inqueue, control, next_instrm);
+				ret++;
+			} 
+			if (((control->sinfo_flags >> 8) & SCTP_DATA_NOT_FRAG) == SCTP_DATA_NOT_FRAG) {
+				/* A singleton now slipping through - mark it non-revokable too */
+				printf("%s:Mark non-revoke control:%p tsn:%d\n", 
+				       __FUNCTION__,
+				       control, control->sinfo_tsn);
+				sctp_mark_non_revokable(asoc, control->sinfo_tsn);
+			} else if (control->end_added == 0) {
+				/* Check if we can defer adding until its all there */
+				if ((control->length < pd_point) || (strm->pd_api_started)) {
+					/* Don't need it or cannot add more (one being delivered that way) */
+					goto out;
+				}
 			}
-		}
-		printf("Adding to read queue\n");
-		sctp_add_to_readq(stcb->sctp_ep, stcb,
-		                  control,
-		                  &stcb->sctp_socket->so_rcv, control->end_added,
-		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-		strm->last_sequence_delivered = next_to_del;
-		if ((control->end_added) && (control->last_frag_seen)){
-			control = nctl;
-			printf("We can deliver more %p\n", nctl);
-			goto deliver_more;
-		} else {
-			/* We are now doing PD API */
-			printf("Start pd-api 2\n");
-			strm->pd_api_started = 1;
+			sctp_add_to_readq(stcb->sctp_ep, stcb,
+					  control,
+					  &stcb->sctp_socket->so_rcv, control->end_added,
+					  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
+			strm->last_sequence_delivered = next_to_del;
+			if ((control->end_added) && (control->last_frag_seen)){
+				control = nctl;
+				goto deliver_more;
+			} else {
+				/* We are now doing PD API */
+				printf("Start pd-api 2\n");
+				strm->pd_api_started = 1;
+			}
 		}
 	}
 out:
-	printf("Ret:%d\n", ret);
 	return (ret);
 }
 
