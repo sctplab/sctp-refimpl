@@ -48,7 +48,6 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_auth.h 255160 2013-09-02 22:48:41Z tue
 /* random sizes */
 #define SCTP_AUTH_RANDOM_SIZE_DEFAULT	32
 #define SCTP_AUTH_RANDOM_SIZE_REQUIRED	32
-#define SCTP_AUTH_RANDOM_SIZE_MAX	256
 
 /* union of all supported HMAC algorithm contexts */
 typedef union sctp_hash_context {
