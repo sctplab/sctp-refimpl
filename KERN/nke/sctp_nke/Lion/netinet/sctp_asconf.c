@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 257800 2013-11-07 16:37:12Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_asconf.c 257803 2013-11-07 17:08:09Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2620,7 +2620,8 @@ sctp_compose_asconf(struct sctp_tcb *stcb, int *retlen, int addr_locked)
 		/* get the parameter length */
 		p_length = SCTP_SIZE32(aa->ap.aph.ph.param_length);
 		/* will it fit in current chunk? */
-		if (SCTP_BUF_LEN(m_asconf) + p_length > stcb->asoc.smallest_mtu) {
+		if ((SCTP_BUF_LEN(m_asconf) + p_length > stcb->asoc.smallest_mtu) ||
+		    (SCTP_BUF_LEN(m_asconf) + p_length > MCLBYTES)) {
 			/* won't fit, so we're done with this chunk */
 			break;
 		}
