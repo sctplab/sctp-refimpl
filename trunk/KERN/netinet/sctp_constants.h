@@ -837,6 +837,7 @@ extern void getwintimeofday(struct timeval *tv);
 #define SCTP_FROM_SCTP_PEELOFF 0xa0000000
 #define SCTP_FROM_SCTP_PANDA   0xb0000000
 #define SCTP_FROM_SCTP_SYSCTL  0xc0000000
+#define SCTP_FROM_SCTPUTIL     0xd0000000
 
 /* Location ID's */
 #define SCTP_LOC_1  0x00000001

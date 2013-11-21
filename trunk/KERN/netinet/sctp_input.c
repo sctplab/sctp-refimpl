@@ -171,7 +171,9 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 	if (sctp_validate_init_auth_params(m, offset + sizeof(*cp),
 					   offset + ntohs(cp->ch.chunk_length))) {
 		/* auth parameter(s) error... send abort */
-		sctp_abort_association(inp, stcb, m, iphlen, src, dst, sh, NULL,
+		struct mbuf *op_err;
+		op_err = sctp_generate_locerr(SCTP_FROM_SCTP_INPUT+SCTP_LOC_9);
+		sctp_abort_association(inp, stcb, m, iphlen, src, dst, sh, op_err,
 #if defined(__FreeBSD__)
 		                       use_mflowid, mflowid,
 #endif
@@ -203,7 +205,7 @@ sctp_handle_init(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
 			                use_mflowid, mflowid,
 #endif
-			                vrf_id, port);
+			                vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_5);
 		}
 		goto outnow;
 	}
@@ -482,12 +484,13 @@ sctp_process_init_ack(struct mbuf *m, int iphlen, int offset,
 	if ((retval = sctp_load_addresses_from_init(stcb, m,
 	    (offset + sizeof(struct sctp_init_chunk)), initack_limit,
 	    src, dst, NULL))) {
-		/* Huh, we should abort */
+		struct mbuf *op_err;
+		op_err = sctp_generate_locerr(SCTP_FROM_SCTP_INPUT+SCTP_LOC_3);
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"Load addresses from INIT causes an abort %d\n",
 			retval);
 		sctp_abort_association(stcb->sctp_ep, stcb, m, iphlen,
-		                       src, dst, sh, NULL,
+		                       src, dst, sh, op_err,
 #if defined(__FreeBSD__)
 		                       use_mflowid, mflowid,
 #endif
@@ -1768,7 +1771,7 @@ sctp_process_cookie_existing(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port);
+		                vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_7);
 		return (NULL);
 	}
 	if ((ntohl(initack_cp->init.initiate_tag) == asoc->my_vtag) &&
@@ -2182,7 +2185,6 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		SCTPDBG(SCTP_DEBUG_INPUT1,
 			"process_cookie_new: no room for another TCB!\n");
 		op_err = sctp_generate_invmanparam(SCTP_CAUSE_OUT_OF_RESC);
-
 		sctp_abort_association(inp, (struct sctp_tcb *)NULL, m, iphlen,
 		                       src, dst, sh, op_err,
 #if defined(__FreeBSD__)
@@ -4692,7 +4694,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #if defined(__FreeBSD__)
 			                 use_mflowid, mflowid,
 #endif
-					 vrf_id, port);
+					 vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_1);
 			*offset = length;
 			if (locked_tcb) {
 				SCTP_TCB_UNLOCK(locked_tcb);
@@ -4735,7 +4737,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 #if defined(__FreeBSD__)
 				                 use_mflowid, mflowid,
 #endif
-				                 vrf_id, port);
+				                 vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_2);
 				return (NULL);
 			}
 		} else {
@@ -4876,8 +4878,10 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 			/* The INIT chunk must be the only chunk. */
 			if ((num_chunks > 1) ||
 			    (length - *offset > (int)SCTP_SIZE32(chk_length))) {
+				struct mbuf *op_err;
+				op_err = sctp_generate_locerr(SCTP_FROM_SCTP_INPUT+SCTP_LOC_8);
 				sctp_abort_association(inp, stcb, m, iphlen,
-				                       src, dst, sh, NULL,
+				                       src, dst, sh, op_err,
 #if defined(__FreeBSD__)
 				                       use_mflowid, mflowid,
 #endif
@@ -5852,7 +5856,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #if defined(__FreeBSD__)
 				                use_mflowid, mflowid,
 #endif
-				                vrf_id, port);
+				                vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
 			}
 		}
 		goto out;
@@ -5920,7 +5924,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #if defined(__FreeBSD__)
 			                 use_mflowid, mflowid,
 #endif
-					 vrf_id, port);
+					 vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_4);
 			goto out;
 		}
 
@@ -5971,7 +5975,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #if defined(__FreeBSD__)
 			                 use_mflowid, mflowid,
 #endif
-					 vrf_id, port);
+					 vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_6);
 			goto out;
 		}
 		if (stcb->asoc.my_vtag != ntohl(sh->v_tag)) {
@@ -6044,7 +6048,7 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 #if defined(__FreeBSD__)
 			                 use_mflowid, mflowid,
 #endif
-					 vrf_id, port);
+					 vrf_id, port, SCTP_FROM_SCTP_INPUT+SCTP_LOC_10);
 			goto out;
 			/*sa_ignore NOTREACHED*/
 			break;
