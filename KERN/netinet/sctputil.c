@@ -4050,7 +4050,7 @@ sctp_abort_association(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__FreeBSD__)
 	                use_mflowid, mflowid,
 #endif
-	                vrf_id, port);
+	                vrf_id, port, SCTP_FROM_SCTPUTIL+SCTP_LOC_1);
 	if (stcb != NULL) {
 		/* Ok, now lets free it */
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
@@ -4218,7 +4218,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
                  uint8_t use_mflowid, uint32_t mflowid,
 #endif
-                 uint32_t vrf_id, uint16_t port)
+                 uint32_t vrf_id, uint16_t port, uint32_t codepoint)
 {
 	struct sctp_chunkhdr *ch, chunk_buf;
 	unsigned int chk_length;
@@ -4287,7 +4287,7 @@ sctp_handle_ootb(struct mbuf *m, int iphlen, int offset,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port);
+		                vrf_id, port, codepoint);
 	}
 }
 
@@ -5098,6 +5098,30 @@ sctp_generate_invmanparam(int err)
 		ph->param_type = htons(err);
 	}
 	return (m);
+}
+
+struct mbuf *
+sctp_generate_locerr(uint32_t codepoint)
+{
+	struct mbuf *op_err;
+	op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
+				       0, M_NOWAIT, 1, MT_DATA);
+	if (op_err) {
+		struct sctp_paramhdr *ph;
+		uint32_t *ippp;
+		
+		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr) +
+			(2 * sizeof(uint32_t));
+		ph = mtod(op_err, struct sctp_paramhdr *);
+		ph->param_type =
+			htons(SCTP_CAUSE_USER_INITIATED_ABT);
+		ph->param_length =htons(SCTP_BUF_LEN(op_err));
+		ippp = (uint32_t *) (ph + 1);
+		*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_19);
+		ippp++;
+		*ippp = htonl(codepoint);
+	}
+	return(op_err);
 }
 
 #ifdef SCTP_MBCNT_LOGGING

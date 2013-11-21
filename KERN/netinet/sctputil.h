@@ -205,7 +205,7 @@ void sctp_handle_ootb(struct mbuf *, int, int,
 #if defined(__FreeBSD__)
                       uint8_t, uint32_t,
 #endif
-                      uint32_t, uint16_t);
+                      uint32_t, uint16_t, uint32_t);
 
 int sctp_connectx_helper_add(struct sctp_tcb *stcb, struct sockaddr *addr,
     int totaddr, int *error);
@@ -270,6 +270,8 @@ sctp_release_pr_sctp_chunk(struct sctp_tcb *, struct sctp_tmit_chunk *,
 );
 
 struct mbuf *sctp_generate_invmanparam(int);
+
+struct mbuf *sctp_generate_locerr(uint32_t codepoint);
 
 void sctp_bindx_add_address(struct socket *so, struct sctp_inpcb *inp,
 			    struct sockaddr *sa, sctp_assoc_t assoc_id,

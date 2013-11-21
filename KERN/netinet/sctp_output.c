@@ -5722,7 +5722,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port);
+		                vrf_id, port, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_2);
 		return;
 	}
 	abort_flag = 0;
@@ -5736,7 +5736,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port);
+		                vrf_id, port, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_3);
 		return;
 	}
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_NOWAIT, 1, MT_DATA);
@@ -12523,13 +12523,16 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sockaddr *src, struct sockadd
 #if defined(__FreeBSD__)
                 uint8_t use_mflowid, uint32_t mflowid,
 #endif
-                uint32_t vrf_id, uint16_t port)
+                uint32_t vrf_id, uint16_t port, uint32_t codepoint)
 {
 	/* Don't respond to an ABORT with an ABORT. */
 	if (sctp_is_there_an_abort_here(m, iphlen, &vtag)) {
 		if (cause)
 			sctp_m_freem(cause);
 		return;
+	}
+	if (cause == NULL) {
+		cause = sctp_generate_locerr(codepoint);
 	}
 	sctp_send_resp_msg(src, dst, sh, vtag, SCTP_ABORT_ASSOCIATION, cause,
 #if defined(__FreeBSD__)
