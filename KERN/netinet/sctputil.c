@@ -4637,6 +4637,43 @@ sctp_pull_off_control_to_new_inp(struct sctp_inpcb *old_inp,
 }
 
 void
+sctp_wakeup_the_read_socket(struct sctp_inpcb *inp)
+{
+	if (inp && inp->sctp_socket) {
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
+			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
+		} else {
+#if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+			struct socket *so;
+
+			so = SCTP_INP_SO(inp);
+			if (!so_locked) {
+				if (stcb) {
+					atomic_add_int(&stcb->asoc.refcnt, 1);
+					SCTP_TCB_UNLOCK(stcb);
+				}
+				SCTP_SOCKET_LOCK(so, 1);
+				if (stcb) {
+					SCTP_TCB_LOCK(stcb);
+					atomic_subtract_int(&stcb->asoc.refcnt, 1);
+				}
+				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
+					SCTP_SOCKET_UNLOCK(so, 1);
+					return;
+				}
+			}
+#endif
+			sctp_sorwakeup(inp, inp->sctp_socket);
+#if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
+			if (!so_locked) {
+				SCTP_SOCKET_UNLOCK(so, 1);
+			}
+#endif
+		}
+	}
+}
+
+void
 sctp_add_to_readq(struct sctp_inpcb *inp,
     struct sctp_tcb *stcb,
     struct sctp_queued_to_read *control,
@@ -4804,36 +4841,7 @@ sctp_add_to_readq(struct sctp_inpcb *inp,
 	if (inp_read_lock_held == 0)
 		SCTP_INP_READ_UNLOCK(inp);
 	if (inp && inp->sctp_socket) {
-		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_ZERO_COPY_ACTIVE)) {
-			SCTP_ZERO_COPY_EVENT(inp, inp->sctp_socket);
-		} else {
-#if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			struct socket *so;
-
-			so = SCTP_INP_SO(inp);
-			if (!so_locked) {
-				if (stcb) {
-					atomic_add_int(&stcb->asoc.refcnt, 1);
-					SCTP_TCB_UNLOCK(stcb);
-				}
-				SCTP_SOCKET_LOCK(so, 1);
-				if (stcb) {
-					SCTP_TCB_LOCK(stcb);
-					atomic_subtract_int(&stcb->asoc.refcnt, 1);
-				}
-				if (inp->sctp_flags & SCTP_PCB_FLAGS_SOCKET_GONE) {
-					SCTP_SOCKET_UNLOCK(so, 1);
-					return;
-				}
-			}
-#endif
-			sctp_sorwakeup(inp, inp->sctp_socket);
-#if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
-			if (!so_locked) {
-				SCTP_SOCKET_UNLOCK(so, 1);
-			}
-#endif
-		}
+		sctp_wakeup_the_read_socket(inp);
 	}
 }
 
