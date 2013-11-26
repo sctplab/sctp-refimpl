@@ -819,6 +819,7 @@ sctp_handle_old_data(struct sctp_tcb *stcb, struct sctp_association *asoc, struc
 	struct sctp_tmit_chunk *chk, *fchk, *lchk;
 	uint32_t fsn;
 	uint32_t length;
+	int cnt_added;
 repeat:
 	lchk = fchk = TAILQ_FIRST(&control->reasm);
 	if (fchk == NULL) {
@@ -860,14 +861,14 @@ repeat:
 			sctp_add_to_readq(stcb->sctp_ep, stcb, strm->uno_pd,
 		                  &stcb->sctp_socket->so_rcv, strm->uno_pd->end_added,
 		                  SCTP_READ_LOCK_NOT_HELD, SCTP_SO_NOT_LOCKED);
-			printf("Start pd-api 3\n");
+			printf("Start pd-api 3 %p\n", stcb);
 			strm->pd_api_started = 1;
 		}
 	} else {
 		/* I have a PD-API going on in uno_pd, have I got more in the reasm for this one? */
 		/* Get the last placed on */
 		fsn = strm->uno_pd->fsn_included + 1;
-
+		cnt_added = 0;
 		/* Now what can we add? */
 		TAILQ_FOREACH_SAFE(chk, &control->reasm, sctp_next, lchk) {
 			if (chk->rec.data.fsn_num == fsn) {
@@ -875,17 +876,23 @@ repeat:
 				TAILQ_REMOVE(&control->reasm, chk, sctp_next);
 				sctp_add_chk_to_control(strm->uno_pd, stcb, asoc, chk);
 				fsn++;
+				cnt_added++;
 				if (strm->uno_pd->end_added) {
 					/* We are done */
 					strm->uno_pd = NULL;
-					printf("Start pd-api ends 2\n");
+					printf("pd-api Ends 2 %p\n", 
+					       stcb);
 					strm->pd_api_started = 0;
+					sctp_wakeup_the_read_socket(stcb->sctp_ep);
 					goto repeat;
 				}
 			} else {
 				/* Can't add more */
 				break;
 			}
+		}
+		if (cnt_added > 0) {
+			sctp_wakeup_the_read_socket(stcb->sctp_ep);
 		}
 	}
 	return (0);
@@ -1002,7 +1009,7 @@ sctp_deliver_reasm_check(struct sctp_tcb *stcb, struct sctp_association *asoc, s
 		} else {
 			/* Can we do a PD-API for this un-ordered guy? */
 			if ((control->length < pd_point) && (strm->pd_api_started == 0)) {
-				printf("Start pd-api 1\n");
+				printf("Start pd-api 1 %p\n", stcb);
 				strm->pd_api_started = 1;
 				sctp_add_to_readq(stcb->sctp_ep, stcb,
 						  control,
@@ -1069,7 +1076,7 @@ deliver_more:
 				goto deliver_more;
 			} else {
 				/* We are now doing PD API */
-				printf("Start pd-api 2\n");
+				printf("Start pd-api 2 %p\n", stcb);
 				strm->pd_api_started = 1;
 			}
 		}
@@ -1088,12 +1095,15 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 	 * data from the chk onto the control and free
 	 * up the chunk resources.
 	 */
+	int i_locked=0;
+
 	if (control->on_read_q) {
 		/* 
 		 * Its being pd-api'd so we must 
 		 * do some locks.
 		 */
 		SCTP_INP_READ_LOCK(stcb->sctp_ep);
+		i_locked = 1;
 	}
 	if (control->data == NULL) {
 		control->data = chk->data;		
@@ -1114,8 +1124,8 @@ sctp_add_chk_to_control(struct sctp_queued_to_read *control,
 		control->end_added = 1;
 		control->last_frag_seen = 1;
 	}
-	if (control->on_read_q) {
-		SCTP_INP_READ_LOCK(stcb->sctp_ep);
+	if (i_locked) {
+		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
 	}
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 } 
@@ -1136,8 +1146,8 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 {
 	uint32_t next_fsn;
 	struct sctp_tmit_chunk *at, *nat;
-
-
+	int cnt_added;
+	int last_frag;
 	/* Must be added to the stream-in queue */
 	if (created_control) {
 		if (sctp_place_control_in_stream(strm, asoc, control)) {
@@ -1238,6 +1248,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	 * Ok lets see if we can suck any up into the control 
 	 * structure that are in seq if it makes sense.
 	 */
+	cnt_added = 0;
 	if (control->first_frag_seen) {
 		next_fsn = control->fsn_included + 1;
 		TAILQ_FOREACH_SAFE(at, &control->reasm, sctp_next, nat) {
@@ -1245,16 +1256,32 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* We can add this one now to the control */
 				next_fsn++;
 				TAILQ_REMOVE(&control->reasm, at, sctp_next);
+				if (at->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
+					last_frag = 1;
+				} else {
+					last_frag = 0;
+				}
 				sctp_add_chk_to_control(control, stcb, asoc, at);
+				cnt_added++;
+				if (last_frag) {
+					printf("Last frag seen end:%d pd:%d on_read_q:%d end_added:%d cnt:%d\n",
+					       last_frag, strm->pd_api_started, control->on_read_q, 
+					       control->end_added, cnt_added);
+				}
 				if (control->on_read_q && strm->pd_api_started && control->end_added) {
 					/* Ok end is on, and we were the pd-api guy clear the flag */
-					printf("Start pd-api ends 1\n");
+					printf("pd-api Ends 1 %p\n", 
+					       stcb);
 					strm->pd_api_started = 0;
 				}
 			} else {
 				break;
 			}
 		}
+	}
+	if ((control->on_read_q) && (cnt_added > 0)){
+		/* Need to wakeup the reader */
+		sctp_wakeup_the_read_socket(stcb->sctp_ep);
 	}
 }
 
