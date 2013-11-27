@@ -2349,6 +2349,18 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		*optsize = sizeof(uint32_t);
 		break;
 	}
+	case SCTP_NDATA_ENABLE:
+	{
+		uint32_t *value;
+
+		SCTP_CHECK_AND_CAST(value, optval, uint32_t, *optsize);
+		if (sctp_is_feature_on(inp, SCTP_PCB_FLAGS_USE_NDATA)) {
+			*value = 1;
+		} else {
+			*value = 0;
+		}
+		break;
+	}
 	case SCTP_CMT_ON_OFF:
 	{
 		struct sctp_assoc_value *av;
