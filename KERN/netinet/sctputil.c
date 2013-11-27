@@ -5112,21 +5112,25 @@ struct mbuf *
 sctp_generate_locerr(uint32_t codepoint)
 {
 	struct mbuf *op_err;
+	uint32_t errcause;
+	uint16_t cause;
+	errcause = SCTP_BASE_SYSCTL( sctp_protocol_issued_abort);
+	if (errcause == 0) {
+		/* Disabled */
+		return(NULL);
+	}
+	cause = (uint16_t)errcause;
 	op_err = sctp_get_mbuf_for_msg(sizeof(struct sctp_paramhdr),
 				       0, M_NOWAIT, 1, MT_DATA);
 	if (op_err) {
 		struct sctp_paramhdr *ph;
 		uint32_t *ippp;
 		
-		SCTP_BUF_LEN(op_err) = sizeof(struct sctp_paramhdr) +
-			(2 * sizeof(uint32_t));
+		SCTP_BUF_LEN(op_err) = (sizeof(struct sctp_paramhdr) + sizeof(uint32_t));
 		ph = mtod(op_err, struct sctp_paramhdr *);
-		ph->param_type =
-			htons(SCTP_CAUSE_USER_INITIATED_ABT);
-		ph->param_length =htons(SCTP_BUF_LEN(op_err));
+		ph->param_type = htons(cause);
+		ph->param_length = htons(SCTP_BUF_LEN(op_err));
 		ippp = (uint32_t *) (ph + 1);
-		*ippp = htonl(SCTP_FROM_SCTP_INDATA+SCTP_LOC_19);
-		ippp++;
 		*ippp = htonl(codepoint);
 	}
 	return(op_err);
