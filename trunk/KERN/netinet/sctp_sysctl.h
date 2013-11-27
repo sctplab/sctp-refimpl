@@ -111,6 +111,7 @@ struct sctp_sysctl {
 	uint32_t sctp_rttvar_eqret;
 	uint32_t sctp_steady_step;
 	uint32_t sctp_use_dccc_ecn;
+	uint32_t sctp_protocol_issued_abort;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	struct sctp_log *sctp_log;
@@ -545,6 +546,11 @@ struct sctp_sysctl {
 #define SCTPCTL_BLACKHOLE_MIN		0
 #define SCTPCTL_BLACKHOLE_MAX		2
 #define SCTPCTL_BLACKHOLE_DEFAULT	SCTPCTL_BLACKHOLE_MIN
+
+#define SCTPCTL_PROTOCOL_ABORT_DESC	"Enable SCTP protocol abort cause"
+#define SCTPCTL_PROTOCOL_ABORT_MIN  0
+#define SCTPCTL_PROTOCOL_ABORT_MAX  65535
+#define SCTPCTL_PROTOCOL_ABORT_DEFAULT  0
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
