@@ -42,19 +42,11 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_constants.h 256556 2013-10-15 20:21:27
 extern void getwintimeofday(struct timeval *tv);
 #endif
 /* IANA assigned port number for SCTP over UDP encapsulation */
-#ifdef __FreeBSD__
-/* For freebsd we cannot bind the port at
- * startup. Otherwise what will happen is
- * we really won't be bound. The user must
- * put it into the sysctl... or we need
- * to build a special timer for this to allow
- * us to wait 1 second or so after the system
- * comes up.
- */
-#define SCTP_OVER_UDP_TUNNELING_PORT 0
-#else
-#define SCTP_OVER_UDP_TUNNELING_PORT 9899
+#if defined(__FreeBSD__) && defined(_KERNEL)
+#define SCTP_CHECK_TICKS 1000
 #endif
+
+#define SCTP_OVER_UDP_TUNNELING_PORT 9899
 /* Number of packets to get before sack sent by default */
 #define SCTP_DEFAULT_SACK_FREQ 2
 

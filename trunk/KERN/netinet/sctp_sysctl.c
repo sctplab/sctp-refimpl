@@ -129,6 +129,9 @@ sctp_init_sysctls()
 	SCTP_BASE_SYSCTL(sctp_use_dccc_ecn) = SCTPCTL_RTTVAR_DCCCECN_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_blackhole) = SCTPCTL_BLACKHOLE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_protocol_issued_abort) = SCTPCTL_PROTOCOL_ABORT_DEFAULT;
+#if !defined(__FreeBSD__) && !defined(_KERNEL)
+	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
+#endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	/* On Windows, the resource for global variables is limited. */
@@ -137,7 +140,6 @@ sctp_init_sysctls()
 	memset(&SCTP_BASE_SYSCTL(sctp_log), 0, sizeof(struct sctp_log));
 #endif
 #endif
-	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = SCTPCTL_UDP_TUNNELING_PORT_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_enable_sack_immediately) = SCTPCTL_SACK_IMMEDIATELY_ENABLE_DEFAULT;
 	SCTP_BASE_SYSCTL(sctp_inits_include_nat_friendly) = SCTPCTL_NAT_FRIENDLY_INITS_DEFAULT;
 #if defined(SCTP_DEBUG)
@@ -1632,11 +1634,16 @@ void sysctl_setup_sctp(void)
 	    NULL, 0, sysctl_sctp_cleartrace,
 	    "Clear SCTP Logging buffer");
 #endif
-
+#if defined(__FreeBSD__) && defined(_KERNEL)  
+	/* For kernel land this is a boot tuneable */
+	sysctl_add_oid(&sysctl_oid_top, "udp_tunneling_port", CTLTYPE_INT|CTLFLAG_RD,
+	    &SCTP_BASE_SYSCTL(sctp_udp_tunneling_port), 0, sysctl_sctp_udp_tunneling_check,
+	    SCTPCTL_UDP_TUNNELING_PORT_DESC);
+#else
 	sysctl_add_oid(&sysctl_oid_top, "udp_tunneling_port", CTLTYPE_INT|CTLFLAG_RW,
 	    &SCTP_BASE_SYSCTL(sctp_udp_tunneling_port), 0, sysctl_sctp_udp_tunneling_check,
 	    SCTPCTL_UDP_TUNNELING_PORT_DESC);
-
+#endif
 	sysctl_add_oid(&sysctl_oid_top, "enable_sack_immediately", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_enable_sack_immediately), 0, sysctl_sctp_check,
 	    SCTPCTL_SACK_IMMEDIATELY_ENABLE_DESC);

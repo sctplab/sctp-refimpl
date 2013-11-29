@@ -71,6 +71,34 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 257555 2013-11-02 20:12:19Z t
 extern struct sctp_cc_functions sctp_cc_functions[];
 extern struct sctp_ss_functions sctp_ss_functions[];
 
+static void
+sctp_startup_udp(void *flag)
+{
+	SCTP_INP_INFO_WLOCK();
+	if (flag == NULL) {
+		if (callout_pending(&SCTP_BASE_SYSCTL(timer))) {
+			/* Callout has been rescheduled */
+			SCTP_INP_INFO_WUNLOCK();
+			return;
+		}
+		if (!callout_active(&SCTP_BASE_SYSCTL(timer))) {
+			/* The callout has been stopped */
+			SCTP_INP_INFO_WUNLOCK();
+			return;
+		}
+		callout_deactivate(&SCTP_BASE_SYSCTL(timer));
+	}
+	if (TAILQ_EMPTY(&V_in_ifaddrhead)) {
+		/* Return until there are addresses */
+		callout_reset(&SCTP_BASE_SYSCTL(timer),
+			      SCTP_CHECK_TICKS, sctp_startup_udp, NULL);
+		SCTP_INP_INFO_WUNLOCK();
+		return;
+	}
+	sctp_over_udp_start();
+	SCTP_INP_INFO_WUNLOCK();
+}
+
 void
 #if defined(__Userspace__)
 sctp_init(uint16_t port,
@@ -80,6 +108,9 @@ sctp_init(uint16_t port,
 sctp_init(void)
 #endif
 {
+#if defined(__FreeBSD__) && defined(_KERNEL)
+	int port;
+#endif
 #if !defined(__Panda__) && !defined(__Userspace__)
 	u_long sb_max_adj;
 
@@ -175,6 +206,20 @@ sctp_init(void)
 	sctp_address_monitor_start();
 	sctp_over_udp_start();
 #endif
+#if defined(__FreeBSD__) && defined(_KERNEL)  
+	port = SCTP_OVER_UDP_TUNNELING_PORT;
+	TUNABLE_INT_FETCH("net.inet.sctp.udp_tunneling_port", &port);
+	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = (uint16_t)port;
+	if (port) {
+		/* 
+		 * Start the timer for 1 second. We need
+		 * to be up in multi-user to get the port set.
+		 */
+		callout_reset(&SCTP_BASE_SYSCTL(timer),
+			      SCTP_CHECK_TICKS, sctp_startup_udp, NULL);
+	}
+#endif
+
 }
 
 void
