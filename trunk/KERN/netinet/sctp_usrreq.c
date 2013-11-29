@@ -207,6 +207,7 @@ sctp_init(void)
 	sctp_over_udp_start();
 #endif
 #if defined(__FreeBSD__) && defined(_KERNEL)  
+	SCTP_OS_TIMER_INIT(&SCTP_BASE_SYSCTL(timer));
 	port = SCTP_OVER_UDP_TUNNELING_PORT;
 	TUNABLE_INT_FETCH("net.inet.sctp.udp_tunneling_port", &port);
 	SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) = (uint16_t)port;
