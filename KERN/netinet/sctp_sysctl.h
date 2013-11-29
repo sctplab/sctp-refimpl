@@ -137,6 +137,9 @@ struct sctp_sysctl {
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	uint32_t sctp_output_unlocked;
 #endif
+#if defined(__FreeBSD__) && defined(_KERNEL)  
+	struct callout timer;
+#endif
 };
 
 /*
