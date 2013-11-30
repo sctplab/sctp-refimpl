@@ -38,7 +38,9 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_dtrace_declare.h 235828 2012-05-23 11:
 #define _NETINET_SCTP_DTRACE_DECLARE_H_
 
 #if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version < 1100000
 #include "opt_kdtrace.h"
+#endif
 #include <sys/kernel.h>
 #include <sys/sdt.h>
 
