@@ -49,7 +49,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_pcb.c 258765 2013-11-30 12:51:19Z tuex
 #include <netinet/sctp_output.h>
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_bsd_addr.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 #include <netinet/sctp_dtrace_define.h>
 #endif
 #if !defined(__Userspace_os_Windows)

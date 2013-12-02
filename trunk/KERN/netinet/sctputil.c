@@ -3233,7 +3233,13 @@ sctp_notify_partial_delivery_indication(struct sctp_tcb *stcb, uint32_t error,
 	SCTP_BUF_LEN(m_notify) = 0;
 	pdapi = mtod(m_notify, struct sctp_pdapi_event *);
 	pdapi->pdapi_type = SCTP_PARTIAL_DELIVERY_EVENT;
-	pdapi->pdapi_flags = 0;
+	if (stcb->asoc.control_pdapi && 
+	    ((stcb->asoc.control_pdapi->sinfo_flags >> 8) & SCTP_DATA_UNORDERED)) {
+		/* Its un-ordered */
+		pdapi->pdapi_flags = 1;
+	} else {
+		pdapi->pdapi_flags = 0;
+	}
 	pdapi->pdapi_length = sizeof(struct sctp_pdapi_event);
 	pdapi->pdapi_indication = error;
 	pdapi->pdapi_stream = (val >> 16);
