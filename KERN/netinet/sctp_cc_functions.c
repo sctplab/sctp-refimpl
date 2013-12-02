@@ -48,7 +48,7 @@ __FBSDID("$FreeBSD: head/sys/netinet/sctp_cc_functions.c 240158 2012-09-06 07:03
 #include <netinet/sctp_timer.h>
 #include <netinet/sctp_auth.h>
 #include <netinet/sctp_asconf.h>
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 #include <netinet/sctp_dtrace_declare.h>
 #endif
 
@@ -85,7 +85,7 @@ sctp_set_initial_cc_param(struct sctp_tcb *stcb, struct sctp_nets *net)
 		}
 	}
 	net->ssthresh = assoc->peers_rwnd;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	SDT_PROBE(sctp, cwnd, net, init,
 	          stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)), net,
 	          0, net->cwnd);
@@ -179,7 +179,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 					}
 				}
 				net->cwnd = net->ssthresh;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 				SDT_PROBE(sctp, cwnd, net, fr,
 					  stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)), net,
 					  old_cwnd, net->cwnd);
@@ -234,7 +234,7 @@ sctp_cwnd_update_after_fr(struct sctp_tcb *stcb,
 #define SCTP_INST_GAINING 3 /* Gaining, step down possible */
 
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 static int
 cc_bw_same(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw,
 	   uint64_t rtt_offset, uint64_t vtag, uint8_t inst_ind)
@@ -244,11 +244,11 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 	   uint64_t rtt_offset, uint8_t inst_ind)
 #endif
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t oth, probepoint;
 #endif
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	probepoint = (((uint64_t)net->cwnd) << 32);
 #endif
 	if (net->rtt > net->cc_mod.rtcc.lbw_rtt + rtt_offset) {
@@ -257,7 +257,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 		 * we don't update bw.. so we don't
 		 * update the rtt either.
 		 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		/* Probe point 5 */
 		probepoint |=  ((5 << 16) | 1);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -277,7 +277,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 			    ((net->cc_mod.rtcc.step_cnt > net->cc_mod.rtcc.steady_step) &&
 			     ((net->cc_mod.rtcc.step_cnt % net->cc_mod.rtcc.steady_step) == 0))) {
 				/* Try a step down */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 				oth = net->cc_mod.rtcc.vol_reduce;
 				oth <<= 16;
 				oth |= net->cc_mod.rtcc.step_cnt;
@@ -306,7 +306,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 		 * we update both the bw and the rtt here to
 		 * lock this in as a good step down.
 		 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		/* Probe point 6 */
 		probepoint |=  ((6 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -317,7 +317,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 			  probepoint);
 #endif
 		if (net->cc_mod.rtcc.steady_step) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			oth = net->cc_mod.rtcc.vol_reduce;
 			oth <<= 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
@@ -352,7 +352,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 	}
 	/* Ok bw and rtt remained the same .. no update to any
 	 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	/* Probe point 7 */
 	probepoint |=  ((7 << 16) | net->cc_mod.rtcc.ret_from_eq);
 	SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -389,7 +389,7 @@ cc_bw_same(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nb
 		return ((int)net->cc_mod.rtcc.ret_from_eq);
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 static int
 cc_bw_decrease(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, uint64_t rtt_offset,
 	       uint64_t vtag, uint8_t inst_ind)
@@ -399,12 +399,12 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 	       uint8_t inst_ind)
 #endif
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t oth, probepoint;
 #endif
 
 	/* Bandwidth decreased.*/
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	probepoint = (((uint64_t)net->cwnd) << 32);
 #endif
 	if (net->rtt  > net->cc_mod.rtcc.lbw_rtt+rtt_offset) {
@@ -413,7 +413,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 		if ((net->cwnd > net->cc_mod.rtcc.cwnd_at_bw_set) &&
 		    (inst_ind != SCTP_INST_LOOSING)) {
 			/* We caused it maybe.. back off? */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			/* PROBE POINT 1 */
 			probepoint |=  ((1 << 16) | 1);
 			SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -430,7 +430,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 			}
 			return (1);
 		}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		/* Probe point 2 */
 		probepoint |=  ((2 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -442,7 +442,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 #endif
 		/* Someone else - fight for more? */
 		if (net->cc_mod.rtcc.steady_step) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			oth = net->cc_mod.rtcc.vol_reduce;
 			oth <<= 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
@@ -469,7 +469,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 		goto out_decision;
 	} else  if (net->rtt  < net->cc_mod.rtcc.lbw_rtt-rtt_offset) {
 		/* bw & rtt decreased */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		/* Probe point 3 */
 		probepoint |=  ((3 << 16) | 0);
 		SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -480,7 +480,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 			  probepoint);
 #endif
 		if (net->cc_mod.rtcc.steady_step) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			oth = net->cc_mod.rtcc.vol_reduce;
 			oth <<= 16;
 			oth |= net->cc_mod.rtcc.step_cnt;
@@ -504,7 +504,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 		goto out_decision;
 	}
 	/* The bw decreased but rtt stayed the same */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	/* Probe point 4 */
 	probepoint |=  ((4 << 16) | 0);
 	SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -515,7 +515,7 @@ cc_bw_decrease(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 		  probepoint);
 #endif
 	if (net->cc_mod.rtcc.steady_step) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		oth = net->cc_mod.rtcc.vol_reduce;
 		oth <<= 16;
 		oth |= net->cc_mod.rtcc.step_cnt;
@@ -547,7 +547,7 @@ out_decision:
 	}
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 static int
 cc_bw_increase(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw, uint64_t vtag)
 #else
@@ -555,7 +555,7 @@ static int
 cc_bw_increase(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_t nbw)
 #endif
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t oth, probepoint;
 
 #endif
@@ -565,7 +565,7 @@ cc_bw_increase(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 	 * update. Note that we pay no attention to
 	 * the inst_ind since our overall sum is increasing.
 	 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	/* PROBE POINT 0 */
 	probepoint = (((uint64_t)net->cwnd) << 32);
 	SDT_PROBE(sctp, cwnd, net, rttvar,
@@ -576,7 +576,7 @@ cc_bw_increase(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net, uint64_
 		  probepoint);
 #endif
 	if (net->cc_mod.rtcc.steady_step) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		oth = net->cc_mod.rtcc.vol_reduce;
 		oth <<= 16;
 		oth |= net->cc_mod.rtcc.step_cnt;
@@ -606,7 +606,7 @@ static int
 cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 {
 	uint64_t bw_offset, rtt_offset;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t probepoint, rtt, vtag;
 #endif
 	uint64_t bytes_for_this_rtt, inst_bw;
@@ -652,7 +652,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * change within 1/32nd
 	 */
 	bw_shift = SCTP_BASE_SYSCTL(sctp_rttvar_bw);
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	rtt = stcb->asoc.my_vtag;
 	vtag = (rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) | (stcb->rport);
 	probepoint = (((uint64_t)net->cwnd) << 32);
@@ -673,12 +673,12 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 					inst_ind = SCTP_INST_LOOSING;
 				else
 					inst_ind = SCTP_INST_NEUTRAL;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 				probepoint |=  ((0xb << 16) | inst_ind);
 #endif
 			} else {
 				inst_ind = net->cc_mod.rtcc.last_inst_ind;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 				inst_bw = bytes_for_this_rtt / (uint64_t)(net->rtt);
 				/* Can't determine do not change */
 				probepoint |=  ((0xc << 16) | inst_ind);
@@ -686,13 +686,13 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 			}
 		} else {
 			inst_ind = net->cc_mod.rtcc.last_inst_ind;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			inst_bw = bytes_for_this_rtt;
 			/* Can't determine do not change */
 			probepoint |=  ((0xd << 16) | inst_ind);
 #endif
 		}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		SDT_PROBE(sctp, cwnd, net, rttvar,
 			  vtag,
 			  ((nbw << 32) | inst_bw),
@@ -706,7 +706,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	}
 	bw_offset = net->cc_mod.rtcc.lbw >> bw_shift;
 	if (nbw > net->cc_mod.rtcc.lbw + bw_offset) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		ret = cc_bw_increase(stcb, net, nbw, vtag);
 #else
 		ret = cc_bw_increase(stcb, net, nbw);
@@ -715,7 +715,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	}
 	rtt_offset = net->cc_mod.rtcc.lbw_rtt >> SCTP_BASE_SYSCTL(sctp_rttvar_rtt);
 	if (nbw < net->cc_mod.rtcc.lbw - bw_offset) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		ret = cc_bw_decrease(stcb, net, nbw, rtt_offset, vtag, inst_ind);
 #else
 		ret = cc_bw_decrease(stcb, net, nbw, rtt_offset, inst_ind);
@@ -726,7 +726,7 @@ cc_bw_limit(struct sctp_tcb *stcb, struct sctp_nets *net, uint64_t nbw)
 	 * we are in a situation where
 	 * the bw stayed the same.
 	 */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	ret = cc_bw_same(stcb, net, nbw, rtt_offset, vtag, inst_ind);
 #else
 	ret = cc_bw_same(stcb, net, nbw, rtt_offset, inst_ind);
@@ -742,7 +742,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				   int accum_moved, int reneged_all SCTP_UNUSED, int will_exit, int use_rtcc)
 {
 	struct sctp_nets *net;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	int old_cwnd;
 #endif
 	uint32_t t_ssthresh, t_cwnd, incr;
@@ -858,7 +858,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 					continue;
 				}
 			} else {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 				uint64_t vtag, probepoint;
 
 				probepoint = (((uint64_t)net->cwnd) << 32);
@@ -894,7 +894,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				if (net->flight_size + net->net_ack >= net->cwnd) {
 					uint32_t limit;
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 					old_cwnd = net->cwnd;
 #endif
 					switch (asoc->sctp_cmt_on_off) {
@@ -965,7 +965,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						sctp_log_cwnd(stcb, net, incr,
 						              SCTP_CWND_LOG_FROM_SS);
 					}
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 					SDT_PROBE(sctp, cwnd, net, ack,
 					          stcb->asoc.my_vtag,
 					          ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -988,7 +988,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 				if ((net->flight_size + net->net_ack >= net->cwnd) &&
                                     (net->partial_bytes_acked >= net->cwnd)) {
 					net->partial_bytes_acked -= net->cwnd;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 					old_cwnd = net->cwnd;
 #endif
 					switch (asoc->sctp_cmt_on_off) {
@@ -1028,7 +1028,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 						break;
 					}
 					net->cwnd += incr;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 					SDT_PROBE(sctp, cwnd, net, ack,
 						  stcb->asoc.my_vtag,
 						  ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -1055,7 +1055,7 @@ sctp_cwnd_update_after_sack_common(struct sctp_tcb *stcb,
 	}
 }
 
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 static void
 sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb, struct sctp_nets *net)
 #else
@@ -1063,13 +1063,13 @@ static void
 sctp_cwnd_update_exit_pf_common(struct sctp_tcb *stcb SCTP_UNUSED, struct sctp_nets *net)
 #endif
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	int old_cwnd;
 
 	old_cwnd = net->cwnd;
 #endif
 	net->cwnd = net->mtu;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	SDT_PROBE(sctp, cwnd, net, ack,
 	          stcb->asoc.my_vtag, ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)), net,
 	          old_cwnd, net->cwnd);
@@ -1142,7 +1142,7 @@ sctp_cwnd_update_after_timeout(struct sctp_tcb *stcb, struct sctp_nets *net)
 	}
 	net->cwnd = net->mtu;
 	net->partial_bytes_acked = 0;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	SDT_PROBE(sctp, cwnd, net, to,
 		  stcb->asoc.my_vtag,
 		  ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -1197,7 +1197,7 @@ sctp_cwnd_update_after_ecn_echo_common(struct sctp_tcb *stcb, struct sctp_nets *
 				net->RTO <<= 1;
 			}
 			net->cwnd = net->ssthresh;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 			SDT_PROBE(sctp, cwnd, net, ecn,
 				  stcb->asoc.my_vtag,
 				  ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -1320,7 +1320,7 @@ sctp_cwnd_update_after_packet_dropped(struct sctp_tcb *stcb,
 
 	if (net->cwnd - old_cwnd != 0) {
 		/* log only changes */
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		SDT_PROBE(sctp, cwnd, net, pd,
 			  stcb->asoc.my_vtag,
 			  ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -1344,7 +1344,7 @@ sctp_cwnd_update_after_output(struct sctp_tcb *stcb,
 		net->ssthresh = net->cwnd;
 	if (burst_limit) {
 		net->cwnd = (net->flight_size + (burst_limit * net->mtu));
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		SDT_PROBE(sctp, cwnd, net, bl,
 			  stcb->asoc.my_vtag,
 			  ((stcb->sctp_ep->sctp_lport << 16) | (stcb->rport)),
@@ -1411,12 +1411,12 @@ static void
 sctp_cwnd_new_rtcc_transmission_begins(struct sctp_tcb *stcb,
 				       struct sctp_nets *net)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t vtag, probepoint;
 
 #endif
 	if (net->cc_mod.rtcc.lbw) {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 		/* Clear the old bw.. we went to 0 in-flight */
 		vtag = (net->rtt << 32) | (((uint32_t)(stcb->sctp_ep->sctp_lport)) << 16) |
 			(stcb->rport);
@@ -1472,13 +1472,13 @@ static void
 sctp_set_rtcc_initial_cc_param(struct sctp_tcb *stcb,
 			       struct sctp_nets *net)
 {
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	uint64_t vtag, probepoint;
 
 #endif
 	sctp_set_initial_cc_param(stcb, net);
 	stcb->asoc.use_precise_time = 1;
-#if defined(__FreeBSD__) && __FreeBSD_version >= 803000
+#if defined(__FreeBSD__) && __FreeBSD_version >= 1000000
 	probepoint = (((uint64_t)net->cwnd) << 32);
 	probepoint |=  ((9 << 16) | 0);
 	vtag = (net->rtt << 32) |
