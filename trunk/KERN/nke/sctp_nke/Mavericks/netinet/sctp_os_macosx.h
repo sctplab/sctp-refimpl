@@ -409,6 +409,14 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
 #define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+#define RTFREE(_rt) rtfree(_rt)
+#endif
+
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+#define INP_SOCKAF(so) so->so_proto->pr_domain->dom_family
+#define INP_CHECK_SOCKAF(so, af) (INP_SOCKAF(so) == af)
+#endif
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
