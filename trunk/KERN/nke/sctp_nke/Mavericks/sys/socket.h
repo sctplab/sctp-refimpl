@@ -739,6 +739,7 @@ struct user32_msghdr {
 #ifdef KERNEL_PRIVATE
 #define MSG_NBIO	0x20000		/* FIONBIO mode, used by fifofs */
 #endif
+#define MSG_NOTIFICATION 0x40000        /* notification message */
 #ifdef	KERNEL
 #define MSG_USEUPCALL	0x80000000 /* Inherit upcall in sock_accept */
 #endif
