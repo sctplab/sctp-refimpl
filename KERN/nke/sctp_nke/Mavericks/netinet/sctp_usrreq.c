@@ -7797,7 +7797,7 @@ sctp_peeraddr(struct socket *so, struct mbuf *nam)
 
 #if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
 struct pr_usrreqs sctp_usrreqs = {
-#if __FreeBSD_version >= 600000
+#if defined(__FreeBSD__)
 	.pru_abort = sctp_abort,
 	.pru_accept = sctp_accept,
 	.pru_attach = sctp_attach,
@@ -7821,45 +7821,51 @@ struct pr_usrreqs sctp_usrreqs = {
 	.pru_sockaddr = sctp_ingetaddr,
 	.pru_sosend = sctp_sosend,
 	.pru_soreceive = sctp_soreceive
-#else
+#elif defined(__APPLE__)
+	.pru_abort = sctp_abort,
+	.pru_accept = sctp_accept,
+	.pru_attach = sctp_attach,
+	.pru_bind = sctp_bind,
+	.pru_connect = sctp_connect,
+	.pru_connect2 = pru_connect2_notsupp,
+	.pru_control = in_control,
+	.pru_detach = sctp_detach,
+	.pru_disconnect = sctp_disconnect,
+	.pru_listen = sctp_listen,
+	.pru_peeraddr = sctp_peeraddr,
+	.pru_rcvd = NULL,
+	.pru_rcvoob = pru_rcvoob_notsupp,
+	.pru_send = sctp_sendm,
+	.pru_sense = pru_sense_null,
+	.pru_shutdown = sctp_shutdown,
+	.pru_sockaddr = sctp_ingetaddr,
+	.pru_sosend = sctp_sosend,
+	.pru_soreceive = sctp_soreceive,
+	.pru_sopoll = sopoll
+#elif defined(__Windows__)
 	sctp_abort,
 	sctp_accept,
 	sctp_attach,
 	sctp_bind,
 	sctp_connect,
 	pru_connect2_notsupp,
-#if defined(__Windows__)
 	NULL,
 	NULL,
-#else
-	in_control,
-	sctp_detach,
-#endif
 	sctp_disconnect,
 	sctp_listen,
 	sctp_peeraddr,
 	NULL,
 	pru_rcvoob_notsupp,
-#if defined(__Windows__)
 	NULL,
-#else
-	sctp_sendm,
-#endif
 	pru_sense_null,
 	sctp_shutdown,
-#if defined(__Windows__)
 	sctp_flush,
-#endif
 	sctp_ingetaddr,
 	sctp_sosend,
 	sctp_soreceive,
-#if defined(__Windows__)
 	sopoll_generic,
 	NULL,
 	sctp_close
-#else
-	sopoll
-#endif
 #endif
 };
 #elif !defined(__Panda__) && !defined(__Userspace__)
