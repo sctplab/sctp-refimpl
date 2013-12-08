@@ -76,6 +76,8 @@ void
 sctp_init(uint16_t port,
           int (*conn_output)(void *addr, void *buffer, size_t length, uint8_t tos, uint8_t set_df),
           void (*debug_printf)(const char *format, ...))
+#elif defined(APPLE_MAVERICKS)
+sctp_init(struct protosw *pp SCTP_UNUSED, struct domain *dp SCTP_UNUSED)
 #else
 sctp_init(void)
 #endif

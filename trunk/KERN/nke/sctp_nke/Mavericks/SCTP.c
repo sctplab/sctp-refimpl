@@ -146,9 +146,16 @@ extern struct sysctl_oid sysctl__net_inet_sctp_output_unlocked;
 extern struct sysctl_oid sysctl__net_inet_sctp_addr_watchdog_limit;
 extern struct sysctl_oid sysctl__net_inet_sctp_vtag_watchdog_limit;
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 extern struct domain inetdomain;
 #ifdef INET6
 extern struct domain inet6domain;
+#endif
+#else
+extern struct domain *inetdomain;
+#ifdef INET6
+extern struct domain *inet6domain;
+#endif
 #endif
 extern struct protosw *ip_protox[];
 #ifdef INET6
@@ -197,19 +204,27 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 
 	sctp4_seqpacket.pr_type      = SOCK_SEQPACKET;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_seqpacket.pr_domain    = &inetdomain;
+#else
+	sctp4_seqpacket.pr_domain    = inetdomain;
+#endif
 	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
 	sctp4_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_seqpacket.pr_input     = sctp_input;
 	sctp4_seqpacket.pr_output    = NULL;
 	sctp4_seqpacket.pr_ctlinput  = sctp_ctlinput;
 	sctp4_seqpacket.pr_ctloutput = sctp_ctloutput;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_seqpacket.pr_ousrreq   = NULL;
+#endif
 	sctp4_seqpacket.pr_init      = sctp_init;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp4_seqpacket.pr_fasttimo  = NULL;
 #endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_seqpacket.pr_slowtimo  = sctp_slowtimo;
+#endif
 	sctp4_seqpacket.pr_drain     = sctp_drain;
 	sctp4_seqpacket.pr_sysctl    = NULL;
 	sctp4_seqpacket.pr_usrreqs   = &sctp_usrreqs;
@@ -218,19 +233,27 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_seqpacket.pr_getlock   = sctp_getlock;
 
 	sctp4_stream.pr_type         = SOCK_STREAM;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_stream.pr_domain       = &inetdomain;
+#else
+	sctp4_stream.pr_domain       = inetdomain;
+#endif
 	sctp4_stream.pr_protocol     = IPPROTO_SCTP;
 	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp4_stream.pr_input        = sctp_input;
 	sctp4_stream.pr_output       = NULL;
 	sctp4_stream.pr_ctlinput     = sctp_ctlinput;
 	sctp4_stream.pr_ctloutput    = sctp_ctloutput;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_stream.pr_ousrreq      = NULL;
+#endif
 	sctp4_stream.pr_init         = NULL;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp4_stream.pr_fasttimo     = NULL;
 #endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_stream.pr_slowtimo     = NULL;
+#endif
 	sctp4_stream.pr_drain        = sctp_drain;
 	sctp4_stream.pr_sysctl       = NULL;
 	sctp4_stream.pr_usrreqs      = &sctp_usrreqs;
@@ -240,14 +263,20 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 
 #ifdef INET6
 	sctp6_seqpacket.pr_type      = SOCK_SEQPACKET;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_seqpacket.pr_domain    = &inet6domain;
+#else
+	sctp6_seqpacket.pr_domain    = inet6domain;
+#endif
 	sctp6_seqpacket.pr_protocol  = IPPROTO_SCTP;
 	sctp6_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_seqpacket.pr_input     = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_seqpacket.pr_output    = NULL;
 	sctp6_seqpacket.pr_ctlinput  = sctp6_ctlinput;
 	sctp6_seqpacket.pr_ctloutput = sctp_ctloutput;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_seqpacket.pr_ousrreq   = NULL;
+#endif
 #ifdef INET
 	sctp6_seqpacket.pr_init      = NULL;
 #else
@@ -256,7 +285,9 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp6_seqpacket.pr_fasttimo  = NULL;
 #endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_seqpacket.pr_slowtimo  = NULL;
+#endif
 	sctp6_seqpacket.pr_drain     = sctp_drain;
 	sctp6_seqpacket.pr_sysctl    = NULL;
 	sctp6_seqpacket.pr_usrreqs   = &sctp6_usrreqs;
@@ -265,19 +296,27 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_seqpacket.pr_getlock   = sctp_getlock;
 
 	sctp6_stream.pr_type         = SOCK_STREAM;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_stream.pr_domain       = &inet6domain;
+#else
+	sctp6_stream.pr_domain       = inet6domain;
+#endif
 	sctp6_stream.pr_protocol     = IPPROTO_SCTP;
 	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
 	sctp6_stream.pr_input        = (void (*) (struct mbuf *, int)) sctp6_input;
 	sctp6_stream.pr_output       = NULL;
 	sctp6_stream.pr_ctlinput     = sctp6_ctlinput;
 	sctp6_stream.pr_ctloutput    = sctp_ctloutput;
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_stream.pr_ousrreq      = NULL;
+#endif
 	sctp6_stream.pr_init         = NULL;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp6_stream.pr_fasttimo     = NULL;
 #endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_stream.pr_slowtimo     = NULL;
+#endif
 	sctp6_stream.pr_drain        = sctp_drain;
 	sctp6_stream.pr_sysctl       = NULL;
 	sctp6_stream.pr_usrreqs      = &sctp6_usrreqs;
@@ -286,22 +325,44 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_stream.pr_getlock      = sctp_getlock;
 #endif
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	lck_mtx_lock(inetdomain.dom_mtx);
 #ifdef INET6
 	lck_mtx_lock(inet6domain.dom_mtx);
 #endif
-
+#else
+	lck_mtx_lock(inetdomain->dom_mtx);
+#ifdef INET6
+	lck_mtx_lock(inet6domain->dom_mtx);
+#endif
+#endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	err  = net_add_proto(&sctp4_seqpacket, &inetdomain);
 	err |= net_add_proto(&sctp4_stream,    &inetdomain);
 #ifdef INET6
 	err |= net_add_proto(&sctp6_seqpacket, &inet6domain);
 	err |= net_add_proto(&sctp6_stream,    &inet6domain);
 #endif
+#else
+	err  = net_add_proto(&sctp4_seqpacket, inetdomain, 1);
+	err |= net_add_proto(&sctp4_stream,    inetdomain, 0);
+#ifdef INET6
+	err |= net_add_proto(&sctp6_seqpacket, inet6domain, 0);
+	err |= net_add_proto(&sctp6_stream,    inet6domain, 0);
+#endif
+#endif
 	if (err) {
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 #ifdef INET6
 		lck_mtx_unlock(inet6domain.dom_mtx);
 #endif
 		lck_mtx_unlock(inetdomain.dom_mtx);
+#else
+#ifdef INET6
+		lck_mtx_unlock(inet6domain->dom_mtx);
+#endif
+		lck_mtx_unlock(inetdomain->dom_mtx);
+#endif
 		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be installed.\n");
 		return (KERN_FAILURE);
 	}
@@ -311,11 +372,17 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	ip6_protox[IPPROTO_SCTP] = &sctp6_seqpacket;
 #endif
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 #ifdef INET6
 	lck_mtx_unlock(inet6domain.dom_mtx);
 #endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
-	
+#else
+#ifdef INET6
+	lck_mtx_unlock(inet6domain->dom_mtx);
+#endif
+	lck_mtx_unlock(inetdomain->dom_mtx);
+#endif
 	sysctl_register_oid(&sysctl__net_inet_sctp);
 	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_recvspace);
@@ -531,29 +598,50 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_vtag_watchdog_limit);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp);
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	lck_mtx_lock(inetdomain.dom_mtx);
 #ifdef INET6
 	lck_mtx_lock(inet6domain.dom_mtx);
 #endif
-
+#else
+	lck_mtx_lock(inetdomain->dom_mtx);
+#ifdef INET6
+	lck_mtx_lock(inet6domain->dom_mtx);
+#endif
+#endif
 	ip_protox[IPPROTO_SCTP]  = old_pr4;
 #ifdef INET6
 	ip6_protox[IPPROTO_SCTP] = old_pr6;
 #endif
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	err  = net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, &inetdomain);
 	err |= net_del_proto(sctp4_stream.pr_type,    sctp4_stream.pr_protocol,    &inetdomain);
 #ifdef INET6
 	err |= net_del_proto(sctp6_seqpacket.pr_type, sctp6_seqpacket.pr_protocol, &inet6domain);
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    &inet6domain);
 #endif
+#else
+	err  = net_del_proto(sctp4_seqpacket.pr_type, sctp4_seqpacket.pr_protocol, inetdomain);
+	err |= net_del_proto(sctp4_stream.pr_type,    sctp4_stream.pr_protocol,    inetdomain);
+#ifdef INET6
+	err |= net_del_proto(sctp6_seqpacket.pr_type, sctp6_seqpacket.pr_protocol, inet6domain);
+	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    inet6domain);
+#endif
+#endif
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
 	sctp_finish();
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 #ifdef INET6
 	lck_mtx_unlock(inet6domain.dom_mtx);
 #endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
-
+#else
+#ifdef INET6
+	lck_mtx_unlock(inet6domain->dom_mtx);
+#endif
+	lck_mtx_unlock(inetdomain->dom_mtx);
+#endif
 	if (err) {
 		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be removed.\n");
 		return (KERN_FAILURE);
