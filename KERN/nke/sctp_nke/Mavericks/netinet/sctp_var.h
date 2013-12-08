@@ -439,6 +439,8 @@ void sctp_init(uint16_t,
 #else
 #if defined(__FreeBSD__) && __FreeBSD_version < 902000
 void sctp_init __P((void));
+#elif defined(APPLE_MAVERICKS)
+void sctp_init(struct protosw *pp, struct domain *dp);
 #else
 void sctp_init(void);
 #endif
