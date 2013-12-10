@@ -190,6 +190,9 @@ kern_return_t
 SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unused)))
 {
 	int err;
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+	domain_guard_t guard;
+#endif
 
 	old_pr4  = ip_protox [IPPROTO_SCTP];
 #ifdef INET6
@@ -331,10 +334,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	lck_mtx_lock(inet6domain.dom_mtx);
 #endif
 #else
-	lck_mtx_lock(inetdomain->dom_mtx);
-#ifdef INET6
-	lck_mtx_lock(inet6domain->dom_mtx);
-#endif
+	guard = domain_guard_deploy();
 #endif
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	err  = net_add_proto(&sctp4_seqpacket, &inetdomain);
@@ -358,10 +358,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 		lck_mtx_unlock(inetdomain.dom_mtx);
 #else
-#ifdef INET6
-		lck_mtx_unlock(inet6domain->dom_mtx);
-#endif
-		lck_mtx_unlock(inetdomain->dom_mtx);
+		domain_guard_release(guard);
 #endif
 		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be installed.\n");
 		return (KERN_FAILURE);
@@ -378,10 +375,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
 #else
-#ifdef INET6
-	lck_mtx_unlock(inet6domain->dom_mtx);
-#endif
-	lck_mtx_unlock(inetdomain->dom_mtx);
+	domain_guard_release(guard);
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp);
 	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
@@ -486,6 +480,9 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 {
 	struct inpcb *inp;
 	int err;
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+	domain_guard_t guard;
+#endif
 	
 	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))) {
 		SCTP_PRINTF("SCTP NKE: Someone else holds the lock\n");
@@ -604,10 +601,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	lck_mtx_lock(inet6domain.dom_mtx);
 #endif
 #else
-	lck_mtx_lock(inetdomain->dom_mtx);
-#ifdef INET6
-	lck_mtx_lock(inet6domain->dom_mtx);
-#endif
+	guard = domain_guard_deploy();
 #endif
 	ip_protox[IPPROTO_SCTP]  = old_pr4;
 #ifdef INET6
@@ -637,10 +631,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 #endif
 	lck_mtx_unlock(inetdomain.dom_mtx);
 #else
-#ifdef INET6
-	lck_mtx_unlock(inet6domain->dom_mtx);
-#endif
-	lck_mtx_unlock(inetdomain->dom_mtx);
+	domain_guard_release(guard);
 #endif
 	if (err) {
 		SCTP_PRINTF("SCTP NKE: Not all protocol handlers could be removed.\n");
