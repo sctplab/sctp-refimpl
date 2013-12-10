@@ -21,15 +21,15 @@
 	<key>OSBundleLibraries</key>
 	<dict>
 		<key>com.apple.kpi.bsd</key>
-		<string>10.8.0</string>
+		<string>13.0.0</string>
 		<key>com.apple.kpi.libkern</key>
-		<string>10.8.0</string>
+		<string>13.0.0</string>
 		<key>com.apple.kpi.mach</key>
-		<string>10.8.0</string>
+		<string>13.0.0</string>
 		<key>com.apple.kpi.unsupported</key>
-		<string>10.8.0</string>
+		<string>13.0.0</string>
 		<key>org.sctp.kpi.sctpsupport</key>
-		<string>10.8.0</string>
+		<string>13.0.0</string>
 	</dict>
 </dict>
 </plist>
