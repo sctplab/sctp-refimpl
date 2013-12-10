@@ -209,8 +209,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_seqpacket.pr_type      = SOCK_SEQPACKET;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_seqpacket.pr_domain    = &inetdomain;
-#else
-	sctp4_seqpacket.pr_domain    = inetdomain;
 #endif
 	sctp4_seqpacket.pr_protocol  = IPPROTO_SCTP;
 	sctp4_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
@@ -238,8 +236,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_stream.pr_type         = SOCK_STREAM;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_stream.pr_domain       = &inetdomain;
-#else
-	sctp4_stream.pr_domain       = inetdomain;
 #endif
 	sctp4_stream.pr_protocol     = IPPROTO_SCTP;
 	sctp4_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
@@ -268,8 +264,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_seqpacket.pr_type      = SOCK_SEQPACKET;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_seqpacket.pr_domain    = &inet6domain;
-#else
-	sctp6_seqpacket.pr_domain    = inet6domain;
 #endif
 	sctp6_seqpacket.pr_protocol  = IPPROTO_SCTP;
 	sctp6_seqpacket.pr_flags     = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
@@ -301,8 +295,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_stream.pr_type         = SOCK_STREAM;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_stream.pr_domain       = &inet6domain;
-#else
-	sctp6_stream.pr_domain       = inet6domain;
 #endif
 	sctp6_stream.pr_protocol     = IPPROTO_SCTP;
 	sctp6_stream.pr_flags        = PR_CONNREQUIRED|PR_WANTRCVD|PR_PCBLOCK|PR_PROTOLOCK;
