@@ -1218,6 +1218,10 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv6_so = NULL;
 	}
 
+	if (SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) == 0) {
+		return (0);
+	}
+
 	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
 	if (error) {
 		sctp_over_udp_ipv4_so = NULL;
