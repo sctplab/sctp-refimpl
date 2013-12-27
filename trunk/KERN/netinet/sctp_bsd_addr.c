@@ -825,12 +825,12 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 		return (NULL);
 	}
 	if (allonebuf == 0)
-                mbuf_threshold = SCTP_BASE_SYSCTL(sctp_mbuf_threshold_count);
+		mbuf_threshold = SCTP_BASE_SYSCTL(sctp_mbuf_threshold_count);
 	else
 		mbuf_threshold = 1;
 
 
-	if (space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
+	if ((int)space_needed > (((mbuf_threshold - 1) * MLEN) + MHLEN)) {
 		MCLGET(m, how);
 		if (m == NULL) {
 			return (NULL);
