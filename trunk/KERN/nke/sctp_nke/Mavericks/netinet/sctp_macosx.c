@@ -675,6 +675,7 @@ sctp_vtag_watchdog()
 	return;
 }
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 void
 sctp_slowtimo(void)
 {
@@ -697,7 +698,7 @@ sctp_slowtimo(void)
 		sctp_vtag_watchdog();
 	}
 
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock));
 	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
@@ -740,13 +741,20 @@ sctp_slowtimo(void)
 		}
 #endif
 	}
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock));
 #ifdef SCTP_DEBUG
 	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		SCTP_PRINTF("sctp_slowtimo: Total number of inps: %u\n", n);
 	}
 #endif
 }
+#else
+void
+sctp_gc(struct inpcbinfo *ipi)
+{
+	SCTP_PRINTF("sctp_gc() called with %p.\n", (void *)ipi);
+}
+#endif
 
 #if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = NULL;
