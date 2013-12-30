@@ -6801,6 +6801,7 @@ sctp_pcb_finish(void)
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 #endif
 #if defined(__APPLE__)
+	in_pcbinfo_detach(&SCTP_BASE_INFO(sctbinfo));
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	do {
 		msleep(&sctp_it_ctl.iterator_flags,
