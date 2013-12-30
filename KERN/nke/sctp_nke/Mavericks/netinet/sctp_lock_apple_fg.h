@@ -39,8 +39,8 @@
 #define SCTP_STATLOG_DESTROY()
 
 /* for now, all locks use this group and attributes */
-#define SCTP_MTX_GRP SCTP_BASE_INFO(mtx_grp)
-#define SCTP_MTX_ATTR SCTP_BASE_INFO(mtx_attr)
+#define SCTP_MTX_GRP SCTP_BASE_INFO(sctbinfo.ipi_lock_grp)
+#define SCTP_MTX_ATTR SCTP_BASE_INFO(sctbinfo.ipi_lock_attr)
 
 
 #define SCTP_WQ_ADDR_INIT() \
@@ -52,17 +52,17 @@
 
 /* Lock for INFO stuff */
 #define SCTP_INP_INFO_LOCK_INIT() \
-	SCTP_BASE_INFO(ipi_ep_mtx) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(sctbinfo.ipi_lock) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock))
 #define SCTP_INP_INFO_RUNLOCK() \
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock))
 #define SCTP_INP_INFO_WLOCK() \
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock))
 #define SCTP_INP_INFO_WUNLOCK() \
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx))
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock))
 #define SCTP_INP_INFO_LOCK_DESTROY() \
-        lck_rw_free(SCTP_BASE_INFO(ipi_ep_mtx), SCTP_MTX_GRP)
+        lck_rw_free(SCTP_BASE_INFO(sctbinfo.ipi_lock), SCTP_MTX_GRP)
 #define SCTP_IPI_COUNT_INIT() \
 	SCTP_BASE_INFO(ipi_count_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_COUNT_DESTROY() \
