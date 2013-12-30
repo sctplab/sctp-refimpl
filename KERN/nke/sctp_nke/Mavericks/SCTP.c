@@ -486,9 +486,9 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 		return (KERN_FAILURE);
 	}
 
-	if (!LIST_EMPTY(&SCTP_BASE_INFO(inplisthead))) {
+	if (!LIST_EMPTY(SCTP_BASE_INFO(sctbinfo).ipi_listhead)) {
 		SCTP_PRINTF("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
-		LIST_FOREACH(inp, &SCTP_BASE_INFO(inplisthead), inp_list) {
+		LIST_FOREACH(inp, SCTP_BASE_INFO(sctbinfo).ipi_listhead, inp_list) {
 			SCTP_PRINTF("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);

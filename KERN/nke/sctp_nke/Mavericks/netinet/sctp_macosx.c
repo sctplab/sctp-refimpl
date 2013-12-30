@@ -699,7 +699,7 @@ sctp_slowtimo(void)
 	}
 
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
-	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
+	LIST_FOREACH_SAFE(inp, SCTP_BASE_INFO(sctbinfo).ipi_listhead, inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
 			n++;
@@ -770,7 +770,7 @@ sctp_gc(struct inpcbinfo *ipi)
 	}
 
 	sctp_gc_done = TRUE;
-	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
+	LIST_FOREACH_SAFE(inp, ipi->ipi_listhead, inp_list, ninp) {
 		/*
 		 * Skip unless it's STOPUSING; garbage collector will
 		 * be triggered by in_pcb_checkstate() upon setting
