@@ -698,7 +698,7 @@ sctp_slowtimo(void)
 		sctp_vtag_watchdog();
 	}
 
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock));
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
 	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
@@ -717,7 +717,7 @@ sctp_slowtimo(void)
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
-				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -733,7 +733,7 @@ sctp_slowtimo(void)
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(&inp->inpcb_mtx);
-				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -741,7 +741,7 @@ sctp_slowtimo(void)
 		}
 #endif
 	}
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo.ipi_lock));
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
 #ifdef SCTP_DEBUG
 	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		SCTP_PRINTF("sctp_slowtimo: Total number of inps: %u\n", n);
@@ -749,10 +749,67 @@ sctp_slowtimo(void)
 #endif
 }
 #else
+/* Garbage collection performed during most recent sctp_gc() run */
+static boolean_t sctp_gc_done = FALSE;
+
 void
 sctp_gc(struct inpcbinfo *ipi)
 {
+	struct inpcb *inp, *ninp;
+	struct socket *so;
+
 	SCTP_PRINTF("sctp_gc() called with %p.\n", (void *)ipi);
+	if (lck_rw_try_lock_exclusive(ipi->ipi_lock) == FALSE) {
+		if (sctp_gc_done == TRUE) {
+			sctp_gc_done = FALSE;
+			/* couldn't get the lock, must lock next time */
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+			return;
+		}
+		lck_rw_lock_exclusive(ipi->ipi_lock);
+	}
+
+	sctp_gc_done = TRUE;
+	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
+		/*
+		 * Skip unless it's STOPUSING; garbage collector will
+		 * be triggered by in_pcb_checkstate() upon setting
+		 * wantcnt to that value.  If the PCB is already dead,
+		 * keep gc active to anticipate wantcnt changing.
+		 */
+		if (inp->inp_wantcnt != WNT_STOPUSING)
+			continue;
+
+		/*
+		 * Skip if busy, no hurry for cleanup.  Keep gc active
+		 * and try the lock again during next round.
+		 */
+		if (!lck_mtx_try_lock(&inp->inpcb_mtx)) {
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+			continue;
+		}
+
+		/*
+		 * Keep gc active unless usecount is 0.
+		 */
+		so = inp->inp_socket;
+		if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
+			lck_mtx_unlock(&inp->inpcb_mtx);
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+		} else {
+			LIST_REMOVE(inp, inp_list);
+			inp->inp_socket = NULL;
+			so->so_pcb      = NULL;
+			lck_mtx_unlock(&inp->inpcb_mtx);
+			lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
+			sodealloc(so);
+			SCTP_DECR_EP_COUNT();
+		}
+	}
+	lck_rw_done(ipi->ipi_lock);
+
+	return;
 }
 #endif
 
