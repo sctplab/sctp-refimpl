@@ -2908,7 +2908,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	LIST_INSERT_HEAD(&SCTP_BASE_INFO(listhead), inp, sctp_list);
 #if defined(__APPLE__)
 	inp->ip_inp.inp.inp_pcbinfo = &SCTP_BASE_INFO(sctbinfo);
-	LIST_INSERT_HEAD(&SCTP_BASE_INFO(inplisthead), &inp->ip_inp.inp, inp_list);
+	LIST_INSERT_HEAD(SCTP_BASE_INFO(sctbinfo).ipi_listhead, &inp->ip_inp.inp, inp_list);
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 
