@@ -365,25 +365,6 @@ sctp_unlock_assert(struct socket *so)
 }
 
 /*
- * timer functions
- */
-
-void
-sctp_start_main_timer(void) {
-	/* bound the timer (in msec) */
-	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) <= 1000/hz)
-		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
-	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
-	timeout(sctp_timeout, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
-}
-
-void
-sctp_stop_main_timer(void) {
-	untimeout(sctp_timeout, NULL);
-}
-
-
-/*
  * locks
  */
 #ifdef _KERN_LOCKS_H_
@@ -486,7 +467,7 @@ sctp_print_addr(struct sockaddr *sa)
 }
 
 static void
-sctp_addr_watchdog()
+sctp_addr_watchdog(void)
 {
 	struct ifnet **ifnetlist;
 	struct ifaddr **ifaddrlist;
@@ -630,7 +611,7 @@ sctp_addr_watchdog()
 }
 
 static void
-sctp_vtag_watchdog()
+sctp_vtag_watchdog(void)
 {
 	struct timeval now;
 	uint32_t i, j, free_cnt, expired_cnt, inuse_cnt, other_cnt;
@@ -673,6 +654,39 @@ sctp_vtag_watchdog()
 	}
 	SCTP_INP_INFO_RUNLOCK();
 	return;
+}
+
+/*
+ * timer functions
+ */
+
+void
+sctp_start_main_timer(void) {
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+	static uint32_t sctp_addr_watchdog_cnt = 0;
+	static uint32_t sctp_vtag_watchdog_cnt = 0;
+
+	if ((SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit) > 0) &&
+	    (++sctp_addr_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit))) {
+		sctp_addr_watchdog_cnt = 0;
+		sctp_addr_watchdog();
+	}
+	if ((SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit) > 0) &&
+	    (++sctp_vtag_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit))) {
+		sctp_vtag_watchdog_cnt = 0;
+		sctp_vtag_watchdog();
+	}
+#endif
+	/* bound the timer (in msec) */
+	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) < 1000/hz)
+		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
+	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
+	timeout(sctp_timeout, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
+}
+
+void
+sctp_stop_main_timer(void) {
+	untimeout(sctp_timeout, NULL);
 }
 
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
