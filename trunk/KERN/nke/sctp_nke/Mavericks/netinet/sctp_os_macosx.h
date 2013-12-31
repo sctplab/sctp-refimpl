@@ -539,6 +539,7 @@ void sctp_stop_main_timer(void);
 /* address monitor thread */
 errno_t sctp_address_monitor_start(void);
 void sctp_address_monitor_stop(void);
+void sctp_delayed_startup(void *);
 #define SCTP_PROCESS_STRUCT thread_t
 
 #endif

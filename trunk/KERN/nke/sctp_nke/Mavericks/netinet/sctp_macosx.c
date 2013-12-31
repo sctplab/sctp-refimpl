@@ -1380,3 +1380,10 @@ sctp_over_udp_stop(void)
 	}
 	return;
 }
+
+void
+sctp_delayed_startup(void *arg SCTP_UNUSED)
+{
+	sctp_over_udp_start();
+	sctp_address_monitor_start();
+}

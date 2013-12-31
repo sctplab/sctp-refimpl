@@ -179,8 +179,7 @@ sctp_init(void)
 #if defined(__APPLE__)
 	SCTP_BASE_VAR(sctp_main_timer_ticks) = 0;
 	sctp_start_main_timer();
-	sctp_address_monitor_start();
-	sctp_over_udp_start();
+	timeout(sctp_delayed_startup, NULL, 1);
 #endif
 }
 
@@ -188,6 +187,7 @@ void
 sctp_finish(void)
 {
 #if defined(__APPLE__)
+	untimeout(sctp_delayed_startup, NULL);
 	sctp_over_udp_stop();
 	sctp_address_monitor_stop();
 	sctp_stop_main_timer();
