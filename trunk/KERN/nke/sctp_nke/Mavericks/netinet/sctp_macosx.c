@@ -973,7 +973,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	return;
 }
 
-void
+errno_t
 sctp_address_monitor_start(void)
 {
 	errno_t error;
@@ -987,6 +987,7 @@ sctp_address_monitor_start(void)
 	if (error) {
 		SCTP_PRINTF("Failed to create routing socket\n");
 	}
+	return (error);
 }
 
 void
@@ -999,10 +1000,10 @@ sctp_address_monitor_stop(void)
 	return;
 }
 #else
-void
+errno_t
 sctp_address_monitor_start(void)
 {
-	return;
+	return (0);
 }
 
 void sctp_address_monitor_stop(void)
