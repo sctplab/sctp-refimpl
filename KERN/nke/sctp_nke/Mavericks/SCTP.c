@@ -476,22 +476,42 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	domain_guard_t guard;
 #endif
 	
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)) {
+#else
 	if (!lck_rw_try_lock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock)) {
+#endif
 		SCTP_PRINTF("SCTP NKE: Someone else holds the lock\n");
 		return (KERN_FAILURE);
 	}
 	if (!LIST_EMPTY(&SCTP_BASE_INFO(listhead))) {
 		SCTP_PRINTF("SCTP NKE: There are still SCTP endpoints. NKE not unloaded\n");
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+		lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
+#else
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
+#endif
 		return (KERN_FAILURE);
 	}
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	if (!LIST_EMPTY(SCTP_BASE_INFO(sctbinfo).listhead)) {
+#else
 	if (!LIST_EMPTY(SCTP_BASE_INFO(sctbinfo).ipi_listhead)) {
+#endif
 		SCTP_PRINTF("SCTP NKE: There are still not deleted SCTP endpoints. NKE not unloaded\n");
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+		LIST_FOREACH(inp, SCTP_BASE_INFO(sctbinfo).listhead, inp_list) {
+#else
 		LIST_FOREACH(inp, SCTP_BASE_INFO(sctbinfo).ipi_listhead, inp_list) {
+#endif
 			SCTP_PRINTF("inp = %p: inp_wantcnt = %d, inp_state = %d, inp_socket->so_usecount = %d\n", inp, inp->inp_wantcnt, inp->inp_state, inp->inp_socket->so_usecount);
 		}
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+		lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
+#else
 		lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
+#endif
 		return (KERN_FAILURE);
 	}
 
@@ -615,7 +635,11 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	err |= net_del_proto(sctp6_stream.pr_type,    sctp6_stream.pr_protocol,    inet6domain);
 #endif
 #endif
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
+#else
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
+#endif
 	sctp_finish();
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 #ifdef INET6
