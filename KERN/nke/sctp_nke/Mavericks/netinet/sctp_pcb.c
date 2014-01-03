@@ -6628,6 +6628,7 @@ sctp_pcb_init()
 	in_pcbinfo_attach(&SCTP_BASE_INFO(sctbinfo));
 #endif
 
+
 	/* init the hash table of endpoints */
 #if defined(__FreeBSD__)
 #if defined(__FreeBSD_cc_version) && __FreeBSD_cc_version >= 440000
@@ -6698,8 +6699,6 @@ sctp_pcb_init()
 
 
 	/* Master Lock INIT for info structure */
-#if defined(__APPLE__)
-#endif
 	SCTP_INP_INFO_LOCK_INIT();
 	SCTP_STATLOG_INIT_LOCK();
 
