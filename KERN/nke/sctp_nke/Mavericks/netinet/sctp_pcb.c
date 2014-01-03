@@ -2877,7 +2877,7 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 
 #if defined(__APPLE__)
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
-	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(SCTP_BASE_INFO(sctbinfo).ipi_lock_grp, SCTP_BASE_INFO(sctbinfo).ipi_lock_attr);
+	inp->ip_inp.inp.inpcb_mtx = lck_mtx_alloc_init(SCTP_BASE_INFO(sctbinfo).mtx_grp, SCTP_BASE_INFO(sctbinfo).mtx_attr);
 	if (inp->ip_inp.inp.inpcb_mtx == NULL) {
 		SCTP_PRINTF("in_pcballoc: can't alloc mutex! so=%p\n", (void *)so);
 #ifdef SCTP_MVRF
@@ -2890,6 +2890,8 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
 		return (ENOMEM);
 	}
+#elif defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	lck_mtx_init(&inp->ip_inp.inp.inpcb_mtx, SCTP_BASE_INFO(sctbinfo).mtx_grp, SCTP_BASE_INFO(sctbinfo).mtx_attr);
 #else
 	lck_mtx_init(&inp->ip_inp.inp.inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp, SCTP_BASE_INFO(sctbinfo).ipi_lock_attr);
 #endif
@@ -2908,7 +2910,11 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	LIST_INSERT_HEAD(&SCTP_BASE_INFO(listhead), inp, sctp_list);
 #if defined(__APPLE__)
 	inp->ip_inp.inp.inp_pcbinfo = &SCTP_BASE_INFO(sctbinfo);
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	LIST_INSERT_HEAD(SCTP_BASE_INFO(sctbinfo).listhead, &inp->ip_inp.inp, inp_list);
+#else
 	LIST_INSERT_HEAD(SCTP_BASE_INFO(sctbinfo).ipi_listhead, &inp->ip_inp.inp, inp_list);
+#endif
 #endif
 	SCTP_INP_INFO_WUNLOCK();
 
@@ -6616,16 +6622,25 @@ sctp_pcb_init()
 	LIST_INIT(&SCTP_BASE_INFO(listhead));
 #if defined(__APPLE__)
 	LIST_INIT(&SCTP_BASE_INFO(inplisthead));
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	SCTP_BASE_INFO(sctbinfo).listhead = &SCTP_BASE_INFO(inplisthead);
+	SCTP_BASE_INFO(sctbinfo).mtx_grp_attr = lck_grp_attr_alloc_init();
+	lck_grp_attr_setdefault(SCTP_BASE_INFO(sctbinfo).mtx_grp_attr);
+	SCTP_BASE_INFO(sctbinfo).mtx_grp = lck_grp_alloc_init("sctppcb", SCTP_BASE_INFO(sctbinfo).mtx_grp_attr);
+	SCTP_BASE_INFO(sctbinfo).mtx_attr = lck_attr_alloc_init();
+	lck_attr_setdefault(SCTP_BASE_INFO(sctbinfo).mtx_attr);
+#else
 	SCTP_BASE_INFO(sctbinfo).ipi_listhead = &SCTP_BASE_INFO(inplisthead);
 	SCTP_BASE_INFO(sctbinfo).ipi_lock_grp_attr = lck_grp_attr_alloc_init();
 	lck_grp_attr_setdefault(SCTP_BASE_INFO(sctbinfo).ipi_lock_grp_attr);
 	SCTP_BASE_INFO(sctbinfo).ipi_lock_grp = lck_grp_alloc_init("sctppcb", SCTP_BASE_INFO(sctbinfo).ipi_lock_grp_attr);
 	SCTP_BASE_INFO(sctbinfo).ipi_lock_attr = lck_attr_alloc_init();
 	lck_attr_setdefault(SCTP_BASE_INFO(sctbinfo).ipi_lock_attr);
+#endif
 #if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
 	SCTP_BASE_INFO(sctbinfo).ipi_gc = sctp_gc;
-#endif
 	in_pcbinfo_attach(&SCTP_BASE_INFO(sctbinfo));
+#endif
 #endif
 
 
@@ -6800,7 +6815,9 @@ sctp_pcb_finish(void)
 	SCTP_IPI_ITERATOR_WQ_UNLOCK();
 #endif
 #if defined(__APPLE__)
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
 	in_pcbinfo_detach(&SCTP_BASE_INFO(sctbinfo));
+#endif
 	SCTP_IPI_ITERATOR_WQ_LOCK();
 	do {
 		msleep(&sctp_it_ctl.iterator_flags,
@@ -6949,9 +6966,15 @@ sctp_pcb_finish(void)
 	SCTP_WQ_ADDR_DESTROY();
 
 #if defined(__APPLE__)
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+	lck_grp_attr_free(SCTP_BASE_INFO(sctbinfo).mtx_grp_attr);
+	lck_grp_free(SCTP_BASE_INFO(sctbinfo).mtx_grp);
+	lck_attr_free(SCTP_BASE_INFO(sctbinfo).mtx_attr);
+#else
 	lck_grp_attr_free(SCTP_BASE_INFO(sctbinfo).ipi_lock_grp_attr);
 	lck_grp_free(SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
 	lck_attr_free(SCTP_BASE_INFO(sctbinfo).ipi_lock_attr);
+#endif
 #endif
 #if defined(__Userspace__)
 	SCTP_TIMERQ_LOCK_DESTROY();
