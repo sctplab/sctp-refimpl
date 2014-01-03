@@ -712,8 +712,8 @@ sctp_slowtimo(void)
 		sctp_vtag_watchdog();
 	}
 
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
-	LIST_FOREACH_SAFE(inp, SCTP_BASE_INFO(sctbinfo).ipi_listhead, inp_list, ninp) {
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
+	LIST_FOREACH_SAFE(inp, SCTP_BASE_INFO(sctbinfo).listhead, inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
 			n++;
@@ -747,7 +747,7 @@ sctp_slowtimo(void)
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(&inp->inpcb_mtx);
-				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
+				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).mtx_grp);
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -755,7 +755,7 @@ sctp_slowtimo(void)
 		}
 #endif
 	}
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock);
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
 #ifdef SCTP_DEBUG
 	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		SCTP_PRINTF("sctp_slowtimo: Total number of inps: %u\n", n);
