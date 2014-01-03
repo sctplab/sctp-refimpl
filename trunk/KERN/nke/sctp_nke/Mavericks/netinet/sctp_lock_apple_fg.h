@@ -39,9 +39,13 @@
 #define SCTP_STATLOG_DESTROY()
 
 /* for now, all locks use this group and attributes */
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+#define SCTP_MTX_GRP SCTP_BASE_INFO(sctbinfo).mtx_grp
+#define SCTP_MTX_ATTR SCTP_BASE_INFO(sctbinfo).mtx_attr
+#else
 #define SCTP_MTX_GRP SCTP_BASE_INFO(sctbinfo).ipi_lock_grp
 #define SCTP_MTX_ATTR SCTP_BASE_INFO(sctbinfo).ipi_lock_attr
-
+#endif
 
 #define SCTP_WQ_ADDR_INIT() \
 	SCTP_BASE_INFO(wq_addr_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
@@ -51,6 +55,20 @@
 #define SCTP_WQ_ADDR_UNLOCK() lck_mtx_unlock(SCTP_BASE_INFO(wq_addr_mtx))
 
 /* Lock for INFO stuff */
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
+#define SCTP_INP_INFO_LOCK_INIT() \
+	SCTP_BASE_INFO(sctbinfo.ipi_lock) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+#define SCTP_INP_INFO_RLOCK() \
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)
+#define SCTP_INP_INFO_RUNLOCK() \
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)
+#define SCTP_INP_INFO_WLOCK() \
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)
+#define SCTP_INP_INFO_WUNLOCK() \
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)
+#define SCTP_INP_INFO_LOCK_DESTROY() \
+        lck_rw_free(SCTP_BASE_INFO(sctbinfo).mtx, SCTP_MTX_GRP)
+#else
 #define SCTP_INP_INFO_LOCK_INIT() \
 	SCTP_BASE_INFO(sctbinfo.ipi_lock) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
@@ -63,6 +81,7 @@
 	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).ipi_lock)
 #define SCTP_INP_INFO_LOCK_DESTROY() \
         lck_rw_free(SCTP_BASE_INFO(sctbinfo).ipi_lock, SCTP_MTX_GRP)
+#endif
 #define SCTP_IPI_COUNT_INIT() \
 	SCTP_BASE_INFO(ipi_count_mtx) = lck_mtx_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_IPI_COUNT_DESTROY() \
