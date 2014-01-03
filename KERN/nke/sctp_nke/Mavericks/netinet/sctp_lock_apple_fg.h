@@ -57,7 +57,7 @@
 /* Lock for INFO stuff */
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 #define SCTP_INP_INFO_LOCK_INIT() \
-	SCTP_BASE_INFO(sctbinfo.ipi_lock) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
+	SCTP_BASE_INFO(sctbinfo.mtx) = lck_rw_alloc_init(SCTP_MTX_GRP, SCTP_MTX_ATTR)
 #define SCTP_INP_INFO_RLOCK() \
 	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx)
 #define SCTP_INP_INFO_RUNLOCK() \
