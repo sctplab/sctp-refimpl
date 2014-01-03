@@ -205,7 +205,9 @@ sctp_peeloff_option(struct proc *p, struct sctp_peeloff_opt *uap)
 	}
 #endif /* MAC_SOCKET_SUBSET */
 
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	fp->f_type = DTYPE_SOCKET;
+#endif
 	fp->f_flag = fflag;
 	fp->f_ops = &socketops;
 	fp->f_data = (caddr_t)so;
@@ -363,25 +365,6 @@ sctp_unlock_assert(struct socket *so)
 }
 
 /*
- * timer functions
- */
-
-void
-sctp_start_main_timer(void) {
-	/* bound the timer (in msec) */
-	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) <= 1000/hz)
-		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
-	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
-	timeout(sctp_timeout, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
-}
-
-void
-sctp_stop_main_timer(void) {
-	untimeout(sctp_timeout, NULL);
-}
-
-
-/*
  * locks
  */
 #ifdef _KERN_LOCKS_H_
@@ -484,7 +467,7 @@ sctp_print_addr(struct sockaddr *sa)
 }
 
 static void
-sctp_addr_watchdog()
+sctp_addr_watchdog(void)
 {
 	struct ifnet **ifnetlist;
 	struct ifaddr **ifaddrlist;
@@ -628,7 +611,7 @@ sctp_addr_watchdog()
 }
 
 static void
-sctp_vtag_watchdog()
+sctp_vtag_watchdog(void)
 {
 	struct timeval now;
 	uint32_t i, j, free_cnt, expired_cnt, inuse_cnt, other_cnt;
@@ -673,6 +656,40 @@ sctp_vtag_watchdog()
 	return;
 }
 
+/*
+ * timer functions
+ */
+
+void
+sctp_start_main_timer(void) {
+#if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
+	static uint32_t sctp_addr_watchdog_cnt = 0;
+	static uint32_t sctp_vtag_watchdog_cnt = 0;
+
+	if ((SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit) > 0) &&
+	    (++sctp_addr_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_addr_watchdog_limit))) {
+		sctp_addr_watchdog_cnt = 0;
+		sctp_addr_watchdog();
+	}
+	if ((SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit) > 0) &&
+	    (++sctp_vtag_watchdog_cnt >= SCTP_BASE_SYSCTL(sctp_vtag_watchdog_limit))) {
+		sctp_vtag_watchdog_cnt = 0;
+		sctp_vtag_watchdog();
+	}
+#endif
+	/* bound the timer (in msec) */
+	if ((int)SCTP_BASE_SYSCTL(sctp_main_timer) < 1000/hz)
+		SCTP_BASE_SYSCTL(sctp_main_timer) = 1000/hz;
+	SCTP_BASE_VAR(sctp_main_timer_ticks) = MSEC_TO_TICKS(SCTP_BASE_SYSCTL(sctp_main_timer));
+	timeout(sctp_timeout, NULL, SCTP_BASE_VAR(sctp_main_timer_ticks));
+}
+
+void
+sctp_stop_main_timer(void) {
+	untimeout(sctp_timeout, NULL);
+}
+
+#if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 void
 sctp_slowtimo(void)
 {
@@ -695,8 +712,8 @@ sctp_slowtimo(void)
 		sctp_vtag_watchdog();
 	}
 
-	lck_rw_lock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
-	LIST_FOREACH_SAFE(inp, &SCTP_BASE_INFO(inplisthead), inp_list, ninp) {
+	lck_rw_lock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
+	LIST_FOREACH_SAFE(inp, SCTP_BASE_INFO(sctbinfo).listhead, inp_list, ninp) {
 #ifdef SCTP_DEBUG
 		if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2)) {
 			n++;
@@ -714,7 +731,7 @@ sctp_slowtimo(void)
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(inp->inpcb_mtx);
-				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				lck_mtx_free(inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -730,7 +747,7 @@ sctp_slowtimo(void)
 				inp->inp_socket = NULL;
 				so->so_pcb      = NULL;
 				lck_mtx_unlock(&inp->inpcb_mtx);
-				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(mtx_grp));
+				lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).mtx_grp);
 				SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 				sodealloc(so);
 				SCTP_DECR_EP_COUNT();
@@ -738,13 +755,77 @@ sctp_slowtimo(void)
 		}
 #endif
 	}
-	lck_rw_unlock_exclusive(SCTP_BASE_INFO(ipi_ep_mtx));
+	lck_rw_unlock_exclusive(SCTP_BASE_INFO(sctbinfo).mtx);
 #ifdef SCTP_DEBUG
 	if ((SCTP_BASE_SYSCTL(sctp_debug_on) & SCTP_DEBUG_PCB2) && (n > 0)) {
 		SCTP_PRINTF("sctp_slowtimo: Total number of inps: %u\n", n);
 	}
 #endif
 }
+#else
+/* Garbage collection performed during most recent sctp_gc() run */
+static boolean_t sctp_gc_done = FALSE;
+
+void
+sctp_gc(struct inpcbinfo *ipi)
+{
+	struct inpcb *inp, *ninp;
+	struct socket *so;
+
+	SCTP_PRINTF("sctp_gc() called with %p.\n", (void *)ipi);
+	if (lck_rw_try_lock_exclusive(ipi->ipi_lock) == FALSE) {
+		if (sctp_gc_done == TRUE) {
+			sctp_gc_done = FALSE;
+			/* couldn't get the lock, must lock next time */
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+			return;
+		}
+		lck_rw_lock_exclusive(ipi->ipi_lock);
+	}
+
+	sctp_gc_done = TRUE;
+	LIST_FOREACH_SAFE(inp, ipi->ipi_listhead, inp_list, ninp) {
+		/*
+		 * Skip unless it's STOPUSING; garbage collector will
+		 * be triggered by in_pcb_checkstate() upon setting
+		 * wantcnt to that value.  If the PCB is already dead,
+		 * keep gc active to anticipate wantcnt changing.
+		 */
+		if (inp->inp_wantcnt != WNT_STOPUSING)
+			continue;
+
+		/*
+		 * Skip if busy, no hurry for cleanup.  Keep gc active
+		 * and try the lock again during next round.
+		 */
+		if (!lck_mtx_try_lock(&inp->inpcb_mtx)) {
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+			continue;
+		}
+
+		/*
+		 * Keep gc active unless usecount is 0.
+		 */
+		so = inp->inp_socket;
+		if ((so->so_usecount != 0) || (inp->inp_state != INPCB_STATE_DEAD)) {
+			lck_mtx_unlock(&inp->inpcb_mtx);
+			atomic_add_32(&ipi->ipi_gc_req.intimer_fast, 1);
+		} else {
+			LIST_REMOVE(inp, inp_list);
+			inp->inp_socket = NULL;
+			so->so_pcb      = NULL;
+			lck_mtx_unlock(&inp->inpcb_mtx);
+			lck_mtx_destroy(&inp->inpcb_mtx, SCTP_BASE_INFO(sctbinfo).ipi_lock_grp);
+			SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
+			sodealloc(so);
+			SCTP_DECR_EP_COUNT();
+		}
+	}
+	lck_rw_done(ipi->ipi_lock);
+
+	return;
+}
+#endif
 
 #if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = NULL;
@@ -906,7 +987,7 @@ sctp_address_monitor_cb(socket_t rt_sock, void *cookie SCTP_UNUSED, int watif SC
 	return;
 }
 
-void
+errno_t
 sctp_address_monitor_start(void)
 {
 	errno_t error;
@@ -920,6 +1001,7 @@ sctp_address_monitor_start(void)
 	if (error) {
 		SCTP_PRINTF("Failed to create routing socket\n");
 	}
+	return (error);
 }
 
 void
@@ -932,10 +1014,10 @@ sctp_address_monitor_stop(void)
 	return;
 }
 #else
-void
+errno_t
 sctp_address_monitor_start(void)
 {
-	return;
+	return (0);
 }
 
 void sctp_address_monitor_stop(void)
@@ -1216,6 +1298,10 @@ sctp_over_udp_start(void)
 		sctp_over_udp_ipv6_so = NULL;
 	}
 
+	if (SCTP_BASE_SYSCTL(sctp_udp_tunneling_port) == 0) {
+		return (0);
+	}
+
 	error = sock_socket(PF_INET, SOCK_DGRAM, IPPROTO_UDP, sctp_over_udp_ipv4_cb, NULL, &sctp_over_udp_ipv4_so);
 	if (error) {
 		sctp_over_udp_ipv4_so = NULL;
@@ -1307,4 +1393,11 @@ sctp_over_udp_stop(void)
 		sctp_over_udp_ipv6_so = NULL;
 	}
 	return;
+}
+
+void
+sctp_delayed_startup(void *arg SCTP_UNUSED)
+{
+	sctp_over_udp_start();
+	sctp_address_monitor_start();
 }
