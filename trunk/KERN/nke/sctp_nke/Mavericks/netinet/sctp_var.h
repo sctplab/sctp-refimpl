@@ -443,7 +443,6 @@ void sctp_init(struct protosw *pp, struct domain *dp);
 #else
 void sctp_init(void);
 #endif
-#endif
 void sctp_finish(void);
 #if defined(__FreeBSD__) || defined(__Windows__) || defined(__Userspace__)
 int sctp_flush(struct socket *, int);
