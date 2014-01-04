@@ -1,0 +1,486 @@
+/*
+ * Copyright (C) 2013 Randal R Stewart
+ * All rights reserved.
+ *
+ * Redistribution and use in source and binary forms, with or without
+ * modification, are permitted provided that the following conditions
+ * are met:
+ * 1. Redistributions of source code must retain the above copyright
+ *    notice, this list of conditions and the following disclaimer.
+ * 2. Redistributions in binary form must reproduce the above copyright
+ *    notice, this list of conditions and the following disclaimer in the
+ *    documentation and/or other materials provided with the distribution.
+ * 3. Neither the name of the project nor the names of its contributors
+ *    may be used to endorse or promote products derived from this software
+ *    without specific prior written permission.
+ *
+ * THIS SOFTWARE IS PROVIDED BY THE PROJECT AND CONTRIBUTORS ``AS IS'' AND
+ * ANY EXPRESS OR IMPLIED WARRANTIES, INCLUDING, BUT NOT LIMITED TO, THE
+ * IMPLIED WARRANTIES OF MERCHANTABILITY AND FITNESS FOR A PARTICULAR PURPOSE
+ * ARE DISCLAIMED.  IN NO EVENT SHALL THE PROJECT OR CONTRIBUTORS BE LIABLE
+ * FOR ANY DIRECT, INDIRECT, INCIDENTAL, SPECIAL, EXEMPLARY, OR CONSEQUENTIAL
+ * DAMAGES (INCLUDING, BUT NOT LIMITED TO, PROCUREMENT OF SUBSTITUTE GOODS
+ * OR SERVICES; LOSS OF USE, DATA, OR PROFITS; OR BUSINESS INTERRUPTION)
+ * HOWEVER CAUSED AND ON ANY THEORY OF LIABILITY, WHETHER IN CONTRACT, STRICT
+ * LIABILITY, OR TORT (INCLUDING NEGLIGENCE OR OTHERWISE) ARISING IN ANY WAY
+ * OUT OF THE USE OF THIS SOFTWARE, EVEN IF ADVISED OF THE POSSIBILITY OF
+ * SUCH DAMAGE.
+ */
+#include <sys/types.h>
+#include <ctype.h>
+#include <stdio.h>
+#include <stdlib.h>
+#include <unistd.h>
+#include <sys/types.h>
+#include <sys/sysctl.h>
+#include <stdint.h>
+#include <sys/socket.h>
+#include <netinet/in.h>
+#include <sys/ioctl.h>
+#include <sys/stat.h>
+#include <stdarg.h>
+#include <signal.h>
+#include <fcntl.h>
+#include <time.h>
+#include <string.h>
+#include <net/if.h>
+#include <errno.h>
+#include <poll.h>
+#include <sys/uio.h>
+#include <readline/readline.h>
+#include <readline/history.h>
+#include <netinet/sctp.h>
+#include <netinet/tcp.h>
+#include <sys/event.h>
+#include <sys/time.h>
+
+#define MAX_ARGS 16
+
+typedef int f2(char **, int);
+
+struct command {
+    char *co_name;      /* Command name. */
+    char *co_desc;      /* Command description. */
+    f2 *co_func;        /* Function to call to execute the command. */
+};
+
+int kq=-1;
+
+/* Line editing.
+ * Store the commands and the help descriptions.
+ * Please keep this list sorted in alphabetical order.
+ */
+static int cmd_quit(char *argv[], int argc);
+static int cmd_help(char *argv[], int argc);
+static int cmd_kevent(char *argv[], int argc);
+static int cmd_silence(char *argv[], int argc);
+
+static struct command commands[] = {
+    {"quit", "quit - Exit the test",
+     cmd_quit},
+    {"help", "help [cmd] - display help for cmd, or for all the commands if no cmd specified",
+     cmd_help},
+    {"akq", "akq fd type {options} - Add a kqueue event to watch for fd type=read/write",
+     cmd_kevent},
+    {"s", "s - toggle silence",
+     cmd_slience},
+
+    {NULL, NULL, NULL}
+};
+
+
+/* Generator function for command completion, called by the readline library.
+ * It returns a list of commands which match "text", one entry per invocation.
+ * Each entry must be freed by the function which has been setup with
+ * rl_callback_handler_install. The end of the list is marked by returning
+ * NULL. When called for the first time with a new "text", "state" is set to
+ * zero to allow for initialization.
+ */
+
+static char *
+command_generator(char *text, int state)
+{
+    static int index, len;
+    char *name;
+
+    /* If this is a new word to complete, initialize now. */
+    if (state == 0) {
+        index = 0;
+        len = strlen(text);
+    }
+    /* Return the next name which partially matches from the command list. */
+    while ( (name = commands[index].co_name) != NULL) {
+        index++;
+        if (strncmp(name, text, len) == 0)
+            return strdup(name);
+    }
+    return NULL;    /* no names matched */
+}
+
+
+static struct command *
+find_command(char *name)
+{
+	int i;
+	if(name == NULL)
+		return(NULL);
+	if(name[0] == 0)
+		return(NULL);
+	for (i = 0; commands[i].co_name != NULL; i++)
+		if (strcmp(name, commands[i].co_name) == 0)
+			return(&commands[i]);
+
+	return NULL;
+}
+
+static int
+execute_line(const char *line)
+{
+    struct command *command;
+    char *argv[MAX_ARGS];
+    char *buf, *cmd;
+    int i, ret;
+
+    if (*line == '\0')
+	return -1;
+
+    memset(argv, 0, sizeof(argv));
+    if ((buf = strdup(line)) == NULL) {
+	    fprintf(stderr, "No memory for strdup err:%d\n", errno);
+	    return (-1);
+    }
+    /* 
+     * Readline gives us an array in buf seperated by tabs.
+     * Lets break it into pieces to fit our argv[n] strings.
+     */
+    cmd = strtok(buf, " \t");
+    for (i=0; i<MAX_ARGS; i++) {
+	    argv[i] = strtok(NULL, " \t");
+	    if (argv[i] == NULL) {
+		    break;
+	    }
+    }
+    /* Since the line may have been generated by command completion
+     * or by the user, we cannot be sure that it is a valid command name.
+     */
+    command = find_command(cmd);
+    if (command == NULL) {
+        printf("%s: No such command.\n", cmd);
+        return -1;
+    }
+    ret = command->co_func(argv, i);
+    free(buf);
+    return ret;
+}
+
+/*
+ * Called with a complete line of input by the readline library.
+ */
+static void
+handle_stdin(char *line)
+{
+    if (line == NULL || *line == '\0')
+        return;
+    execute_line(line);
+    add_history(line);
+    free(line);
+}
+
+/* Initialize user interface handling.
+ */
+pthread_t tid;
+int not_done = 1;
+
+static char *
+get_filter_name(short fil)
+{
+	static char buf[100];
+	if (fil == EVFILT_READ) {
+		return("read");
+	} else if (fil == EVFILT_WRITE) {
+		return("write");
+	} else if (fil == EVFILT_AIO) {
+		return("aio");
+	} else if (fil == EVFILT_VNODE) {
+		return("vnode");
+	} else if (fil == EVFILT_PROC) {
+		return("proc");
+	} else if (fil == EVFILT_SIGNAL) {
+		return("signal");
+	} else if (fil == EVFILT_TIMER) {
+		return("timer");
+	} else if (fil == EVFILT_USER) {
+		return("user");
+	}
+	sprintf(buf, "unknown:%d", fil);
+	return(buf);
+}
+
+static char *
+get_flags_name(u_short flag)
+{
+	char buf[512];
+	char buf1[32], *ret;
+	int num=0;
+	int len;
+
+	memset(buf, 0, sizeof(buf));
+	if (flag & EV_ADD) {
+		strcat(buf, "EV_ADD");
+		num++;
+	}
+	if (flag & EV_ENABLE) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_ENABLE");
+		num++;
+	}
+	if (flag & EV_DISABLE) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_DISABLE");
+		num++;
+	}
+	if (flag & EV_DISPATCH) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_DISPATCH");
+		num++;
+	}
+	if (flag & EV_DELETE) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_DELETE");
+		num++;
+	}
+	if (flag & EV_RECEIPT) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_RECEIPT");
+		num++;
+	}
+	if (flag & EV_ONESHOT) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_ONESHOT");
+		num++;
+	}
+	if (flag & EV_CLEAR) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_CLEAR");
+		num++;
+	}
+	if (flag & EV_ERROR) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_ERROR");
+		num++;
+	}
+	if (flag & EV_EOF) {
+		if (num)
+			strcat(buf, "|");
+		strcat(buf, "EV_EOF");
+		num++;
+	}
+	sprintf(buf1, ":0x%x", flag);
+	len = strlen(buf) + strlen(buf1) + 1;
+	ret = malloc(len);
+	if (ret == NULL) {
+		printf("Help %d\n", errno);
+		exit(-1);
+	}
+	memset(ret, 0, len);
+	strcpy(ret, buf);
+	strcat(ret, buf1);
+	return(ret);
+}
+
+int silence=0;
+
+void *
+kqwork(void *arg)
+{
+	int ev;
+	struct kevent event;
+	char *name, *flags;
+	
+	while(not_done) {
+		ev = kevent(kq, NULL, 0, &event, 1, NULL);
+		if (ev > 0) {
+			name = get_filter_name(event.filter);
+			flags = get_flags_name(ev.flags);
+			if (silence == 0) {
+				printf("Filter %s ident:%d flags:%s fflags:0x%x data:%p udata:%p\n",
+				       name, (int)ev.ident, flags, (uint32_t)ev.fflags,
+				       (void *)data, udata);
+			}
+			if (flags) {
+				free(flags);
+			}
+		} else if (ev < 0) {
+			printf("Kq bad event errno:%d -- exiting thread\n",
+			       errno);
+			break;
+		}
+	}
+	return(NULL);
+}
+
+static void
+init_user_int(void)
+{
+	/* Init the readline library, callback mode. */
+	rl_completion_entry_function = (rl_compentry_func_t *) command_generator;
+	rl_callback_handler_install(">>>", handle_stdin);
+
+	/* Setup our kqueue */
+	kq = kqueue();
+	if (kq == -1) {
+		printf("Can't initialize kq err:%d\n", errno);
+		exit(-1);
+	}
+	if(pthread_create(&tid, NULL, kqwork, NULL)) {
+		printf("Can't create pthread -- err:%d\n", errno);
+		exit(-1);
+	}
+}
+
+uint32_t count=0;
+
+int 
+cmd_kevent(char *argv[], int argc)
+{
+	struct kevent event;
+	u_short def;
+	int fd, i;
+	short filt;
+	char *flags;
+
+	if (argc < 2) {
+	unknown:
+		printf("You need at minimum two args fd and type\n");
+		printf("akq fd type ..options..\n");
+		printf("fd = a file descriptor\n");
+		printf("type = read or write\n");
+		printf("options include:\n");
+		printf(" - disable\n");
+		printf(" - delete\n");
+		printf(" - add\n");	
+		printf(" - dispatch\n");
+		printf(" - receipt\n");
+		printf(" - oneshot\n");
+		printf(" - clear\n");
+		return(0);
+	}
+	fd = strtol(argv[0], NULL, 0);
+	if (strcmp(argv[1], "read") == 0) {
+		fil = EVFILT_READ;
+	} else if (strcmp(argv[1], "write") == 0) {
+		fil = EVFILT_WRITE;
+	} else {
+		printf("Unkown filter type %s\n", argv[1]);
+		goto unknown;
+	}
+	if (argc == 2) {
+		def = EV_ADD|EV_ENABLE|EV_DISPATCH;
+	} else {
+		def = 0;
+		for(i=2; i<argc; i++) {
+			if (strcmp(argv[i], "disable") == 0) {
+				def |= EV_DISABLE;
+			} else if (strcmp(argv[i], "delete") == 0) {
+				def |= EV_DELETE;
+			} else if (strcmp(argv[i], "add") == 0) {
+				def |= EV_ADD;
+			} else if (strcmp(argv[i], "dispatch") == 0) {
+				def |= EV_DISPATCH;
+			} else if (strcmp(argv[i], "receipt") == 0) {
+				def |= EV_RECEIPT;
+			} else if (strcmp(argv[i], "oneshot") == 0) {
+				def |= EV_ONESHOT;
+			} else if (strcmp(argv[i], "clear") == 0) {
+				def |= EV_CLEAR;
+			} else {
+				printf("Unknown option %s - skipping\n", argv[i]);
+			}
+		}
+	}
+	EV_SET(&event, fd, fil, def, 0, 0, count);
+	flags = get_flags_name(ev.flags);
+	printf("Set in fd:%d fil:%s flags:%s count:%d\n",
+	       fd,
+	       get_filter_name(event.filter),
+	       flags, count);
+	count++;
+	if (flags) {
+		free(flags);
+	}
+	errno = 0;
+	ret = kevent(kq, &event, 1, NULL, 0, NULL);
+	printf("Returns %d errno:%d\n", ret, errno);
+	return(0);
+}
+
+int 
+cmd_silence(char *argv[], int argc)
+{
+	if (silence == 0) {
+		silence = 1;
+	} else {
+		silence = 0;
+	}
+	return(0);
+}
+
+int 
+cmd_quit(char *argv[], int argc)
+{
+	not_done = 0;
+}
+
+int
+cmd_help(char *argv[], int argc)
+{
+	int i, printed;
+	char *cmdname;
+	struct command *cmd;
+
+	if (argc > 0) {
+		cmdname = argv[0];
+		if ( (cmd = find_command(cmdname)) != NULL) {
+			printf("%s\n", cmd->co_desc);
+		} else {
+			printf("help: no match for `%s'. Command\n", cmdname);
+			printf("Use one of:\n");
+			goto dump_all;
+		}
+	} else {
+	dump_all:
+		for (i = 0; commands[i].co_name != NULL; i++) {
+			printf("%s\n", commands[i].co_desc);
+		}
+	}
+	return(0);
+}
+
+int 
+main(int argc, char **argv) 
+{
+	int rc;
+	struct pollfd fds[2];
+
+	init_user_int();
+	
+	memset(fds, 0, sizeof(fds));
+	while(not_done) {
+		fds[0].fd = 0; /* Stdin */
+		fds[0].events = POLLIN;
+		fds[0].revents = 0;
+		ret = poll(fds, 1, INFTIM);
+		if (ret)  {
+			rl_callback_read_char();
+		}
+	}
+	return(0);
+}
