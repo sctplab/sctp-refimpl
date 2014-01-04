@@ -313,7 +313,7 @@ sctp_bindx(int sd, struct sockaddr *addrs, int addrcnt, int flags)
 	 * has that port to make sure it fails or succeeds correctly.
 	 */
 	if (sport) {
-		sin = (struct sockaddr_in *)sa;
+		sin = (struct sockaddr_in *)addrs;
 		sin->sin_port = sport;
 	}
 	argsz = sizeof(struct sctp_getaddresses) +
