@@ -245,8 +245,10 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp4_stream.pr_ctloutput    = sctp_ctloutput;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp4_stream.pr_ousrreq      = NULL;
-#endif
 	sctp4_stream.pr_init         = NULL;
+#else
+	sctp4_stream.pr_init         = sctp_init;
+#endif
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp4_stream.pr_fasttimo     = NULL;
 #endif
@@ -273,8 +275,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_seqpacket.pr_ctloutput = sctp_ctloutput;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_seqpacket.pr_ousrreq   = NULL;
-#endif
-#ifdef INET
 	sctp6_seqpacket.pr_init      = NULL;
 #else
 	sctp6_seqpacket.pr_init      = sctp_init;
@@ -304,8 +304,10 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sctp6_stream.pr_ctloutput    = sctp_ctloutput;
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD) || defined(APPLE_LION) || defined(APPLE_MOUNTAINLION)
 	sctp6_stream.pr_ousrreq      = NULL;
-#endif
 	sctp6_stream.pr_init         = NULL;
+#else
+	sctp6_stream.pr_init         = sctp_init;
+#endif
 #if defined(APPLE_LEOPARD) || defined(APPLE_SNOWLEOPARD)
 	sctp6_stream.pr_fasttimo     = NULL;
 #endif
