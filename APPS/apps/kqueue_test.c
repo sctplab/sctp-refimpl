@@ -514,6 +514,9 @@ kqwork(void *arg)
 				free(flags);
 			}
 		} else if (ret < 0) {
+			if (errno == EINTR) {
+				continue;
+			}
 			printf("Kq bad event errno:%d -- exiting thread\n",
 			       errno);
 			break;
