@@ -1,5 +1,5 @@
 /*
- * Copyright (C) 2013 Randal R Stewart
+ * Copyright (C) 2014 Randal R Stewart
  * All rights reserved.
  *
  * Redistribution and use in source and binary forms, with or without
@@ -53,6 +53,8 @@
 #include <netinet/tcp.h>
 #include <sys/event.h>
 #include <sys/time.h>
+#include <arpa/inet.h>
+#include <pthread.h>
 
 #define MAX_ARGS 16
 
@@ -65,6 +67,8 @@ struct command {
 };
 
 int kq=-1;
+pthread_mutex_t mut;
+int kqueue_stopped = 0;
 
 /* Line editing.
  * Store the commands and the help descriptions.
@@ -74,17 +78,54 @@ static int cmd_quit(char *argv[], int argc);
 static int cmd_help(char *argv[], int argc);
 static int cmd_kevent(char *argv[], int argc);
 static int cmd_silence(char *argv[], int argc);
+static int cmd_stop(char *argv[], int argc);
+static int cmd_start(char *argv[], int argc);
+static int cmd_socket(char *argv[], int argc);
+static int cmd_socklist(char *argv[], int argc);
+static int cmd_connect(char *argv[], int argc);
+static int cmd_close(char *argv[], int argc);
+static int cmd_send(char *argv[], int argc);
+static int cmd_bind(char *argv[], int argc);
+static int cmd_recv(char *argv[], int argc);
+static int cmd_accept(char *argv[], int argc);
+static int cmd_listen(char *argv[], int argc);
+static int cmd_nb(char *argv[], int argc);
+
 
 static struct command commands[] = {
-    {"quit", "quit - Exit the test",
-     cmd_quit},
-    {"help", "help [cmd] - display help for cmd, or for all the commands if no cmd specified",
-     cmd_help},
+    {"accept", "accept sd - accept on a socket",
+     cmd_accept},
     {"akq", "akq fd type {options} - Add a kqueue event to watch for fd type=read/write",
      cmd_kevent},
-    {"s", "s - toggle silence",
-     cmd_slience},
+    {"bind", "bind fd port - Bind a socket to a port",
+     cmd_bind},
 
+    {"close", "close fdnum - Close a previously opened socket",
+     cmd_close},
+    {"connect", "connect fd addr port - connect to a remote address/port",
+     cmd_connect},
+    {"help", "help [cmd] - display help for cmd, or for all the commands if no cmd specified",
+     cmd_help},
+    {"listen", "listen sd - listen on a socket",
+     cmd_listen},
+    {"nb", "nb sd - Toggle blocking on the socket",
+     cmd_nb},
+    {"quit", "quit - Exit the test",
+     cmd_quit},
+    { "recv", "recv sd (blen) - Recv a msg on socket sd", 
+      cmd_recv},
+    {"s", "s - toggle silence",
+     cmd_silence},
+    {"stop", "stop - Prevent the kqueue thread from getting more events after next one",
+     cmd_stop},
+    {"start", "start - Allow the kqueue thread to get more events",
+     cmd_start},
+    {"socket", "socket {type} - Open a socket and get a fd back -- type can be sctp or tcp",
+     cmd_socket},
+    {"socklist", "socklist - List out sockets",
+     cmd_socklist},
+    { "send", "send sd msg - Send a msg on socket sd (msg one string)", 
+      cmd_send},
     {NULL, NULL, NULL}
 };
 
@@ -96,6 +137,156 @@ static struct command commands[] = {
  * NULL. When called for the first time with a new "text", "state" is set to
  * zero to allow for initialization.
  */
+struct socket_reg {
+	char *type;
+	int fd;
+	uint32_t flags;
+	int port;
+};
+
+#define EXPAND_BY 32
+int cnt_of_sock=0;
+int cnt_alloc=0;
+struct socket_reg *sock_reg=NULL;
+
+#define SOCK_OPEN   0x00001
+#define SOCK_CLOSE  0x00002
+#define SOCK_LISTEN 0x00004
+#define SOCK_CONN   0x00008
+#define SOCK_ACCEPT 0x00010
+#define SOCK_NB     0x00020
+#define SOCK_BOUND  0x00040
+
+int
+register_sd(int sd, char *t)
+{
+	size_t mallen, cplen;
+	struct socket_reg *tmp;
+
+	if ((cnt_of_sock+1) > cnt_alloc) {
+		/* Time to expand */
+		mallen = sizeof(struct socket_reg) * (cnt_alloc+EXPAND_BY);
+		tmp = malloc(mallen);
+		if (tmp == NULL) {
+			printf("Can't expand socket reg -- no memory\n");
+			return(-1);
+		}
+		memset(tmp, 0, mallen);
+		if (sock_reg) {
+			cplen = sizeof(struct socket_reg) * cnt_of_sock;
+			memcpy(tmp, sock_reg, cplen);
+			free(sock_reg);
+		}
+		sock_reg = tmp;			
+	}
+	sock_reg[cnt_of_sock].fd = sd;
+	sock_reg[cnt_of_sock].type = t;
+	sock_reg[cnt_of_sock].flags = SOCK_OPEN;
+	cnt_of_sock++;
+	return(0);
+}
+
+struct socket_reg *
+get_reg(int fd)
+{
+	struct socket_reg *ret=NULL;
+	int i;
+
+	for(i=0; i<cnt_of_sock; i++) {
+		if (sock_reg[i].fd == fd) {
+			ret = &sock_reg[i];
+			break;
+		}
+	}
+	return(ret);
+}
+
+int 
+cmd_stop(char *argv[], int argc)
+{
+	if (kqueue_stopped) {
+		printf("Kqueue is already stopped\n");
+		return(0);
+	}
+	pthread_mutex_lock(&mut);
+	kqueue_stopped = 1;
+	printf("The kqueue is stopped - it will wake once more and then wait until a start\n");
+}
+
+int 
+cmd_start(char *argv[], int argc)
+{
+	if (kqueue_stopped == 0) {
+		printf("Kqueue is already started\n");		
+		return(0);
+	}
+	kqueue_stopped = 0;
+	pthread_mutex_unlock(&mut);
+	printf("The kqueue thread has been released\n");
+}
+
+int 
+cmd_socklist(char *argv[], int argc)
+{
+	int i, cnt;
+
+	if (cnt_of_sock == 0) {
+		printf("No sockets are registered\n");
+		return(0);
+	}	
+	printf("%d sockets are registered:\n", cnt_of_sock);
+	for(i=0; i<cnt_of_sock; i++) {
+		printf("Sd:%d type:%s ",
+		       sock_reg[i].fd,
+		       sock_reg[i].type);
+		if (sock_reg[i].flags & SOCK_CLOSE) {
+			printf( "CLOSED\n");
+			continue;
+		}
+		cnt = 0;
+		if (sock_reg[i].flags & SOCK_OPEN) {
+			printf("OPEN");
+			cnt++;
+		}
+		if (sock_reg[i].flags & SOCK_LISTEN) {
+			if (cnt) {
+				printf("|");
+			}
+			cnt++;
+			printf("LISTEN");
+		}
+		if (sock_reg[i].flags & SOCK_CONN) {
+			if (cnt) {
+				printf("|");
+			}
+			cnt++;
+			printf("CONN");
+		}
+		if (sock_reg[i].flags & SOCK_ACCEPT) {
+			if (cnt) {
+				printf("|");
+			}
+			cnt++;
+			printf("ACCEPT");
+		}
+		if (sock_reg[i].flags & SOCK_NB) {
+			if (cnt) {
+				printf("|");
+			}
+			cnt++;
+			printf("NBIO");
+		}
+		if (sock_reg[i].flags & SOCK_BOUND) {
+			if (cnt) {
+				printf("|");
+			}
+			cnt++;
+			printf("BOUND");
+			printf("(%d)", sock_reg[i].port);
+		}
+		printf("\n");
+	}
+}
 
 static char *
 command_generator(char *text, int state)
@@ -301,24 +492,28 @@ int silence=0;
 void *
 kqwork(void *arg)
 {
-	int ev;
-	struct kevent event;
+	int ret;
+	struct kevent ev;
 	char *name, *flags;
 	
 	while(not_done) {
-		ev = kevent(kq, NULL, 0, &event, 1, NULL);
-		if (ev > 0) {
-			name = get_filter_name(event.filter);
+		/* Do our stopping thing */
+		pthread_mutex_lock(&mut);
+		pthread_mutex_unlock(&mut);
+		/* Now go get the kqueue */
+		ret = kevent(kq, NULL, 0, &ev, 1, NULL);
+		if (ret > 0) {
+			name = get_filter_name(ev.filter);
 			flags = get_flags_name(ev.flags);
 			if (silence == 0) {
 				printf("Filter %s ident:%d flags:%s fflags:0x%x data:%p udata:%p\n",
 				       name, (int)ev.ident, flags, (uint32_t)ev.fflags,
-				       (void *)data, udata);
+				       (void *)ev.data, ev.udata);
 			}
 			if (flags) {
 				free(flags);
 			}
-		} else if (ev < 0) {
+		} else if (ret < 0) {
 			printf("Kq bad event errno:%d -- exiting thread\n",
 			       errno);
 			break;
@@ -326,6 +521,8 @@ kqwork(void *arg)
 	}
 	return(NULL);
 }
+
+
 
 static void
 init_user_int(void)
@@ -340,20 +537,26 @@ init_user_int(void)
 		printf("Can't initialize kq err:%d\n", errno);
 		exit(-1);
 	}
+	if (pthread_mutex_init(&mut, NULL)) {
+		printf("Can't init kqueue handler mutex err:%d\n",
+		       errno);
+		exit(-1);
+	}
+
 	if(pthread_create(&tid, NULL, kqwork, NULL)) {
 		printf("Can't create pthread -- err:%d\n", errno);
 		exit(-1);
 	}
 }
 
-uint32_t count=0;
+uint64_t count=0;
 
 int 
 cmd_kevent(char *argv[], int argc)
 {
 	struct kevent event;
 	u_short def;
-	int fd, i;
+	int fd, i, ret;
 	short filt;
 	char *flags;
 
@@ -364,20 +567,21 @@ cmd_kevent(char *argv[], int argc)
 		printf("fd = a file descriptor\n");
 		printf("type = read or write\n");
 		printf("options include:\n");
-		printf(" - disable\n");
-		printf(" - delete\n");
 		printf(" - add\n");	
-		printf(" - dispatch\n");
-		printf(" - receipt\n");
-		printf(" - oneshot\n");
 		printf(" - clear\n");
+		printf(" - delete\n");
+		printf(" - disable\n");
+		printf(" - dispatch\n");
+		printf(" - enable\n");
+		printf(" - oneshot\n");
+		printf(" - receipt\n");
 		return(0);
 	}
 	fd = strtol(argv[0], NULL, 0);
 	if (strcmp(argv[1], "read") == 0) {
-		fil = EVFILT_READ;
+		filt = EVFILT_READ;
 	} else if (strcmp(argv[1], "write") == 0) {
-		fil = EVFILT_WRITE;
+		filt = EVFILT_WRITE;
 	} else {
 		printf("Unkown filter type %s\n", argv[1]);
 		goto unknown;
@@ -391,6 +595,8 @@ cmd_kevent(char *argv[], int argc)
 				def |= EV_DISABLE;
 			} else if (strcmp(argv[i], "delete") == 0) {
 				def |= EV_DELETE;
+			} else if (strcmp(argv[i], "enable") == 0) {
+				def |= EV_ENABLE;
 			} else if (strcmp(argv[i], "add") == 0) {
 				def |= EV_ADD;
 			} else if (strcmp(argv[i], "dispatch") == 0) {
@@ -406,8 +612,14 @@ cmd_kevent(char *argv[], int argc)
 			}
 		}
 	}
-	EV_SET(&event, fd, fil, def, 0, 0, count);
-	flags = get_flags_name(ev.flags);
+	EV_SET(&event, 
+	       fd, 
+	       filt, 
+	       def, 
+	       0, 
+	       0, 
+	       (void *)count);
+	flags = get_flags_name(event.flags);
 	printf("Set in fd:%d fil:%s flags:%s count:%d\n",
 	       fd,
 	       get_filter_name(event.filter),
@@ -465,9 +677,345 @@ cmd_help(char *argv[], int argc)
 }
 
 int 
+cmd_socket(char *argv[], int argc)
+{
+	int sock_type, proto;
+	int sd;
+	char *tof;
+	
+	proto = IPPROTO_TCP;
+	sock_type = SOCK_STREAM;
+	tof = "tcp";
+	if (argc > 0) {
+		if (strcmp(argv[0], "sctp") == 0) {
+			proto = IPPROTO_SCTP;
+			sock_type = SOCK_SEQPACKET;
+			tof = "sctp";
+		} else 	if (strcmp(argv[0], "udp") == 0) {
+			proto = IPPROTO_UDP;
+			sock_type = SOCK_DGRAM;
+			tof = "udp";
+		} else if (strcmp(argv[0], "tcp") == 0) {
+			proto = IPPROTO_TCP;
+			sock_type = SOCK_STREAM;
+		} else {
+			printf("Unknown socket type not tcp or sctp or udp\n");
+			return(0);
+		}
+
+	}
+	sd = socket(AF_INET, sock_type, proto);
+	printf("fd is %d\n", sd);
+	register_sd(sd, tof);
+}
+
+int 
+cmd_close(char *argv[], int argc)
+{
+	int sd;
+
+	if (argc < 1) {
+		printf("You must specify a fd\n");
+		return(0);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	if (close(sd) == 0) {
+		struct socket_reg *reg;
+
+		reg = get_reg(sd);
+		if (reg) {
+			reg->flags = SOCK_CLOSE;
+			reg->fd = -1;
+		}
+		printf("Success\n");
+	} else {
+		printf("Failed errno:%d\n", errno);
+	}
+	return(0);
+}
+
+int 
+cmd_send(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int sd, ret, len, tlen, i;
+	char buffer[1024];
+
+	if (argc < 2) {
+		printf("recv sd -- need a sd and msg\n");
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	if ((reg->flags & (SOCK_CONN|SOCK_ACCEPT)) == 0) {
+		printf("You can't send on a non-connected socket\n");
+		return(0);
+	}
+	memset(buffer, 0, sizeof(buffer));
+	tlen = 0;
+	for(i=1; i<argc; i++) {
+		len = strlen(argv[i]);
+		if ((len + tlen) > 1024)
+			break;
+		strcat(buffer, argv[i]);
+		tlen += len;
+	}
+	errno = 0;
+	ret = send(sd, buffer, tlen, 0);
+	if (ret > 0) {
+		printf("Sent %d bytes on sd:%d\n", ret, sd);
+	} else {
+		printf("Send Ret %d errno:%d tlen:%d\n", ret, errno, tlen);
+	}
+	return(0);
+}
+
+int 
+cmd_recv(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int sd, ret;
+	char buffer[1024];
+	size_t blen;
+
+	if (argc < 1) {
+		printf("recv sd -- need a sd specified\n");
+	}
+	if (argc > 1) {
+		blen = strtol(argv[1], NULL, 0);
+		if (blen > sizeof(buffer)) {
+			blen = sizeof(buffer);
+		}
+	} else {
+		blen - sizeof(buffer);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	if ((reg->flags & (SOCK_CONN|SOCK_ACCEPT)) == 0) {
+		printf("You can't recv on a non-connected socket\n");
+		return(0);
+	}
+	memset(buffer, 0, sizeof(buffer));
+	errno = 0;
+	ret = recv(sd, buffer, blen, 0);
+	if (ret > 0) {
+		printf("Recv %d bytes\n", ret);
+		if (ret > (sizeof(buffer)-2)) {
+			buffer[(sizeof(buffer)-2)] = '\n';
+			buffer[(sizeof(buffer)-1)] = 0;
+		} else {
+			buffer[ret] = '\n';
+		}
+		printf("%s", buffer);
+	} else {
+		printf("Recv returns %d errno:%d\n", ret, errno);
+	}
+	return(0);
+}
+
+int 
+cmd_connect(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	struct sockaddr_in sin;
+	socklen_t slen;
+	uint16_t port;
+	int sd, ret;
+
+	if (argc < 3) {
+		printf("connect sd addr port\n");
+		return(0);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	memset(&sin, 0, sizeof(sin));
+	port = (uint16_t)strtol(argv[2], NULL, 0);
+	sin.sin_family = AF_INET;
+	sin.sin_port = htons(port);
+	slen = sizeof(struct sockaddr_in);
+	sin.sin_len = slen;
+	ret = inet_pton(AF_INET, argv[1], &sin.sin_addr);
+	if (ret != 1) {
+		printf("Sorry can't parse address %s\n", argv[1]);
+		return(0);
+	}
+	printf("Connecting to %s:%d on sd:%d\n", argv[1], port, sd);
+
+	ret = connect(sd, (struct sockaddr *)&sin, slen);
+	if (ret) {
+		printf("Connect fails ret:%d err:%d\n", ret, errno);
+	} else {
+		reg->flags |= SOCK_CONN;
+		printf("Success\n");
+	}
+}
+
+int 
+cmd_accept(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int sd, newsd, ret, backlog=10;
+	struct sockaddr_in sin;
+	socklen_t slen;
+	char from[64];
+
+	if (argc < 1) {
+		printf("Need to specify a sd to accept on\n");
+		return(0);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	slen = sizeof(struct sockaddr_in);
+	newsd = accept(sd, (struct sockaddr *)&sin, &slen);
+	if (newsd == -1) {
+		printf("accept error %d\n", errno);
+		return(0);
+	}
+	inet_ntop(sin.sin_family, &sin.sin_addr, from, sizeof(from));
+	printf("Accept gets a new connection to sd:%d from %s:%d\n",
+	       newsd, from, ntohs(sin.sin_port));
+	register_sd(newsd, reg->type);
+	reg = get_reg(newsd);
+	if(reg == NULL) {
+		printf("Can't find registry?\n");
+		return(0);
+	}
+	reg->flags |= SOCK_ACCEPT;
+	return(0);
+}
+
+int 
+cmd_listen(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int sd, ret, backlog=10;
+
+	if (argc < 1) {
+		printf("Need to specify a sd to listen on\n");
+		return(0);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	if (listen(sd, backlog)) {
+		printf("Listen on sd:%d failed err:%d\n", sd, errno);
+	} else {
+		reg->flags |= SOCK_LISTEN;
+		printf("Success\n");
+	}
+	return(0);
+}
+
+int 
+cmd_nb(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int nbio, sd;
+	
+	if (argc < 1) {
+		printf("Need to specify a sd to toggle nbio on\n");
+		return(0);
+	}
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	if (reg->flags & SOCK_NB) {
+		printf("set nbio to 0\n");
+		nbio = 0;
+	} else {
+		printf("set nbio to 1\n");
+		nbio = 1;
+	}
+	if (ioctl(sd, FIONBIO, (caddr_t)&nbio)) {
+		printf("Failed to toggle nb to:%d err:%d\n", nbio, errno);
+	} else {
+		if (nbio) {
+			printf("add flag SOCK_NB\n");
+			reg->flags |= SOCK_NB;
+		} else {
+			printf("remove flag SOCK_NB\n");
+			reg->flags &= ~SOCK_NB;
+		}
+		printf("Success\n");
+	}
+	return(0);
+}
+
+int 
+cmd_bind(char *argv[], int argc)
+{
+	struct socket_reg *reg;
+	int sd, ret;
+	uint16_t port;
+	struct sockaddr_in sin, baddr;
+	socklen_t slen;
+
+	if (argc < 2) {
+		printf("Need to specify a sd and port\n");
+		return(0);
+	}	
+	sd = strtol(argv[0], NULL, 0);
+	reg = get_reg(sd);
+	if (reg == NULL) {
+		printf("Can't find sd:%d in registry\n", sd);
+		return(0);
+	}
+	port = (uint16_t)strtol(argv[1], NULL, 0);
+	memset(&sin, 0, sizeof(sin));
+	sin.sin_family = AF_INET;
+	sin.sin_len = sizeof(sin);
+	sin.sin_port = ntohs(port);
+	printf("Binding port %d\n", port);
+	slen = sizeof(sin);
+	errno = 0;
+	ret = bind(sd, (struct sockaddr *)&sin, slen);
+	if (ret) {
+		printf("Bind fails ret:%d errno:%d\n", ret, errno);
+		return(0);
+	}
+	errno = 0;
+	slen = sizeof(baddr);
+	if (getsockname(sd, (struct sockaddr  *)&baddr, &slen) == 0) {
+		reg->port = port;
+		reg->flags |= SOCK_BOUND;
+		if (ntohs(baddr.sin_port) != port) {
+			reg->port = ntohs(baddr.sin_port);
+			printf("Success but new port %d\n", reg->port);
+		} else {
+			printf("Success\n");
+		}
+	} else {
+		printf("getsockname failes err:%d\n", errno);
+	}
+
+}
+
+
+int 
 main(int argc, char **argv) 
 {
-	int rc;
+	int ret;
 	struct pollfd fds[2];
 
 	init_user_int();
@@ -484,3 +1032,4 @@ main(int argc, char **argv)
 	}
 	return(0);
 }
+
