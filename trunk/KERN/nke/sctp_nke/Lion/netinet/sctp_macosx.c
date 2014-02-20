@@ -434,10 +434,7 @@ m_pulldown(struct mbuf *mbuf, int offset, int len, int *offsetp)
 
 static void
 sctp_print_addr(struct sockaddr *sa)
-{
-	char ip6buf[INET6_ADDRSTRLEN];
-	ip6buf[0] = 0;
-	
+{	
 	switch (sa->sa_family) {
 #ifdef INET6
 	case AF_INET6:
