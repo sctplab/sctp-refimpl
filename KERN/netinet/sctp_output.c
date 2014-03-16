@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 263096 2014-03-12 17:18:15Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 263237 2014-03-16 12:32:16Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -5468,16 +5468,16 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 #endif
 		l_len += (2 * sizeof(struct sctp_paramhdr));
 		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_NOWAIT, 1, MT_DATA);
-        if (op_err) {
-    		SCTP_BUF_LEN(op_err) = 0;
+		if (op_err) {
+			SCTP_BUF_LEN(op_err) = 0;
 #ifdef INET6
-	    	SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
 #else
-	    	SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
 #endif
-		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-    		SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
-        }
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+		}
 	}
 	if ((op_err) && phdr) {
 		struct sctp_paramhdr s;
@@ -5725,11 +5725,13 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		 * though we even set the T bit and copy in the 0 tag.. this
 		 * looks no different than if no listener was present.
 		 */
-		sctp_send_abort(init_pkt, iphlen, src, dst, sh, 0, NULL,
+		op_err = sctp_generate_cause(SCTP_BASE_SYSCTL(sctp_diag_info_code),
+		                             "Address added");
+		sctp_send_abort(init_pkt, iphlen, src, dst, sh, 0, op_err,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_2);
+		                vrf_id, port);
 		return;
 	}
 	abort_flag = 0;
@@ -5738,12 +5740,19 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 						       &abort_flag, (struct sctp_chunkhdr *)init_chk, &nat_friendly);
 	if (abort_flag) {
 	do_a_abort:
+		if (op_err == NULL) {
+			char msg[SCTP_DIAG_INFO_LEN];
+
+			snprintf(msg, sizeof(msg), "%s:%d at %s\n", __FILE__, __LINE__, __FUNCTION__);
+			op_err = sctp_generate_cause(SCTP_BASE_SYSCTL(sctp_diag_info_code),
+			                             msg);
+		}
 		sctp_send_abort(init_pkt, iphlen, src, dst, sh,
 				init_chk->init.initiate_tag, op_err,
 #if defined(__FreeBSD__)
 		                use_mflowid, mflowid,
 #endif
-		                vrf_id, port, SCTP_FROM_SCTP_OUTPUT+SCTP_LOC_3);
+		                vrf_id, port);
 		return;
 	}
 	m = sctp_get_mbuf_for_msg(MCLBYTES, 0, M_NOWAIT, 1, MT_DATA);
@@ -12529,16 +12538,13 @@ sctp_send_abort(struct mbuf *m, int iphlen, struct sockaddr *src, struct sockadd
 #if defined(__FreeBSD__)
                 uint8_t use_mflowid, uint32_t mflowid,
 #endif
-                uint32_t vrf_id, uint16_t port, uint32_t codepoint)
+                uint32_t vrf_id, uint16_t port)
 {
 	/* Don't respond to an ABORT with an ABORT. */
 	if (sctp_is_there_an_abort_here(m, iphlen, &vtag)) {
 		if (cause)
 			sctp_m_freem(cause);
 		return;
-	}
-	if (cause == NULL) {
-		cause = sctp_generate_locerr(codepoint);
 	}
 	sctp_send_resp_msg(src, dst, sh, vtag, SCTP_ABORT_ASSOCIATION, cause,
 #if defined(__FreeBSD__)
