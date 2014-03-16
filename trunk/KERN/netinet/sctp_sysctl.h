@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 252779 2013-07-05 10:08:49Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_sysctl.h 263237 2014-03-16 12:32:16Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_SYSCTL_H_
@@ -111,7 +111,7 @@ struct sctp_sysctl {
 	uint32_t sctp_rttvar_eqret;
 	uint32_t sctp_steady_step;
 	uint32_t sctp_use_dccc_ecn;
-	uint32_t sctp_protocol_issued_abort;
+	uint32_t sctp_diag_info_code;
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__Windows__)
 	struct sctp_log *sctp_log;
@@ -137,7 +137,7 @@ struct sctp_sysctl {
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 	uint32_t sctp_output_unlocked;
 #endif
-#if defined(__FreeBSD__) && defined(_KERNEL)  
+#if defined(__FreeBSD__) && defined(_KERNEL)
 	struct callout timer;
 #endif
 };
@@ -550,10 +550,10 @@ struct sctp_sysctl {
 #define SCTPCTL_BLACKHOLE_MAX		2
 #define SCTPCTL_BLACKHOLE_DEFAULT	SCTPCTL_BLACKHOLE_MIN
 
-#define SCTPCTL_PROTOCOL_ABORT_DESC	"Enable SCTP protocol abort cause"
-#define SCTPCTL_PROTOCOL_ABORT_MIN  0
-#define SCTPCTL_PROTOCOL_ABORT_MAX  65535
-#define SCTPCTL_PROTOCOL_ABORT_DEFAULT  0
+#define SCTPCTL_DIAG_INFO_CODE_DESC	"Diagnostic information error cause code"
+#define SCTPCTL_DIAG_INFO_CODE_MIN	0
+#define SCTPCTL_DIAG_INFO_CODE_MAX	65535
+#define SCTPCTL_DIAG_INFO_CODE_DEFAULT	0
 
 #if defined(SCTP_DEBUG)
 /* debug: Configure debug output */
