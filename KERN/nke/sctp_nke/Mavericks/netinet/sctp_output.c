@@ -5464,16 +5464,16 @@ sctp_arethere_unrecognized_parameters(struct mbuf *in_initpkt,
 #endif
 		l_len += (2 * sizeof(struct sctp_paramhdr));
 		op_err = sctp_get_mbuf_for_msg(l_len, 0, M_NOWAIT, 1, MT_DATA);
-        	if (op_err) {
-    			SCTP_BUF_LEN(op_err) = 0;
+		if (op_err) {
+			SCTP_BUF_LEN(op_err) = 0;
 #ifdef INET6
-	    		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct ip6_hdr));
 #else
-	    		SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct ip));
 #endif
 			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctphdr));
-    			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
-        	}
+			SCTP_BUF_RESV_UF(op_err, sizeof(struct sctp_chunkhdr));
+		}
 	}
 	if ((op_err) && phdr) {
 		struct sctp_paramhdr s;
