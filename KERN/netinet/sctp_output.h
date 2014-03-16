@@ -217,7 +217,7 @@ sctp_send_abort(struct mbuf *, int, struct sockaddr *, struct sockaddr *,
 #if defined(__FreeBSD__)
                 uint8_t, uint32_t,
 #endif
-                uint32_t, uint16_t, uint32_t);
+                uint32_t, uint16_t);
 
 void sctp_send_operr_to(struct sockaddr *, struct sockaddr *,
                         struct sctphdr *, uint32_t, struct mbuf *,
