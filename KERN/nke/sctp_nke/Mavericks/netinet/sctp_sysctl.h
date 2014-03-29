@@ -483,7 +483,11 @@ struct sctp_sysctl {
 #define SCTPCTL_UDP_TUNNELING_PORT_DESC		"Set the SCTP/UDP tunneling port"
 #define SCTPCTL_UDP_TUNNELING_PORT_MIN		0
 #define SCTPCTL_UDP_TUNNELING_PORT_MAX		65535
+#if defined(__FreeBSD__)
+#define SCTPCTL_UDP_TUNNELING_PORT_DEFAULT	0
+#else
 #define SCTPCTL_UDP_TUNNELING_PORT_DEFAULT	SCTP_OVER_UDP_TUNNELING_PORT
+#endif
 
 /* Enable sending of the SACK-IMMEDIATELY bit */
 #define SCTPCTL_SACK_IMMEDIATELY_ENABLE_DESC	"Enable sending of the SACK-IMMEDIATELY-bit."
