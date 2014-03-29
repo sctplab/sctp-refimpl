@@ -383,7 +383,7 @@ typedef struct callout sctp_os_timer_t;
 /*************************/
 #define SCTP_GATHER_MTU_FROM_IFN_INFO(ifn, ifn_index, af) ((struct ifnet *)ifn)->if_mtu
 #if (__FreeBSD_version >= 1010000)
-#define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt->rt_mtu : 0)
+#define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt_mtu : 0)
 #else
 #define SCTP_GATHER_MTU_FROM_ROUTE(sctp_ifa, sa, rt) ((rt != NULL) ? rt->rt_rmx.rmx_mtu : 0)
 #endif
@@ -399,6 +399,7 @@ typedef struct callout sctp_os_timer_t;
                                                  rt->rt_rmx.rmx_mtu = mtu; \
                                            } while(0)
 #endif
+
 /* (de-)register interface event notifications */
 #define SCTP_REGISTER_INTERFACE(ifhandle, af)
 #define SCTP_DEREGISTER_INTERFACE(ifhandle, af)
