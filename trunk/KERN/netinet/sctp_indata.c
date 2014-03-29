@@ -397,9 +397,9 @@ sctp_place_control_in_stream(struct sctp_stream_in *strm,
 			}
 			TAILQ_INSERT_HEAD(q, control, next_instrm);
 		} else {
-			TAILQ_INSERT_TAIL(q, control, next_instrm);			
+			TAILQ_INSERT_TAIL(q, control, next_instrm);
 		}
-		return(0);
+		return (0);
 	} else {
 		q = &strm->inqueue;
 	}
@@ -5161,7 +5161,7 @@ sctp_handle_forward_tsn(struct sctp_tcb *stcb,
 				strm->last_sequence_delivered = stseq->sequence;
 			}
 			/* now kick the stream the new way */
-                        /*sa_ignore NO_NULL_CHK*/
+			/*sa_ignore NO_NULL_CHK*/
 			sctp_kick_prsctp_reorder_queue(stcb, strm);
 		}
 		SCTP_INP_READ_UNLOCK(stcb->sctp_ep);
