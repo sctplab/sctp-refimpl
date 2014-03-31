@@ -6451,11 +6451,16 @@ sctp_get_frag_point(struct sctp_tcb *stcb,
 	 * we use a larger frag point.
 	 */
 	if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-		ovh = SCTP_MED_OVERHEAD;
+		ovh = sizeof(struct ip6_hdr);
 	} else {
-		ovh = SCTP_MED_V4_OVERHEAD;
+		ovh = sizeof(struct ip);
 	}
-
+	ovh += sizeof(struct sctphdr);
+	if (stcb->asoc.peer_supports_ndata) {
+		ovh += sizeof(struct sctp_ndata_chunk);
+	} else {
+		ovh += sizeof(struct sctp_data_chunk);
+	}
 	if (stcb->asoc.sctp_frag_point > asoc->smallest_mtu)
 		siz = asoc->smallest_mtu - ovh;
 	else
