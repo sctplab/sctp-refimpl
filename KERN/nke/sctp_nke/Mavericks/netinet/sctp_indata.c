@@ -1166,7 +1166,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 					 * Huh, need the same ordering here,
 					 * they must be the same.
 					 */
-					SCTPDBG(SCTP_DEBUG_INDATA1, "Prev check - Gak, Evil plot, U-bit not constant\n");
+					SCTPDBG(SCTP_DEBUG_INDATA1, "Next check - Gak, Evil plot, U-bit not constant\n");
 					snprintf(msg, sizeof(msg),
 					         "Expect U-bit=%d for TSN=%8.8x, got U-bit=%d",
 					         (next->rec.data.rcv_flags & SCTP_DATA_UNORDERED) ? 1 : 0,
