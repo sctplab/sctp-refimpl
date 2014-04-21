@@ -494,8 +494,6 @@ sctp_abort_in_reasm(struct sctp_tcb *stcb,
 		ippp++;
 		*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
 	}
-	/* Throw it in stream queue for cleanup */
-	TAILQ_INSERT_HEAD(&strm->inqueue, control, next_instrm);
 	sctp_m_freem(chk->data);
 	chk->data = NULL;
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
