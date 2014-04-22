@@ -1729,6 +1729,9 @@ failed_express_del:
 				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_15;
 				sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
 				*abort_flag = 1;
+				if (last_chunk) {
+					*m = NULL;
+				}
 				return (0);
 			} else {
 				if (sctp_does_tsn_belong_to_reasm(asoc, control->sinfo_tsn)) {
@@ -1745,6 +1748,9 @@ failed_express_del:
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_16;
 					sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
 					*abort_flag = 1;
+					if (last_chunk) {
+						*m = NULL;
+					}
 					return (0);
 				}
 			}
@@ -1771,6 +1777,9 @@ failed_express_del:
 					stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_17;
 					sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
 					*abort_flag = 1;
+					if (last_chunk) {
+						*m = NULL;
+					}
 					return (0);
 				}
 			}
@@ -1833,6 +1842,9 @@ failed_express_del:
 			} else {
 				sctp_queue_data_to_stream(stcb, asoc, control, abort_flag);
 				if (*abort_flag) {
+					if (last_chunk) {
+						*m = NULL;
+					}
 					return (0);
 				}
 			}
@@ -1845,7 +1857,9 @@ failed_express_del:
 			 * the assoc is now gone and chk was put onto the
 			 * reasm queue, which has all been freed.
 			 */
-			*m = NULL;
+			if (last_chunk) {
+				*m = NULL;
+			}
 			return (0);
 		}
 	}
