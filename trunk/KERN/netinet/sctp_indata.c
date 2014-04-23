@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 264704 2014-04-20 21:11:39Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_indata.c 264838 2014-04-23 21:20:55Z tuexen $");
 #endif
 #include <netinet/sctp_os.h>
 #ifdef __FreeBSD__
@@ -1777,6 +1777,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		} else {
 			sctp_queue_data_to_stream(stcb, strm, asoc, control, abort_flag, &need_reasm_check);
 			if (*abort_flag) {
+				if (last_chunk) {
+					*m = NULL;
+				}
 				return (0);
 			}
 		}
@@ -1790,7 +1793,9 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 		 * the assoc is now gone and chk was put onto the
 		 * reasm queue, which has all been freed.
 		 */
-		*m = NULL;
+		if (last_chunk) {
+			*m = NULL;
+		}
 		return (0);
 	}
 finish_express_del:
