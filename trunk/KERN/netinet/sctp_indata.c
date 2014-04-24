@@ -1316,6 +1316,31 @@ find_reasm_entry(struct sctp_stream_in *strm, uint32_t msg_id, int ordered, int 
 	return(reasm);
 }
 
+static struct sctp_queued_to_read *
+find_reasm_entry_too(struct sctp_stream_in *strm, uint16_t stream, uint16_t seq, int ordered, int old)
+{
+	struct sctp_queued_to_read *reasm;
+	if (ordered) {
+		TAILQ_FOREACH(reasm, &strm->inqueue, next_instrm) {
+			if ((reasm->sinfo_stream == stream) &&
+			    (reasm->sinfo_ssn == seq)) {
+				break;
+			}
+		}
+	} else {
+		if (old) {
+			return(TAILQ_FIRST(&strm->uno_inqueue));
+		}
+		TAILQ_FOREACH(reasm, &strm->uno_inqueue, next_instrm) {
+			if (reasm->sinfo_stream == stream) {
+				break;
+			}
+		}
+	}
+	return(reasm);
+}
+
+
 static int
 sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			  struct mbuf **m, int offset, struct sctp_data_chunk *ch, int chk_length,
@@ -1498,6 +1523,15 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				/* We can't have a switched unordered with a ordered chunk */
 				goto err_out;
 			}
+		}
+	} else {
+		/* Its a complete segment. Lets validate we 
+		 * don't have a re-assembly going on with 
+		 * the same Stream/Seq (for ordered) or in
+		 * the same Stream for unordered.
+		 */
+		if (find_reasm_entry_too(strm, strmno, strmseq, ordered, old_data)) {
+			goto err_out;
 		}
 	}
 	/* now do the tests */
