@@ -1128,7 +1128,7 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			  struct sctp_queued_to_read *control,
 			  struct sctp_tmit_chunk *chk, 
 			  int created_control,
-			  int *abort_flag)
+			  int *abort_flag, uint32_t tsn)
 {
 	uint32_t next_fsn;
 	struct sctp_tmit_chunk *at, *nat;
@@ -1142,6 +1142,17 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 			chk->data = NULL;
 			sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
 			return;
+		}
+		if (tsn == (asoc->cumulative_tsn + 1)) {
+			/* Ok we created this control and now
+			 * lets validate that its legal i.e. there
+			 * is a B bit set, if not and we have
+			 * up to the cum-ack then its invalid.
+			 */
+			if ((chk->rec.data.rcv_flags & SCTP_DATA_FIRST_FRAG) == 0) {
+				sctp_abort_in_reasm(stcb, strm, control, chk, abort_flag, (SCTP_FROM_SCTP_INDATA+SCTP_LOC_2));
+				return;
+			}
 		}
 	}
 	/* 
@@ -1189,6 +1200,12 @@ sctp_queue_data_for_reasm(struct sctp_tcb *stcb, struct sctp_association *asoc,
 				control->last_frag_seen = 1;
 			}
 		} else {
+			if (chk->rec.data.rcv_flags & SCTP_DATA_LAST_FRAG) {
+				/* Second last? huh? */
+				sctp_abort_in_reasm(stcb, strm, control, 
+						    chk, abort_flag, (SCTP_FROM_SCTP_INDATA+SCTP_LOC_2));
+				return;
+			}
 			/* validate not beyond top FSN if we have seen last one */
 			if (SCTP_TSN_GT(chk->rec.data.fsn_num, control->top_fsn)) {
 				sctp_abort_in_reasm(stcb, strm, control, chk, abort_flag, (SCTP_FROM_SCTP_INDATA+SCTP_LOC_3));
@@ -1463,6 +1480,25 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	if ((chunk_flags & SCTP_DATA_NOT_FRAG) != SCTP_DATA_NOT_FRAG) {
 		/* See if we can find the re-assembly entity */
 		control = find_reasm_entry(strm, msg_id, ordered, old_data);
+		if (control) {
+			/* We found something, does it belong? */
+			if (ordered && (strmseq != control->sinfo_ssn)) {
+			err_out:
+				op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
+				stcb->sctp_ep->last_abort_code = SCTP_FROM_SCTP_INDATA+SCTP_LOC_14;
+				sctp_abort_an_association(stcb->sctp_ep, stcb, op_err, SCTP_SO_NOT_LOCKED);
+				*abort_flag = 1;
+				return (0);
+			}
+			if (ordered && ((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED)) {
+				/* We can't have a switched order with an unordered chunk */
+				goto err_out;
+			}
+			if (!ordered && (((control->sinfo_flags >> 8) & SCTP_DATA_UNORDERED) == 0)) {
+				/* We can't have a switched unordered with a ordered chunk */
+				goto err_out;
+			}
+		}
 	}
 	/* now do the tests */
 	if (((asoc->cnt_on_all_streams +
@@ -1787,7 +1823,7 @@ sctp_process_a_data_chunk(struct sctp_tcb *stcb, struct sctp_association *asoc,
 	}
 	/* If we reach here its a reassembly */
 	need_reasm_check = 1;
-	sctp_queue_data_for_reasm(stcb, asoc, strm, control, chk, created_control, abort_flag);
+	sctp_queue_data_for_reasm(stcb, asoc, strm, control, chk, created_control, abort_flag, tsn);
 	if (*abort_flag) {
 		/*
 		 * the assoc is now gone and chk was put onto the
