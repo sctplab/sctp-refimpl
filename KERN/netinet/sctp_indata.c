@@ -466,34 +466,21 @@ sctp_place_control_in_stream(struct sctp_stream_in *strm,
 
 static void
 sctp_abort_in_reasm(struct sctp_tcb *stcb, 
-    struct sctp_stream_in *strm, 
-    struct sctp_queued_to_read *control,
-    struct sctp_tmit_chunk *chk, 
-    int *abort_flag, int opspot)
+                    struct sctp_stream_in *strm, 
+                    struct sctp_queued_to_read *control,
+                    struct sctp_tmit_chunk *chk, 
+                    int *abort_flag, int opspot)
 {
+	char msg[SCTP_DIAG_INFO_LEN];
 	struct mbuf *oper;
-	oper = sctp_get_mbuf_for_msg((sizeof(struct sctp_paramhdr) + 3 * sizeof(uint32_t)),
-				     0, M_NOWAIT, 1, MT_DATA);
-	if (oper) {
-		struct sctp_paramhdr *ph;
-		uint32_t *ippp;
-		
-		SCTP_BUF_LEN(oper) =
-			sizeof(struct sctp_paramhdr) +
-			(3 * sizeof(uint32_t));
-		ph = mtod(oper,
-			  struct sctp_paramhdr *);
-		ph->param_type =
-			htons(SCTP_CAUSE_PROTOCOL_VIOLATION);
-		ph->param_length =
-			htons(SCTP_BUF_LEN(oper));
-		ippp = (uint32_t *) (ph + 1);
-		*ippp = htonl(opspot);
-		ippp++;
-		*ippp = chk->rec.data.TSN_seq;
-		ippp++;
-		*ippp = ((chk->rec.data.stream_number << 16) | chk->rec.data.stream_seq);
-	}
+
+	snprintf(msg, sizeof(msg),
+		 "Reassembly problem at %x for TSN=%8.8x, SID=%4.4x, SSN=%4.4x",
+		 opspot,
+		 chk->rec.data.TSN_seq,
+		 chk->rec.data.stream_number,
+		 chk->rec.data.stream_seq);
+	op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 	sctp_m_freem(chk->data);
 	chk->data = NULL;
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
