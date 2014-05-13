@@ -480,7 +480,7 @@ sctp_abort_in_reasm(struct sctp_tcb *stcb,
 		 chk->rec.data.TSN_seq,
 		 chk->rec.data.stream_number,
 		 chk->rec.data.stream_seq);
-	op_err = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
+	oper = sctp_generate_cause(SCTP_CAUSE_PROTOCOL_VIOLATION, msg);
 	sctp_m_freem(chk->data);
 	chk->data = NULL;
 	sctp_free_a_chunk(stcb, chk, SCTP_SO_NOT_LOCKED);
