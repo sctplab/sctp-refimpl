@@ -7567,7 +7567,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr)) {
+						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr) != 0) {
 							continue;
 						}
 #endif
@@ -7595,7 +7595,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr)) {
+						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr) != 0) {
 							continue;
 						}
 #endif

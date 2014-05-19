@@ -308,7 +308,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 						if (sin->sin_addr.s_addr == 0)
 							continue;
 #if defined(__FreeBSD__)
-						if (prison_check_ip4(inp->ip_inp.inp.inp_cred, &sin->sin_addr)) {
+						if (prison_check_ip4(inp->ip_inp.inp.inp_cred, &sin->sin_addr) != 0) {
 							continue;
 						}
 #endif
@@ -331,7 +331,7 @@ copy_out_local_addresses(struct sctp_inpcb *inp, struct sctp_tcb *stcb, struct s
 						if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr))
 							continue;
 #if defined(__FreeBSD__)
-						if (prison_check_ip6(inp->ip_inp.inp.inp_cred, &sin6->sin6_addr)) {
+						if (prison_check_ip6(inp->ip_inp.inp.inp_cred, &sin6->sin6_addr) != 0) {
 							continue;
 						}
 #endif

@@ -1685,7 +1685,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip4(inp->ip_inp.inp.inp_cred, &sin->sin_addr)) {
+						if (prison_check_ip4(inp->ip_inp.inp.inp_cred, &sin->sin_addr) != 0) {
 							continue;
 						}
 #endif
@@ -1733,7 +1733,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip6(inp->ip_inp.inp.inp_cred, &sin6->sin6_addr)) {
+						if (prison_check_ip6(inp->ip_inp.inp.inp_cred, &sin6->sin6_addr) != 0) {
 							continue;
 						}
 #endif
