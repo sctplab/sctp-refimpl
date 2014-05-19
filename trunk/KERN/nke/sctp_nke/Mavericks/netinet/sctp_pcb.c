@@ -992,6 +992,11 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 						    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
 							continue;
 						}
+#if defined(__FreeBSD__)
+						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr)) {
+							continue;
+						}
+#endif
 						if (sin->sin_addr.s_addr == rsin->sin_addr.s_addr) {
 							SCTP_IPI_ADDR_RUNLOCK();
 							return (1);
@@ -1008,6 +1013,11 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 #endif
 						sin6 = &sctp_ifa->address.sin6;
 						rsin6 = (struct sockaddr_in6 *)to;
+#if defined(__FreeBSD__)
+						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr)) {
+							continue;
+						}
+#endif
 						if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 							if (local_scope == 0)
 								continue;
