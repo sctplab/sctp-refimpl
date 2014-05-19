@@ -939,7 +939,7 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
-
+printf("Enterning...\n");
 	loopback_scope = stcb->asoc.scope.loopback_scope;
 #if defined(INET)
 	ipv4_local_scope = stcb->asoc.scope.ipv4_local_scope;
@@ -993,7 +993,7 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr)) {
+						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr) != 0) {
 							continue;
 						}
 #endif
@@ -1014,7 +1014,7 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 						sin6 = &sctp_ifa->address.sin6;
 						rsin6 = (struct sockaddr_in6 *)to;
 #if defined(__FreeBSD__)
-						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr)) {
+						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr) != 0) {
 							continue;
 						}
 #endif
@@ -1139,6 +1139,7 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 		}
 	}
 	SCTP_IPI_ADDR_RUNLOCK();
+printf("Returning 0\n");
 	return (0);
 }
 
