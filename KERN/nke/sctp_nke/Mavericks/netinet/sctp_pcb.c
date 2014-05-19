@@ -2753,6 +2753,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	/* setup socket pointers */
 	inp->sctp_socket = so;
 	inp->ip_inp.inp.inp_socket = so;
+#if defined(__FreeBSD__)
+	inp->ip_inp.inp.inp_cred = crhold(so->so_cred);
+#endif
 #ifdef INET6
 #if !defined(__Userspace__) && !defined(__Windows__)
 	if (INP_SOCKAF(so) == AF_INET6) {
@@ -2779,6 +2782,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	/* init the small hash table we use to track asocid <-> tcb */
 	inp->sctp_asocidhash = SCTP_HASH_INIT(SCTP_STACK_VTAG_HASH_SIZE, &inp->hashasocidmark);
 	if (inp->sctp_asocidhash == NULL) {
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		SCTP_INP_INFO_WUNLOCK();
 		return (ENOBUFS);
@@ -2798,6 +2804,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 	error = 0;
 #endif
 	if (error != 0) {
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		SCTP_INP_INFO_WUNLOCK();
 		return error;
@@ -2843,6 +2852,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		 */
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, EOPNOTSUPP);
 		so->so_pcb = NULL;
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		return (EOPNOTSUPP);
 	}
@@ -2862,6 +2874,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_PRINTF("Out of SCTP-INPCB->hashinit - no resources\n");
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		so->so_pcb = NULL;
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		return (ENOBUFS);
 	}
@@ -2873,6 +2888,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOBUFS);
 		so->so_pcb = NULL;
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		return (ENOBUFS);
 	}
@@ -2891,6 +2909,9 @@ sctp_inpcb_alloc(struct socket *so, uint32_t vrf_id)
 #endif
 		SCTP_HASH_FREE(inp->sctp_tcbhash, inp->sctp_hashmark);
 		so->so_pcb = NULL;
+#if defined(__FreeBSD__)
+		crfree(inp->ip_inp.inp.inp_cred);
+#endif
 		SCTP_ZONE_FREE(SCTP_BASE_INFO(ipi_zone_ep), inp);
 		SCTP_UNLOCK_EXC(SCTP_BASE_INFO(sctbinfo).ipi_lock);
 		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_PCB, ENOMEM);
@@ -4265,6 +4286,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	/* Now we must put the ep memory back into the zone pool */
 #if defined(__FreeBSD__)
+	crfree(inp->ip_inp.inp.inp.inp_cred);
 	INP_LOCK_DESTROY(&inp->ip_inp.inp);
 #endif
 	SCTP_INP_LOCK_DESTROY(inp);
