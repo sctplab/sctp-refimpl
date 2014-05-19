@@ -4286,7 +4286,7 @@ sctp_inpcb_free(struct sctp_inpcb *inp, int immediate, int from)
 	}
 	/* Now we must put the ep memory back into the zone pool */
 #if defined(__FreeBSD__)
-	crfree(inp->ip_inp.inp.inp.inp_cred);
+	crfree(inp->ip_inp.inp.inp_cred);
 	INP_LOCK_DESTROY(&inp->ip_inp.inp);
 #endif
 	SCTP_INP_LOCK_DESTROY(inp);
