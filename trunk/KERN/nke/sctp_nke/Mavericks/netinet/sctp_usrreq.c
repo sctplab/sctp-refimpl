@@ -1676,7 +1676,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 					if (ipv4_addr_legal) {
 						struct sockaddr_in *sin;
 
-						sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
+						sin = &sctp_ifa->address.sin;
 						if (sin->sin_addr.s_addr == 0) {
 							/*
 							 * we skip unspecifed
@@ -1724,7 +1724,7 @@ sctp_fill_up_addresses_vrf(struct sctp_inpcb *inp,
 #if defined(SCTP_EMBEDDED_V6_SCOPE) && !defined(SCTP_KAME)
 						struct sockaddr_in6 lsa6;
 #endif
-						sin6 = (struct sockaddr_in6 *)&sctp_ifa->address.sa;
+						sin6 = &sctp_ifa->address.sin6;
 						if (IN6_IS_ADDR_UNSPECIFIED(&sin6->sin6_addr)) {
 							/*
 							 * we skip unspecifed
