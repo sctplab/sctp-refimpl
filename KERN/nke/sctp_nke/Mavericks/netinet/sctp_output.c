@@ -2096,6 +2096,20 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				continue;
 			}
 			LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+#if defined(__FreeBSD__)
+#ifdef INET
+				if ((sctp_ifap->address.sa.sa_family == AF_INET) &&
+				    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin.sin_addr) != 0)) {
+				    	continue;
+				}
+#endif
+#ifdef INET6
+				if ((sctp_ifap->address.sa.sa_family == AF_INET6) &&
+				    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin6.sin6_addr) != 0)) {
+				    	continue;
+				}
+#endif
+#endif
 				if (sctp_is_addr_restricted(stcb, sctp_ifap)) {
 					continue;
 				}
@@ -2130,6 +2144,20 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 					continue;
 				}
 				LIST_FOREACH(sctp_ifap, &sctp_ifnp->ifalist, next_ifa) {
+#if defined(__FreeBSD__)
+#ifdef INET
+					if ((sctp_ifap->address.sa.sa_family == AF_INET) &&
+					    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin.sin_addr) != 0)) {
+					    	continue;
+					}
+#endif
+#ifdef INET6
+					if ((sctp_ifap->address.sa.sa_family == AF_INET6) &&
+					    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin6.sin6_addr) != 0)) {
+					    	continue;
+					}
+#endif
+#endif
 					if (sctp_is_addr_restricted(stcb, sctp_ifap)) {
 						continue;
 					}
