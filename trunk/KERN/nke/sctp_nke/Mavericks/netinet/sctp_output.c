@@ -2099,13 +2099,15 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__FreeBSD__)
 #ifdef INET
 				if ((sctp_ifap->address.sa.sa_family == AF_INET) &&
-				    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin.sin_addr) != 0)) {
+				    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+				                      &sctp_ifap->address.sin.sin_addr) != 0)) {
 				    	continue;
 				}
 #endif
 #ifdef INET6
 				if ((sctp_ifap->address.sa.sa_family == AF_INET6) &&
-				    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin6.sin6_addr) != 0)) {
+				    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+				                      &sctp_ifap->address.sin6.sin6_addr) != 0)) {
 				    	continue;
 				}
 #endif
@@ -2147,13 +2149,15 @@ sctp_add_addresses_to_i_ia(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #if defined(__FreeBSD__)
 #ifdef INET
 					if ((sctp_ifap->address.sa.sa_family == AF_INET) &&
-					    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin.sin_addr) != 0)) {
+					    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+					                      &sctp_ifap->address.sin.sin_addr) != 0)) {
 					    	continue;
 					}
 #endif
 #ifdef INET6
 					if ((sctp_ifap->address.sa.sa_family == AF_INET6) &&
-					    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sctp_ifa->address.sin6.sin6_addr) != 0)) {
+					    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+					                      &sctp_ifap->address.sin6.sin6_addr) != 0)) {
 					    	continue;
 					}
 #endif
