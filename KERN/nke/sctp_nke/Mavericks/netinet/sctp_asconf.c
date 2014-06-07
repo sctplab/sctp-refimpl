@@ -1900,14 +1900,26 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	 * this is boundall or subset bound w/ASCONF allowed
 	 */
 
-	/* first, make sure it's a good address family */
+	/* first, make sure that the address is IPv4 or IPv6 and not jailed */
 	switch (ifa->address.sa.sa_family) {
 #ifdef INET6
 	case AF_INET6:
+#if defined(__FreeBSD__)
+		if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+		                     &ifa->address.sin6.sin6_addr) != 0) {
+			return;
+		}
+#endif
 		break;
 #endif
 #ifdef INET
 	case AF_INET:
+#if defined(__FreeBSD__)
+		if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+		                     &ifa->address.sin.sin_addr) != 0) {
+			return;
+		}
+#endif
 		break;
 #endif
 	default:
