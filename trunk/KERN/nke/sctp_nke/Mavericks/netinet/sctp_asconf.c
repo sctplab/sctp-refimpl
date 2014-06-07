@@ -2146,6 +2146,12 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* we skip unspecifed addresses */
 				continue;
 			}
+#if defined(__FreeBSD__)
+			if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+			                     &sin6->sin6_addr) != 0) {
+				continue;
+			}
+#endif
 			if (IN6_IS_ADDR_LINKLOCAL(&sin6->sin6_addr)) {
 				if (stcb->asoc.scope.local_scope == 0) {
 					continue;
@@ -2176,6 +2182,12 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				/* we skip unspecifed addresses */
 				continue;
 			}
+#if defined(__FreeBSD__)
+			if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+			                     &sin->sin_addr) != 0) {
+				continue;
+			}
+#endif
 			if (stcb->asoc.scope.ipv4_local_scope == 0 &&
 			    IN4_ISPRIVATE_ADDRESS(&sin->sin_addr)) {
 				continue;
