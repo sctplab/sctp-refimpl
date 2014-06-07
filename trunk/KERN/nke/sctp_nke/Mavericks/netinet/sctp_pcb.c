@@ -939,7 +939,7 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 	struct sctp_vrf *vrf;
 	struct sctp_ifn *sctp_ifn;
 	struct sctp_ifa *sctp_ifa;
-printf("Enterning...\n");
+
 	loopback_scope = stcb->asoc.scope.loopback_scope;
 #if defined(INET)
 	ipv4_local_scope = stcb->asoc.scope.ipv4_local_scope;
@@ -1139,7 +1139,6 @@ printf("Enterning...\n");
 		}
 	}
 	SCTP_IPI_ADDR_RUNLOCK();
-printf("Returning 0\n");
 	return (0);
 }
 
