@@ -2245,7 +2245,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		} else if (type == SCTP_SET_PRIM_ADDR) {
 			if ((stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) == 0) {
 				/* must validate the ifa is in the ep */
-				if (sctp_is_addr_in_ep(stcb->sctp_ep,ifa) == 0) {
+				if (sctp_is_addr_in_ep(stcb->sctp_ep, ifa) == 0) {
 					continue;
 				}
 			} else {
