@@ -3184,7 +3184,7 @@ again_with_private_addresses_allowed:
 #ifdef INET
 		if ((sctp_ifa->address.sa.sa_family == AF_INET) &&
 		    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
-		                      &ifa->address.sin.sin_addr) != 0)) {
+		                      &sctp_ifa->address.sin.sin_addr) != 0)) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT2,"Jailed\n");
 			continue;
 		}
@@ -3192,7 +3192,7 @@ again_with_private_addresses_allowed:
 #ifdef INET6
 		if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
 		    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
-		                      &ifa->address.sin6.sin6_addr) != 0)) {
+		                      &sctp_ifa->address.sin6.sin6_addr) != 0)) {
 			SCTPDBG(SCTP_DEBUG_OUTPUT2,"Jailed\n");
 			continue;
 		}
@@ -3252,14 +3252,14 @@ again_with_private_addresses_allowed:
 #ifdef INET
 			if ((sctp_ifa->address.sa.sa_family == AF_INET) &&
 			    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
-			                      &ifa->address.sin.sin_addr) != 0)) {
+			                      &sctp_ifa->address.sin.sin_addr) != 0)) {
 				continue;
 			}
 #endif
 #ifdef INET6
 			if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
 			    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
-			                      &ifa->address.sin6.sin6_addr) != 0)) {
+			                      &sctp_ifa->address.sin6.sin6_addr) != 0)) {
 				continue;
 			}
 #endif
@@ -3318,14 +3318,14 @@ out:
 #ifdef INET
 					if ((sctp_ifa->address.sa.sa_family == AF_INET) &&
 					    (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
-					                      &ifa->address.sin.sin_addr) != 0)) {
+					                      &sctp_ifa->address.sin.sin_addr) != 0)) {
 						continue;
 					}
 #endif
 #ifdef INET6
 					if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
 					    (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
-					                      &ifa->address.sin6.sin6_addr) != 0)) {
+					                      &sctp_ifa->address.sin6.sin6_addr) != 0)) {
 						continue;
 					}
 #endif
