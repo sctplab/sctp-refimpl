@@ -2544,7 +2544,7 @@ sctp_choose_boundspecific_inp(struct sctp_inpcb *inp,
 #endif
 #ifdef INET6
 			if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
-			    (prison_check_ip4(inp->ip_inp.inp.inp_cred,
+			    (prison_check_ip6(inp->ip_inp.inp.inp_cred,
 			                      &sctp_ifa->address.sin6.sin6_addr) != 0)) {
 				continue;
 			}
@@ -2686,7 +2686,7 @@ sctp_choose_boundspecific_stcb(struct sctp_inpcb *inp,
 #endif
 #ifdef INET6
 			if ((sctp_ifa->address.sa.sa_family == AF_INET6) &&
-			    (prison_check_ip4(inp->ip_inp.inp.inp_cred,
+			    (prison_check_ip6(inp->ip_inp.inp.inp_cred,
 			                      &sctp_ifa->address.sin6.sin6_addr) != 0)) {
 				continue;
 			}
