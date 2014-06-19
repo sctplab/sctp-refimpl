@@ -7561,7 +7561,7 @@ sctp_local_addr_count(struct sctp_tcb *stcb)
 					if (ipv4_addr_legal) {
 						struct sockaddr_in *sin;
 
-						sin = (struct sockaddr_in *)&sctp_ifa->address.sa;;
+						sin = (struct sockaddr_in *)&sctp_ifa->address.sa;
 						if (sin->sin_addr.s_addr == 0) {
 							/* skip unspecified addrs */
 							continue;
