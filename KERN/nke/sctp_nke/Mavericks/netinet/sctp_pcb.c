@@ -993,7 +993,8 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 							continue;
 						}
 #if defined(__FreeBSD__)
-						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin->sin_addr) != 0) {
+						if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+						                     &sin->sin_addr) != 0) {
 							continue;
 						}
 #endif
@@ -1014,7 +1015,8 @@ sctp_does_stcb_own_this_addr(struct sctp_tcb *stcb, struct sockaddr *to)
 						sin6 = &sctp_ifa->address.sin6;
 						rsin6 = (struct sockaddr_in6 *)to;
 #if defined(__FreeBSD__)
-						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred, &sin6->sin6_addr) != 0) {
+						if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+						                     &sin6->sin6_addr) != 0) {
 							continue;
 						}
 #endif
@@ -1217,6 +1219,41 @@ sctp_tcb_special_locate(struct sctp_inpcb **inp_p, struct sockaddr *from,
 			SCTP_INP_RUNLOCK(inp);
 			continue;
 		}
+#if defined(__FreeBSD__)
+		switch (to->sa_family) {
+#ifdef INET
+		case AF_INET:
+		{
+			struct sockaddr_in *sin;
+
+			sin = (struct sockaddr_in *)to;
+			if (prison_check_ip4(inp->ip_inp.inp.inp_cred,
+			                     &sin->sin_addr) != 0) {
+				SCTP_INP_RUNLOCK(inp);
+				continue;
+			}
+			break;
+		}
+#endif
+#ifdef INET6
+		case AF_INET6:
+		{
+			struct sockaddr_in6 *sin6;
+
+			sin6 = (struct sockaddr_in6 *)to;
+			if (prison_check_ip6(inp->ip_inp.inp.inp_cred,
+			                     &sin6->sin6_addr) != 0) {
+				SCTP_INP_RUNLOCK(inp);
+				continue;
+			}
+			break;
+		}
+#endif
+		default:
+			SCTP_INP_RUNLOCK(inp);
+			continue;
+		}
+#endif
 #ifdef SCTP_MVRF
 		fnd = 0;
 		for (i = 0; i < inp->num_vrfs; i++) {
@@ -1917,23 +1954,43 @@ sctp_endpoint_probe(struct sockaddr *nam, struct sctppcbhead *head,
 		if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUNDALL) &&
 		    (inp->sctp_lport == lport)) {
 			/* got it */
+			switch (nam->sa_family) {
 #ifdef INET
-			if ((nam->sa_family == AF_INET) &&
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
-			    SCTP_IPV6_V6ONLY(inp)) {
-				/* IPv4 on a IPv6 socket with ONLY IPv6 set */
-				SCTP_INP_RUNLOCK(inp);
-				continue;
-			}
+			case AF_INET:
+				if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) &&
+				    SCTP_IPV6_V6ONLY(inp)) {
+					/* IPv4 on a IPv6 socket with ONLY IPv6 set */
+					SCTP_INP_RUNLOCK(inp);
+					continue;
+				}
+#if defined(__FreeBSD__)
+				if (prison_check_ip4(inp->ip_inp.inp.inp_cred,
+				                     &sin->sin_addr) != 0) {
+					SCTP_INP_RUNLOCK(inp);
+					continue;
+				}
+#endif
+				break;
 #endif
 #ifdef INET6
-			/* A V6 address and the endpoint is NOT bound V6 */
-			if (nam->sa_family == AF_INET6 &&
-			    (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
-				SCTP_INP_RUNLOCK(inp);
-				continue;
-			}
+			case AF_INET6:
+				/* A V6 address and the endpoint is NOT bound V6 */
+				if ((inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) == 0) {
+					SCTP_INP_RUNLOCK(inp);
+					continue;
+				}
+#if defined(__FreeBSD__)
+				if (prison_check_ip6(inp->ip_inp.inp.inp_cred,
+				                     &sin6->sin6_addr) != 0) {
+					SCTP_INP_RUNLOCK(inp);
+					continue;
+				}
 #endif
+				break;
+#endif
+			default:
+				break;
+			}
 			/* does a VRF id match? */
 			fnd = 0;
 #ifdef SCTP_MVRF
