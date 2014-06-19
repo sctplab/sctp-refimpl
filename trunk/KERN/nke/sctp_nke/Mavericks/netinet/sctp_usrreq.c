@@ -6106,6 +6106,44 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					error = EINVAL;
 					goto out_of_it;
 				}
+#if defined(__FreeBSD__)
+			} else {
+				switch (sspp->sspp_addr.ss_family) {
+#ifdef INET
+				case AF_INET:
+				{
+					struct sockaddr_in *sin;
+
+					sin = (struct sockaddr_in *)&sspp->sspp_addr;
+					if (prison_check_ip4(inp->ip_inp.inp.inp_cred,
+					                     &sin->sin_addr) != 0) {
+						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+						error = EINVAL;
+						goto out_of_it;
+					}
+					break;
+				}
+#endif
+#ifdef INET6
+				case AF_INET6:
+				{
+					struct sockaddr_in6 *sin6;
+
+					sin6 = (struct sockaddr_in6 *)&sspp->sspp_addr;
+					if (prison_check_ip6(inp->ip_inp.inp.inp_cred,
+					                     &sin6->sin6_addr) != 0) {
+						SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+						error = EINVAL;
+						goto out_of_it;
+					}
+					break;
+				}
+#endif
+				default:
+					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
+					error = EINVAL;
+					goto out_of_it;
+#endif
 			}
 			if (sctp_set_primary_ip_address_sa(stcb,
 							   (struct sockaddr *)&sspp->sspp_addr) != 0) {
