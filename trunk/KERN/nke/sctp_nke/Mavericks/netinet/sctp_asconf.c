@@ -3467,10 +3467,10 @@ sctp_asconf_send_nat_state_update(struct sctp_tcb *stcb,
 						continue;
 					}
 #endif
-					if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
+					if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
 						continue;
 					}
-					if (IN4_ISPRIVATE_ADDRESS(&to->sin_addr)) {
+					if (IN4_ISLOOPBACK_ADDRESS(&to->sin_addr)) {
 						continue;
 					}
 					break;
