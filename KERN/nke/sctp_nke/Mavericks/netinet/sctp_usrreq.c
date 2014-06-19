@@ -6143,6 +6143,7 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 					SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP_USRREQ, EINVAL);
 					error = EINVAL;
 					goto out_of_it;
+				}
 #endif
 			}
 			if (sctp_set_primary_ip_address_sa(stcb,
