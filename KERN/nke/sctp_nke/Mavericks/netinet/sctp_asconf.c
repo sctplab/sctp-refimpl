@@ -1905,7 +1905,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef INET6
 	case AF_INET6:
 #if defined(__FreeBSD__)
-		if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+		if (prison_check_ip6(inp->ip_inp.inp.inp_cred,
 		                     &ifa->address.sin6.sin6_addr) != 0) {
 			return;
 		}
@@ -1915,7 +1915,7 @@ sctp_addr_mgmt_assoc(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 #ifdef INET
 	case AF_INET:
 #if defined(__FreeBSD__)
-		if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+		if (prison_check_ip4(inp->ip_inp.inp.inp_cred,
 		                     &ifa->address.sin.sin_addr) != 0) {
 			return;
 		}
@@ -2147,7 +2147,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				continue;
 			}
 #if defined(__FreeBSD__)
-			if (prison_check_ip6(stcb->sctp_ep->ip_inp.inp.inp_cred,
+			if (prison_check_ip6(inp->ip_inp.inp.inp_cred,
 			                     &sin6->sin6_addr) != 0) {
 				continue;
 			}
@@ -2183,7 +2183,7 @@ sctp_asconf_iterator_stcb(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 				continue;
 			}
 #if defined(__FreeBSD__)
-			if (prison_check_ip4(stcb->sctp_ep->ip_inp.inp.inp_cred,
+			if (prison_check_ip4(inp->ip_inp.inp.inp_cred,
 			                     &sin->sin_addr) != 0) {
 				continue;
 			}
