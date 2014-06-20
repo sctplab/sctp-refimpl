@@ -4,6 +4,7 @@ TEST_SOURCES                = test_sctp_recvmsg.c \
                               test_sctp_sockopts.c \
                               test_connect.c \
                               test_bind.c \
+                              test_listen.c \
                               test_sctp_bindx.c \
                               test_shutdown.c \
                               test_socket.c \
