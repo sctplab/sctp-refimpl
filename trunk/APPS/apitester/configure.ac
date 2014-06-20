@@ -1,12 +1,12 @@
-AC_INIT(src/api_tests.c)
-
-AM_INIT_AUTOMAKE(apitester, 0.1)
+AC_INIT(apitester, 0.2)
+AC_CONFIG_SRCDIR(src/api_tests.c)
+AM_INIT_AUTOMAKE
 
 AC_PROG_CC
 
 AC_CANONICAL_HOST
 
-CFLAGS="$CFLAGS -Wall -ansi"
+CFLAGS="$CFLAGS -Wall -std=c99"
 
 case $host_os in
 solaris*)
