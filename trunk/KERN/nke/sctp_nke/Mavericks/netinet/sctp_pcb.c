@@ -4701,9 +4701,9 @@ sctp_add_remote_addr(struct sctp_tcb *stcb, struct sockaddr *newaddr,
 				 * the route may be leading out the loopback, or
 				 * a different interface.
 				 */
- 				net->mtu = rmtu;
+				net->mtu = rmtu;
 			}
-	        }
+		}
 	} else {
 		net->src_addr_selected = 0;
 	}
