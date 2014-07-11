@@ -904,7 +904,7 @@ sctp_handle_ifamsg(struct ifa_msghdr *ifa_msg) {
 		case AF_INET:
 			if (((struct sockaddr_in *)sa)->sin_addr.s_addr == ((struct sockaddr_in *)ifa->ifa_addr)->sin_addr.s_addr) {
 				found_ifa = ifa;
- 			}
+			}
 			break;
 #endif
 #ifdef INET6
@@ -1231,7 +1231,7 @@ sctp_over_udp_ipv6_cb(socket_t udp_sock, void *cookie SCTP_UNUSED, int watif SCT
 			dst.sin6_port = sh->dest_port;
 			memcpy((void *)&dst.sin6_addr, (const void *)(&((struct in6_pktinfo *)CMSG_DATA(cmsg))->ipi6_addr), sizeof(struct in6_addr));
 #if 0
- 			if (in6_setscope(&dst.sin6_addr, m->m_pkthdr.rcvif, NULL) != 0) {
+			if (in6_setscope(&dst.sin6_addr, m->m_pkthdr.rcvif, NULL) != 0) {
 				goto out;
 			}
 #endif

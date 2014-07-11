@@ -223,7 +223,7 @@ do { \
 		} while (0)
 
 #define SAVE_I_AM_HERE(_inp) \
-                do { \
+		do { \
 			(_inp)->i_am_here_file = APPLE_FILE_NO; \
 			(_inp)->i_am_here_line = __LINE__; \
 		} while (0)
@@ -231,22 +231,22 @@ do { \
 /* save caller pc and caller's caller pc */
 #if defined(__i386__)
 #define SAVE_CALLERS(a, b, c) { \
-        unsigned int ebp = 0; \
-        unsigned int prev_ebp = 0; \
-        asm("movl %%ebp, %0;" : "=r"(ebp)); \
-        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
-        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
-        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
-        prev_ebp = *(unsigned int *)prev_ebp; \
-        c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+	unsigned int ebp = 0; \
+	unsigned int prev_ebp = 0; \
+	asm("movl %%ebp, %0;" : "=r"(ebp)); \
+	a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+	prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+	b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+	prev_ebp = *(unsigned int *)prev_ebp; \
+	c = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
 }
 #define SAVE_CALLERS_NOSKIP(a, b, c) { \
-        unsigned int ebp = 0; \
-        unsigned int prev_ebp = 0; \
-        asm("movl %%ebp, %0;" : "=r"(ebp)); \
-        a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
-        prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
-        b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
+	unsigned int ebp = 0; \
+	unsigned int prev_ebp = 0; \
+	asm("movl %%ebp, %0;" : "=r"(ebp)); \
+	a = *(unsigned int *)(*(unsigned int *)ebp + 4) - 4; \
+	prev_ebp = *(unsigned int *)(*(unsigned int *)ebp); \
+	b = *(unsigned int *)((char *)prev_ebp + 4) - 4; \
 	c = 0; \
 }
 #else
@@ -257,85 +257,85 @@ do { \
 #define SBLOCKWAIT(f)   (((f) & MSG_DONTWAIT) ? M_NOWAIT : M_WAITOK)
 
 #define SCTP_INCR_EP_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep), 1); \
+		} while (0)
 
 #define SCTP_DECR_EP_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep),-1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_ep),-1); \
+		} while (0)
 
 #define SCTP_INCR_ASOC_COUNT() \
-                do { \
-	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), 1); \
+		} while (0)
 
 #define SCTP_DECR_ASOC_COUNT() \
-                do { \
-	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), -1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_asoc), -1); \
+		} while (0)
 
 #define SCTP_INCR_LADDR_COUNT() \
-                do { \
-	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), 1); \
+		} while (0)
 
 #define SCTP_DECR_LADDR_COUNT() \
-                do { \
-	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), -1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_laddr), -1); \
+		} while (0)
 
 #define SCTP_INCR_RADDR_COUNT() \
-                do { \
- 	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),1); \
+		} while (0)
 
 #define SCTP_DECR_RADDR_COUNT() \
-                do { \
- 	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),-1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_raddr),-1); \
+		} while (0)
 
 #define SCTP_INCR_CHK_COUNT() \
-                do { \
-  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk), 1); \
+		} while (0)
 
 #ifdef INVARIANTS
 
 #define SCTP_DECR_CHK_COUNT() \
-                do { \
-                       if (SCTP_BASE_INFO(ipi_count_chunk) == 0) \
-                             panic("chunk count to 0?"); \
-  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
-	        } while (0)
+		do { \
+			if (SCTP_BASE_INFO(ipi_count_chunk) == 0) \
+				panic("chunk count to 0?"); \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
+		} while (0)
 #else
 
 #define SCTP_DECR_CHK_COUNT() \
-                do { \
-  	               atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_chunk),-1); \
+		} while (0)
 #endif
 
 #define SCTP_INCR_READQ_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq),1); \
+		} while (0)
 
 #define SCTP_DECR_READQ_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq), -1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_readq), -1); \
+		} while (0)
 
 #define SCTP_INCR_STRMOQ_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq), 1); \
+		} while (0)
 
 #define SCTP_DECR_STRMOQ_COUNT() \
-                do { \
-		       atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq),-1); \
-	        } while (0)
+		do { \
+			atomic_add_int(&SCTP_BASE_INFO(ipi_count_strmoq),-1); \
+		} while (0)
 
 
 
