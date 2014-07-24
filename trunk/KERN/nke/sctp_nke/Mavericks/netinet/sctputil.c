@@ -3616,7 +3616,7 @@ sctp_notify_remote_error(struct sctp_tcb *stcb, uint16_t error, struct sctp_erro
 		return;
 	}
 	if (chunk != NULL) {
-		;chunk_len = ntohs(chunk->ch.chunk_length);
+		chunk_len = ntohs(chunk->ch.chunk_length);
 	} else {
 		chunk_len = 0;
 	}
