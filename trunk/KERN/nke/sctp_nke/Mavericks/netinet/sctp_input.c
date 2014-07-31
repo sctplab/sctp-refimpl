@@ -5632,7 +5632,7 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 					SCTP_BUF_LEN(mm) = sizeof(*phd);
 					SCTP_BUF_NEXT(mm) = SCTP_M_COPYM(m, *offset, chk_length, M_NOWAIT);
 					if (SCTP_BUF_NEXT(mm)) {
-						if (sctp_pad_lastmbuf(SCTP_BUF_NEXT(mm), SCTP_SIZE32(chk_length) - chk_length, NULL)) {
+						if (sctp_pad_lastmbuf(SCTP_BUF_NEXT(mm), SCTP_SIZE32(chk_length) - chk_length, NULL) == NULL) {
 							sctp_m_freem(mm);
 						} else {
 #ifdef SCTP_MBUF_LOGGING
