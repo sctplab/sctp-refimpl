@@ -98,7 +98,6 @@ extern struct sysctl_oid sysctl__net_inet_sctp_cmt_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_nr_sack_on_off;
 extern struct sysctl_oid sysctl__net_inet_sctp_cmt_use_dac;
 extern struct sysctl_oid sysctl__net_inet_sctp_cwnd_maxburst;
-extern struct sysctl_oid sysctl__net_inet_sctp_asconf_auth_nochk;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
 extern struct sysctl_oid sysctl__net_inet_sctp_nat_friendly;
 extern struct sysctl_oid sysctl__net_inet_sctp_abc_l_var;
@@ -409,7 +408,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_register_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
-	sysctl_register_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_register_oid(&sysctl__net_inet_sctp_abc_l_var);
@@ -562,7 +560,6 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cmt_use_dac);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_cwnd_maxburst);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_asconf_auth_nochk);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nat_friendly);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_abc_l_var);
