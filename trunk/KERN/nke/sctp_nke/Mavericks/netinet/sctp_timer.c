@@ -441,7 +441,7 @@ sctp_recover_sent_list(struct sctp_tcb *stcb)
 				sctp_free_bufspace(stcb, asoc, chk, 1);
 				sctp_m_freem(chk->data);
 				chk->data = NULL;
-				if (asoc->peer_supports_prsctp && PR_SCTP_BUF_ENABLED(chk->flags)) {
+				if (asoc->prsctp_supported && PR_SCTP_BUF_ENABLED(chk->flags)) {
 					asoc->sent_queue_cnt_removeable--;
 				}
 			}
@@ -599,7 +599,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			if (stcb->asoc.peer_supports_prsctp && PR_SCTP_TTL_ENABLED(chk->flags)) {
+			if (stcb->asoc.prsctp_supported && PR_SCTP_TTL_ENABLED(chk->flags)) {
 				/* Is it expired? */
 #ifndef __FreeBSD__
 				if (timercmp(&now, &chk->rec.data.timetodrop, >)) {
@@ -617,7 +617,7 @@ sctp_mark_all_for_resend(struct sctp_tcb *stcb,
 					continue;
 				}
 			}
-			if (stcb->asoc.peer_supports_prsctp && PR_SCTP_RTX_ENABLED(chk->flags)) {
+			if (stcb->asoc.prsctp_supported && PR_SCTP_RTX_ENABLED(chk->flags)) {
 				/* Has it been retransmitted tv_sec times? */
 				if (chk->snd_count > chk->rec.data.timetodrop.tv_sec) {
 					if (chk->data) {
@@ -964,7 +964,7 @@ sctp_t3rxt_timer(struct sctp_inpcb *inp,
 		sctp_timer_start(SCTP_TIMER_TYPE_SEND, inp, stcb, net);
 		return (0);
 	}
-	if (stcb->asoc.peer_supports_prsctp) {
+	if (stcb->asoc.prsctp_supported) {
 		struct sctp_tmit_chunk *lchk;
 
 		lchk = sctp_try_advance_peer_ack_point(stcb, &stcb->asoc);
