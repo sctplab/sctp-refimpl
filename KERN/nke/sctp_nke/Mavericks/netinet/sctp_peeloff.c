@@ -126,6 +126,7 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	n_inp->sctp_frag_point = inp->sctp_frag_point;
 	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
 	n_inp->ecn_supported = inp->ecn_supported;
+	n_inp->prsctp_supported = inp->prsctp_supported;
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
 	n_inp->local_strreset_support = inp->local_strreset_support;
@@ -235,6 +236,7 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	n_inp->sctp_frag_point = inp->sctp_frag_point;
 	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
 	n_inp->ecn_supported = inp->ecn_supported;
+	n_inp->prsctp_supported = inp->prsctp_supported;
 	n_inp->partial_delivery_point = inp->partial_delivery_point;
 	n_inp->sctp_context = inp->sctp_context;
 	n_inp->local_strreset_support = inp->local_strreset_support;
