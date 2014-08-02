@@ -4013,7 +4013,7 @@ sctp_add_cookie(struct mbuf *init, int init_offset,
 static uint8_t
 sctp_get_ect(struct sctp_tcb *stcb)
 {
-	if ((stcb != NULL) && (stcb->asoc.ecn_allowed == 1)) {
+	if ((stcb != NULL) && (stcb->asoc.ecn_supported == 1)) {
 		return (SCTP_ECT0_BIT);
 	} else {
 		return (0);
@@ -5135,7 +5135,7 @@ sctp_send_initiate(struct sctp_inpcb *inp, struct sctp_tcb *stcb, int so_locked
 	}
 
 	/* ECN parameter */
-	if (stcb->asoc.ecn_allowed == 1) {
+	if (stcb->asoc.ecn_supported == 1) {
 		parameter_len = (uint16_t)sizeof(struct sctp_paramhdr);
 		ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + chunk_len);
 		ph->param_type = htons(SCTP_ECN_CAPABLE);
@@ -6298,8 +6298,8 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 	}
 
 	/* ECN parameter */
-	if (((asoc != NULL) && (asoc->ecn_allowed == 1)) ||
-	    ((asoc == NULL) && (inp->sctp_ecn_enable == 1))) {
+	if (((asoc != NULL) && (asoc->ecn_supported == 1)) ||
+	    ((asoc == NULL) && (inp->ecn_supported == 1))) {
 		parameter_len = (uint16_t)sizeof(struct sctp_paramhdr);
 		ph = (struct sctp_paramhdr *)(mtod(m, caddr_t) + chunk_len);
 		ph->param_type = htons(SCTP_ECN_CAPABLE);
