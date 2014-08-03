@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 269448 2014-08-02 21:36:40Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 269475 2014-08-03 14:10:10Z tuexen $");
 #endif
 
 #include <stdio.h>
@@ -424,6 +424,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		((struct sctp_assoc_value *)arg)->assoc_id = id;
 		break;
 	case SCTP_PR_SUPPORTED:
+		((struct sctp_assoc_value *)arg)->assoc_id = id;
+		break;
+	case SCTP_NRSACK_SUPPORTED:
 		((struct sctp_assoc_value *)arg)->assoc_id = id;
 		break;
 #if !(defined(__FreeBSD__) && __FreeBSD_version < 900000)
