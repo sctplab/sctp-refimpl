@@ -70,7 +70,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 #endif
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_pr_enable;
-extern struct sysctl_oid sysctl__net_inet_sctp_nr_sack_on_off;
+extern struct sysctl_oid sysctl__net_inet_sctp_nrsack_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_fr_maxburst;
 extern struct sysctl_oid sysctl__net_inet_sctp_strict_sacks;
 #if !defined(SCTP_WITH_NO_CSUM)
@@ -380,7 +380,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_pr_enable);
-	sysctl_register_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
+	sysctl_register_oid(&sysctl__net_inet_sctp_nrsack_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_fr_maxburst);
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_sacks);
 #if !defined(SCTP_WITH_NO_CSUM)
@@ -534,7 +534,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_pr_enable);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_nr_sack_on_off);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_nrsack_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_fr_maxburst);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_strict_sacks);
 #if !defined(SCTP_WITH_NO_CSUM)

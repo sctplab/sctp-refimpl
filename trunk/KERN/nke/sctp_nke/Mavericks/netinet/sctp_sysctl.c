@@ -1085,9 +1085,15 @@ SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, pr_enable, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_pr_enable), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_PR_ENABLE_DESC);
 
+#if defined(__FreeBSD__) && __FreeBSD_version < 1100000
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, nr_sack_on_off, CTLTYPE_UINT | CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_nrsack_enable), 0, sysctl_sctp_check, "IU",
                  SCTPCTL_NRSACK_ENABLE_DESC);
+#else
+SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, nrsack_enable, CTLTYPE_UINT | CTLFLAG_RW,
+                 &SCTP_BASE_SYSCTL(sctp_nrsack_enable), 0, sysctl_sctp_check, "IU",
+                 SCTPCTL_NRSACK_ENABLE_DESC);
+#endif
 
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, strict_sacks, CTLTYPE_UINT|CTLFLAG_RW,
                  &SCTP_BASE_SYSCTL(sctp_strict_sacks), 0, sysctl_sctp_check, "IU",
@@ -1428,7 +1434,7 @@ void sysctl_setup_sctp(void)
             &SCTP_BASE_SYSCTL(sctp_pr_enable), 0, sysctl_sctp_check,
 	    SCTPCTL_PR_ENABLE_DESC);
 
-	sysctl_add_oid(&sysctl_oid_top, "nr_sack_on_off", CTLTYPE_INT|CTLFLAG_RW,
+	sysctl_add_oid(&sysctl_oid_top, "nrsack_enable", CTLTYPE_INT|CTLFLAG_RW,
             &SCTP_BASE_SYSCTL(sctp_nrsack_enable), 0, sysctl_sctp_check,
 	    SCTPCTL_NRSACK_ENABLE_DESC);
 
