@@ -1203,6 +1203,7 @@ struct sctp_association {
 	/* Flags whether an extension is supported or not */
 	uint8_t ecn_supported;
 	uint8_t prsctp_supported;
+	uint8_t reconfig_supported;
 	uint8_t nrsack_supported;
 	uint8_t pktdrop_supported;
 
@@ -1213,8 +1214,6 @@ struct sctp_association {
 	uint8_t peer_supports_asconf;
 	/* peer authentication support flag */
 	uint8_t peer_supports_auth;
-	/* stream resets are supported by the peer */
-	uint8_t peer_supports_strreset;
 	uint8_t local_strreset_support;
 
 	uint8_t peer_supports_nat;

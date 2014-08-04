@@ -2928,6 +2928,7 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 			inp->sctp_cmt_on_off = (*inp_p)->sctp_cmt_on_off;
 			inp->ecn_supported = (*inp_p)->ecn_supported;
 			inp->prsctp_supported = (*inp_p)->prsctp_supported;
+			inp->reconfig_supported = (*inp_p)->reconfig_supported;
 			inp->nrsack_supported = (*inp_p)->nrsack_supported;
 			inp->pktdrop_supported = (*inp_p)->pktdrop_supported;
 			inp->partial_delivery_point = (*inp_p)->partial_delivery_point;
@@ -5534,13 +5535,13 @@ sctp_process_control(struct mbuf *m, int iphlen, int *offset, int length,
 				*offset = length;
 				return (NULL);
 			}
-			if (stcb->asoc.peer_supports_strreset == 0) {
+			if (stcb->asoc.reconfig_supported == 0) {
 				/*
 				 * hmm, peer should have announced this, but
 				 * we will turn it on since he is sending us
 				 * a stream reset.
 				 */
-				stcb->asoc.peer_supports_strreset = 1;
+				stcb->asoc.reconfig_supported = 1;
 			}
 			if (sctp_handle_stream_reset(stcb, m, *offset, ch)) {
 				/* stop processing */
