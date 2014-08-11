@@ -127,6 +127,8 @@ sctp_do_peeloff(struct socket *head, struct socket *so, sctp_assoc_t assoc_id)
 	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
 	n_inp->ecn_supported = inp->ecn_supported;
 	n_inp->prsctp_supported = inp->prsctp_supported;
+	n_inp->auth_supported = inp->auth_supported;
+	n_inp->asconf_supported = inp->asconf_supported;
 	n_inp->reconfig_supported = inp->reconfig_supported;
 	n_inp->nrsack_supported = inp->nrsack_supported;
 	n_inp->pktdrop_supported = inp->pktdrop_supported;
@@ -240,6 +242,8 @@ sctp_get_peeloff(struct socket *head, sctp_assoc_t assoc_id, int *error)
 	n_inp->sctp_cmt_on_off = inp->sctp_cmt_on_off;
 	n_inp->ecn_supported = inp->ecn_supported;
 	n_inp->prsctp_supported = inp->prsctp_supported;
+	n_inp->auth_supported = inp->auth_supported;
+	n_inp->asconf_supported = inp->asconf_supported;
 	n_inp->reconfig_supported = inp->reconfig_supported;
 	n_inp->nrsack_supported = inp->nrsack_supported;
 	n_inp->pktdrop_supported = inp->pktdrop_supported;
