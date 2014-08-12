@@ -182,9 +182,9 @@ struct sctp_sysctl {
 
 /* auth_enable: Enable SCTP AUTH function */
 #define SCTPCTL_AUTH_ENABLE_DESC	"Enable SCTP AUTH function"
-#define SCTPCTL_AUTH_ENABLE_MIN	0
-#define SCTPCTL_AUTH_ENABLE_MAX	1
-#define SCTPCTL_AUTH_ENABLE_DEFAULT	0
+#define SCTPCTL_AUTH_ENABLE_MIN		0
+#define SCTPCTL_AUTH_ENABLE_MAX		1
+#define SCTPCTL_AUTH_ENABLE_DEFAULT	1
 
 /* asconf_enable: Enable SCTP ASCONF */
 #define SCTPCTL_ASCONF_ENABLE_DESC	"Enable SCTP ASCONF"
