@@ -70,7 +70,7 @@ extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
 #endif
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_pr_enable;
-extern struct sysctl_oid sysctl__net_inet_sctp_auth_disable;
+extern struct sysctl_oid sysctl__net_inet_sctp_auth_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_asconf_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_reconfig_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_nrsack_enable;
@@ -383,7 +383,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_pr_enable);
-	sysctl_register_oid(&sysctl__net_inet_sctp_auth_disable);
+	sysctl_register_oid(&sysctl__net_inet_sctp_auth_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_asconf_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_reconfig_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_nrsack_enable);
@@ -540,7 +540,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_pr_enable);
-	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_disable);
+	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_asconf_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_reconfig_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_nrsack_enable);
