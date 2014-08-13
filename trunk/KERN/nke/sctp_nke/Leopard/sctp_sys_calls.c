@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 269858 2014-08-12 11:30:16Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 269945 2014-08-13 15:50:16Z tuexen $");
 #endif
 
 #include <stdio.h>
@@ -448,6 +448,12 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 #endif
 	case SCTP_ENABLE_STREAM_RESET:
 		((struct sctp_assoc_value *)arg)->assoc_id = id;
+		break;
+	case SCTP_PR_STREAM_STATUS:
+		((struct sctp_prstatus *)arg)->sprstat_assoc_id = id;
+		break;
+	case SCTP_PR_ASSOC_STATUS:
+		((struct sctp_prstatus *)arg)->sprstat_assoc_id = id;
 		break;
 	default:
 		break;
