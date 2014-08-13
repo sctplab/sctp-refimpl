@@ -4229,13 +4229,16 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 
 		sid = sprstat->sprstat_sid;
 		policy = sprstat->sprstat_policy;
+#if defined(SCTP_DETAILED_STR_STATS)
 		if ((stcb != NULL) &&
 		    (policy != SCTP_PR_SCTP_NONE) &&
 		    (sid < stcb->asoc.streamoutcnt) &&
-#if defined(SCTP_DETAILED_STR_STATS)
 		    ((policy == SCTP_PR_SCTP_ALL) ||
 		     (PR_SCTP_VALID_POLICY(policy)))) {
 #else
+		if ((stcb != NULL) &&
+		    (policy != SCTP_PR_SCTP_NONE) &&
+		    (sid < stcb->asoc.streamoutcnt) &&
 		    (policy == SCTP_PR_SCTP_ALL)) {
 #endif
 			if (policy == SCTP_PR_SCTP_ALL) {
