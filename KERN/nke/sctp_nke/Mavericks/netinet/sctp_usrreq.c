@@ -4239,8 +4239,8 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		    (policy == SCTP_PR_SCTP_ALL)) {
 #endif
 			if (policy == SCTP_PR_SCTP_ALL) {
-				sprstat->sprstat_abandoned_unsent = stcb->asoc.strmout[sprstat->sprstat_sid].abandoned_unsent[0];
-				sprstat->sprstat_abandoned_sent = stcb->asoc.strmout[sprstat->sprstat_sid].abandoned_sent[0];
+				sprstat->sprstat_abandoned_unsent = stcb->asoc.strmout[sid].abandoned_unsent[0];
+				sprstat->sprstat_abandoned_sent = stcb->asoc.strmout[sid].abandoned_sent[0];
 			} else {
 				sprstat->sprstat_abandoned_unsent = stcb->asoc.strmout[sid].abandoned_unsent[policy];
 				sprstat->sprstat_abandoned_sent = stcb->asoc.strmout[sid].abandoned_sent[policy];
