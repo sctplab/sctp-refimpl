@@ -1025,21 +1025,21 @@ sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 #if defined(__FreeBSD__)
 #if __FreeBSD_version >= 800056 && __FreeBSD_version < 1000100
 #ifdef VIMAGE
-#define SCTP_UINT_SYSCTL(name, prefix)					\
+#define SCTP_UINT_SYSCTL(name, var_name, prefix)			\
 	static int							\
 	sysctl_##name##_check(SYSCTL_HANDLER_ARGS)			\
 	{								\
 		int error;						\
 		uint32_t new;						\
 									\
-		new = SCTP_BASE_SYSCTL(sctp_##name);			\
+		new = SCTP_BASE_SYSCTL(var_name);			\
 		error = vnet_sysctl_handle_int(oidp, &new, 0, req);	\
 		if ((error == 0) && (req->newptr != NULL)) {		\
 			if ((new < prefix##_MIN) ||			\
 			    (new > prefix##_MAX)) {			\
 				error = EINVAL;				\
 			} else {					\
-				SCTP_BASE_SYSCTL(sctp_##name) = new;	\
+				SCTP_BASE_SYSCTL(var_name) = new;	\
 			}						\
 		}							\
 		return (error);						\
@@ -1048,21 +1048,21 @@ sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 	                 CTLTYPE_UINT | CTLFLAG_RW, NULL, 0,		\
 	                 sysctl_##name##_check, "UI", prefix##_DESC);
 #else
-#define SCTP_UINT_SYSCTL(name, prefix)					\
+#define SCTP_UINT_SYSCTL(name, var_name, prefix)			\
 	static int							\
 	sysctl_##name##_check(SYSCTL_HANDLER_ARGS)			\
 	{								\
 		int error;						\
 		uint32_t new;						\
 									\
-		new = SCTP_BASE_SYSCTL(sctp_##name);			\
+		new = SCTP_BASE_SYSCTL(var_name);			\
 		error = sysctl_handle_int(oidp, &new, 0, req);		\
 		if ((error == 0) && (req->newptr != NULL)) {		\
 			if ((new < prefix##_MIN) ||			\
 			    (new > prefix##_MAX)) {			\
 				error = EINVAL;				\
 			} else {					\
-				SCTP_BASE_SYSCTL(sctp_##name) = new;	\
+				SCTP_BASE_SYSCTL(var_name) = new;	\
 			}						\
 		}							\
 		return (error);						\
@@ -1072,21 +1072,21 @@ sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 	                 sysctl_##name##_check, "UI", prefix##_DESC);
 #endif
 #else
-#define SCTP_UINT_SYSCTL(name, prefix)					\
+#define SCTP_UINT_SYSCTL(name, var_name, prefix)			\
 	static int							\
 	sysctl_##name##_check(SYSCTL_HANDLER_ARGS)			\
 	{								\
 		int error;						\
 		uint32_t new;						\
 									\
-		new = SCTP_BASE_SYSCTL(sctp_##name);			\
+		new = SCTP_BASE_SYSCTL(var_name);			\
 		error = sysctl_handle_int(oidp, &new, 0, req);		\
 		if ((error == 0) && (req->newptr != NULL)) {		\
 			if ((new < prefix##_MIN) ||			\
 			    (new > prefix##_MAX)) {			\
 				error = EINVAL;				\
 			} else {					\
-				SCTP_BASE_SYSCTL(sctp_##name) = new;	\
+				SCTP_BASE_SYSCTL(var_name) = new;	\
 			}						\
 		}							\
 		return (error);						\
