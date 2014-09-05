@@ -1056,7 +1056,7 @@ sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 		uint32_t new;						\
 									\
 		new = SCTP_BASE_SYSCTL(sctp_##name);			\
-		error = sysctl_handle_int(oidp, &new, 0, req);	\
+		error = sysctl_handle_int(oidp, &new, 0, req);		\
 		if ((error == 0) && (req->newptr != NULL)) {		\
 			if ((new < prefix##_MIN) ||			\
 			    (new > prefix##_MAX)) {			\
@@ -1080,7 +1080,7 @@ sysctl_sctp_cleartrace(SYSCTL_HANDLER_ARGS)
 		uint32_t new;						\
 									\
 		new = SCTP_BASE_SYSCTL(sctp_##name);			\
-		error = sysctl_handle_int(oidp, &new, 0, req);	\
+		error = sysctl_handle_int(oidp, &new, 0, req);		\
 		if ((error == 0) && (req->newptr != NULL)) {		\
 			if ((new < prefix##_MIN) ||			\
 			    (new > prefix##_MAX)) {			\
