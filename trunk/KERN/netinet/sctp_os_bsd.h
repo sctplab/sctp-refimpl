@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 268537 2014-07-11 21:15:40Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 271204 2014-09-06 19:12:14Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -175,23 +175,16 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #define V_system_base_info VNET(system_base_info)
 #define SCTP_BASE_INFO(__m) V_system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS V_system_base_info.sctpstat
-#define SCTP_BASE_STATS_SYSCTL VNET_NAME(system_base_info.sctpstat)
-#define SCTP_BASE_STAT(__m)     V_system_base_info.sctpstat.__m
-#define SCTP_BASE_SYSCTL(__m) VNET_NAME(system_base_info.sctpsysctl.__m)
+#define SCTP_BASE_STAT(__m) V_system_base_info.sctpstat.__m
+#define SCTP_BASE_SYSCTL(__m) V_system_base_info.sctpsysctl.__m
 #define SCTP_BASE_VAR(__m) V_system_base_info.__m
 #else
 #define SCTP_BASE_INFO(__m) system_base_info.sctppcbinfo.__m
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STATS_SYSCTL system_base_info.sctpstat
 #define SCTP_BASE_STAT(__m)     system_base_info.sctpstat.__m
 #define SCTP_BASE_SYSCTL(__m) system_base_info.sctpsysctl.__m
 #define SCTP_BASE_VAR(__m) system_base_info.__m
 #endif
-
-/*
- *
- */
-#define USER_ADDR_NULL	(NULL)		/* FIX ME: temp */
 
 #define SCTP_PRINTF(params...)	printf(params)
 #if defined(SCTP_DEBUG)
@@ -206,9 +199,9 @@ MALLOC_DECLARE(SCTP_M_MCORE);
 #define SCTPDBG_ADDR(level, addr)					\
 {									\
 	do {								\
-	if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {			\
-		sctp_print_address(addr);				\
-	}								\
+		if (SCTP_BASE_SYSCTL(sctp_debug_on) & level ) {		\
+			sctp_print_address(addr);			\
+		}							\
 	} while (0);							\
 }
 #else
