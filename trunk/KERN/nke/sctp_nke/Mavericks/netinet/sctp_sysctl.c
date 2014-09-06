@@ -1081,7 +1081,7 @@ sctp_sysctl_handle_trace_log_clear(SYSCTL_HANDLER_ARGS)
 		}							\
 		return (error);						\
 	}								\
-	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, name,		\
+	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, mib_name,		\
 	                 CTLTYPE_UINT | CTLFLAG_RW, NULL, 0,		\
 	                 sctp_sysctl_handle_##mib_name, "UI", prefix##_DESC);
 #else
@@ -1104,7 +1104,7 @@ sctp_sysctl_handle_trace_log_clear(SYSCTL_HANDLER_ARGS)
 		}							\
 		return (error);						\
 	}								\
-	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, name,		\
+	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, mib_name,		\
 	                 CTLTYPE_UINT | CTLFLAG_RW, NULL, 0,		\
 	                 sctp_sysctl_handle_##mib_name, "UI", prefix##_DESC);
 #endif
@@ -1128,7 +1128,7 @@ sctp_sysctl_handle_trace_log_clear(SYSCTL_HANDLER_ARGS)
 		}							\
 		return (error);						\
 	}								\
-	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, name,		\
+	SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, mib_name,		\
 	                 CTLTYPE_UINT | CTLFLAG_RW, NULL, 0,		\
 	                 sctp_sysctl_handle_##mib_name, "UI", prefix##_DESC);
 #endif
