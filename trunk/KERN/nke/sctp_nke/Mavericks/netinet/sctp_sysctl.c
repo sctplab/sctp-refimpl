@@ -864,7 +864,8 @@ sysctl_stat_check(SYSCTL_HANDLER_ARGS)
 	    (req->newlen != sizeof(struct sctpstat))) {
 		return (EINVAL);
 	}
-#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+#if defined(__FreeBSD__)
+#if defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 	memset(&sb, 0, sizeof(struct sctpstat));
 	for (cpu = 0; cpu < mp_maxid; cpu++) {
 		sarry = &SCTP_BASE_STATS[cpu];
@@ -998,6 +999,9 @@ sysctl_stat_check(SYSCTL_HANDLER_ARGS)
 		}
 	}
 	error = SYSCTL_OUT(req, &sb, sizeof(struct sctpstat));
+#else
+	error = SYSCTL_OUT(req, &SCTP_BASE_STATS, sizeof(struct sctpstat));
+#endif
 #else
 	error = SYSCTL_OUT(req, &SCTP_BASE_STATS, sizeof(struct sctpstat));
 #endif
