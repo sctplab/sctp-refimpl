@@ -459,7 +459,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 	number_of_remote_addresses = 0;
 
 	SCTP_INP_INFO_RLOCK();
-#if !defined(__Windows__)
+#if defined(__APPLE__)
 	if (req->oldptr == USER_ADDR_NULL) {
 #else
 	if (req->data == NULL) {
@@ -491,7 +491,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #endif
 		return (0);
 	}
-#if !defined(__Windows__)
+#if defined(__APPLE__)
 	if (req->newptr != USER_ADDR_NULL) {
 #else
 	if (req->new_data != NULL) {
