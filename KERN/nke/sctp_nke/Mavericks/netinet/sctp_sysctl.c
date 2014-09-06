@@ -849,9 +849,11 @@ sysctl_stat_check(SYSCTL_HANDLER_ARGS)
 {
 #endif
 	int error;
-#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+#if defined(__FreeBSD__)
+#if defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
 	int cpu;
 	struct sctpstat sb, *sarry;
+#endif
 #endif
 
 #if defined (__APPLE__)
@@ -1211,14 +1213,11 @@ SCTP_UINT_SYSCTL(mobility_fasthandoff, sctp_mobility_fasthandoff, SCTPCTL_MOBILI
 SYSCTL_VNET_STRUCT(_net_inet_sctp, OID_AUTO, log, CTLFLAG_RD,
                    &SCTP_BASE_SYSCTL(sctp_log), sctp_log,
                    "SCTP logging (struct sctp_log)");
-
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, clear_trace, CTLTYPE_UINT | CTLFLAG_RW,
-                 &SCTP_BASE_SYSCTL(sctp_log), 0, sysctl_sctp_cleartrace, "IU",
-                 "Clear SCTP Logging buffer");
+                 &SCTP_BASE_SYSCTL(sctp_log), 0, sysctl_sctp_cleartrace, "IU", "Clear SCTP Logging buffer");
 #endif
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, udp_tunneling_port, CTLTYPE_UINT|CTLFLAG_RW,
-                 NULL, 0, sysctl_sctp_udp_tunneling_check, "IU",
-                 SCTPCTL_UDP_TUNNELING_PORT_DESC);
+                 NULL, 0, sysctl_sctp_udp_tunneling_check, "IU", SCTPCTL_UDP_TUNNELING_PORT_DESC);
 SCTP_UINT_SYSCTL(enable_sack_immediately, sctp_enable_sack_immediately, SCTPCTL_SACK_IMMEDIATELY_ENABLE)
 SCTP_UINT_SYSCTL(nat_friendly_init, sctp_inits_include_nat_friendly, SCTPCTL_NAT_FRIENDLY_INITS)
 SCTP_UINT_SYSCTL(vtag_time_wait, sctp_vtag_time_wait, SCTPCTL_TIME_WAIT)
@@ -1245,11 +1244,9 @@ SCTP_UINT_SYSCTL(vtag_watchdog_limit, sctp_vtag_watchdog_limit, SCTPCTL_VTAG_WAT
 SCTP_UINT_SYSCTL(output_unlocked, sctp_output_unlocked, SCTPCTL_OUTPUT_UNLOCKED)
 #endif
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, stats, CTLTYPE_STRUCT|CTLFLAG_RW,
-                 NULL, 0, sysctl_stat_check, "S,sctpstat",
-                 "SCTP statistics (struct sctp_stat)");
+                 NULL, 0, sysctl_stat_check, "S,sctpstat", "SCTP statistics (struct sctp_stat)");
 SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLTYPE_OPAQUE|CTLFLAG_RD,
-                 NULL, 0, sctp_assoclist, "S,xassoc",
-                 "List of active SCTP associations");
+                 NULL, 0, sctp_assoclist, "S,xassoc", "List of active SCTP associations");
 
 #elif defined(__Windows__)
 
