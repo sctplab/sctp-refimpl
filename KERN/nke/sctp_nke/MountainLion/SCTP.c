@@ -65,9 +65,7 @@ SYSCTL_NODE(_net_inet6, IPPROTO_SCTP,   sctp6,  CTLFLAG_RW, 0,  "SCTP6")
 
 extern struct sysctl_oid sysctl__net_inet_sctp_sendspace;
 extern struct sysctl_oid sysctl__net_inet_sctp_recvspace;
-#if defined(SCTP_APPLE_AUTO_ASCONF)
 extern struct sysctl_oid sysctl__net_inet_sctp_auto_asconf;
-#endif
 extern struct sysctl_oid sysctl__net_inet_sctp_ecn_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_pr_enable;
 extern struct sysctl_oid sysctl__net_inet_sctp_auth_enable;
@@ -116,12 +114,8 @@ extern struct sysctl_oid sysctl__net_inet_sctp_log_level;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_cc_module;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_ss_module;
 extern struct sysctl_oid sysctl__net_inet_sctp_default_frag_interleave;
-#if defined(SCTP_APPLE_MOBILITY_BASE)
 extern struct sysctl_oid sysctl__net_inet_sctp_mobility_base;
-#endif
-#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 extern struct sysctl_oid sysctl__net_inet_sctp_mobility_fasthandoff;
-#endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 extern struct sysctl_oid sysctl__net_inet_sctp_log;
 extern struct sysctl_oid sysctl__net_inet_sctp_clear_trace;
@@ -378,9 +372,7 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp);
 	sysctl_register_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_register_oid(&sysctl__net_inet_sctp_recvspace);
-#if defined(SCTP_APPLE_AUTO_ASCONF)
 	sysctl_register_oid(&sysctl__net_inet_sctp_auto_asconf);
-#endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_pr_enable);
 	sysctl_register_oid(&sysctl__net_inet_sctp_auth_enable);
@@ -392,7 +384,6 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_strict_sacks);
 #if !defined(SCTP_WITH_NO_CSUM)
 	sysctl_register_oid(&sysctl__net_inet_sctp_loopback_nocsum);
-
 #endif
 	sysctl_register_oid(&sysctl__net_inet_sctp_peer_chkoh);
 	sysctl_register_oid(&sysctl__net_inet_sctp_maxburst);
@@ -430,12 +421,8 @@ SCTP_start(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unu
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_cc_module);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_register_oid(&sysctl__net_inet_sctp_default_frag_interleave);
-#if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_base);
-#endif
-#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 	sysctl_register_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
-#endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	sysctl_register_oid(&sysctl__net_inet_sctp_log);
 	sysctl_register_oid(&sysctl__net_inet_sctp_clear_trace);
@@ -535,9 +522,7 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 #endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_sendspace);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_recvspace);
-#if defined(SCTP_APPLE_AUTO_ASCONF)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auto_asconf);
-#endif
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_ecn_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_pr_enable);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_auth_enable);
@@ -586,12 +571,8 @@ SCTP_stop(kmod_info_t * ki __attribute__((unused)), void * d __attribute__((unus
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_cc_module);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_ss_module);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_default_frag_interleave);
-#if defined(SCTP_APPLE_MOBILITY_BASE)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_base);
-#endif
-#if defined(SCTP_APPLE_MOBILITY_FASTHANDOFF)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_mobility_fasthandoff);
-#endif
 #if defined(SCTP_LOCAL_TRACE_BUF)
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_log);
 	sysctl_unregister_oid(&sysctl__net_inet_sctp_clear_trace);

@@ -824,7 +824,6 @@ sctp_gc(struct inpcbinfo *ipi)
 }
 #endif
 
-#if defined(SCTP_APPLE_AUTO_ASCONF)
 socket_t sctp_address_monitor_so = NULL;
 
 #define ROUNDUP(a, size) (((a) & ((size)-1)) ? (1 + ((a) | ((size)-1))) : (a))
@@ -1010,18 +1009,6 @@ sctp_address_monitor_stop(void)
 	}
 	return;
 }
-#else
-errno_t
-sctp_address_monitor_start(void)
-{
-	return (0);
-}
-
-void sctp_address_monitor_stop(void)
-{
-	return;
-}
-#endif
 
 #if 0
 static void
