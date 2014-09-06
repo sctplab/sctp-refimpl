@@ -124,7 +124,6 @@ extern struct fileops socketops;
 
 #define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STATS_SYSCTL system_base_info.sctpstat
 #define SCTP_BASE_STAT(elem) system_base_info.sctpstat.elem
 #define SCTP_BASE_SYSCTL(var) system_base_info.sctpsysctl.var
 #define SCTP_BASE_VAR(var) system_base_info.var

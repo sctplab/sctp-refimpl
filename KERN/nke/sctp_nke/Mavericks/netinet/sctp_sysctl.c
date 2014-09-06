@@ -838,23 +838,32 @@ sysctl_sctp_asconf_check(SYSCTL_HANDLER_ARGS)
 	return (error);
 }
 
-#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+#if defined(__APPLE__)
 static int
-sysctl_stat_get(SYSCTL_HANDLER_ARGS)
+sysctl_stat_check SYSCTL_HANDLER_ARGS
 {
-	int cpu, error;
-	struct sctpstat sb, *sarry, *cpin = NULL;
+#pragma unused(oidp, arg1, arg2)
+#else
+static int
+sysctl_stat_check(SYSCTL_HANDLER_ARGS)
+{
+#endif
+	int error;
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+	int cpu;
+	struct sctpstat sb, *sarry;
+#endif
 
-	if ((req->newptr) && (req->newlen == sizeof(struct sctpstat))) {
-		/* User wants us to clear or at least
-		 * reset the counters to the specified values.
-		 */
-		cpin = (struct sctpstat *)req->newptr;
-	} else if (req->newptr) {
-		/* Must be a stat structure */
+#if defined (__APPLE__)
+	if ((req->newptr != USER_ADDR_NULL) &&
+#else
+	if ((req->newptr != NULL)) &&
+#endif
+	    (req->newlen != sizeof(struct sctpstat))) {
 		return (EINVAL);
 	}
-	memset(&sb, 0, sizeof(sb));
+#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
+	memset(&sb, 0, sizeof(struct sctpstat));
 	for (cpu = 0; cpu < mp_maxid; cpu++) {
 		sarry = &SCTP_BASE_STATS[cpu];
 		if (sarry->sctps_discontinuitytime.tv_sec > sb.sctps_discontinuitytime.tv_sec) {
@@ -982,14 +991,16 @@ sysctl_stat_get(SYSCTL_HANDLER_ARGS)
 		sb.sctps_send_burst_avoid += sarry->sctps_send_burst_avoid;
 		sb.sctps_send_cwnd_avoid += sarry->sctps_send_cwnd_avoid;
 		sb.sctps_fwdtsn_map_over += sarry->sctps_fwdtsn_map_over;
-		if (cpin) {
-			memcpy(sarry, cpin, sizeof(struct sctpstat));
+		if (req->newptr != NULL) {
+			memcpy(sarry, req->newptr, sizeof(struct sctpstat));
 		}
 	}
-	error = SYSCTL_OUT(req, &sb, sizeof(sb));
+	error = SYSCTL_OUT(req, &sb, sizeof(struct sctpstat));
+#else
+	error = SYSCTL_OUT(req, &SCTP_BASE_STATS, sizeof(struct sctpstat));
+#endif
 	return (error);
 }
-#endif
 
 #if defined(SCTP_LOCAL_TRACE_BUF)
 #if defined(__APPLE__)
@@ -1233,19 +1244,12 @@ SCTP_UINT_SYSCTL(vtag_watchdog_limit, sctp_vtag_watchdog_limit, SCTPCTL_VTAG_WAT
 #if defined(__APPLE__) || defined(SCTP_SO_LOCK_TESTING)
 SCTP_UINT_SYSCTL(output_unlocked, sctp_output_unlocked, SCTPCTL_OUTPUT_UNLOCKED)
 #endif
-#if defined(__FreeBSD__) && defined(SMP) && defined(SCTP_USE_PERCPU_STAT)
-SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, stats,
-                 CTLTYPE_STRUCT|CTLFLAG_RW,
-                 NULL, 0, sysctl_stat_get, "S,sctpstat",
+SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, stats, CTLTYPE_STRUCT|CTLFLAG_RW,
+                 NULL, 0, sysctl_stat_check, "S,sctpstat",
                  "SCTP statistics (struct sctp_stat)");
-#else
-SYSCTL_VNET_STRUCT(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_RW,
-                   &SCTP_BASE_STATS_SYSCTL, sctpstat,
-                   "SCTP statistics (struct sctp_stat)");
-#endif
-SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLTYPE_OPAQUE | CTLFLAG_RD,
-                 NULL, 0, sctp_assoclist,
-                 "S,xassoc", "List of active SCTP associations");
+SYSCTL_VNET_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLTYPE_OPAQUE|CTLFLAG_RD,
+                 NULL, 0, sctp_assoclist, "S,xassoc",
+                 "List of active SCTP associations");
 
 #elif defined(__Windows__)
 
