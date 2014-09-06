@@ -857,7 +857,7 @@ sysctl_stat_check(SYSCTL_HANDLER_ARGS)
 #if defined (__APPLE__)
 	if ((req->newptr != USER_ADDR_NULL) &&
 #else
-	if ((req->newptr != NULL)) &&
+	if ((req->newptr != NULL) &&
 #endif
 	    (req->newlen != sizeof(struct sctpstat))) {
 		return (EINVAL);
