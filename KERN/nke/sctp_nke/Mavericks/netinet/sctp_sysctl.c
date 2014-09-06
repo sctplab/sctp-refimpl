@@ -462,7 +462,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #if defined(__APPLE__)
 	if (req->oldptr == USER_ADDR_NULL) {
 #else
-	if (req->data == NULL) {
+	if (req->oldptr == NULL) {
 #endif
 		LIST_FOREACH(inp, &SCTP_BASE_INFO(listhead), sctp_list) {
 			SCTP_INP_RLOCK(inp);
@@ -494,7 +494,7 @@ sctp_assoclist(SYSCTL_HANDLER_ARGS)
 #if defined(__APPLE__)
 	if (req->newptr != USER_ADDR_NULL) {
 #else
-	if (req->new_data != NULL) {
+	if (req->newptr != NULL) {
 #endif
 		SCTP_INP_INFO_RUNLOCK();
 		SCTP_LTRACE_ERR_RET(NULL, NULL, NULL, SCTP_FROM_SCTP_SYSCTL, EPERM);
