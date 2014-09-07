@@ -1172,9 +1172,9 @@ SCTP_UINT_SYSCTL(auto_asconf, sctp_auto_asconf, SCTPCTL_AUTOASCONF)
 SCTP_UINT_SYSCTL(ecn_enable, sctp_ecn_enable, SCTPCTL_ECN_ENABLE)
 SCTP_UINT_SYSCTL(pr_enable, sctp_pr_enable, SCTPCTL_PR_ENABLE)
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, auth_enable, CTLFLAG_VNET|CTLTYPE_UINT|CTLFLAG_RW,
-                 NULL, 0, sctp_sysctl_handle_auth, "IU", SCTPCTL_AUTH_ENABLE_DESC);
+            NULL, 0, sctp_sysctl_handle_auth, "IU", SCTPCTL_AUTH_ENABLE_DESC);
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, asconf_enable, CTLFLAG_VNET|CTLTYPE_UINT|CTLFLAG_RW,
-                 NULL, 0, sctp_sysctl_handle_asconf, "IU", SCTPCTL_ASCONF_ENABLE_DESC);
+            NULL, 0, sctp_sysctl_handle_asconf, "IU", SCTPCTL_ASCONF_ENABLE_DESC);
 SCTP_UINT_SYSCTL(reconfig_enable, sctp_reconfig_enable, SCTPCTL_RECONFIG_ENABLE)
 SCTP_UINT_SYSCTL(nrsack_enable, sctp_nrsack_enable, SCTPCTL_NRSACK_ENABLE)
 SCTP_UINT_SYSCTL(pktdrop_enable, sctp_pktdrop_enable, SCTPCTL_PKTDROP_ENABLE)
@@ -1264,9 +1264,9 @@ SCTP_UINT_SYSCTL(vtag_watchdog_limit, sctp_vtag_watchdog_limit, SCTPCTL_VTAG_WAT
 SCTP_UINT_SYSCTL(output_unlocked, sctp_output_unlocked, SCTPCTL_OUTPUT_UNLOCKED)
 #endif
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, stats, CTLFLAG_VNET|CTLTYPE_STRUCT|CTLFLAG_RW,
-                 NULL, 0, sctp_sysctl_handle_stats, "S,sctpstat", "SCTP statistics (struct sctp_stat)");
+            NULL, 0, sctp_sysctl_handle_stats, "S,sctpstat", "SCTP statistics (struct sctp_stat)");
 SYSCTL_PROC(_net_inet_sctp, OID_AUTO, assoclist, CTLFLAG_VNET|CTLTYPE_OPAQUE|CTLFLAG_RD,
-                 NULL, 0, sctp_sysctl_handle_assoclist, "S,xassoc", "List of active SCTP associations");
+            NULL, 0, sctp_sysctl_handle_assoclist, "S,xassoc", "List of active SCTP associations");
 
 #elif defined(__Windows__)
 
