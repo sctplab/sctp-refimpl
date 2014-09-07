@@ -3021,8 +3021,9 @@ sctp_handle_cookie_ack(struct sctp_cookie_ack_chunk *cp SCTP_UNUSED,
 
 	SCTPDBG(SCTP_DEBUG_INPUT2,
 		"sctp_handle_cookie_ack: handling COOKIE-ACK\n");
-	if (stcb == NULL)
+	if ((stcb == NULL) || (net == NULL)) {
 		return;
+	}
 
 	asoc = &stcb->asoc;
 
