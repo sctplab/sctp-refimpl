@@ -629,8 +629,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			store.sin6.sin6_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			store.sin6.sin6_port = stcb->rport;
-			memcpy(&store.sin6.sin6_addr, cp->heartbeat.hb_info.address,
-			       sizeof(store.sin6.sin6_addr));
+			memcpy(&store.sin6.sin6_addr, cp->heartbeat.hb_info.address, sizeof(struct in6_addr));
 		} else {
 			return;
 		}
@@ -644,8 +643,7 @@ sctp_handle_heartbeat_ack(struct sctp_heartbeat_chunk *cp,
 			store.sconn.sconn_len = cp->heartbeat.hb_info.addr_len;
 #endif
 			store.sconn.sconn_port = stcb->rport;
-			memcpy(&store.sconn.sconn_addr, cp->heartbeat.hb_info.address,
-			       sizeof(store.sconn.sconn_addr));
+			memcpy(&store.sconn.sconn_addr, cp->heartbeat.hb_info.address, sizeof(void *));
 		} else {
 			return;
 		}
@@ -2332,8 +2330,7 @@ sctp_process_cookie_new(struct mbuf *m, int iphlen, int offset,
 		store.sin6.sin6_len = sizeof(struct sockaddr_in6);
 #endif
 		store.sin6.sin6_scope_id = cookie->scope_id;
-		memcpy(&store.sin6.sin6_addr, cookie->laddress,
-		    sizeof(store.sin6.sin6_addr));
+		memcpy(&store.sin6.sin6_addr, cookie->laddress, sizeof(struct in6_addr));
 		break;
 #endif
 #if defined(__Userspace__)
