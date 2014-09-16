@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 271230 2014-09-07 18:05:37Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_output.c 271670 2014-09-16 10:57:55Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3407,10 +3407,10 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 #endif
 
 	/**
-	 * Rules: 
-	 * - Find the route if needed, cache if I can. 
+	 * Rules:
+	 * - Find the route if needed, cache if I can.
 	 * - Look at interface address in route, Is it in the bound list. If so we
-	 *   have the best source. 
+	 *   have the best source.
 	 * - If not we must rotate amongst the addresses.
 	 *
 	 * Cavets and issues
@@ -3478,7 +3478,12 @@ sctp_source_address_selection(struct sctp_inpcb *inp,
 	if (ro->ro_rt == NULL) {
 		return (NULL);
 	}
+#if defined(__Userspace_os_Windows)
+	/* On Windows the sa_family is U_SHORT or ADDRESS_FAMILY */
+	fam = (sa_family_t)ro->ro_dst.sa_family;
+#else
 	fam = ro->ro_dst.sa_family;
+#endif
 	dest_is_priv = dest_is_loop = 0;
 	/* Setup our scopes for the destination */
 	switch (fam) {
@@ -6384,7 +6389,7 @@ sctp_send_initiate_ack(struct sctp_inpcb *inp, struct sctp_tcb *stcb,
 		padding_len = SCTP_SIZE32(parameter_len) - parameter_len;
 		chunk_len += parameter_len;
 	}
-	
+
 	/* add authentication parameters */
 	if (((asoc != NULL) && (asoc->auth_supported == 1)) ||
 	    ((asoc == NULL) && (inp->auth_supported == 1))) {
@@ -8269,7 +8274,7 @@ sctp_med_chunk_output(struct sctp_inpcb *inp,
 {
 	/**
 	 * Ok this is the generic chunk service queue. we must do the
-	 * following: 
+	 * following:
 	 * - Service the stream queue that is next, moving any
 	 *   message (note I must get a complete message i.e. FIRST/MIDDLE and
 	 *   LAST to the out queue in one pass) and assigning TSN's. This
@@ -11986,7 +11991,7 @@ sctp_send_hb(struct sctp_tcb *stcb, struct sctp_nets *net,int so_locked
 	hb->heartbeat.hb_info.time_value_1 = now.tv_sec;
 	hb->heartbeat.hb_info.time_value_2 = now.tv_usec;
 	/* Did our user request this one, put it in */
-	hb->heartbeat.hb_info.addr_family = net->ro._l_addr.sa.sa_family;
+	hb->heartbeat.hb_info.addr_family = (uint8_t)net->ro._l_addr.sa.sa_family;
 #ifdef HAVE_SA_LEN
 	hb->heartbeat.hb_info.addr_len = net->ro._l_addr.sa.sa_len;
 #else
