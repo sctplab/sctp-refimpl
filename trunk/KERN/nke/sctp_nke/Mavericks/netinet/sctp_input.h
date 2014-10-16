@@ -52,7 +52,7 @@ sctp_common_input_processing(struct mbuf **, int, int, int,
 #endif
                              uint32_t, uint16_t);
 
-struct sctp_stream_reset_out_request *
+struct sctp_stream_reset_request *
 sctp_find_stream_reset(struct sctp_tcb *stcb, uint32_t seq,
     struct sctp_tmit_chunk **bchk);
 
