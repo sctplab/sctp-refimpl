@@ -1,5 +1,4 @@
 #!/bin/sh
-# This is outdated.
 
 source=~/Documents/KERN/darwin
 destination=~/Documents
