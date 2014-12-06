@@ -124,10 +124,10 @@ in6_sin_2_v4mapsin6(struct sockaddr_in *sin, struct sockaddr_in6 *sin6)
 #endif
 	sin6->sin6_port = sin->sin_port;
 #if defined(__Userspace_os_Windows)
-	((uint32_t *)&sin6.sin6_addr)[0] = 0;
-	((uint32_t *)&sin6.sin6_addr)[1] = 0;
-	((uint32_t *)&sin6.sin6_addr)[2] = htonl(0xffff);
-	((uint32_t *)&sin6.sin6_addr)[3] = sin->sin_addr.s_addr;
+	((uint32_t *)&sin6->sin6_addr)[0] = 0;
+	((uint32_t *)&sin6->sin6_addr)[1] = 0;
+	((uint32_t *)&sin6->sin6_addr)[2] = htonl(0xffff);
+	((uint32_t *)&sin6->sin6_addr)[3] = sin->sin_addr.s_addr;
 #else
  	sin6->sin6_addr.s6_addr32[0] = 0;
 	sin6->sin6_addr.s6_addr32[1] = 0;
