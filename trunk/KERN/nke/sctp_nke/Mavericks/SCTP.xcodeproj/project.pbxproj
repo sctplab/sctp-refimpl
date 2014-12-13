@@ -7,6 +7,17 @@
 	objects = {
 
 /* Begin PBXBuildFile section */
+		501D19B31A3CB251007EF645 /* _pthread_attr_t.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19A71A3CB251007EF645 /* _pthread_attr_t.h */; };
+		501D19B51A3CB251007EF645 /* _types.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19A91A3CB251007EF645 /* _types.h */; };
+		501D19B61A3CB251007EF645 /* bitstring.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AA1A3CB251007EF645 /* bitstring.h */; };
+		501D19B71A3CB251007EF645 /* kpi_mbuf.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AB1A3CB251007EF645 /* kpi_mbuf.h */; };
+		501D19B81A3CB251007EF645 /* mcache.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AC1A3CB251007EF645 /* mcache.h */; };
+		501D19B91A3CB251007EF645 /* pthread_internal.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AD1A3CB251007EF645 /* pthread_internal.h */; };
+		501D19BA1A3CB251007EF645 /* resource.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AE1A3CB251007EF645 /* resource.h */; };
+		501D19BB1A3CB251007EF645 /* select.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19AF1A3CB251007EF645 /* select.h */; };
+		501D19BC1A3CB251007EF645 /* tree.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19B01A3CB251007EF645 /* tree.h */; };
+		501D19BD1A3CB251007EF645 /* tty.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19B11A3CB251007EF645 /* tty.h */; };
+		501D19BE1A3CB251007EF645 /* ttydefaults.h in Headers */ = {isa = PBXBuildFile; fileRef = 501D19B21A3CB251007EF645 /* ttydefaults.h */; };
 		50BAFEA8107391A00005425A /* sctp_sys_calls.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFEA7107391A00005425A /* sctp_sys_calls.c */; };
 		50BAFEB5107392200005425A /* sctp_asconf.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFE42107390EC0005425A /* sctp_asconf.c */; };
 		50BAFEB81073924D0005425A /* sctp6_usrreq.c in Sources */ = {isa = PBXBuildFile; fileRef = 50BAFEA11073915D0005425A /* sctp6_usrreq.c */; };
@@ -33,6 +44,17 @@
 /* End PBXBuildFile section */
 
 /* Begin PBXFileReference section */
+		501D19A71A3CB251007EF645 /* _pthread_attr_t.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; path = _pthread_attr_t.h; sourceTree = "<group>"; };
+		501D19A91A3CB251007EF645 /* _types.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = _types.h; path = sys/_types.h; sourceTree = "<group>"; };
+		501D19AA1A3CB251007EF645 /* bitstring.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = bitstring.h; path = sys/bitstring.h; sourceTree = "<group>"; };
+		501D19AB1A3CB251007EF645 /* kpi_mbuf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = kpi_mbuf.h; path = sys/kpi_mbuf.h; sourceTree = "<group>"; };
+		501D19AC1A3CB251007EF645 /* mcache.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = mcache.h; path = sys/mcache.h; sourceTree = "<group>"; };
+		501D19AD1A3CB251007EF645 /* pthread_internal.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = pthread_internal.h; path = sys/pthread_internal.h; sourceTree = "<group>"; };
+		501D19AE1A3CB251007EF645 /* resource.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = resource.h; path = sys/resource.h; sourceTree = "<group>"; };
+		501D19AF1A3CB251007EF645 /* select.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = select.h; path = sys/select.h; sourceTree = "<group>"; };
+		501D19B01A3CB251007EF645 /* tree.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tree.h; path = sys/tree.h; sourceTree = "<group>"; };
+		501D19B11A3CB251007EF645 /* tty.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = tty.h; path = sys/tty.h; sourceTree = "<group>"; };
+		501D19B21A3CB251007EF645 /* ttydefaults.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = ttydefaults.h; path = sys/ttydefaults.h; sourceTree = "<group>"; };
 		50BAFE42107390EC0005425A /* sctp_asconf.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_asconf.c; path = netinet/sctp_asconf.c; sourceTree = "<group>"; };
 		50BAFE43107390EC0005425A /* sctp_asconf.h */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.h; name = sctp_asconf.h; path = netinet/sctp_asconf.h; sourceTree = "<group>"; };
 		50BAFE44107390EC0005425A /* sctp_auth.c */ = {isa = PBXFileReference; fileEncoding = 4; lastKnownFileType = sourcecode.c.c; name = sctp_auth.c; path = netinet/sctp_auth.c; sourceTree = "<group>"; };
@@ -173,6 +195,15 @@
 			name = Products;
 			sourceTree = "<group>";
 		};
+		501D19A61A3CB251007EF645 /* _types */ = {
+			isa = PBXGroup;
+			children = (
+				501D19A71A3CB251007EF645 /* _pthread_attr_t.h */,
+			);
+			name = _types;
+			path = sys/_types;
+			sourceTree = "<group>";
+		};
 		50BAFE99107391000005425A /* netinet */ = {
 			isa = PBXGroup;
 			children = (
@@ -244,6 +275,9 @@
 		50BAFF0810739A080005425A /* sys */ = {
 			isa = PBXGroup;
 			children = (
+				501D19A61A3CB251007EF645 /* _types */,
+				501D19A91A3CB251007EF645 /* _types.h */,
+				501D19AA1A3CB251007EF645 /* bitstring.h */,
 				50C2D08B1077B6D20088259C /* domain.h */,
 				50C2D08C1077B6D20088259C /* event.h */,
 				50C2D08D1077B6D20088259C /* eventvar.h */,
@@ -251,17 +285,25 @@
 				50C2D08F1077B6D20088259C /* filedesc.h */,
 				50C2D0901077B6D20088259C /* kernel_types.h */,
 				50C2D0911077B6D20088259C /* kernel.h */,
+				501D19AB1A3CB251007EF645 /* kpi_mbuf.h */,
 				50C2D0921077B6D20088259C /* mbuf.h */,
+				501D19AC1A3CB251007EF645 /* mcache.h */,
 				50C2D0931077B6D20088259C /* namei.h */,
 				50C2D1A210789C180088259C /* proc_internal.h */,
 				50C2D0941077B6D20088259C /* protosw.h */,
+				501D19AD1A3CB251007EF645 /* pthread_internal.h */,
+				501D19AE1A3CB251007EF645 /* resource.h */,
 				50C2D0951077B6D20088259C /* resourcevar.h */,
+				501D19AF1A3CB251007EF645 /* select.h */,
 				50C2D0961077B6D20088259C /* signal.h */,
 				50C2D0971077B6D20088259C /* signalvar.h */,
 				50BAFF0B10739A1D0005425A /* socket.h */,
 				50C2D0D31077BA890088259C /* socketvar.h */,
 				50C2D1A310789C180088259C /* systm.h */,
+				501D19B01A3CB251007EF645 /* tree.h */,
+				501D19B11A3CB251007EF645 /* tty.h */,
 				50C2D0981077B6D20088259C /* ttychars.h */,
+				501D19B21A3CB251007EF645 /* ttydefaults.h */,
 				50C2D0991077B6D20088259C /* ttydev.h */,
 				50C2D09A1077B6D20088259C /* uio_internal.h */,
 				50C2D09B1077B6D20088259C /* user.h */,
@@ -291,9 +333,20 @@
 			isa = PBXHeadersBuildPhase;
 			buildActionMask = 2147483647;
 			files = (
+				501D19BC1A3CB251007EF645 /* tree.h in Headers */,
+				501D19B81A3CB251007EF645 /* mcache.h in Headers */,
+				501D19BA1A3CB251007EF645 /* resource.h in Headers */,
 				50BAFEBB107392690005425A /* sctp_uio.h in Headers */,
 				50BAFEBC107392740005425A /* sctp.h in Headers */,
+				501D19B61A3CB251007EF645 /* bitstring.h in Headers */,
 				50BAFEE4107393F80005425A /* in.h in Headers */,
+				501D19B31A3CB251007EF645 /* _pthread_attr_t.h in Headers */,
+				501D19B71A3CB251007EF645 /* kpi_mbuf.h in Headers */,
+				501D19B51A3CB251007EF645 /* _types.h in Headers */,
+				501D19BD1A3CB251007EF645 /* tty.h in Headers */,
+				501D19BE1A3CB251007EF645 /* ttydefaults.h in Headers */,
+				501D19B91A3CB251007EF645 /* pthread_internal.h in Headers */,
+				501D19BB1A3CB251007EF645 /* select.h in Headers */,
 			);
 			runOnlyForDeploymentPostprocessing = 0;
 		};
