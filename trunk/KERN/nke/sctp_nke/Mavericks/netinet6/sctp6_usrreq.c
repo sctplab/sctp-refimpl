@@ -1556,8 +1556,13 @@ sctp6_peeraddr(struct socket *so, struct mbuf *nam)
 	}
 #ifdef SCTP_EMBEDDED_V6_SCOPE
 #ifdef SCTP_KAME
-	if ((error = sa6_recoverscope(sin6)) != 0)
+	if ((error = sa6_recoverscope(sin6)) != 0) {
+#if defined(__FreeBSD__) || defined(__APPLE__) || defined(__Windows__)
+		SCTP_FREE_SONAME(sin6);
+#endif
+		SCTP_LTRACE_ERR_RET(inp, NULL, NULL, SCTP_FROM_SCTP6_USRREQ, error);
 		return (error);
+	}
 #else
 	in6_recoverscope(sin6, &sin6->sin6_addr, NULL);
 #endif /* SCTP_KAME */
