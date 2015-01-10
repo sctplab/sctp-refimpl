@@ -849,9 +849,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	 */
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 #elif defined(__FreeBSD__) && __FreeBSD_version > 1100052
@@ -872,9 +870,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	}
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 #elif defined(__FreeBSD__) && __FreeBSD_version > 602000
@@ -904,9 +900,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	}
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 #else
@@ -967,9 +961,7 @@ sctp_get_mbuf_for_msg(unsigned int space_needed, int want_header,
 	SCTP_BUF_NEXT(m) = SCTP_BUF_NEXT_PKT(m) = NULL;
 #ifdef SCTP_MBUF_LOGGING
 	if (SCTP_BASE_SYSCTL(sctp_logging_level) & SCTP_MBUF_LOGGING_ENABLE) {
-		if (SCTP_BUF_IS_EXTENDED(m)) {
-			sctp_log_mb(m, SCTP_MBUF_IALLOC);
-		}
+		sctp_log_mb(m, SCTP_MBUF_IALLOC);
 	}
 #endif
 #endif
