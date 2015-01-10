@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 276692 2015-01-05 09:58:32Z rwatson $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 276911 2015-01-10 13:56:26Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -352,7 +352,11 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
 #define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
+#if __FreeBSD_version > 1100052 
+#define SCTP_BUF_SIZE M_SIZE
+#else
 #define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
+#endif
 #define SCTP_BUF_TYPE(m) (m->m_type)
 #define SCTP_BUF_RECVIF(m) (m->m_pkthdr.rcvif)
 #define SCTP_BUF_PREPEND	M_PREPEND
