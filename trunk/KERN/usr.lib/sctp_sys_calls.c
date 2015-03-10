@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 275857 2014-12-17 07:47:25Z tuexen $");
+__FBSDID("$FreeBSD: head/lib/libc/net/sctp_sys_calls.c 279859 2015-03-10 19:49:25Z tuexen $");
 #endif
 
 #include <stdio.h>
@@ -454,6 +454,9 @@ sctp_opt_info(int sd, sctp_assoc_t id, int opt, void *arg, socklen_t *size)
 		break;
 	case SCTP_PR_ASSOC_STATUS:
 		((struct sctp_prstatus *)arg)->sprstat_assoc_id = id;
+		break;
+	case SCTP_MAX_CWND:
+		((struct sctp_assoc_value *)arg)->assoc_id = id;
 		break;
 	default:
 		break;
