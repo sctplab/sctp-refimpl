@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 279859 2015-03-10 19:49:25Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctputil.c 279867 2015-03-10 22:38:10Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2863,7 +2863,11 @@ set_error:
 
 static void
 sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
-    struct sockaddr *sa, uint32_t error)
+    struct sockaddr *sa, uint32_t error, int so_locked
+#if !defined(__APPLE__) && !defined(SCTP_SO_LOCK_TESTING)
+    SCTP_UNUSED
+#endif
+)
 {
 	struct mbuf *m_notify;
 	struct sctp_paddr_change *spc;
@@ -2959,7 +2963,7 @@ sctp_notify_peer_addr_change(struct sctp_tcb *stcb, uint32_t state,
 	                  control,
 	                  &stcb->sctp_socket->so_rcv, 1,
 	                  SCTP_READ_LOCK_NOT_HELD,
-	                  SCTP_SO_NOT_LOCKED);
+	                  so_locked);
 }
 
 
@@ -3757,7 +3761,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 
 			net = (struct sctp_nets *)data;
 			sctp_notify_peer_addr_change(stcb, SCTP_ADDR_UNREACHABLE,
-			    (struct sockaddr *)&net->ro._l_addr, error);
+			    (struct sockaddr *)&net->ro._l_addr, error, so_locked);
 			break;
 		}
 	case SCTP_NOTIFY_INTERFACE_UP:
@@ -3766,7 +3770,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 
 			net = (struct sctp_nets *)data;
 			sctp_notify_peer_addr_change(stcb, SCTP_ADDR_AVAILABLE,
-			    (struct sockaddr *)&net->ro._l_addr, error);
+			    (struct sockaddr *)&net->ro._l_addr, error, so_locked);
 			break;
 		}
 	case SCTP_NOTIFY_INTERFACE_CONFIRMED:
@@ -3775,7 +3779,7 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 
 			net = (struct sctp_nets *)data;
 			sctp_notify_peer_addr_change(stcb, SCTP_ADDR_CONFIRMED,
-			    (struct sockaddr *)&net->ro._l_addr, error);
+			    (struct sockaddr *)&net->ro._l_addr, error, so_locked);
 			break;
 		}
 	case SCTP_NOTIFY_SPECIAL_SP_FAIL:
@@ -3845,15 +3849,15 @@ sctp_ulp_notify(uint32_t notification, struct sctp_tcb *stcb,
 		break;
 	case SCTP_NOTIFY_ASCONF_ADD_IP:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_ADDED, data,
-		    error);
+		    error, so_locked);
 		break;
 	case SCTP_NOTIFY_ASCONF_DELETE_IP:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_REMOVED, data,
-		                             error);
+		                             error, so_locked);
 		break;
 	case SCTP_NOTIFY_ASCONF_SET_PRIMARY:
 		sctp_notify_peer_addr_change(stcb, SCTP_ADDR_MADE_PRIM, data,
-		                             error);
+		                             error, so_locked);
 		break;
 	case SCTP_NOTIFY_PEER_SHUTDOWN:
 		sctp_notify_shutdown_event(stcb);
