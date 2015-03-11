@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 279888 2015-03-11 15:21:39Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_os_bsd.h 279889 2015-03-11 15:40:29Z tuexen $");
 #endif
 
 #ifndef _NETINET_SCTP_OS_BSD_H_
@@ -462,7 +462,10 @@ typedef struct callout sctp_os_timer_t;
 /* get the socket type */
 #define SCTP_SO_TYPE(so)	((so)->so_type)
 #if (__FreeBSD_version >= 1100046)
-/* Use a macro for renaming sb_cc to sb_ccc */
+/* Use a macro for renaming sb_cc to sb_acc.
+ * Initially sb_ccc was used, but this broke select() when used
+ * with SCTP sockets.
+ */
 #define sb_cc sb_acc
 #endif
 /* reserve sb space for a socket */
