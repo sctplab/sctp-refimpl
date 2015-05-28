@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 283650 2015-05-28 16:00:23Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_usrreq.c 283666 2015-05-28 20:33:28Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -3102,16 +3102,23 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			/* Applies to the specific association */
 			paddrp->spp_flags = 0;
 			if (net != NULL) {
-				int ovh;
-				if (inp->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-					ovh = SCTP_MED_OVERHEAD;
-				} else {
-					ovh = SCTP_MED_V4_OVERHEAD;
-				}
-
 				paddrp->spp_hbinterval = net->heart_beat_delay;
 				paddrp->spp_pathmaxrxt = net->failure_threshold;
-				paddrp->spp_pathmtu = net->mtu - ovh;
+				paddrp->spp_pathmtu = net->mtu;
+				switch (net->ro._l_addr.sa.sa_family) {
+#ifdef INET
+				case AF_INET:
+					paddrp->spp_pathmtu -= SCTP_MIN_V4_OVERHEAD;
+					break;
+#endif
+#ifdef INET6
+				case AF_INET6:
+					paddrp->spp_pathmtu -= SCTP_MIN_V4_OVERHEAD;
+					break;
+#endif
+				default:
+					break;
+				}
 				/* get flags for HB */
 				if (net->dest_state & SCTP_ADDR_NOHB) {
 					paddrp->spp_flags |= SPP_HB_DISABLE;
@@ -3141,7 +3148,7 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 				 * value
 				 */
 				paddrp->spp_pathmaxrxt = stcb->asoc.def_net_failure;
-				paddrp->spp_pathmtu = sctp_get_frag_point(stcb, &stcb->asoc);
+				paddrp->spp_pathmtu = 0;
 				if (stcb->asoc.default_dscp & 0x01) {
 					paddrp->spp_dscp = stcb->asoc.default_dscp & 0xfc;
 					paddrp->spp_flags |= SPP_DSCP;
@@ -3272,6 +3279,20 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 			paddri->spinfo_rto = net->RTO;
 			paddri->spinfo_assoc_id = sctp_get_associd(stcb);
 			paddri->spinfo_mtu = net->mtu;
+			switch (addr->sa_family) {
+#if defined(INET)
+			case AF_INET:
+				paddri->spinfo_mtu -= SCTP_MIN_V4_OVERHEAD;
+				break;
+#endif
+#if defined(INET6)
+			case AF_INET6:
+				paddri->spinfo_mtu -= SCTP_MIN_OVERHEAD;
+				break;
+#endif
+			default:
+				break;
+			}
 			SCTP_TCB_UNLOCK(stcb);
 			*optsize = sizeof(struct sctp_paddrinfo);
 		} else {
@@ -3360,6 +3381,20 @@ sctp_getopt(struct socket *so, int optname, void *optval, size_t *optsize,
 		sstat->sstat_primary.spinfo_srtt = net->lastsa >> SCTP_RTT_SHIFT;
 		sstat->sstat_primary.spinfo_rto = net->RTO;
 		sstat->sstat_primary.spinfo_mtu = net->mtu;
+		switch (stcb->asoc.primary_destination->ro._l_addr.sa.sa_family) {
+#if defined(INET)
+		case AF_INET:
+			sstat->sstat_primary.spinfo_mtu -= SCTP_MIN_V4_OVERHEAD;
+			break;
+#endif
+#if defined(INET6)
+		case AF_INET6:
+			sstat->sstat_primary.spinfo_mtu -= SCTP_MIN_OVERHEAD;
+			break;
+#endif
+		default:
+			break;
+		}
 		sstat->sstat_primary.spinfo_assoc_id = sctp_get_associd(stcb);
 		SCTP_TCB_UNLOCK(stcb);
 		*optsize = sizeof(struct sctp_status);
@@ -6031,19 +6066,6 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 
 		if (stcb != NULL) {
 			/************************TCB SPECIFIC SET ******************/
-			/*
-			 * do we change the timer for HB, we run
-			 * only one?
-			 */
-			int ovh = 0;
-
-			if (stcb->sctp_ep->sctp_flags & SCTP_PCB_FLAGS_BOUND_V6) {
-				ovh = SCTP_MED_OVERHEAD;
-			} else {
-				ovh = SCTP_MED_V4_OVERHEAD;
-			}
-
-			/* network sets ? */
 			if (net != NULL) {
 				/************************NET SPECIFIC SET ******************/
 				if (paddrp->spp_flags & SPP_HB_DISABLE) {
@@ -6077,7 +6099,21 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 								SCTP_FROM_SCTP_USRREQ + SCTP_LOC_11);
 					}
 					net->dest_state |= SCTP_ADDR_NO_PMTUD;
-					net->mtu = paddrp->spp_pathmtu + ovh;
+					net->mtu = paddrp->spp_pathmtu;
+					switch (net->ro._l_addr.sa.sa_family) {
+#ifdef INET
+					case AF_INET:
+						net->mtu += SCTP_MIN_V4_OVERHEAD;
+						break;
+#endif
+#ifdef INET6
+					case AF_INET6:
+						net->mtu += SCTP_MIN_OVERHEAD;
+						break;
+#endif
+					default:
+						break;
+					}
 					if (net->mtu < stcb->asoc.smallest_mtu) {
 						sctp_pathmtu_adjustment(stcb, net->mtu);
 					}
@@ -6206,7 +6242,21 @@ sctp_setopt(struct socket *so, int optname, void *optval, size_t optsize,
 									SCTP_FROM_SCTP_USRREQ + SCTP_LOC_16);
 						}
 						net->dest_state |= SCTP_ADDR_NO_PMTUD;
-						net->mtu = paddrp->spp_pathmtu + ovh;
+						net->mtu = paddrp->spp_pathmtu;
+						switch (net->ro._l_addr.sa.sa_family) {
+#ifdef INET
+						case AF_INET:
+							net->mtu += SCTP_MIN_V4_OVERHEAD;
+							break;
+#endif
+#ifdef INET6
+						case AF_INET6:
+							net->mtu += SCTP_MIN_OVERHEAD;
+							break;
+#endif
+						default:
+							break;
+						}
 						if (net->mtu < stcb->asoc.smallest_mtu) {
 							sctp_pathmtu_adjustment(stcb, net->mtu);
 						}
