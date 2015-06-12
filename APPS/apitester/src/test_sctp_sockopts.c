@@ -6991,7 +6991,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 {
 	int fds[2];
 	int result;
-	struct sockaddr *sa = NULL;
+	struct sockaddr_storage ss;
 	uint32_t hbinterval[2];
 	uint16_t maxrxt[2];
 	uint32_t pathmtu[2];
@@ -7000,13 +7000,19 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 	uint32_t ipv6_flowlabel[2];
 	uint8_t ipv4_tos[2];
 	uint32_t newval;
+	socklen_t len;
 
 	fds[0] = fds[1] = -1;
 	result = sctp_socketpair(fds, 1);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[0],
+	len = (socklen_t)sizeof(struct sockaddr_storage);
+	result = sctp_get_primary(fds[0], 0, (struct sockaddr *)&ss, &len);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], 0, (struct sockaddr *)&ss, &hbinterval[0],
 				      &maxrxt[0],
 				      &pathmtu[0],
 				      &flags[0],
@@ -7021,13 +7027,13 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_1)
 	if(newval < 1024)
 		newval = 1024;
 
-	result = sctp_set_pmtu(fds[0], 0, NULL, newval);
+	result = sctp_set_pmtu(fds[0], 0, (struct sockaddr *)&ss, newval);
 	if (result< 0) {
 		close(fds[0]);
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	result = sctp_get_paddr_param(fds[0], 0, sa, &hbinterval[1],
+	result = sctp_get_paddr_param(fds[0], 0, (struct sockaddr *)&ss, &hbinterval[1],
 				      &maxrxt[1],
 				      &pathmtu[1],
 				      &flags[1],
@@ -7078,7 +7084,7 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 {
 	int fds[2];
 	int result;
-	struct sockaddr *sa = NULL;
+	struct sockaddr_storage ss;
 	uint32_t hbinterval[2];
 	uint16_t maxrxt[2];
 	uint32_t pathmtu[2];
@@ -7088,13 +7094,19 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 	uint8_t ipv4_tos[2];
 	uint32_t newval;
 	sctp_assoc_t ids[2];
+	socklen_t len;
 
 	fds[0] = fds[1] = -1;
 	result = sctp_socketpair_1tom(fds, ids, 1);
 	if (result < 0) {
 		return(strerror(errno));
 	}
-	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[0],
+	len = (socklen_t)sizeof(struct sockaddr_storage);
+	result = sctp_get_primary(fds[0], ids[0], (struct sockaddr *)&ss, &len);
+	if (result < 0) {
+		return(strerror(errno));
+	}
+	result = sctp_get_paddr_param(fds[0], ids[0], (struct sockaddr *)&ss, &hbinterval[0],
 				      &maxrxt[0],
 				      &pathmtu[0],
 				      &flags[0],
@@ -7109,13 +7121,13 @@ DEFINE_APITEST(paddrpara, sso_apmtu_dis_1_M)
 	if(newval < 1024)
 		newval = 1024;
 
-	result = sctp_set_pmtu(fds[0], ids[0], NULL, newval);
+	result = sctp_set_pmtu(fds[0], ids[0], (struct sockaddr *)&ss, newval);
 	if (result< 0) {
 		close(fds[0]);
 		close(fds[1]);
 		return(strerror(errno));
 	}
-	result = sctp_get_paddr_param(fds[0], ids[0], sa, &hbinterval[1],
+	result = sctp_get_paddr_param(fds[0], ids[0], (struct sockaddr *)&ss, &hbinterval[1],
 				      &maxrxt[1],
 				      &pathmtu[1],
 				      &flags[1],
