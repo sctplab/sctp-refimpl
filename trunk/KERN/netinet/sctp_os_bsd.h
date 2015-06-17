@@ -352,7 +352,7 @@ typedef struct callout sctp_os_timer_t;
 #define SCTP_BUF_RESV_UF(m, size) m->m_data += size
 #define SCTP_BUF_AT(m, size) m->m_data + size
 #define SCTP_BUF_IS_EXTENDED(m) (m->m_flags & M_EXT)
-#if __FreeBSD_version > 1100052 
+#if __FreeBSD_version > 1100052
 #define SCTP_BUF_SIZE M_SIZE
 #else
 #define SCTP_BUF_EXTEND_SIZE(m) (m->m_ext.ext_size)
@@ -487,13 +487,8 @@ typedef struct callout sctp_os_timer_t;
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
 
-/*
- * XXX multi-FIB support was backed out in r179783 and it seems clear that the
- * VRF support as currently in FreeBSD is not ready to support multi-FIB.
- * It might be best to implement multi-FIB support for both v4 and v6 indepedent
- * of VRFs and leave those to a real MPLS stack.
- */
-#define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
+#define SCTP_RTALLOC(ro, vrf_id, fibnum) \
+	rtalloc_ign_fib((struct route *)ro, 0UL, fibnum)
 
 /* Future zero copy wakeup/send  function */
 #define SCTP_ZERO_COPY_EVENT(inp, so)
