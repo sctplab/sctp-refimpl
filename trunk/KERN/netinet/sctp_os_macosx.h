@@ -124,7 +124,6 @@ extern struct fileops socketops;
 
 #define SCTP_BASE_INFO(type) system_base_info.sctppcbinfo.type
 #define SCTP_BASE_STATS system_base_info.sctpstat
-#define SCTP_BASE_STATS_SYSCTL system_base_info.sctpstat
 #define SCTP_BASE_STAT(elem) system_base_info.sctpstat.elem
 #define SCTP_BASE_SYSCTL(var) system_base_info.sctpsysctl.var
 #define SCTP_BASE_VAR(var) system_base_info.var
@@ -408,7 +407,7 @@ struct mbuf *sctp_m_prepend_2(struct mbuf *m, int len, int how);
  */
 typedef struct route	sctp_route_t;
 typedef struct rtentry	sctp_rtentry_t;
-#define SCTP_RTALLOC(ro, vrf_id) rtalloc_ign((struct route *)ro, 0UL)
+#define SCTP_RTALLOC(ro, vrf_id, fibnum) rtalloc_ign((struct route *)ro, 0UL)
 #if !defined(APPLE_LEOPARD) && !defined(APPLE_SNOWLEOPARD) && !defined(APPLE_LION) && !defined(APPLE_MOUNTAINLION)
 #define RTFREE(_rt) rtfree(_rt)
 #endif
