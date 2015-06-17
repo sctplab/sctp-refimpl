@@ -32,7 +32,7 @@
 
 #ifdef __FreeBSD__
 #include <sys/cdefs.h>
-__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 284515 2015-06-17 15:20:14Z tuexen $");
+__FBSDID("$FreeBSD: head/sys/netinet/sctp_input.c 284526 2015-06-17 19:26:23Z tuexen $");
 #endif
 
 #include <netinet/sctp_os.h>
@@ -2778,8 +2778,9 @@ sctp_handle_cookie_echo(struct mbuf *m, int iphlen, int offset,
 		return (NULL);
 	}
 #if defined(__FreeBSD__)
-	if ((*netp != NULL) && (mflowtype != M_HASHTYPE_NONE)) {
+	if (*netp != NULL) {
 		(*netp)->flowtype = mflowtype;
+		(*netp)->flowid = mflowid;
 	}
 #endif
 	/*
@@ -5820,8 +5821,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 			}
 #endif
 #if defined(__FreeBSD__)
-			if ((net != NULL) && (mflowtype != M_HASHTYPE_NONE)) {
+			if (net != NULL) {
 				net->flowtype = mflowtype;
+				net->flowid = mflowid;
 			}
 #endif
 			if ((inp != NULL) && (stcb != NULL)) {
@@ -5852,8 +5854,9 @@ sctp_common_input_processing(struct mbuf **mm, int iphlen, int offset, int lengt
 	}
 #endif
 #if defined(__FreeBSD__)
-	if ((net != NULL) && (mflowtype != M_HASHTYPE_NONE)) {
+	if (net != NULL) {
 		net->flowtype = mflowtype;
+		net->flowid = mflowid;
 	}
 #endif
 	if (inp == NULL) {
