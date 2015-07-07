@@ -4,7 +4,7 @@
  *
  * Redistribution and use in source and binary forms, with or without
  * modification, are permitted provided that the following conditions are met:
- * 
+ *
  * a) Redistributions of source code must retain the above copyright notice,
  *    this list of conditions and the following disclaimer.
  *
@@ -66,7 +66,7 @@ int main(int argc, char *argv[])
 		}
 	}
 
-	if (sysctlbyname("net.inet.sctp.stats", giant_buffer, 
+	if (sysctlbyname("net.inet.sctp.stats", giant_buffer,
 			 &len, NULL, 0) < 0) {
 		printf("Error %d (%s) could not get the stat\n", errno, strerror(errno));
 		return(0);
@@ -299,8 +299,8 @@ int main(int argc, char *argv[])
 					is_primary_addr = ((primary_addr.sa.sa_family == AF_INET6) && !memcmp(&primary_addr.sin6.sin6_addr, &xraddr->address.sin6.sin6_addr, sizeof(struct in6_addr)));
 					break;
 				}
-				printf("\t\tPath towards %s, %sActive=%d, Confirmed=%d, PF=%d, MTU=%u, HBEnabled=%u, RTO=%u, RTT=%u, CWND=%u, Flightsize=%u, ErrorCounter=%u.\n",
-				       inet_ntop(family, addr, buffer, ADDRSTRLEN), is_primary_addr?"Primary, " : "", xraddr->active, xraddr->confirmed, xraddr->potentially_failed, xraddr->mtu, xraddr->heartbeat_enabled, xraddr->rto, xraddr->rtt, xraddr->cwnd, xraddr->flight_size, xraddr->error_counter);
+				printf("\t\tPath towards %s, %sActive=%d, Confirmed=%d, PF=%d, MTU=%u, HBEnabled=%u, RTO=%u, RTT=%u, CWND=%u, SSTHRESH=%u, Flightsize=%u, ErrorCounter=%u.\n",
+				       inet_ntop(family, addr, buffer, ADDRSTRLEN), is_primary_addr?"Primary, " : "", xraddr->active, xraddr->confirmed, xraddr->potentially_failed, xraddr->mtu, xraddr->heartbeat_enabled, xraddr->rto, xraddr->rtt, xraddr->cwnd, xraddr->ssthresh, xraddr->flight_size, xraddr->error_counter);
 				offset += sizeof(struct xsctp_raddr);
 				xraddr = (struct xsctp_raddr *)(buf + offset);
 			}
