@@ -1,7 +1,9 @@
 # README for sctp-refimpl
 
 This repository was expored from [Google Code](https://code.google.com/hosting/moved?project=sctp-refimpl) on
-July 18th, 2015. There will be no changes to this code.
+July 18th, 2015.
+
+**There will be _no_ changes to this repository.**
 
 For the userland stack usrsctp please use [usrsctp](https://github.com/sctplab/usrsctp).
 
